@@ -835,3 +835,7 @@ button:disabled{cursor:not-allowed;opacity:.60;filter:saturate(.55)}
    a child ledger would then occupy only the first half. */
 .game-screen .sidebar #buildResourceSummary.resource-strip,.game-screen .sidebar #techResourceSummary.resource-strip{display:block!important;width:100%!important;grid-template-columns:none!important}
 .game-screen .sidebar :is(#buildResourceSummary,#techResourceSummary) .resource-ledger{display:grid!important;width:100%!important;grid-template-columns:repeat(2,minmax(0,1fr))!important}
+
+/* V14: conquest is unlimited; the third HUD stat displays active fronts. */
+.topbar .clock-stat span{color:#f3d688!important}
+#frontCount{font-variant-numeric:tabular-nums}
