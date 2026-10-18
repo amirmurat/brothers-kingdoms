@@ -6,45 +6,44 @@
   <meta name="theme-color" content="#0d2130">
   <meta name="description" content="Brothers Kingdoms — стратегия за территорию в реальном времени. Играй с братьями или против ботов.">
   <title>Brothers Kingdoms · Frontline</title>
-  <link rel="stylesheet" href="style.css?v=8">
-  <link rel="stylesheet" href="frontline-v7.css?v=8">
+  <link rel="stylesheet" href="style.css?v=9">
+  <link rel="stylesheet" href="frontline-v7.css?v=9"><link rel="stylesheet" href="refined-v9.css?v=9">
 </head>
 <body>
   <div id="lobby" class="lobby-screen">
-    <div class="lobby-frame">
-      <header class="site-header"><div class="site-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9l5 3 3-7 3 7 5-3v10H4Z"/><path d="M4 19h16"/></svg></div><span>BROTHERS <b>KINGDOMS</b></span><span class="site-version">FRONTLINE / 08</span></header>
-      <main class="lobby-grid">
-        <div class="lobby-copy">
-          <div class="overline"><span class="overline-dot"></span> ИГРАЙТЕ ВМЕСТЕ · 2–4 ИГРОКА</div>
-          <h1>Завоюй мир.<br><span>Вместе с братьями.</span></h1>
-          <p>Война за каждую границу. Отправляй войска, расширяй территории и сражайся вместе с братьями прямо в браузере.</p>
-          <div class="lobby-features"><div><strong>01</strong><span>Захватывай землю</span></div><div><strong>02</strong><span>Наращивай силы</span></div><div><strong>03</strong><span>Побеждай соперников</span></div></div>
-          <div class="map-preview" aria-hidden="true"><svg viewBox="0 0 540 170" preserveAspectRatio="xMidYMid slice"><rect width="540" height="170" fill="#dbe6ee"/><path d="M0 28C65 0 110 20 158 49s79 11 116-19 104-30 146 5 79 28 120 9v126H0Z" fill="#e8e9dc"/><path d="M0 119c67-62 112-80 173-61 54 18 60 50 132 50 76 0 110-56 160-53 33 2 51 29 75 33v82H0Z" fill="#83bba8"/><path d="M0 170v-39c52-19 96-21 145-4 58 19 102 25 158 11 82-19 128-52 237-33v65Z" fill="#78a6db"/><path d="M214 80c31-36 84-44 115-17 26 23 35 34 79 32" fill="none" stroke="#ffffff" stroke-width="2" stroke-opacity=".75"/><circle cx="214" cy="80" r="5" fill="#fff"/><circle cx="408" cy="95" r="5" fill="#fff"/></svg></div>
-        </div>
-        <section class="entry-card" aria-label="Начать игру">
-          <div class="card-eyebrow">НОВАЯ ПАРТИЯ</div>
-          <h2>Начать играть</h2>
-          <p class="card-subtitle">Создай комнату или присоединись к братьям.</p>
-          <label class="input-label" for="nickname">Название королевства</label>
-          <input id="nickname" maxlength="18" autocomplete="nickname" placeholder="Например, Северный союз">
-          <button id="hostButton" class="primary large">Создать комнату <span aria-hidden="true">→</span></button>
-          <div class="split"><span>УЖЕ ЕСТЬ КОД?</span></div>
-          <div class="join-line"><input id="roomCode" maxlength="9" autocomplete="off" placeholder="Код комнаты" aria-label="Код комнаты"><button id="joinButton" class="secondary">Войти</button></div>
-          <div class="solo-options"><label for="soloBots">Соперники</label><select id="soloBots"><option value="2">2 · обучение</option><option value="4" selected>4 · стандарт</option><option value="7">7 · сложно</option><option value="10">10 · хаос</option></select></div><button id="demoButton" class="ghost large">Играть с ботами <span aria-hidden="true">↗</span></button>
-          <div class="card-foot">Бесплатно · Без регистрации · Браузерная игра</div>
-          <p id="lobbyError" class="error" role="alert"></p>
-        </section>
-      </main>
-    </div>
+    <main class="start-screen" aria-label="Главное меню">
+      <header class="start-brand">
+        <span class="start-emblem" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19V9l5 3 3-7 3 7 5-3v10H4Z M4 19h16"/></svg></span>
+        <div><strong>BROTHERS KINGDOMS</strong><small>Стратегия территорий</small></div>
+      </header>
+      <section class="start-actions" aria-label="Начать партию">
+        <h1>Начать игру</h1>
+        <button id="hostButton" class="start-choice start-choice-primary"><span class="choice-symbol" aria-hidden="true">♙</span><span><strong>Создать комнату</strong><small>Играть с братьями</small></span><span class="choice-arrow" aria-hidden="true">→</span></button>
+        <details id="joinDetails" class="join-details">
+          <summary class="start-choice"><span class="choice-symbol" aria-hidden="true">↗</span><span><strong>Присоединиться</strong><small>По коду комнаты</small></span><span class="choice-arrow" aria-hidden="true">⌄</span></summary>
+          <div class="join-inputs"><input id="roomCode" maxlength="9" autocomplete="off" placeholder="Код комнаты" aria-label="Код комнаты"><button id="joinButton" class="primary">Войти</button></div>
+        </details>
+        <button id="demoButton" class="start-choice"><span class="choice-symbol" aria-hidden="true">◇</span><span><strong>Играть с ботами</strong><small>Одиночный матч</small></span><span class="choice-arrow" aria-hidden="true">→</span></button>
+        <button id="resumeButton" class="start-choice hidden"><span class="choice-symbol" aria-hidden="true">↶</span><span><strong>Продолжить партию</strong><small>Последнее сохранение</small></span><span class="choice-arrow" aria-hidden="true">→</span></button>
+      </section>
+      <details class="start-settings" id="playerPreferences"><summary>Настройки игрока и матча <span aria-hidden="true">⌄</span></summary>
+        <label for="nickname">Имя королевства</label><input id="nickname" maxlength="18" autocomplete="nickname" placeholder="Королевство">
+        <label for="soloBots">Соперники в одиночной игре</label><select id="soloBots"><option value="2">2 — обучение</option><option selected value="4">4 — стандарт</option><option value="7">7 — сложно</option><option value="10">10 — хаос</option></select>
+      </details>
+      <p class="start-note">Захватывай земли, наращивай войска и первым получи 70% карты.</p>
+      <p id="lobbyError" class="error" role="alert"></p>
+    </main>
   </div>
   <div id="waiting" class="waiting-screen hidden"><section class="entry-card waiting-card">
     <div class="card-eyebrow">КОМНАТА СОЗДАНА</div><h2>Пригласи братьев</h2><p class="card-subtitle">Отправь им ссылку или код комнаты.</p>
     <div class="room-token"><strong id="showCode">------</strong><button id="copyCode" class="secondary">Код</button><button id="copyLink" class="secondary">Ссылка</button></div>
     <div id="waitingPlayers" class="waiting-players"></div>
+    <details id="roomSettings" class="room-settings"><summary>Параметры матча <span id="roomSettingsSummary">7 ботов · 12 минут</span></summary>
     <label class="input-label" for="botCount">Количество ботов</label>
-    <select id="botCount"><option value="0">Без ботов</option><option value="3">3 · спокойно</option><option selected value="7">7 · стандартно</option><option value="10">10 · напряжённо</option></select><label class="input-label" for="matchDuration">Длительность матча</label><select id="matchDuration"><option value="360">6 минут</option><option value="720" selected>12 минут</option><option value="1200">20 минут</option></select><label class="input-label" for="spawnChoice">Место появления</label><select id="spawnChoice"><option value="auto">Автоматически</option><option value="northwest">Северо-запад</option><option value="northeast">Северо-восток</option><option value="southwest">Юго-запад</option><option value="southeast">Юго-восток</option></select><button id="readyButton" class="secondary large hidden" aria-pressed="false">Готов</button><p id="roomRules" class="hint">Победа: захват 70% суши или лидерство по времени. Ведущий должен оставаться в игре.</p>
+    <select id="botCount"><option value="0">Без ботов</option><option value="3">3 · спокойно</option><option selected value="7">7 · стандартно</option><option value="10">10 · напряжённо</option></select><label class="input-label" for="matchDuration">Длительность матча</label><select id="matchDuration"><option value="360">6 минут</option><option value="720" selected>12 минут</option><option value="1200">20 минут</option></select><label class="input-label" for="spawnChoice">Место появления</label><select id="spawnChoice"><option value="auto">Автоматически</option><option value="northwest">Северо-запад</option><option value="northeast">Северо-восток</option><option value="southwest">Юго-запад</option><option value="southeast">Юго-восток</option></select></details>
+<button id="readyButton" class="secondary large hidden" aria-pressed="false">Готов</button><p id="roomRules" class="hint">Победа: 70% земли или лидерство по времени. Ведущий должен оставить вкладку открытой.</p>
     <button id="startButton" class="primary large">Начать матч <span aria-hidden="true">→</span></button>
-    <p class="card-foot" id="waitingHint">Можно играть даже одному.</p>
+    <p class="card-foot" id="waitingHint">Можно играть даже одному.</p><button id="leaveRoom" class="leave-room">Покинуть комнату</button>
   </section></div>
   <div id="game" class="game-screen hidden">
     <header class="topbar">
@@ -65,7 +64,7 @@
         <div class="map-toolbar">
           <div class="map-location"><span class="location-dot"></span><strong id="myKingdom" title="Название королевства">Королевство</strong><span id="mapStatus" aria-live="polite">Выбери цель на карте — отправь армию</span></div>
           <div class="map-toolbar-actions">
-            <button id="pauseGame" class="develop-button" title="Пауза в одиночной игре">Пауза</button><button id="helpButton" class="square-button" aria-label="Правила игры">?</button><button id="developButton" class="develop-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V9l9-6 9 6v12H3Z M9 21v-8h6v8"/></svg><span>Развитие</span></button>
+            <button id="pauseGame" class="develop-button" title="Пауза в одиночной игре">Пауза</button><button id="helpButton" class="square-button" aria-label="Правила игры">?</button><button id="armiesToggle" class="develop-button" title="Текущие наступления">Походы <span id="frontCountBadge">0</span></button><button id="developButton" class="develop-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V9l9-6 9 6v12H3Z M9 21v-8h6v8"/></svg><span>Развитие</span></button>
             <button id="zoomOut" class="square-button" title="Уменьшить" aria-label="Уменьшить"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
             <span id="zoomText" class="zoom-label">100%</span>
             <button id="zoomIn" class="square-button" title="Увеличить" aria-label="Увеличить"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
@@ -91,8 +90,8 @@
         <div class="sidebar-heading"><div><small>УПРАВЛЕНИЕ</small><strong>Развитие государства</strong></div><button id="closePanel" class="square-button" aria-label="Закрыть панель">×</button></div>
         <div class="tabbar" role="tablist" aria-label="Разделы развития"><button role="tab" aria-selected="true" data-tab="build" class="active">Здания</button><button role="tab" aria-selected="false" data-tab="tech">Наука</button><button role="tab" aria-selected="false" data-tab="diplomacy">Союзы</button><button role="tab" aria-selected="false" data-tab="info">Обзор</button></div>
         <div class="side-scroll">
-          <section id="tab-build" class="tab-content"><div class="section-head"><h2>Постройки</h2><p>Выбери здание, затем коснись своей территории.</p></div><div id="buildingsPanel" class="build-grid"></div></section>
-          <section id="tab-tech" class="tab-content hidden"><div class="section-head"><h2>Исследования</h2><p>Улучшения распространяются на всё государство.</p></div><div id="techPanel" class="tech-list"></div></section>
+          <section id="tab-build" class="tab-content"><div class="section-head"><h2>Здания</h2><p>Что они дают и сколько стоит построить.</p></div><div id="buildResourceSummary" class="resource-strip"></div><div id="buildingsPanel" class="build-grid"></div></section>
+          <section id="tab-tech" class="tab-content hidden"><div class="section-head"><h2>Исследования</h2><p>Улучшения распространяются на всё государство.</p></div><div id="techResourceSummary" class="resource-strip"></div><div id="techPanel" class="tech-list"></div></section>
           <section id="tab-diplomacy" class="tab-content hidden"><div class="section-head"><h2>Дипломатия</h2><p>Союзы и помощь соседям.</p></div><div id="diplomacyPanel" class="diplomacy-list"></div></section>
           <section id="tab-info" class="tab-content hidden"><div class="section-head"><h2>Статистика</h2></div><div id="infoPanel"></div><h3>События</h3><div id="events" class="events"></div><details class="instructions"><summary>Как играть</summary><p>Выбери процент армии и коснись нейтральной или вражеской земли. Нейтральная земля захватывается широкими слоями по всей доступной границе, пока хватает войск. Противника атакуют по общей границе с ним. Выжившие возвращаются. Победа — 70% суши, разгром остальных или лидерство через 12 минут.</p></details></section>
           <div class="selected-card"><div class="section-label">ВЫБРАННЫЙ ОБЪЕКТ</div><div id="selectedPanel" class="selected-body">Коснись армии или здания, чтобы открыть действия.</div></div>
@@ -100,10 +99,10 @@
         <div class="leaderboard"><div class="section-label">ЛИДЕРЫ</div><div id="leaderboard"></div></div>
       </aside>
     </main>
-    <div id="quickLeadersPanel" class="quick-leaders hidden" role="dialog" aria-label="Таблица лидеров"><strong>Лидеры мира</strong><div id="quickLeadersList"></div><button id="closeQuickLeaders" class="secondary">Закрыть</button></div><div id="contextCard" class="context-card hidden"><button id="closeContext" class="context-close" aria-label="Закрыть карточку">×</button><div id="contextBody"></div></div><div id="economyPanel" class="economy-panel hidden" role="dialog" aria-label="Экономика"><strong>Экономика</strong><div id="economyDetails"></div><button id="pauseMobile" class="secondary">Пауза (одиночная игра)</button><button id="nextFront" class="secondary">К следующей армии</button><button id="quickLeaders" class="secondary">Таблица лидеров</button><button id="closeEconomy" class="secondary">Закрыть</button></div><div id="tutorial" class="tutorial hidden" role="dialog" aria-modal="true" aria-label="Как играть"><section><h2>Как играть</h2><p><b>1.</b> Коснись чужой или нейтральной земли, чтобы выбрать цель.</p><p><b>2.</b> Выбери долю войск и нажми «Атаковать»; повторное касание цели тоже подтверждает. На телефоне удержи свою землю и проведи к цели.</p><p><b>3.</b> Накопленные войска защищают границы. Развивай экономику в меню.</p><p>Перетаскивай карту пальцем, приближай двумя пальцами. Цель — 70% суши или лидерство по окончании времени.</p><button id="closeTutorial" class="primary large">Понятно</button></section></div><div id="victory" class="victory-screen hidden"><section><div class="card-eyebrow">МАТЧ ЗАВЕРШЁН</div><h1 id="victoryName">Победа</h1><p id="victoryDesc"></p><div id="victoryStats"></div><button id="restart" class="primary large">Новая игра</button><button id="downloadSave" class="secondary">Сохранить итог матча</button></section></div>
+    <div id="quickLeadersPanel" class="quick-leaders hidden" role="dialog" aria-label="Таблица лидеров"><strong>Лидеры мира</strong><div id="quickLeadersList"></div><button id="closeQuickLeaders" class="secondary">Закрыть</button></div><div id="contextCard" class="context-card hidden"><button id="closeContext" class="context-close" aria-label="Закрыть карточку">×</button><div id="contextBody"></div></div><div id="armiesPanel" class="armies-panel hidden" role="dialog" aria-label="Текущие походы"><div class="armies-panel-head"><strong>Мои походы</strong><button id="closeArmies" class="square-button" aria-label="Закрыть список походов">×</button></div><div id="armiesList"></div></div><div id="economyPanel" class="economy-panel hidden" role="dialog" aria-label="Экономика"><strong>Экономика</strong><div id="economyDetails"></div><button id="pauseMobile" class="secondary">Пауза (одиночная игра)</button><button id="nextFront" class="secondary">К следующей армии</button><button id="quickLeaders" class="secondary">Таблица лидеров</button><button id="closeEconomy" class="secondary">Закрыть</button></div><div id="tutorial" class="tutorial hidden" role="dialog" aria-modal="true" aria-label="Как играть"><section><h2>Как играть</h2><p><b>1.</b> Коснись чужой или нейтральной земли, чтобы выбрать цель.</p><p><b>2.</b> Выбери долю войск и нажми «Атаковать»; повторное касание цели тоже подтверждает. На телефоне удержи свою землю и проведи к цели.</p><p><b>3.</b> Накопленные войска защищают границы. Развивай экономику в меню.</p><p>Перетаскивай карту пальцем, приближай двумя пальцами. Цель — 70% суши или лидерство по окончании времени.</p><button id="closeTutorial" class="primary large">Понятно</button></section></div><div id="victory" class="victory-screen hidden"><section><div class="card-eyebrow">МАТЧ ЗАВЕРШЁН</div><h1 id="victoryName">Победа</h1><p id="victoryDesc"></p><div id="victoryStats"></div><button id="restart" class="primary large">Новая игра</button><details class="result-export"><summary>Дополнительно</summary><button id="downloadSave" class="secondary">Скачать статистику</button></details></section></div>
   </div>
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div><div id="gameError" class="sr-only" role="alert"></div>
-  <script src="engine.js?v=8"></script>
+  <script src="engine.js?v=9"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="game.js?v=8"></script>
+  <script src="game.js?v=9"></script>
 </body></html>
