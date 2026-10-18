@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#0d2130">
   <meta name="description" content="Brothers Kingdoms — стратегия за территорию в реальном времени. Играй с братьями или против ботов.">
   <title>Brothers Kingdoms · Frontline</title>
-  <link rel="stylesheet" href="style.css?v=9">
-  <link rel="stylesheet" href="frontline-v7.css?v=9"><link rel="stylesheet" href="refined-v9.css?v=9">
+  <link rel="stylesheet" href="style.css?v=10">
+  <link rel="stylesheet" href="frontline-v7.css?v=10"><link rel="stylesheet" href="refined-v9.css?v=10"><link rel="stylesheet" href="hud-v10.css?v=10">
 </head>
 <body>
   <div id="lobby" class="lobby-screen">
@@ -54,8 +54,8 @@
         <div><span>КАМЕНЬ</span><b id="resStone">0</b><small id="incStone">+0</small></div>
         <div><span>ЗОЛОТО</span><b id="resGold">0</b><small id="incGold">+0</small></div>
       </div>
-      <div class="top-stat troop-stat"><span>ВОЙСКА</span><b id="troopCount">0</b><small id="troopCap">/0</small><small id="troopGrowth">+0/с</small></div>
-      <div class="top-stat land-stat"><span>ТЕРРИТОРИЯ</span><b id="landCount">0</b><small id="landShare">0%</small></div>
+      <div class="top-stat troop-stat" id="hudTroops" title="Войска в резерве"><span>ВОЙСКА</span><b id="troopCount">0</b><small id="troopGrowth">+0/с</small><small id="troopReason" class="troop-reason hidden"></small><small id="troopCap" class="stat-aux">/0</small></div>
+      <div class="top-stat land-stat" title="Процент захваченной земли"><span>ТЕРРИТОРИЯ</span><b id="landCount">0%</b><small id="landShare">цель 70%</small><div class="land-progress" aria-hidden="true"><i id="landProgress"></i></div></div>
       <div class="top-stat clock-stat"><span>ВРЕМЯ</span><b id="timeLeft">12:00</b><small id="networkStatus">ОНЛАЙН</small></div><button id="economyToggle" class="square-button" aria-label="Показать ресурсы" title="Ресурсы">◎</button>
       <button id="menuToggle" class="square-button mobile-menu" aria-label="Меню развития"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     </header>
@@ -75,10 +75,10 @@
         <div class="map-view" id="mapView">
           <canvas id="mapCanvas" tabindex="0" role="application" aria-label="Карта государств. Стрелки передвигают курсор, Enter выбирает цель."></canvas><div id="keyboardPosition" class="sr-only" aria-live="polite"></div>
           <div class="map-hint" id="mapHint">Нейтральная земля — широкий фронт · Сосед — атака по границе</div>
-          <div id="mapTooltip" class="map-tooltip hidden"></div><div id="mapStatusMobile" class="map-status-mobile hidden" aria-live="polite"></div><ul id="accessibleObjects" class="sr-only" aria-label="Доступные объекты карты"></ul>
+          <button id="hudAlert" class="hud-alert hidden" type="button" aria-live="polite"><span id="hudAlertIcon" aria-hidden="true">!</span><span id="hudAlertText"></span><span aria-hidden="true">›</span></button><div id="mapTooltip" class="map-tooltip hidden"></div><div id="mapStatusMobile" class="map-status-mobile hidden" aria-live="polite"></div><ul id="accessibleObjects" class="sr-only" aria-label="Доступные объекты карты"></ul>
           <div class="minimap-wrap" id="minimapWrap"><button id="minimapToggle" aria-label="Скрыть миникарту" aria-expanded="true">Мир <span>−</span></button><canvas id="minimap" tabindex="0" width="160" height="104" role="button" aria-label="Миникарта, Enter переместиться к центру мира"></canvas></div>
-          <div id="targetPreview" class="target-preview hidden" aria-live="polite"><div class="target-info"><strong id="targetTitle">Цель</strong><span id="targetDetail">Выбери территорию</span><span id="targetForecast">—</span></div><div id="targetQuickPercents" class="target-quick-percents" role="group" aria-label="Размер армии"><button data-target-percent="15">15%</button><button data-target-percent="30" class="active">30%</button><button data-target-percent="50">50%</button><button data-target-percent="75">75%</button><button data-target-percent="95">95%</button></div><div class="target-actions"><button id="cancelTarget" class="secondary">Отмена</button><button id="confirmTarget" class="primary">Отправить войска</button></div></div><div class="map-battle-controls" id="battleDock"><button id="dockToggle" class="dock-toggle" aria-expanded="true">Армия <span id="dockSummary">30%</span> <span aria-hidden="true">⌃</span></button>
-            <div class="control-header"><div><small>ОТПРАВКА АРМИИ</small><strong id="modeLabel">Наступление</strong></div><div class="percent-pill" id="percentLabel">30%</div></div>
+          <div id="targetPreview" class="target-preview hidden" aria-live="polite"><div class="target-info"><strong id="targetTitle">Цель</strong><span id="targetDetail">Выбери территорию</span><span id="targetForecast">—</span></div><div id="targetQuickPercents" class="target-quick-percents" role="group" aria-label="Размер армии"><button data-target-percent="15">15%</button><button data-target-percent="30" class="active">30%</button><button data-target-percent="50">50%</button><button data-target-percent="75">75%</button><button data-target-percent="95">95%</button></div><div class="target-actions"><button id="cancelTarget" class="secondary">Отмена</button><button id="confirmTarget" class="primary">Отправить войска</button></div></div><div class="map-battle-controls collapsed" id="battleDock"><button id="dockToggle" class="dock-toggle" aria-expanded="false" aria-label="Настроить долю армии">Атака <span id="dockSummary">30%</span> <span class="dock-chevron" aria-hidden="true">⌄</span></button>
+            <div class="control-header"><div><small>РАЗМЕР АТАКИ</small><strong id="modeLabel">Наступление</strong></div><div class="percent-pill" id="percentLabel">30%</div></div>
             <input id="attackPercent" aria-label="Процент отправляемых войск" type="range" min="5" max="95" value="30" step="5">
             <div class="attack-presets"><button data-percent="15">15%</button><button data-percent="30" class="active">30%</button><button data-percent="50">50%</button><button data-percent="75">75%</button><button data-percent="95">95%</button></div>
             <div id="attackNumbers" class="attack-numbers">Будет отправлено: <b id="sendingTroops">0</b> · Останется: <b id="remainingTroops">0</b> · Походы: <b id="activeArmies">0/12</b></div><p id="actionHint">Коснись цели или удержи свою землю и проведи к ней.</p>
@@ -102,7 +102,7 @@
     <div id="quickLeadersPanel" class="quick-leaders hidden" role="dialog" aria-label="Таблица лидеров"><strong>Лидеры мира</strong><div id="quickLeadersList"></div><button id="closeQuickLeaders" class="secondary">Закрыть</button></div><div id="contextCard" class="context-card hidden"><button id="closeContext" class="context-close" aria-label="Закрыть карточку">×</button><div id="contextBody"></div></div><div id="armiesPanel" class="armies-panel hidden" role="dialog" aria-label="Текущие походы"><div class="armies-panel-head"><strong>Мои походы</strong><button id="closeArmies" class="square-button" aria-label="Закрыть список походов">×</button></div><div id="armiesList"></div></div><div id="economyPanel" class="economy-panel hidden" role="dialog" aria-label="Экономика"><strong>Экономика</strong><div id="economyDetails"></div><button id="pauseMobile" class="secondary">Пауза (одиночная игра)</button><button id="nextFront" class="secondary">К следующей армии</button><button id="quickLeaders" class="secondary">Таблица лидеров</button><button id="closeEconomy" class="secondary">Закрыть</button></div><div id="tutorial" class="tutorial hidden" role="dialog" aria-modal="true" aria-label="Как играть"><section><h2>Как играть</h2><p><b>1.</b> Коснись чужой или нейтральной земли, чтобы выбрать цель.</p><p><b>2.</b> Выбери долю войск и нажми «Атаковать»; повторное касание цели тоже подтверждает. На телефоне удержи свою землю и проведи к цели.</p><p><b>3.</b> Накопленные войска защищают границы. Развивай экономику в меню.</p><p>Перетаскивай карту пальцем, приближай двумя пальцами. Цель — 70% суши или лидерство по окончании времени.</p><button id="closeTutorial" class="primary large">Понятно</button></section></div><div id="victory" class="victory-screen hidden"><section><div class="card-eyebrow">МАТЧ ЗАВЕРШЁН</div><h1 id="victoryName">Победа</h1><p id="victoryDesc"></p><div id="victoryStats"></div><button id="restart" class="primary large">Новая игра</button><details class="result-export"><summary>Дополнительно</summary><button id="downloadSave" class="secondary">Скачать статистику</button></details></section></div>
   </div>
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div><div id="gameError" class="sr-only" role="alert"></div>
-  <script src="engine.js?v=9"></script>
+  <script src="engine.js?v=10"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="game.js?v=9"></script>
+  <script src="game.js?v=10"></script>
 </body></html>

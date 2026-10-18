@@ -172,7 +172,7 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Матч 
    return {ok:false,error:targetOwner?'Сначала выйди к границе этого противника.':'Нет общей границы с доступной нейтральной землёй.'};
   }
   p.troops-=strength;
-  s.armies.push({id:'a'+(++s.nonce),owner:id,x:src.x,y:src.y,ox:src.x,oy:src.y,tx,ty,targetOwner,strength,naval,landing,turns:0,stuck:0});
+  s.armies.push({id:'a'+(++s.nonce),owner:id,x:src.x,y:src.y,ox:src.x,oy:src.y,tx,ty,targetOwner,strength,initialStrength:strength,captured:0,naval,landing,turns:0,stuck:0});
   return {ok:true};
  }
  if(a.type==='redirect'){
@@ -233,7 +233,7 @@ function capture(s,a,x,y){const old=owner(s,x,y),p=person(s,a.owner);if(old===a.
  cost*=1-.08*p.tech.logistics;
  if(a.strength<cost)return false;a.strength-=cost;
  if(old){const def=person(s,old);def.troops=Math.max(0,def.troops-Math.max(0.8,cost*.43));}
- gainTile(s,x,y,p.id);
+ gainTile(s,x,y,p.id);a.captured=(a.captured||0)+1;
  const b=buildingAt(s,x,y);
  if(b&&b.owner!==p.id){if(b.kind==='capital'){takeCapital(s,p.id,b.owner);b.kind='city';}b.owner=p.id;b.level=Math.max(1,b.level-1);}
  return true;
