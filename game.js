@@ -9,7 +9,7 @@ const textTech={economy:'Увеличивает производство все�
 const costText=c=>Object.entries(c||{}).map(([k,v])=>({wood:'Д',stone:'К',gold:'З',food:'Е'}[k]||k)+': '+v).join(' · ');
 const number=n=>Math.floor(n||0).toLocaleString('ru-RU');
 let state=null,myId=null,host=false,demo=false,peer=null,upstream=null,code='',connections=new Map(),lastSendTime=new Map(),phaseShown='',timer=0;
-let zoom=1.65,camX=0,camY=0,terrainSeed=null,pressed=new Map(),pointerStart=null,gesture=null,selected=null,buildMode=null,currentTab='build',percent=30,tooltipTimer=null,terrainLayer=null,ownershipLayer=null,renderQueued=false,panelOpen=false;let toastTimeout=null;
+let zoom=1.05,camX=0,camY=0,terrainSeed=null,pressed=new Map(),pointerStart=null,gesture=null,selected=null,buildMode=null,currentTab='build',percent=30,tooltipTimer=null,worldLayer=null,paintedRevision=-1,miniRevision=-1,renderQueued=false,panelOpen=false;let toastTimeout=null;
 const TILE=14;const mine=()=>state?.players.find(p=>p.id===myId);const color=id=>state?.players.find(p=>p.id===id)?.color||'#e8f3f3';
 function toast(msg){const t=$('toast');t.textContent=msg;t.classList.remove('hidden');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.classList.add('hidden'),3200);}
 function show(screen){for(const name of ['lobby','waiting','game'])$(name).classList.toggle('hidden',name!==screen);if(screen==='game')setTimeout(resize,10);}
@@ -19,8 +19,8 @@ function randomCode(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',v=new Uint8
 function urlRoom(){return location.origin+location.pathname+'#'+code;}
 function compress(arr){let chunks=[];for(let i=0;i<arr.length;i+=8192)chunks.push(String.fromCharCode(...arr.slice(i,i+8192)));return btoa(chunks.join(''));}
 function expand(str){const raw=atob(str),out=new Array(raw.length);for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);return out;}
-function pack(s){if(!s||!s.owners?.length)return s;return {...s,tiles:compress(s.tiles),owners:compress(s.owners),packed:true};}
-function unpack(s){if(s?.packed){s.tiles=expand(s.tiles);s.owners=expand(s.owners);delete s.packed;}return s;}
+function pack(s,includeTerrain=true){if(!s||!s.owners?.length)return s;return {...s,tiles:includeTerrain?compress(s.tiles):null,owners:compress(s.owners),packed:true};}
+function unpack(s){if(s?.packed){s.tiles=s.tiles?expand(s.tiles):(state?.tiles||[]);s.owners=expand(s.owners);delete s.packed;}return s;}
 function getPeer(){if(window.Peer)return true;error('Не загрузилась библиотека PeerJS. Проверь интернет.');return false;}
 function createRoom(){if(!getPeer())return;code=randomCode();host=true;demo=false;peer=new Peer('bk-'+code);$('networkStatus').textContent='ПОДКЛЮЧЕНИЕ…';
  peer.on('open',()=>{state=E.lobby(Date.now());myId=E.addPlayer(state,name());$('networkStatus').textContent='● ВЕДУЩИЙ';history.replaceState(null,'','#'+code);phaseShown='';render();});
@@ -39,16 +39,16 @@ function joinConnection(conn){conn.on('data',m=>{if(!m||typeof m!=='object')retu
  if(m.t==='join'){
   if(connections.has(conn))return;
   const id=E.addPlayer(state,m.name);if(!id){conn.send({t:'error',message:'Комната заполнена или матч уже идёт.'});return;}
-  connections.set(conn,id);conn.send({t:'welcome',id,state:pack(state)});broadcast();
+  connections.set(conn,id);conn.send({t:'welcome',id,state:pack(state)});broadcast(false);
  }else if(m.t==='action'){
   const id=connections.get(conn);if(!id)return;
   const now=Date.now();if(now-(lastSendTime.get(conn)||0)<90)return;lastSendTime.set(conn,now);
   const result=E.action(state,id,m.action);if(!result.ok)conn.send({t:'error',message:result.error});else broadcast();
  }
  });conn.on('close',()=>{connections.delete(conn);lastSendTime.delete(conn);toast('Один из игроков покинул комнату.');});}
-function broadcast(){if(!state)return;const packed=pack(state);for(const c of connections.keys())if(c.open){try{c.send({t:'state',state:packed});}catch(_){}}render();}
-function createDemo(){host=true;demo=true;code='DEMO';state=E.lobby(Date.now());myId=E.addPlayer(state,name());E.start(state,7);phaseShown='';$('networkStatus').textContent='● ОДИНОЧНАЯ ИГРА';render();}
-function startGame(){if(!host)return;const res=E.start(state,Number($('botCount').value));if(!res.ok)return toast(res.error);broadcast();}
+function broadcast(includeTerrain=false){if(!state)return;const packed=pack(state,includeTerrain);for(const c of connections.keys())if(c.open){try{c.send({t:'state',state:packed});}catch(_){}}render();}
+function createDemo(){worldLayer=null;paintedRevision=-1;host=true;demo=true;code='DEMO';state=E.lobby(Date.now());myId=E.addPlayer(state,name());E.start(state,7);phaseShown='';$('networkStatus').textContent='● ОДИНОЧНАЯ ИГРА';render();}
+function startGame(){if(!host)return;const res=E.start(state,Number($('botCount').value));if(!res.ok)return toast(res.error);broadcast(true);}
 function command(a){if(!state||state.phase!=='playing')return;
  if(host){const r=E.action(state,myId,a);if(!r.ok)toast(r.error);else broadcast();}
  else if(upstream?.open){upstream.send({t:'action',action:a});}else toast('Нет связи с комнатой.');}
@@ -61,7 +61,7 @@ function render(){if(!state)return;
   phaseShown='lobby';return;
  }
  if(phaseShown!=='playing'&&phaseShown!=='ended'){
-  show('game');phaseShown='playing';resize();centerOnCapital();
+  show('game');phaseShown='playing';zoom=window.innerWidth<600?0.82:1.1;resize();centerOnCapital();
  }else if(phaseShown==='ended'&&state.phase==='playing'){phaseShown='playing';}
  updateUI();repaintWorld();queueDraw();
  if(state.phase==='ended'&&phaseShown!=='ended'){
@@ -74,7 +74,7 @@ function render(){if(!state)return;
 function updateUI(){const p=mine();if(!p)return;
  for(const r of ['food','wood','stone','gold']){$('res'+r[0].toUpperCase()+r.slice(1)).textContent=number(p.res[r]);$('inc'+r[0].toUpperCase()+r.slice(1)).textContent='+'+number(p.income?.[r]);}
  $('troopCount').textContent=number(p.troops);$('troopCap').textContent='/ '+number(p.troopCap);
- const sec=Math.max(0,state.duration-state.tick);$('timeLeft').textContent=String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');
+ const sec=Math.max(0,state.duration-state.tick);$('timeLeft').textContent=String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');$('landCount').textContent=number(p.land);$('landShare').textContent=(p.land/Math.max(1,state.landTotal)*100).toFixed(1)+'%';
  $('myKingdom').textContent=p.name.toUpperCase()+ (p.eliminated?' · РАЗГРОМЛЕНО':'');$('myKingdom').style.color=p.color;
  const top=[...state.players].filter(p=>p.land>0).sort((a,b)=>b.land-a.land);
  $('leaderboard').innerHTML=top.slice(0,9).map((v,i)=>`<div class="leader-row"><span>${i+1}.</span><i class="player-dot" style="background:${v.color}"></i><span class="leader-name">${esc(v.name)}${v.bot?' · AI':''}</span><div class="bar"><i style="width:${Math.max(3,v.land/Math.max(1,top[0].land)*100)}%;background:${v.color}"></i></div><div>${number(v.land)}</div></div>`).join('');
@@ -96,24 +96,27 @@ function updateSelection(){const p=mine(),item=selected?.kind==='army'?state.arm
  if(selected.kind==='army')box.innerHTML=`<strong>⚔ Отряд ${esc(op?.name||'')}</strong><div>Солдаты: ${number(item.strength)}</div><div>Цель: ${item.tx}, ${item.ty}</div>${own?'<button data-retreat="'+esc(item.id)+'">ВЕРНУТЬ В СТОЛИЦУ</button><div>Чтобы сменить цель, нажми на другую клетку карты.</div>':''}`;
  else box.innerHTML=`<strong>${symbols[item.kind]} ${esc(E.KINDS[item.kind]?.name||'Столица')}</strong><div>Владелец: ${esc(op?.name||'')}</div><div>Уровень: ${item.level}/4</div>${own?`<button data-upgrade="${esc(item.id)}" ${item.level>=4?'disabled':''}>${item.level>=4?'МАКС. УРОВЕНЬ':'УЛУЧШИТЬ · '+costText(E.costUpgrade(item))}</button>`:''}`;
 }
-$('buildingsPanel').addEventListener('click',e=>{const b=e.target.closest('[data-build]');if(!b)return;buildMode=buildMode===b.dataset.build?null:b.dataset.build;selected=null;$('cancelMode').classList.toggle('hidden',!buildMode);$('modeLabel').textContent=buildMode?'⌂ Строительство: '+E.KINDS[buildMode].name:'⚔ Отправить войска';$('actionHint').textContent=buildMode?'Нажми на свою землю для строительства.':'Нажми на цель на карте для похода.';updateUI();});
+$('buildingsPanel').addEventListener('click',e=>{const b=e.target.closest('[data-build]');if(!b)return;buildMode=buildMode===b.dataset.build?null:b.dataset.build;selected=null;$('cancelMode').classList.toggle('hidden',!buildMode);$('modeLabel').textContent=buildMode?'⌂ Строительство: '+E.KINDS[buildMode].name:'⚔ Отправить войска';$('actionHint').textContent=buildMode?'Нажми на свою землю для строительства.':'Нажми на цель на карте для похода.';updateUI();if(buildMode&&window.innerWidth<871){panelOpen=false;$('sidebar').classList.remove('open');}});
 $('techPanel').addEventListener('click',e=>{const b=e.target.closest('[data-research]');if(b)command({type:'research',key:b.dataset.research});});
 $('diplomacyPanel').addEventListener('click',e=>{const b=e.target.closest('[data-ally]'),d=e.target.closest('[data-donate]');if(b)command({type:'diplomacy',target:Number(b.dataset.ally)});if(d)command({type:'donate',target:Number(d.dataset.donate),amount:100,resource:'gold'});});
 $('selectedPanel').addEventListener('click',e=>{const b=e.target.closest('[data-upgrade]'),r=e.target.closest('[data-retreat]');if(b)command({type:'upgrade',id:b.dataset.upgrade});if(r)command({type:'return',id:r.dataset.retreat});});
 for(const b of document.querySelectorAll('[data-tab]'))b.onclick=()=>{currentTab=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(t=>t.classList.toggle('active',t===b));document.querySelectorAll('.tab-content').forEach(t=>t.classList.toggle('hidden',t.id!=='tab-'+currentTab));updateUI();};
 $('menuToggle').onclick=()=>{panelOpen=!panelOpen;$('sidebar').classList.toggle('open',panelOpen);};
+$('developButton').onclick=()=>{panelOpen=!panelOpen;$('sidebar').classList.toggle('open',panelOpen);};
+$('closePanel').onclick=()=>{panelOpen=false;$('sidebar').classList.remove('open');};
 $('attackPercent').oninput=e=>{percent=Number(e.target.value);$('percentLabel').textContent=percent+'%';document.querySelectorAll('[data-percent]').forEach(t=>t.classList.toggle('active',Number(t.dataset.percent)===percent));};
 for(const b of document.querySelectorAll('[data-percent]'))b.onclick=()=>{$('attackPercent').value=b.dataset.percent;$('attackPercent').oninput({target:$('attackPercent')});};
 $('cancelMode').onclick=cancelMode;function cancelMode(){buildMode=null;$('modeLabel').textContent='⚔ Отправить войска';$('actionHint').textContent='Нажми на цель на карте для похода.';$('cancelMode').classList.add('hidden');updateUI();}
-function resize(){const rect=canvas.getBoundingClientRect();if(rect.width<1)return;const dpr=Math.min(2,devicePixelRatio||1);const w=Math.round(rect.width*dpr),h=Math.round(rect.height*dpr);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;queueDraw();}}
+function resize(){const rect=canvas.getBoundingClientRect();if(rect.width<1)return;const dpr=Math.min(window.innerWidth<900?1:1.5,devicePixelRatio||1);const w=Math.round(rect.width*dpr),h=Math.round(rect.height*dpr);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;queueDraw();}}
 function centerOnCapital(){const p=mine();if(!p?.capital)return;const c=p.capital;const r=canvas.getBoundingClientRect();camX=r.width/2-(c.x+.5)*TILE*zoom;camY=r.height/2-(c.y+.5)*TILE*zoom;clampCamera();queueDraw();}
 function clampCamera(){const rect=canvas.getBoundingClientRect();camX=Math.min(70,Math.max(rect.width-E.W*TILE*zoom-70,camX));camY=Math.min(70,Math.max(rect.height-E.H*TILE*zoom-70,camY));}
-function zoomAt(factor,cx,cy){const old=zoom;zoom=Math.max(.52,Math.min(5,zoom*factor));camX=cx-(cx-camX)*zoom/old;camY=cy-(cy-camY)*zoom/old;clampCamera();$('zoomText').textContent=Math.round(zoom*100)+'%';queueDraw();}
+function zoomAt(factor,cx,cy){const old=zoom;zoom=Math.max(.14,Math.min(5,zoom*factor));camX=cx-(cx-camX)*zoom/old;camY=cy-(cy-camY)*zoom/old;clampCamera();$('zoomText').textContent=Math.round(zoom*100)+'%';queueDraw();}
 function pixelAt(clientX,clientY){const r=canvas.getBoundingClientRect();return {x:clientX-r.left,y:clientY-r.top};}
 function gridAt(clientX,clientY){const p=pixelAt(clientX,clientY);return {x:Math.floor((p.x-camX)/(TILE*zoom)),y:Math.floor((p.y-camY)/(TILE*zoom))};}
 function selectMap(clientX,clientY){if(state?.phase!=='playing'||mine()?.eliminated)return;const p=gridAt(clientX,clientY);if(!E.inside(p.x,p.y))return;
  const b=E.buildingAt(state,p.x,p.y),a=E.armiesAt(state,p.x,p.y).find(a=>a.owner===myId)||E.armiesAt(state,p.x,p.y)[0];
  if(buildMode){if(E.owner(state,p.x,p.y)!==myId){toast('Строить можно только на собственной территории.');return;}command({type:'build',kind:buildMode,x:p.x,y:p.y});cancelMode();return;}
+ if(selected?.kind==='army'&&state.armies.some(v=>v.id===selected.id&&v.owner===myId)&&(!a||a.id!==selected.id)){command({type:'redirect',id:selected.id,x:p.x,y:p.y});selected=null;updateSelection();queueDraw();return;}
  if(a&&a.owner===myId){selected={kind:'army',id:a.id};updateSelection();queueDraw();return;}
  if(b){selected={kind:'building',id:b.id};updateSelection();queueDraw();if(b.owner===myId)return;}
  if(selected?.kind==='army'&&state.armies.some(a=>a.id===selected.id&&a.owner===myId)){command({type:'redirect',id:selected.id,x:p.x,y:p.y});selected=null;return;}
@@ -129,33 +132,50 @@ function onPointerMove(e){if(!pressed.has(e.pointerId))return;pressed.set(e.poin
 function onPointerUp(e){const was=pointerStart;const touch=pressed.size;pressed.delete(e.pointerId);if(touch===1){pointerStart=null;if(was&&!was.moved)selectMap(e.clientX,e.clientY);}else{pointerStart=null;gesture=null;}}
 canvas.addEventListener('pointerdown',onPointerDown);canvas.addEventListener('pointermove',onPointerMove);canvas.addEventListener('pointerup',onPointerUp);canvas.addEventListener('pointercancel',e=>{pressed.delete(e.pointerId);pointerStart=null;gesture=null;});
 canvas.addEventListener('wheel',e=>{e.preventDefault();const p=pixelAt(e.clientX,e.clientY);zoomAt(e.deltaY<0?1.13:.885,p.x,p.y);},{passive:false});canvas.addEventListener('contextmenu',e=>e.preventDefault());
-$('zoomIn').onclick=()=>zoomAt(1.24,canvas.clientWidth/2,canvas.clientHeight/2);$('zoomOut').onclick=()=>zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);$('centerMap').onclick=centerOnCapital;
+$('zoomIn').onclick=()=>zoomAt(1.24,canvas.clientWidth/2,canvas.clientHeight/2);$('zoomOut').onclick=()=>zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);$('viewAll').onclick=()=>{zoom=Math.min((canvas.clientWidth-16)/(E.W*TILE),(canvas.clientHeight-16)/(E.H*TILE));camX=(canvas.clientWidth-E.W*TILE*zoom)/2;camY=(canvas.clientHeight-E.H*TILE*zoom)/2;$('zoomText').textContent=Math.round(zoom*100)+'%';queueDraw();};$('centerMap').onclick=()=>{zoom=window.innerWidth<650?.82:1.1;centerOnCapital();};
 mini.addEventListener('pointerdown',e=>{const r=mini.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*E.W,y=(e.clientY-r.top)/r.height*E.H;camX=canvas.clientWidth/2-x*TILE*zoom;camY=canvas.clientHeight/2-y*TILE*zoom;clampCamera();queueDraw();});
-function buildTerrain(){if(!state?.tiles.length)return;terrainLayer=document.createElement('canvas');terrainLayer.width=E.W*TILE;terrainLayer.height=E.H*TILE;const c=terrainLayer.getContext('2d');
- const palette=['#235574','#52735d','#2b6156','#687064','#719c6e','#88774a','#657482'];
- for(let y=0;y<E.H;y++)for(let x=0;x<E.W;x++){
-  const t=E.tile(state,x,y),xx=x*TILE,yy=y*TILE;c.fillStyle=palette[t];c.fillRect(xx,yy,TILE,TILE);
-  const h=(x*183+y*97+x*y*3)%17;if(t===0){if(h<3){c.fillStyle='#447f96';c.fillRect(xx+4,yy+6,5,1);}continue;}
-  if(t===2){c.fillStyle='#1a5247';c.beginPath();c.arc(xx+5,yy+5,4,0,Math.PI*2);c.arc(xx+10,yy+9,3,0,Math.PI*2);c.fill();}
-  if(t===3||t===6){c.fillStyle=t===6?'#b3b9a3':'#939986';c.beginPath();c.moveTo(xx+3,yy+11);c.lineTo(xx+8,yy+3);c.lineTo(xx+13,yy+12);c.closePath();c.fill();}
-  if(t===5){c.fillStyle='#edcb6b';c.fillRect(xx+6,yy+5,3,3);}
-  if(t===4&&h<4){c.fillStyle='#aedc85';c.fillRect(xx+3,yy+6,2,4);}
+// Low-resolution territory bitmap: one pixel per world tile. The GPU enlarges it.
+// It is updated only when a territory changes, NOT once per animation frame.
+const TERRAIN_RGB=[[24,64,91],[59,100,77],[36,87,71],[96,104,90],[86,120,83],[118,105,72],[115,121,123]];
+let minimapCached=null;
+function repaintWorld(){
+ if(!state?.owners?.length||!state?.tiles?.length)return;
+ const revision=state.territoryRevision??state.tick;
+ if(worldLayer&&paintedRevision===revision&&terrainSeed===state.seed)return;
+ if(!worldLayer){worldLayer=document.createElement('canvas');worldLayer.width=E.W;worldLayer.height=E.H;}
+ const c=worldLayer.getContext('2d',{alpha:false});const img=c.createImageData(E.W,E.H);
+ const colors=state.players.map(p=>{const x=parseInt(p.color.slice(1),16);return[(x>>>16)&255,(x>>>8)&255,x&255];});
+ const owners=state.owners,tiles=state.tiles,d=img.data;
+ for(let i=0;i<owners.length;i++){
+  const terr=TERRAIN_RGB[tiles[i]]||TERRAIN_RGB[1],id=owners[i],col=id?colors[id-1]:null;
+  const p=i*4;
+  // Tint occupied tiles heavily for readable borders at every zoom level.
+  const k=col ? 0.75 : 0;
+  const noise=(i*13+(i/E.W|0)*7)%5-2;
+  d[p]=Math.max(0,Math.min(255,Math.round(terr[0]*(1-k)+(col?.[0]||0)*k+noise)));
+  d[p+1]=Math.max(0,Math.min(255,Math.round(terr[1]*(1-k)+(col?.[1]||0)*k+noise)));
+  d[p+2]=Math.max(0,Math.min(255,Math.round(terr[2]*(1-k)+(col?.[2]||0)*k+noise)));
+  d[p+3]=255;
  }
-}
-function repaintWorld(){if(!state?.owners.length)return;if(!terrainLayer||terrainSeed!==state.seed){buildTerrain();terrainSeed=state.seed;}
- ownershipLayer=document.createElement('canvas');ownershipLayer.width=E.W*TILE;ownershipLayer.height=E.H*TILE;const c=ownershipLayer.getContext('2d');
- const col=state.players.map(p=>p.color);const fillById=new Map(state.players.map(p=>[p.id,hexAlpha(p.color,.55)]));
- for(let y=0;y<E.H;y++)for(let x=0;x<E.W;x++){
-  const id=state.owners[y*E.W+x];if(!id)continue;const xx=x*TILE,yy=y*TILE;c.fillStyle=fillById.get(id)||'#ffffff77';c.fillRect(xx,yy,TILE,TILE);
-  c.strokeStyle=col[id-1]||'#fff';c.lineWidth=1.5;
-  if(x===0||state.owners[y*E.W+x-1]!==id){c.beginPath();c.moveTo(xx+.8,yy);c.lineTo(xx+.8,yy+TILE);c.stroke();}
-  if(y===0||state.owners[(y-1)*E.W+x]!==id){c.beginPath();c.moveTo(xx,yy+.8);c.lineTo(xx+TILE,yy+.8);c.stroke();}
- }
+ c.putImageData(img,0,0);terrainSeed=state.seed;paintedRevision=revision;miniRevision=-1;
 }
 function hexAlpha(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;}
 function queueDraw(){if(renderQueued)return;renderQueued=true;requestAnimationFrame(()=>{renderQueued=false;draw();});}
-function draw(){if(!state?.tiles.length||!terrainLayer)return;resize();const dpr=canvas.width/Math.max(1,canvas.clientWidth);const w=canvas.clientWidth,h=canvas.clientHeight;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#112e42';ctx.fillRect(0,0,w,h);
- ctx.save();ctx.translate(camX,camY);ctx.scale(zoom,zoom);ctx.imageSmoothingEnabled=false;ctx.drawImage(terrainLayer,0,0);if(ownershipLayer)ctx.drawImage(ownershipLayer,0,0);
+function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr=canvas.width/Math.max(1,canvas.clientWidth);const w=canvas.clientWidth,h=canvas.clientHeight;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#112e42';ctx.fillRect(0,0,w,h);
+ ctx.save();ctx.translate(camX,camY);ctx.scale(zoom,zoom);ctx.imageSmoothingEnabled=false;ctx.drawImage(worldLayer,0,0,E.W,E.H,0,0,E.W*TILE,E.H*TILE);
+ // Draw vector borders only when zoomed in sufficiently; avoid per-tile work otherwise.
+ if(zoom>1.12){
+  const minX=Math.max(0,Math.floor(-camX/(TILE*zoom))-1),maxX=Math.min(E.W-1,Math.ceil((w-camX)/(TILE*zoom))+1);
+  const minY=Math.max(0,Math.floor(-camY/(TILE*zoom))-1),maxY=Math.min(E.H-1,Math.ceil((h-camY)/(TILE*zoom))+1);
+  ctx.lineWidth=Math.max(.5,1.7/zoom);ctx.strokeStyle='#07151a95';ctx.beginPath();
+  const o=state.owners;
+  for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
+   const i=y*E.W+x,id=o[i];if(!id)continue;
+   if(x===0||o[i-1]!==id){ctx.moveTo(x*TILE,y*TILE);ctx.lineTo(x*TILE,(y+1)*TILE);}
+   if(y===0||o[i-E.W]!==id){ctx.moveTo(x*TILE,y*TILE);ctx.lineTo((x+1)*TILE,y*TILE);}
+  }
+  ctx.stroke();
+ }
  const capF=Math.max(9,13/zoom);ctx.font='800 '+capF+'px DM Sans, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
  for(const b of state.buildings){const x=(b.x+.5)*TILE,y=(b.y+.5)*TILE;if(x*zoom+camX<-40||x*zoom+camX>w+40||y*zoom+camY<-40||y*zoom+camY>h+40)continue;
   const c=color(b.owner);const rad=b.kind==='capital'?12:8;ctx.fillStyle='#101b29';ctx.strokeStyle=c;ctx.lineWidth=2/zoom;ctx.beginPath();ctx.arc(x,y,rad,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle=b.kind==='capital'?'#edcc83':'#f7f7ed';ctx.font=(b.kind==='capital'?'bold ':'')+Math.max(11,14/zoom)+'px Georgia,serif';ctx.fillText(symbols[b.kind]||'◇',x,y+1);
@@ -168,9 +188,17 @@ function draw(){if(!state?.tiles.length||!terrainLayer)return;resize();const dpr
  }
  if(selected){const b=selected.kind==='building'?state.buildings.find(v=>v.id===selected.id):state.armies.find(v=>v.id===selected.id);if(b){ctx.strokeStyle='#ffffff';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.strokeRect(b.x*TILE-5,b.y*TILE-5,TILE+10,TILE+10);ctx.setLineDash([]);}}
  ctx.restore();drawMini();}
-function drawMini(){if(!state?.owners.length)return;const im=mctx.createImageData(E.W,E.H);for(let i=0;i<state.tiles.length;i++){
-  const o=state.owners[i],t=state.tiles[i],hex=o?color(o):['#20506e','#436950','#255444','#555d54','#799465','#8f7a51','#68717a'][t];const val=parseInt(hex.slice(1),16);const at=i*4;im.data[at]=(val>>16)&255;im.data[at+1]=(val>>8)&255;im.data[at+2]=val&255;im.data[at+3]=255;
- }mctx.putImageData(im,0,0);mctx.lineWidth=.7;mctx.strokeStyle='#fff';const scale=zoom*TILE;const x=-camX/scale,y=-camY/scale;mctx.strokeRect(x,y,canvas.clientWidth/scale,canvas.clientHeight/scale);
+function drawMini(){
+ if(!state?.owners?.length||!worldLayer)return;
+ const revision=state.territoryRevision??state.tick;
+ if(miniRevision!==revision){
+  if(!minimapCached){minimapCached=document.createElement('canvas');minimapCached.width=E.W;minimapCached.height=E.H;}
+  const mc=minimapCached.getContext('2d',{alpha:false});mc.imageSmoothingEnabled=false;mc.drawImage(worldLayer,0,0);
+  miniRevision=revision;
+ }
+ mctx.clearRect(0,0,E.W,E.H);mctx.drawImage(minimapCached,0,0);
+ mctx.lineWidth=.65;mctx.strokeStyle='#ffffff';const scale=zoom*TILE;
+ mctx.strokeRect(-camX/scale,-camY/scale,canvas.clientWidth/scale,canvas.clientHeight/scale);
 }
 window.addEventListener('resize',()=>{resize();clampCamera();queueDraw();});document.addEventListener('keydown',e=>{if(e.key==='Escape')cancelMode();if(!state||state.phase!=='playing'||['INPUT','TEXTAREA'].includes(document.activeElement.tagName))return;if(e.key==='+'||e.key==='=')zoomAt(1.2,canvas.clientWidth/2,canvas.clientHeight/2);if(e.key==='-')zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);});
 $('hostButton').onclick=createRoom;$('joinButton').onclick=joinRoom;$('demoButton').onclick=createDemo;$('startButton').onclick=startGame;$('copyLink').onclick=async()=>{try{await navigator.clipboard.writeText(urlRoom());toast('Ссылка на комнату скопирована.');}catch(_){prompt('Ссылка:',urlRoom());}};$('restart').onclick=()=>location.href=location.pathname;
