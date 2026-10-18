@@ -27,7 +27,7 @@ function person(s,id){return s.players.find(p=>p.id===id);}
 const available=(p,c)=>Object.entries(c||{}).every(([k,v])=>(p.res[k]||0)>=v);
 const charge=(p,c)=>Object.entries(c).forEach(([k,v])=>p.res[k]-=v);
 function log(s,msg){s.log.unshift(msg);if(s.log.length>8)s.log.length=8;}
-function lobby(seed=57283){return {version:8,settings:{bots:7,duration:720},phase:'lobby',seed:Math.floor(seed),tick:0,tiles:[],owners:[],players:[],buildings:[],armies:[],log:['Захватывайте земли, улучшайте экономику и защищайте столицу.'],winner:null,mode:'conquest',duration:LIMIT,nonce:0,landTotal:0,territoryRevision:0};}
+function lobby(seed=57283){return {version:9,settings:{bots:7,duration:720},phase:'lobby',seed:Math.floor(seed),tick:0,tiles:[],owners:[],players:[],buildings:[],armies:[],log:['Захватывайте земли, улучшайте экономику и защищайте столицу.'],winner:null,mode:'conquest',duration:LIMIT,nonce:0,landTotal:0,territoryRevision:0};}
 function addPlayer(s,name,isBot=false){if(s.phase!=='lobby'||s.players.filter(p=>!p.bot).length>=MAX&&!isBot||s.players.length>=COLORS.length)return null;
  let id=1;while(s.players.some(p=>p.id===id))id++;let safe=String(name||('Королевство '+id)).trim().slice(0,18)||('Игрок '+id);
  s.players.push({id,name:safe,bot:!!isBot,color:COLORS[(id-1)%COLORS.length],res:{food:650,wood:390,stone:310,gold:260},troops:450,troopCap:1700,land:0,ready:!!isBot,connected:true,spawnPreference:'auto',eliminated:false,tech:{economy:0,war:0,logistics:0,sailing:0},offers:[],allies:[],capital:null,kills:0});
@@ -229,7 +229,8 @@ function tileDefense(s,id,x,y){let n=3;const defender=person(s,id);if(!defender)
 }
 function capture(s,a,x,y){const old=owner(s,x,y),p=person(s,a.owner);if(old===a.owner)return true;if(tile(s,x,y)===0||tile(s,x,y)===6&&a.strength<10)return false;
  if(old&&p.allies.includes(old))return false;
- const cost=old?tileDefense(s,old,x,y)/(.95+.19*p.tech.war):tile(s,x,y)===6?8:tile(s,x,y)===3?4:2.8;
+ let cost=old?tileDefense(s,old,x,y)/(.95+.19*p.tech.war):tile(s,x,y)===6?8:tile(s,x,y)===3?4:2.8;
+ cost*=1-.08*p.tech.logistics;
  if(a.strength<cost)return false;a.strength-=cost;
  if(old){const def=person(s,old);def.troops=Math.max(0,def.troops-Math.max(0.8,cost*.43));}
  gainTile(s,x,y,p.id);
@@ -239,8 +240,9 @@ function capture(s,a,x,y){const old=owner(s,x,y),p=person(s,a.owner);if(old===a.
 }
 // Territorial-style front propagation: conquer COMPLETE BORDER LAYERS, not the
 // single pixel that is nearest to the pointer. The tapped tile chooses which
-// country to attack; with neutral land it simply selects the neutral theatre.
-// This is independently written logic; it does not contain Territorial.io code.
+// A chosen target selects a LOCAL theatre along the common border. The old
+// algorithm enrolled every border cell nationwide, making one tap produce
+// unrelated simultaneous captures far from the indicated location.
 const SIDE=[1,-1,W,-W];
 function borderCandidates(s,id,targetOwner){
  const found=[];
@@ -254,10 +256,27 @@ function borderCandidates(s,id,targetOwner){
  }
  return [...new Set(found)];
 }
+function initialFront(s,id,tx,ty,targetOwner){
+ const border=borderCandidates(s,id,targetOwner);
+ if(!border.length)return [];
+ let center=border[0],best=Infinity;
+ for(const i of border){const x=i%W,y=Math.floor(i/W);const d=(x-tx)*(x-tx)+(y-ty)*(y-ty);if(d<best){best=d;center=i;}}
+ const cx=center%W,cy=Math.floor(center/W);
+ // Ten cells of frontage (diameter), rather than a 1-cell snake or the entire map.
+ const result=border.filter(i=>{const x=i%W,y=Math.floor(i/W);return(x-cx)*(x-cx)+(y-cy)*(y-cy)<=36;});
+ return result.length?result:[center];
+}
+function previewFront(s,id,tx,ty){
+ if(!inside(tx,ty)||!s.owners?.length)return {cells:[],targetOwner:0,kind:'none'};
+ const targetOwner=owner(s,tx,ty);
+ if(targetOwner===id)return {cells:[],targetOwner,kind:'own'};
+ const cells=initialFront(s,id,tx,ty,targetOwner);
+ return {cells,targetOwner,kind:targetOwner?'enemy':'neutral'};
+}
 function waveFront(s,a){
  let f=attackFronts.get(a);if(f)return f;
  const targetOwner=Number.isInteger(a.targetOwner)?a.targetOwner:owner(s,a.tx,a.ty);
- f={targetOwner,candidates:new Set(borderCandidates(s,a.owner,targetOwner)),layers:0};
+ f={targetOwner,candidates:new Set(initialFront(s,a.owner,a.tx,a.ty,targetOwner)),layers:0};
  attackFronts.set(a,f);return f;
 }
 function finishWave(s,a,p){
@@ -290,7 +309,9 @@ function advance(s,a){
  if(a.naval){
   if(!a.landing){finishWave(s,a,p);return;}
   const dx=a.landing.x-a.x,dy=a.landing.y-a.y,d=Math.hypot(dx,dy);
-  if(d>4){a.x+=dx/d*4;a.y+=dy/d*4;a.strength-=1.2;a.turns++;return;}
+  const portLevel=s.buildings.filter(b=>b.owner===a.owner&&b.kind==='port').reduce((m,b)=>Math.max(m,b.level),1);
+  const speed=4+Math.max(0,p.tech.sailing-1)*1.25+(portLevel-1)*.55;
+  if(d>speed){a.x+=dx/d*speed;a.y+=dy/d*speed;a.strength-=Math.max(.25,1.2-(p.tech.sailing-1)*.25-(portLevel-1)*.12);a.turns++;return;}
   a.x=a.landing.x;a.y=a.landing.y;a.naval=false;a.ox=a.x;a.oy=a.y;
   a.targetOwner=owner(s,a.x,a.y);
   if(!capture(s,a,a.x,a.y)){finishWave(s,a,p);return;}
@@ -385,5 +406,5 @@ function tick(s){if(s.phase!=='playing')return;s.tick++;
  checkWin(s);
 }
 
-return{W,H,MAX,LIMIT,COLORS,KINDS,TECH,canBuild,tileDefense,lobby,addPlayer,start,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{W,H,MAX,LIMIT,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,lobby,addPlayer,start,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });
