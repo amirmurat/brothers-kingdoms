@@ -27,7 +27,7 @@ function person(s,id){return s.players.find(p=>p.id===id);}
 const available=(p,c)=>Object.entries(c||{}).every(([k,v])=>(p.res[k]||0)>=v);
 const charge=(p,c)=>Object.entries(c).forEach(([k,v])=>p.res[k]-=v);
 function log(s,msg){s.log.unshift(msg);if(s.log.length>8)s.log.length=8;}
-function lobby(seed=57283){return {version:7,settings:{bots:7,duration:720},phase:'lobby',seed:Math.floor(seed),tick:0,tiles:[],owners:[],players:[],buildings:[],armies:[],log:['Захватывайте земли, улучшайте экономику и защищайте столицу.'],winner:null,mode:'conquest',duration:LIMIT,nonce:0,landTotal:0,territoryRevision:0};}
+function lobby(seed=57283){return {version:8,settings:{bots:7,duration:720},phase:'lobby',seed:Math.floor(seed),tick:0,tiles:[],owners:[],players:[],buildings:[],armies:[],log:['Захватывайте земли, улучшайте экономику и защищайте столицу.'],winner:null,mode:'conquest',duration:LIMIT,nonce:0,landTotal:0,territoryRevision:0};}
 function addPlayer(s,name,isBot=false){if(s.phase!=='lobby'||s.players.filter(p=>!p.bot).length>=MAX&&!isBot||s.players.length>=COLORS.length)return null;
  let id=1;while(s.players.some(p=>p.id===id))id++;let safe=String(name||('Королевство '+id)).trim().slice(0,18)||('Игрок '+id);
  s.players.push({id,name:safe,bot:!!isBot,color:COLORS[(id-1)%COLORS.length],res:{food:650,wood:390,stone:310,gold:260},troops:450,troopCap:1700,land:0,ready:!!isBot,connected:true,spawnPreference:'auto',eliminated:false,tech:{economy:0,war:0,logistics:0,sailing:0},offers:[],allies:[],capital:null,kills:0});
@@ -164,12 +164,23 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Матч 
     src=coastalOwner(s,id,tx,ty);landing=landingCoast(s,id,tx,ty);naval=true;
     if(!src||!landing)return {ok:false,error:'Не удалось выбрать место для высадки.'};
   }
+  // A land assault must begin on an existing shared border. Neutral attacks
+  // automatically expand the whole accessible neutral perimeter (layer by layer).
+  // Hostile attacks expand only into the clicked opponent, never across bystanders.
+  const targetOwner=owner(s,tx,ty);
+  if(!naval&&!borderCandidates(s,id,targetOwner).length){
+   return {ok:false,error:targetOwner?'Сначала выйди к границе этого противника.':'Нет общей границы с доступной нейтральной землёй.'};
+  }
   p.troops-=strength;
-  s.armies.push({id:'a'+(++s.nonce),owner:id,x:src.x,y:src.y,ox:src.x,oy:src.y,tx,ty,strength,naval,landing,turns:0,stuck:0});
+  s.armies.push({id:'a'+(++s.nonce),owner:id,x:src.x,y:src.y,ox:src.x,oy:src.y,tx,ty,targetOwner,strength,naval,landing,turns:0,stuck:0});
   return {ok:true};
  }
  if(a.type==='redirect'){
-  const army=s.armies.find(v=>v.id===a.id&&v.owner===id);if(!army||!inside(a.x,a.y))return {ok:false,error:'Армия не найдена.'};army.tx=Math.floor(a.x);army.ty=Math.floor(a.y);army.stuck=0;return {ok:true};
+  const army=s.armies.find(v=>v.id===a.id&&v.owner===id);if(!army||!inside(a.x,a.y))return {ok:false,error:'Армия не найдена.'};
+  const tx=Math.floor(a.x),ty=Math.floor(a.y),targetOwner=owner(s,tx,ty);
+  if(!tile(s,tx,ty)||targetOwner===id||p.allies.includes(targetOwner))return {ok:false,error:'Выбери нейтральную или вражескую землю.'};
+  if(!army.naval&&!borderCandidates(s,id,targetOwner).length)return {ok:false,error:'Нужна общая граница для смены направления.'};
+  army.tx=tx;army.ty=ty;army.targetOwner=targetOwner;army.stuck=0;attackFronts.delete(army);return {ok:true};
  }
  if(a.type==='return'){
   const army=s.armies.find(v=>v.id===a.id&&v.owner===id);if(!army)return {ok:false,error:'Армия не найдена.'};
@@ -226,29 +237,53 @@ function capture(s,a,x,y){const old=owner(s,x,y),p=person(s,a.owner);if(old===a.
  if(b&&b.owner!==p.id){if(b.kind==='capital'){takeCapital(s,p.id,b.owner);b.kind='city';}b.owner=p.id;b.level=Math.max(1,b.level-1);}
  return true;
 }
-// An attack is an advancing FRONT rather than a unit marching along a one-cell trail.
-// Candidate cells must touch existing territory or the territory just captured by this wave.
-// Shortest coherent radial expansion is biased toward the target, producing wide, connected shapes.
-function waveFront(s,a){
- let f=attackFronts.get(a);if(f)return f;
- f={candidates:new Set(),originX:a.ox??a.x,originY:a.oy??a.y,targetReached:false};
- // Begin with a broad stretch of the current national border, not a one-cell snake.
- for(let y=Math.max(1,Math.floor(a.y)-5);y<=Math.min(H-2,Math.ceil(a.y)+5);y++){
-  for(let x=Math.max(1,Math.floor(a.x)-5);x<=Math.min(W-2,Math.ceil(a.x)+5);x++){
-   if(s.owners[idx(x,y)]!==a.owner||Math.hypot(x-a.x,y-a.y)>5.5)continue;
-   for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
-    const xx=x+dx,yy=y+dy,i=idx(xx,yy),id=s.owners[i];
-    if(s.tiles[i]&&id!==a.owner&&!person(s,a.owner)?.allies.includes(id))f.candidates.add(i);
-   }
+// Territorial-style front propagation: conquer COMPLETE BORDER LAYERS, not the
+// single pixel that is nearest to the pointer. The tapped tile chooses which
+// country to attack; with neutral land it simply selects the neutral theatre.
+// This is independently written logic; it does not contain Territorial.io code.
+const SIDE=[1,-1,W,-W];
+function borderCandidates(s,id,targetOwner){
+ const found=[];
+ for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
+  const i=idx(x,y);
+  if(s.owners[i]!==id)continue;
+  for(const d of SIDE){
+   const j=i+d;
+   if(s.tiles[j]!==0&&s.owners[j]===targetOwner)found.push(j);
   }
  }
+ return [...new Set(found)];
+}
+function waveFront(s,a){
+ let f=attackFronts.get(a);if(f)return f;
+ const targetOwner=Number.isInteger(a.targetOwner)?a.targetOwner:owner(s,a.tx,a.ty);
+ f={targetOwner,candidates:new Set(borderCandidates(s,a.owner,targetOwner)),layers:0};
  attackFronts.set(a,f);return f;
 }
 function finishWave(s,a,p){
- // Unspent survivors come home. Launching an order has a small mobilisation cost.
- if(p&&!p.eliminated&&a.strength>0)p.troops=Math.min(p.troopCap,p.troops+Math.floor(a.strength*0.96));
- a.strength=0;
- attackFronts.delete(a);
+ if(p&&!p.eliminated&&a.strength>0)p.troops=Math.min(p.troopCap,p.troops+Math.floor(a.strength*.96));
+ a.strength=0;attackFronts.delete(a);
+}
+// Distribute any *partially funded* final layer across the whole frontage, not
+// in a sequential snake at one end. Ordered buckets cover 16 angular sectors.
+function balancedLayer(cells,s,step){
+ let sx=0,sy=0;
+ for(const i of cells){sx+=i%W;sy+=Math.floor(i/W);}
+ const cx=sx/Math.max(1,cells.length),cy=sy/Math.max(1,cells.length);
+ const buckets=Array.from({length:16},()=>[]);
+ for(const i of cells){
+  const x=i%W,y=Math.floor(i/W),ang=Math.atan2(y-cy,x-cx);
+  const sector=Math.min(15,Math.floor((ang+Math.PI)/(Math.PI*2)*16));
+  buckets[sector].push(i);
+ }
+ for(const b of buckets)b.sort((a,b)=>hash(a%W,Math.floor(a/W),s.seed+step)-hash(b%W,Math.floor(b/W),s.seed+step));
+ const order=[],cursor=new Array(16).fill(0);
+ let left=cells.length;
+ while(left){for(let k=0;k<16;k++){
+  const b=buckets[(k+step)%16],i=cursor[(k+step)%16]++;
+  if(i<b.length){order.push(b[i]);left--;}
+ }}
+ return order;
 }
 function advance(s,a){
  const p=person(s,a.owner);if(!alive(p)){a.strength=0;attackFronts.delete(a);return;}
@@ -257,56 +292,39 @@ function advance(s,a){
   const dx=a.landing.x-a.x,dy=a.landing.y-a.y,d=Math.hypot(dx,dy);
   if(d>4){a.x+=dx/d*4;a.y+=dy/d*4;a.strength-=1.2;a.turns++;return;}
   a.x=a.landing.x;a.y=a.landing.y;a.naval=false;a.ox=a.x;a.oy=a.y;
+  a.targetOwner=owner(s,a.x,a.y);
   if(!capture(s,a,a.x,a.y)){finishWave(s,a,p);return;}
   a.landing=null;
-  // Continue with an expanding land frontier from the beachhead.
  }
-
- const f=waveFront(s,a),dirX=a.tx-f.originX,dirY=a.ty-f.originY;
- const len=Math.max(1,Math.hypot(dirX,dirY)),nx=dirX/len,ny=dirY/len;
- const steps=4+2*p.tech.logistics;
- let progress=0;
- for(let step=0;step<steps;step++){
-  if(a.strength<9)break;
-  let winner=-1,best=Infinity;
-  for(const cell of f.candidates){
-   const x=cell%W,y=Math.floor(cell/W),terrain=s.tiles[cell],old=s.owners[cell];
-   if(old===a.owner||!terrain){f.candidates.delete(cell);continue;}
-   if(old&&p.allies.includes(old)){f.candidates.delete(cell);continue;}
-   const dx=x-f.originX,dy=y-f.originY;
-   const forward=dx*nx+dy*ny;
-   const lateral=Math.abs(dx*ny-dy*nx);
-   const corridor=2.2+Math.max(0,forward)*.30;
-   const targetDistance=Math.hypot(x-a.tx,y-a.ty);
-   // Aggressive progress toward the selected target, but a wide, supported front.
-   let friendly=0;for(const d of [-1,1,-W,W])if(s.owners[cell+d]===a.owner)friendly++;
-   const score=targetDistance*1.12
-     +Math.max(0,lateral-corridor)*10
-     +Math.max(0,-forward)*2.5
-     -(friendly-1)*2.1
-     +(terrain===6?5:terrain===3?1.4:0)
-     +(old?3:0)
-     +hash(x,y,s.seed)*.28;
-   if(score<best){best=score;winner=cell;}
+ const f=waveFront(s,a);
+ // Alliances or a completed conquest can invalidate a target while in flight.
+ if(f.targetOwner&&p.allies.includes(f.targetOwner)){finishWave(s,a,p);return;}
+ const layer=[...f.candidates].filter(i=>s.tiles[i]&&s.owners[i]===f.targetOwner);
+ f.candidates.clear();
+ if(!layer.length||a.strength<3){finishWave(s,a,p);return;}
+ let gained=0,point=null,pointDist=Infinity;
+ for(const i of balancedLayer(layer,s,f.layers++)){
+  if(s.owners[i]!==f.targetOwner)continue;
+  const x=i%W,y=Math.floor(i/W);
+  if(!capture(s,a,x,y)){
+   // An expensive stronghold can be attempted next layer if enough troops remain.
+   f.candidates.add(i);
+   continue;
   }
-  if(winner===-1)break;
-  f.candidates.delete(winner);
-  const x=winner%W,y=Math.floor(winner/W);
-  if(!capture(s,a,x,y))continue;
-  a.x=x;a.y=y;progress++;
+  gained++;
+  const dist=Math.hypot(x-a.tx,y-a.ty);
+  if(dist<pointDist){pointDist=dist;point={x,y};}
   for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
-   const px=x+dx,py=y+dy;if(!inside(px,py))continue;
-   const i=idx(px,py),old=s.owners[i];
-   if(s.tiles[i]!==0&&old!==a.owner&&(!old||!p.allies.includes(old)))f.candidates.add(i);
+   const nx=x+dx,ny=y+dy;if(!inside(nx,ny))continue;
+   const j=idx(nx,ny);
+   if(s.tiles[j]&&s.owners[j]===f.targetOwner)f.candidates.add(j);
   }
-  for(const foe of s.armies){
-   if(foe===a||foe.owner===a.owner||foe.strength<=0||p.allies.includes(foe.owner))continue;
-   if(near(a,foe)<=1){const loss=Math.min(foe.strength,a.strength)*.025;foe.strength=Math.max(0,foe.strength-loss);a.strength=Math.max(0,a.strength-loss);}
-  }
-  if(x===a.tx&&y===a.ty){f.targetReached=true;break;}
  }
- a.turns++;a.stuck=progress?0:a.stuck+1;
- if(f.targetReached||a.strength<9||a.stuck>4||a.turns>90||f.candidates.size===0)finishWave(s,a,p);
+ if(point){a.x=point.x;a.y=point.y;}
+ // After a finished complete layer, remaining candidates form the NEXT layer.
+ // An attack continues while its committed troops can pay for that next layer.
+ a.turns++;a.stuck=gained?0:a.stuck+1;
+ if(a.strength<3||a.stuck>=3||a.turns>140||!f.candidates.size)finishWave(s,a,p);
 }
 function counts(s,id){const stats={farm:0,lumber:0,quarry:0,mine:0,barracks:0,fort:0,city:0,port:0};for(const b of s.buildings)if(b.owner===id&&stats[b.kind]!==undefined)stats[b.kind]+=b.level;return stats;}
 function income(s,p){const c=counts(s,p.id),l=p.land,e=1+p.tech.economy*.25;
@@ -326,15 +344,24 @@ function bot(s,id){const p=person(s,id);if(!alive(p)||s.phase!=='playing')return
     }
   }
   if(p.troops>130&&s.armies.filter(a=>a.owner===id).length<5){
-   const targets=[];for(let n=0;n<35;n++){
-     const ox=Math.floor(hash(n,s.tick,id*43)*W),oy=Math.floor(hash(s.tick,n,id*19)*H);
-     if(tile(s,ox,oy)===0||owner(s,ox,oy)===id||p.allies.includes(owner(s,ox,oy)))continue;
-     const b=nearestBorder(s,id,ox,oy);if(!b)continue;
-     const d=near(b,{x:ox,y:oy});if(d>24)continue;
-     const foe=owner(s,ox,oy);targets.push({x:ox,y:oy,score:d+(foe?9:0)+hash(ox,oy,s.tick)*8});
+   // Bot attacks must follow actual shared borders. Sampling distant map points
+   // frequently produced illegal orders after the layer-based engine rewrite.
+   const active=new Set(s.armies.filter(a=>a.owner===id).map(a=>a.targetOwner));
+   const targets=new Map();
+   for(const b of borders(s,id)){
+    const i=idx(b.x,b.y);
+    for(const d of SIDE){
+     const j=i+d,x=j%W,y=(j/W)|0,foe=s.owners[j];
+     if(!s.tiles[j]||foe===id||p.allies.includes(foe)||active.has(foe))continue;
+     const score=foe===0?0:12+(person(s,foe)?.troops||0)/Math.max(1,p.troops)*30;
+     if(!targets.has(foe)||score+hash(x,y,s.seed)*.05<targets.get(foe).score){
+      targets.set(foe,{x,y,score:score+hash(x,y,s.seed)*.05});
+     }
+    }
    }
-   targets.sort((a,b)=>a.score-b.score);
-   if(targets.length)action(s,id,{type:'send',x:targets[0].x,y:targets[0].y,percent:clamp(23+hash(id,s.tick,s.seed)*25,15,55)});
+   const options=[...targets.values()].sort((a,b)=>a.score-b.score);
+   if(options.length)action(s,id,{type:'send',x:options[0].x,y:options[0].y,percent:clamp(23+hash(id,s.tick,s.seed)*25,15,55)});
+
   }
  }
  if(s.tick%38===id%38){const choices=['economy','war','logistics'];action(s,id,{type:'research',key:choices[(Math.floor(s.tick/38)+id)%3]});}

@@ -1,6 +1,12 @@
-# Brothers Kingdoms — Frontline v7
+# Brothers Kingdoms — Layered Conquest v8
 
 Free browser-based territory strategy for 1–4 human players and optional bots. The game implementation and visuals are independently authored. It is **not a copy of Territorial.io**.
+
+## v8 — fundamental conquest correction
+
+The clicked neutral tile initiates conquest, but does NOT define a thin route. Neutral fronts expand across the exposed national border by *whole connected layers* until the committed troop budget runs out. Hostile attacks propagate only along borders shared with the selected enemy. Partially funded layers distribute captures across sixteen sectors, preventing narrow tendrils. Armies cannot attack a distant enemy without a shared land border (naval assaults remain separate). Bots were updated to select actual neighboring targets. The older focus-on-a-target-path implementation was removed.
+
+The implementation is original code inspired by observable gameplay and public explanations of Territorial.io, not a copy of its proprietary source. Run `node test-frontline.js` to check that captures are broad, connected and do not form one-cell corridors.
 
 ## Play
 
@@ -11,13 +17,13 @@ Free browser-based territory strategy for 1–4 human players and optional bots.
 - Development is optional during early expansion: **Развитие** opens construction, technology, diplomacy, and statistics; it does not consume permanent map space.
 - Tap your own army to redirect or recall it. A recall immediately ends the campaign and returns surviving troops minus 4% withdrawal cost.
 
-## What changed from v6
+## Historical v7 changes
 
-**Actual gameplay changes:** the attack starts along a wider portion of the national border, follows the chosen destination and **stops when the target is reached**. Host simulation now updates advancing fronts at approximately 4 Hz while economy and match time remain 1 Hz. Troop commitment and remaining reserves are visible at confirmation. No more free land added after each simulation tick. Capturing a capital penalizes the defender but does not magically transfer all distant provinces; elimination requires losing all land. Capital upgrades improve capital defense.
+**Actual gameplay changes:** v7 directed single-pixel capture toward the clicked destination and stopped at that target (this created thin corridors; fixed in v8). Host simulation now updates advancing fronts at approximately 4 Hz while economy and match time remain 1 Hz. Troop commitment and remaining reserves are visible at confirmation. No more free land added after each simulation tick. Capturing a capital penalizes the defender but does not magically transfer all distant provinces; elimination requires losing all land. Capital upgrades improve capital defense.
 
 **Interaction and design:** new dark tactical-map presentation, clean country boundaries and labels, subdued land biomes, visible attack direction, one compact attack composer instead of two stacked panels, context-sensitive percent selection, dedicated development drawer, large phone hit areas, and long-press-and-drag targeting.
 
-**Engineering and testing:** `test-engine.js`, `test-frontline.js`, `test-v7-gameplay.js` validate deterministic simulation/target stopping/retreat. Playwright scripts `interaction_v7.py`, `touch_v7.py`, `network_smoke.py`, `screenshot_one.py` cover viewport layouts, attack confirmation, the mobile drag gesture, and two-client mock-room commands/reconnect.
+**Engineering and testing:** `test-engine.js` and `test-frontline.js` verify deterministic simulation, broad multi-direction neutral expansion, hostile border capture, and immediate retreat. Playwright scripts `interaction_v7.py`, `touch_v7.py`, `network_smoke.py`, `screenshot_one.py` cover viewport layouts, attack confirmation, the mobile drag gesture, and two-client mock-room commands/reconnect.
 
 ## Run locally
 
