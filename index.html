@@ -6,17 +6,18 @@
   <meta name="theme-color" content="#f7f8fa">
   <meta name="description" content="Brothers Kingdoms — стратегия за территорию в реальном времени. Играй с братьями или против ботов.">
   <title>Brothers Kingdoms · Frontline</title>
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=7">
+  <link rel="stylesheet" href="frontline-v7.css?v=7">
 </head>
 <body>
   <div id="lobby" class="lobby-screen">
     <div class="lobby-frame">
-      <header class="site-header"><div class="site-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9l5 3 3-7 3 7 5-3v10H4Z"/><path d="M4 19h16"/></svg></div><span>BROTHERS <b>KINGDOMS</b></span><span class="site-version">FRONTLINE / 06</span></header>
+      <header class="site-header"><div class="site-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9l5 3 3-7 3 7 5-3v10H4Z"/><path d="M4 19h16"/></svg></div><span>BROTHERS <b>KINGDOMS</b></span><span class="site-version">FRONTLINE / 07</span></header>
       <main class="lobby-grid">
         <div class="lobby-copy">
           <div class="overline"><span class="overline-dot"></span> ИГРАЙТЕ ВМЕСТЕ · 2–4 ИГРОКА</div>
-          <h1>Твой мир.<br><span>Твои границы.</span></h1>
-          <p>Расширяй королевство, управляй войсками, строй укрепления и борись за каждый участок карты. Никаких установок и оплаты.</p>
+          <h1>Завоюй мир.<br><span>Вместе с братьями.</span></h1>
+          <p>Война за каждую границу. Отправляй войска, расширяй территории и сражайся вместе с братьями прямо в браузере.</p>
           <div class="lobby-features"><div><strong>01</strong><span>Захватывай землю</span></div><div><strong>02</strong><span>Наращивай силы</span></div><div><strong>03</strong><span>Побеждай соперников</span></div></div>
           <div class="map-preview" aria-hidden="true"><svg viewBox="0 0 540 170" preserveAspectRatio="xMidYMid slice"><rect width="540" height="170" fill="#dbe6ee"/><path d="M0 28C65 0 110 20 158 49s79 11 116-19 104-30 146 5 79 28 120 9v126H0Z" fill="#e8e9dc"/><path d="M0 119c67-62 112-80 173-61 54 18 60 50 132 50 76 0 110-56 160-53 33 2 51 29 75 33v82H0Z" fill="#83bba8"/><path d="M0 170v-39c52-19 96-21 145-4 58 19 102 25 158 11 82-19 128-52 237-33v65Z" fill="#78a6db"/><path d="M214 80c31-36 84-44 115-17 26 23 35 34 79 32" fill="none" stroke="#ffffff" stroke-width="2" stroke-opacity=".75"/><circle cx="214" cy="80" r="5" fill="#fff"/><circle cx="408" cy="95" r="5" fill="#fff"/></svg></div>
         </div>
@@ -62,7 +63,7 @@
     <main class="game-layout">
       <section class="map-shell">
         <div class="map-toolbar">
-          <div class="map-location"><span class="location-dot"></span><strong id="myKingdom" title="Название королевства">Королевство</strong><span id="mapStatus" aria-live="polite">Коснись территории, чтобы выбрать цель</span></div>
+          <div class="map-location"><span class="location-dot"></span><strong id="myKingdom" title="Название королевства">Королевство</strong><span id="mapStatus" aria-live="polite">Выбери цель на карте — отправь армию</span></div>
           <div class="map-toolbar-actions">
             <button id="pauseGame" class="develop-button" title="Пауза в одиночной игре">Пауза</button><button id="helpButton" class="square-button" aria-label="Правила игры">?</button><button id="developButton" class="develop-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V9l9-6 9 6v12H3Z M9 21v-8h6v8"/></svg><span>Развитие</span></button>
             <button id="zoomOut" class="square-button" title="Уменьшить" aria-label="Уменьшить"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
@@ -74,14 +75,14 @@
         </div>
         <div class="map-view" id="mapView">
           <canvas id="mapCanvas" tabindex="0" role="application" aria-label="Карта государств. Стрелки передвигают курсор, Enter выбирает цель."></canvas><div id="keyboardPosition" class="sr-only" aria-live="polite"></div>
-          <div class="map-hint" id="mapHint">Касание — выбрать цель · Перетаскивание — карта</div>
+          <div class="map-hint" id="mapHint">Коснись цели · Удержи свою землю и проведи к цели</div>
           <div id="mapTooltip" class="map-tooltip hidden"></div><div id="mapStatusMobile" class="map-status-mobile hidden" aria-live="polite"></div><ul id="accessibleObjects" class="sr-only" aria-label="Доступные объекты карты"></ul>
           <div class="minimap-wrap" id="minimapWrap"><button id="minimapToggle" aria-label="Скрыть миникарту" aria-expanded="true">Мир <span>−</span></button><canvas id="minimap" tabindex="0" width="160" height="104" role="button" aria-label="Миникарта, Enter переместиться к центру мира"></canvas></div>
           <div id="targetPreview" class="target-preview hidden" aria-live="polite"><div class="target-info"><strong id="targetTitle">Цель</strong><span id="targetDetail">Выбери территорию</span><span id="targetForecast">—</span></div><div class="target-actions"><button id="cancelTarget" class="secondary">Отмена</button><button id="confirmTarget" class="primary">Отправить войска</button></div></div><div class="map-battle-controls" id="battleDock"><button id="dockToggle" class="dock-toggle" aria-expanded="true">Армия <span id="dockSummary">30%</span> <span aria-hidden="true">⌃</span></button>
             <div class="control-header"><div><small>ОТПРАВКА АРМИИ</small><strong id="modeLabel">Наступление</strong></div><div class="percent-pill" id="percentLabel">30%</div></div>
             <input id="attackPercent" aria-label="Процент отправляемых войск" type="range" min="5" max="95" value="30" step="5">
             <div class="attack-presets"><button data-percent="15">15%</button><button data-percent="30" class="active">30%</button><button data-percent="50">50%</button><button data-percent="75">75%</button><button data-percent="95">95%</button></div>
-            <div id="attackNumbers" class="attack-numbers">Будет отправлено: <b id="sendingTroops">0</b> · Останется: <b id="remainingTroops">0</b> · Походы: <b id="activeArmies">0/12</b></div><p id="actionHint">Сначала выбери цель на карте, затем подтверди приказ.</p>
+            <div id="attackNumbers" class="attack-numbers">Будет отправлено: <b id="sendingTroops">0</b> · Останется: <b id="remainingTroops">0</b> · Походы: <b id="activeArmies">0/12</b></div><p id="actionHint">Коснись цели или удержи свою землю и проведи к ней.</p>
             <button id="cancelMode" class="secondary cancel-mode hidden">Отменить строительство</button>
           </div>
         </div>
@@ -93,16 +94,16 @@
           <section id="tab-build" class="tab-content"><div class="section-head"><h2>Постройки</h2><p>Выбери здание, затем коснись своей территории.</p></div><div id="buildingsPanel" class="build-grid"></div></section>
           <section id="tab-tech" class="tab-content hidden"><div class="section-head"><h2>Исследования</h2><p>Улучшения распространяются на всё государство.</p></div><div id="techPanel" class="tech-list"></div></section>
           <section id="tab-diplomacy" class="tab-content hidden"><div class="section-head"><h2>Дипломатия</h2><p>Союзы и помощь соседям.</p></div><div id="diplomacyPanel" class="diplomacy-list"></div></section>
-          <section id="tab-info" class="tab-content hidden"><div class="section-head"><h2>Статистика</h2></div><div id="infoPanel"></div><h3>События</h3><div id="events" class="events"></div><details class="instructions"><summary>Как играть</summary><p>Выбери процент армии и коснись нейтральной или вражеской земли. Войска расширяют линию фронта, а выжившие возвращаются. Победа — 70% суши, разгром остальных или лидерство через 12 минут.</p></details></section>
+          <section id="tab-info" class="tab-content hidden"><div class="section-head"><h2>Статистика</h2></div><div id="infoPanel"></div><h3>События</h3><div id="events" class="events"></div><details class="instructions"><summary>Как играть</summary><p>Выбери процент армии и коснись нейтральной или вражеской земли. Фронт идёт к выбранной точке. Захват прекращается при достижении цели, а выжившие возвращаются. Победа — 70% суши, разгром остальных или лидерство через 12 минут.</p></details></section>
           <div class="selected-card"><div class="section-label">ВЫБРАННЫЙ ОБЪЕКТ</div><div id="selectedPanel" class="selected-body">Коснись армии или здания, чтобы открыть действия.</div></div>
         </div>
         <div class="leaderboard"><div class="section-label">ЛИДЕРЫ</div><div id="leaderboard"></div></div>
       </aside>
     </main>
-    <div id="quickLeadersPanel" class="quick-leaders hidden" role="dialog" aria-label="Таблица лидеров"><strong>Лидеры мира</strong><div id="quickLeadersList"></div><button id="closeQuickLeaders" class="secondary">Закрыть</button></div><div id="contextCard" class="context-card hidden"><button id="closeContext" class="context-close" aria-label="Закрыть карточку">×</button><div id="contextBody"></div></div><div id="economyPanel" class="economy-panel hidden" role="dialog" aria-label="Экономика"><strong>Экономика</strong><div id="economyDetails"></div><button id="pauseMobile" class="secondary">Пауза (одиночная игра)</button><button id="nextFront" class="secondary">К следующей армии</button><button id="quickLeaders" class="secondary">Таблица лидеров</button><button id="closeEconomy" class="secondary">Закрыть</button></div><div id="tutorial" class="tutorial hidden" role="dialog" aria-modal="true" aria-label="Как играть"><section><h2>Как играть</h2><p><b>1.</b> Коснись нейтральной земли — выбери цель.</p><p><b>2.</b> Выбери долю войск и подтверди атаку.</p><p><b>3.</b> Накопленные войска защищают границы. Развивай экономику в меню.</p><p>Перетаскивай карту пальцем, приближай двумя пальцами. Цель — 70% суши или лидерство по окончании времени.</p><button id="closeTutorial" class="primary large">Понятно</button></section></div><div id="victory" class="victory-screen hidden"><section><div class="card-eyebrow">МАТЧ ЗАВЕРШЁН</div><h1 id="victoryName">Победа</h1><p id="victoryDesc"></p><div id="victoryStats"></div><button id="restart" class="primary large">Новая игра</button><button id="downloadSave" class="secondary">Сохранить итог матча</button></section></div>
+    <div id="quickLeadersPanel" class="quick-leaders hidden" role="dialog" aria-label="Таблица лидеров"><strong>Лидеры мира</strong><div id="quickLeadersList"></div><button id="closeQuickLeaders" class="secondary">Закрыть</button></div><div id="contextCard" class="context-card hidden"><button id="closeContext" class="context-close" aria-label="Закрыть карточку">×</button><div id="contextBody"></div></div><div id="economyPanel" class="economy-panel hidden" role="dialog" aria-label="Экономика"><strong>Экономика</strong><div id="economyDetails"></div><button id="pauseMobile" class="secondary">Пауза (одиночная игра)</button><button id="nextFront" class="secondary">К следующей армии</button><button id="quickLeaders" class="secondary">Таблица лидеров</button><button id="closeEconomy" class="secondary">Закрыть</button></div><div id="tutorial" class="tutorial hidden" role="dialog" aria-modal="true" aria-label="Как играть"><section><h2>Как играть</h2><p><b>1.</b> Коснись чужой или нейтральной земли, чтобы выбрать цель.</p><p><b>2.</b> Выбери долю войск и нажми «Атаковать»; повторное касание цели тоже подтверждает. На телефоне удержи свою землю и проведи к цели.</p><p><b>3.</b> Накопленные войска защищают границы. Развивай экономику в меню.</p><p>Перетаскивай карту пальцем, приближай двумя пальцами. Цель — 70% суши или лидерство по окончании времени.</p><button id="closeTutorial" class="primary large">Понятно</button></section></div><div id="victory" class="victory-screen hidden"><section><div class="card-eyebrow">МАТЧ ЗАВЕРШЁН</div><h1 id="victoryName">Победа</h1><p id="victoryDesc"></p><div id="victoryStats"></div><button id="restart" class="primary large">Новая игра</button><button id="downloadSave" class="secondary">Сохранить итог матча</button></section></div>
   </div>
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div><div id="gameError" class="sr-only" role="alert"></div>
-  <script src="engine.js?v=6"></script>
+  <script src="engine.js?v=7"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="game.js?v=6"></script>
+  <script src="game.js?v=7"></script>
 </body></html>
