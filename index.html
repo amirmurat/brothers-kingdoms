@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <meta name="theme-color" content="#101b28"/>
+  <meta name="description" content="Brothers Kingdoms: бесплатная браузерная стратегия в реальном времени для друзей и братьев."/>
+  <title>Brothers Kingdoms — стратегия для братьев</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <header class="topbar">
+    <div class="identity"><div class="crest">♜</div><div><strong>BROTHERS <span>KINGDOMS</span></strong><small>REAL-TIME STRATEGY · ALPHA 0.1</small></div></div>
+    <span class="connection" id="connIndicator">● Локальная игра</span>
+  </header>
+  <main>
+    <section class="lobby panel" id="lobby">
+      <div class="lobby-left"><p class="eyebrow">ПОСТРОЙ СВОЁ КОРОЛЕВСТВО</p><h1>Четыре королевства.<br><em>Одна карта.</em></h1><p>Развивай поселение, приказывай рабочим добывать ресурсы, строй укрепления и отправляй армию на земли соперников.</p>
+      <div class="feature-chips"><span>⚔ Война в реальном времени</span><span>▦ 2–4 игрока</span><span>◎ Без установки</span></div>
+      <div class="how">Один игрок создаёт комнату и не закрывает вкладку. Остальные присоединяются по коду или ссылке. Игра идёт прямо в браузере.</div></div>
+      <div class="lobby-right"><h2>Начать игру</h2><label for="nickname">Твоё имя</label><input id="nickname" maxlength="18" value="Амир" autocomplete="nickname"/>
+        <button id="hostButton" class="primary">Создать комнату <span>→</span></button>
+        <div class="or">ИЛИ ПРИСОЕДИНИТЬСЯ</div>
+        <label for="roomCode">Код комнаты</label><div class="inline"><input id="roomCode" maxlength="9" placeholder="Например: ABC123"/><button id="joinButton">Войти</button></div>
+        <button id="demoButton" class="ghost">Играть одному против бота</button>
+        <div class="error" id="lobbyError" role="status"></div>
+      </div>
+    </section>
+    <section class="waiting panel hidden" id="waiting">
+      <div><p class="eyebrow">КОМНАТА СОЗДАНА</p><h2>Собери братьев</h2><p>Поделись кодом или ссылкой. Матч начинает создатель комнаты.</p></div>
+      <div class="invite"><div class="room-code" id="showCode">—</div><button id="copyLink">Скопировать ссылку <span>↗</span></button></div>
+      <div><strong>Участники</strong><div id="waitingPlayers" class="players-list"></div></div>
+      <div class="inline"><button class="primary" id="startButton">Начать матч</button><span class="muted" id="waitingHint">Для старта нужны два игрока.</span></div>
+    </section>
+    <section class="game hidden" id="game">
+      <div class="resourcebar panel"><div class="resource"><span>🪵</span><div><small>ДРЕВЕСИНА</small><strong id="resWood">0</strong></div></div><div class="resource"><span>🪨</span><div><small>КАМЕНЬ</small><strong id="resStone">0</strong></div></div><div class="resource"><span>🌾</span><div><small>ЕДА</small><strong id="resFood">0</strong></div></div><div class="resource"><span>🟡</span><div><small>ЗОЛОТО</small><strong id="resGold">0</strong></div></div><div class="resource"><span>♟</span><div><small>НАСЕЛЕНИЕ</small><strong id="resPop">0 / 0</strong></div></div></div>
+      <div class="game-columns"><div class="main-column"><div class="map-head"><div><p class="eyebrow">ПОЛЕ БИТВЫ</p><h2>Пограничные земли</h2></div><div class="tick" id="tickLabel">00:00</div></div><div class="map-wrap" id="mapWrap"><canvas id="mapCanvas" width="912" height="608" aria-label="Карта игрового мира"></canvas></div><div class="map-footer"><span id="mapStatus">Выбери рабочего, затем лес или рудник.</span><span>Перетаскивай карту прокруткой</span></div></div>
+      <aside class="side-column"><div class="panel sidebar-section"><p class="eyebrow">ВАШИ ВЛАДЕНИЯ</p><div id="sidePlayers" class="players-list"></div></div>
+        <div class="panel sidebar-section"><p class="eyebrow">ПРОИЗВОДСТВО</p><h3>Здания</h3><div id="buildButtons" class="action-grid"></div><div class="subnote">Выбери здание, затем свободную клетку своего цвета.</div></div>
+        <div class="panel sidebar-section"><p class="eyebrow">КОМАНДОВАНИЕ</p><h3>Войска и рабочие</h3><div id="recruitButtons" class="action-grid"></div><div id="selection" class="selection">Выбери юнита или здание на карте.</div><button id="upgradeButton" class="full hidden">Улучшить здание</button></div>
+        <div class="panel sidebar-section"><p class="eyebrow">СОБЫТИЯ</p><div id="events" class="events"></div></div>
+      </aside></div>
+    </section>
+  </main>
+  <footer class="footer">Brothers Kingdoms · Семейная альфа · Peer-to-peer multiplayer · Бесплатный проект</footer>
+  <div id="toast" class="toast hidden" role="status"></div>
+  <script src="engine.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="game.js"></script>
+</body></html>
