@@ -1,25 +1,32 @@
-# Brothers Kingdoms — Battlefield Awareness v11
+# Brothers Kingdoms — Kingdom Craft v12
 
-Browser-based original territory strategy for 1–4 human players and optional bots. Designed for mobile Safari/Chromium and desktops.
+Обновлённое оригинальное оформление территориальной стратегии для браузера. Визуальный ориентир — ясность, объём и характер мобильных стратегий наподобие Clash of Clans. Ни один ассет Supercell не используется.
 
-## v11: critical information visible during the match
+## Что нового
 
-- Persistent compact resources ribbon: food, wood, stone, gold, live production/s; food rate factors in troop recruitment. Low or declining food has a visual warning.
-- Always-visible troop reserve/cap, land %, victory target and match timer (retained from v10).
-- Persistent **incoming attack** banner when a hostile army targets your country. Names the attacker, counts incoming fronts and shows enemy troops. Tap to zoom to the battle. It disappears when the attacks stop.
-- Targeted incoming fronts receive a red marker on the world map and a red circle on the minimap. This is a focused warning for your kingdom rather than every world conflict.
-- New resource rates also show a consistent forecast before the first economy tick.
-- No game engine rule changes; attack, building, research, bots and P2P room protocols remain compatible with v10.
+- Светлая, более контрастная карта с отдельными цветами равнин, лесов, холмов, месторождений, гор и воды; рельефные штрихи кэшируются вне основного игрового цикла.
+- Две крупные равнозначные кнопки внизу карты: **Атака** и **Строить**. Походы — второстепенная кнопка поверх карты.
+- 4 всегда видимых ресурса с оригинальными иконками и читаемыми численными значениями / изменением в секунду; на 320px используются две строки по два ресурса.
+- Компактные, но читаемые показатели резерва, территории, времени.
+- Рисованные оригинальные иллюстрации всех 8 строений и столицы; иконки ресурсов, атаки, строительства и походов. SVG встроены в HTML и JS как data URI для надёжного запуска без дополнительных запросов; исходные SVG также лежат в assets/ для дальнейшего редактирования.
+- Светлая «инвентарная» панель строительства с бонусом, ценой и требованиями; отдельный экран исследований.
+- Сигнал входящего нападения поверх карты не изменяет её высоту, можно перейти к атакованной границе одним нажатием.
+- Главное меню, лобби и дополнительные панели оформлены в той же оригинальной игровой эстетике.
+- На GitHub Pages `index.html` содержит встроенные стили и скрипты; в исходном архиве сохранён отдельный `game-v12.css`. Внутри пока присутствуют сохранённые базовые правила v11 и завершающий слой Kingdom Craft. Это упрощение загрузки, не полная очистка исторических CSS-селекторов.
 
-## How to run
+## Запуск
 
-Open `index.html` in a browser or serve the folder with a static web server. Multiplayer uses PeerJS via CDN and needs an internet connection. An active host tab is required. For deployment to GitHub Pages, keep the related stylesheets and scripts in the repository root.
+Распаковать архив, запустить локальный HTTP-сервер в корневой папке, например `python -m http.server 8000`, открыть `http://localhost:8000/`. Для игры через интернет используется GitHub Pages и PeerJS; ведущий должен держать вкладку открытой.
 
-## Regression tests
+## Тесты
 
-- `node test-v9-gameplay.js`
-- `python test-visibility-v11.py` (Chromium + Playwright)
-- `python test-hud-v10.py` (updated to load `hud-v11.css`)
-- `python test-network-v11.py` (simulated PeerJS network and incoming attack to a guest)
+- `node test-v9-gameplay.js` — регрессия основного движка.
+- `python test-v12-functional.py` — скриншоты, размеры, видимость ресурсов/кнопок, карточки зданий, исследования, предпросмотр цели и тревога.
+- `python test-network-v12.py` — два клиента на имитированном PeerJS: комната, готовность, совместный матч, сигнал вражеской атаки.
+- `python test-v12-visual.py` — снимки игрового экрана и панели на четырёх разрешениях.
 
-The standalone release ZIP includes the Python tests used during verification. See `VISIBILITY_AUDIT_V11.md` for the full 60-point visibility audit, test scope, and outstanding work.
+В локальной тестовой среде HTTP-запросы из Chromium блокируются политикой среды, поэтому браузерные тесты встраивают HTML, CSS и JS непосредственно в тестовую страницу. Оригинальные SVG активируются data URL при тесте. Это не заменяет проверку на реальном Safari, а сам PeerJS не проверялся через внешний интернет.
+
+## Ограничения
+
+В этом релизе переработана **художественная система и UI**, а не весь дизайн-долг из 100 замечаний. Ещё нужны: настоящая ручная проверка Safari и двух телефонов, отдельное масштабирование UI, полноценный звук и анимационный пакет, более плавная геометрия берегов и владений, при желании — дальнейшая очистка накопленного CSS. Автоматическая передача роли ведущего также не реализована.
