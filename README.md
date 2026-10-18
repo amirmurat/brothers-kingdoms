@@ -1,42 +1,25 @@
-# Brothers Kingdoms — Gameplay HUD v10
+# Brothers Kingdoms — Battlefield Awareness v11
 
-A private-room and solo browser territory strategy. This release specifically targets **information visibility during an active match**. It builds on v9's buildings and locally controlled frontline conquest.
+Browser-based original territory strategy for 1–4 human players and optional bots. Designed for mobile Safari/Chromium and desktops.
 
-## What changed
+## v11: critical information visible during the match
 
-- **Always-on, device-independent core stats:** reserve troops, capacity, actual recruitment rate, territorial percentage, 70% victory goal, remaining match time. Territory no longer disappears on 320px-wide phones. A small goal-progress line shows advancement.
-- **Context-aware recruitment status:** `НЕТ ЕДЫ`, `ЛИМИТ`, or `НАБОР 0` rather than an unexplained `+0/с`. Before the first economic tick, displayed troop income is explicitly approximate and cap is derived from current territory/buildings.
-- **Map-first attack controls:** initial attack control is one compact button; presets expand on demand. The selected-target sheet replaces, rather than stacks on, the dock. Its reserve warning uses the actual reserve left, not a hard-coded attack-percent cutoff.
-- **Strategic context:** minimap is expanded at start on phones. Important notifications include territorial losses with a map focus action, threats to the capital, completed campaigns, stalled food-related recruitment, weakened expeditions and connection degradation.
-- **Network safety:** stale guest state (over 4.5 s old) blocks new orders, showing the number of seconds since the last update. It does *not* pretend that the match is up to date.
-- **Live fronts:** new expeditions track their initial troop allocation and how many tiles they capture. The expedition list shows remaining vs initial troops, estimated losses, captured cells, and high-risk depleted units. The map highlights severely weakened army markers.
-- **Decision support:** for enemy attack previews, show both target-tile defense and mean defense on the selected frontage, with uncertainty. Shift the map enough to keep a selected target visible above the confirmation sheet.
-- **Quick feedback:** local orders now acknowledge the start of a campaign. Resource details include recruitment and estimated food consumption.
+- Persistent compact resources ribbon: food, wood, stone, gold, live production/s; food rate factors in troop recruitment. Low or declining food has a visual warning.
+- Always-visible troop reserve/cap, land %, victory target and match timer (retained from v10).
+- Persistent **incoming attack** banner when a hostile army targets your country. Names the attacker, counts incoming fronts and shows enemy troops. Tap to zoom to the battle. It disappears when the attacks stop.
+- Targeted incoming fronts receive a red marker on the world map and a red circle on the minimap. This is a focused warning for your kingdom rather than every world conflict.
+- New resource rates also show a consistent forecast before the first economy tick.
+- No game engine rule changes; attack, building, research, bots and P2P room protocols remain compatible with v10.
 
-## Files
+## How to run
 
-`index.html`, `style.css`, `frontline-v7.css`, `refined-v9.css`, `hud-v10.css`, `game.js`, `engine.js`.
+Open `index.html` in a browser or serve the folder with a static web server. Multiplayer uses PeerJS via CDN and needs an internet connection. An active host tab is required. For deployment to GitHub Pages, keep the related stylesheets and scripts in the repository root.
 
-## Tests (run from project root)
+## Regression tests
 
-```bash
-node --check game.js
-node --check engine.js
-node test-v9-gameplay.js
-python test-hud-v10.py
-python interaction_v9.py
-python network_v9.py
-```
+- `node test-v9-gameplay.js`
+- `python test-visibility-v11.py` (Chromium + Playwright)
+- `python test-hud-v10.py` (updated to load `hud-v11.css`)
+- `python test-network-v11.py` (simulated PeerJS network and incoming attack to a guest)
 
-Browser tests use Python Playwright + Chromium. The scripts open the standalone app via `set_content` to avoid sandbox navigation restrictions; the PeerJS two-client test uses a simulated transport. Live Safari and internet-connected peer-to-peer matches remain to be checked on real devices.
-
-## Not included / known gaps
-
-- Does **not** reconstruct a complete battle odds/probability model. The displayed defender information is factual and the suggested risk remains qualitative.
-- There is no reliable ETA or predicted conquered land area (these would be dishonest without a deeper combat simulation).
-- No authoritative hosting or automatic host migration; rooms still require the host to stay online.
-- UI remains pixel/grid-based on canvas; a more polished map renderer and stronger front highlight are independent work.
-- Historical end-of-expedition returned troop counts are not stored as per-campaign statistics; the active view reports current strength, troops expended and captured cells.
-- v9 save games may include older armies without the new `initialStrength` / `captured` fields; the list safely uses fallback values.
-
-See `HUD_V10_STATUS.md` for individual status against the preceding 56-point visibility audit.
+The standalone release ZIP includes the Python tests used during verification. See `VISIBILITY_AUDIT_V11.md` for the full 60-point visibility audit, test scope, and outstanding work.
