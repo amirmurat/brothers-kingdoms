@@ -6,12 +6,12 @@
   <meta name="theme-color" content="#f7f8fa">
   <meta name="description" content="Brothers Kingdoms — стратегия за территорию в реальном времени. Играй с братьями или против ботов.">
   <title>Brothers Kingdoms · Frontline</title>
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
   <div id="lobby" class="lobby-screen">
     <div class="lobby-frame">
-      <header class="site-header"><div class="site-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9l5 3 3-7 3 7 5-3v10H4Z"/><path d="M4 19h16"/></svg></div><span>BROTHERS <b>KINGDOMS</b></span><span class="site-version">FRONTLINE / 05</span></header>
+      <header class="site-header"><div class="site-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9l5 3 3-7 3 7 5-3v10H4Z"/><path d="M4 19h16"/></svg></div><span>BROTHERS <b>KINGDOMS</b></span><span class="site-version">FRONTLINE / 06</span></header>
       <main class="lobby-grid">
         <div class="lobby-copy">
           <div class="overline"><span class="overline-dot"></span> ИГРАЙТЕ ВМЕСТЕ · 2–4 ИГРОКА</div>
@@ -29,7 +29,7 @@
           <button id="hostButton" class="primary large">Создать комнату <span aria-hidden="true">→</span></button>
           <div class="split"><span>УЖЕ ЕСТЬ КОД?</span></div>
           <div class="join-line"><input id="roomCode" maxlength="9" autocomplete="off" placeholder="Код комнаты" aria-label="Код комнаты"><button id="joinButton" class="secondary">Войти</button></div>
-          <button id="demoButton" class="ghost large">Играть с ботами <span aria-hidden="true">↗</span></button>
+          <div class="solo-options"><label for="soloBots">Соперники</label><select id="soloBots"><option value="2">2 · обучение</option><option value="4" selected>4 · стандарт</option><option value="7">7 · сложно</option><option value="10">10 · хаос</option></select></div><button id="demoButton" class="ghost large">Играть с ботами <span aria-hidden="true">↗</span></button>
           <div class="card-foot">Бесплатно · Без регистрации · Браузерная игра</div>
           <p id="lobbyError" class="error" role="alert"></p>
         </section>
@@ -38,33 +38,33 @@
   </div>
   <div id="waiting" class="waiting-screen hidden"><section class="entry-card waiting-card">
     <div class="card-eyebrow">КОМНАТА СОЗДАНА</div><h2>Пригласи братьев</h2><p class="card-subtitle">Отправь им ссылку или код комнаты.</p>
-    <div class="room-token"><strong id="showCode">------</strong><button id="copyLink" class="secondary">Копировать ссылку</button></div>
+    <div class="room-token"><strong id="showCode">------</strong><button id="copyCode" class="secondary">Код</button><button id="copyLink" class="secondary">Ссылка</button></div>
     <div id="waitingPlayers" class="waiting-players"></div>
     <label class="input-label" for="botCount">Количество ботов</label>
-    <select id="botCount"><option value="3">3 · спокойно</option><option selected value="7">7 · стандартно</option><option value="10">10 · напряжённо</option></select>
+    <select id="botCount"><option value="0">Без ботов</option><option value="3">3 · спокойно</option><option selected value="7">7 · стандартно</option><option value="10">10 · напряжённо</option></select><label class="input-label" for="matchDuration">Длительность матча</label><select id="matchDuration"><option value="360">6 минут</option><option value="720" selected>12 минут</option><option value="1200">20 минут</option></select><label class="input-label" for="spawnChoice">Место появления</label><select id="spawnChoice"><option value="auto">Автоматически</option><option value="northwest">Северо-запад</option><option value="northeast">Северо-восток</option><option value="southwest">Юго-запад</option><option value="southeast">Юго-восток</option></select><button id="readyButton" class="secondary large hidden" aria-pressed="false">Готов</button><p id="roomRules" class="hint">Победа: захват 70% суши или лидерство по времени. Ведущий должен оставаться в игре.</p>
     <button id="startButton" class="primary large">Начать матч <span aria-hidden="true">→</span></button>
     <p class="card-foot" id="waitingHint">Можно играть даже одному.</p>
   </section></div>
   <div id="game" class="game-screen hidden">
     <header class="topbar">
       <div class="brand"><div class="brand-symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9l5 3 3-7 3 7 5-3v10H4Z"/></svg></div><div class="brand-name">BROTHERS <b>KINGDOMS</b></div></div>
-      <div class="top-resources">
+      <div class="top-resources" id="resourceSummary">
         <div><span>ЕДА</span><b id="resFood">0</b><small id="incFood">+0</small></div>
         <div><span>ДРЕВЕСИНА</span><b id="resWood">0</b><small id="incWood">+0</small></div>
         <div><span>КАМЕНЬ</span><b id="resStone">0</b><small id="incStone">+0</small></div>
         <div><span>ЗОЛОТО</span><b id="resGold">0</b><small id="incGold">+0</small></div>
       </div>
-      <div class="top-stat troop-stat"><span>ВОЙСКА</span><b id="troopCount">0</b><small id="troopCap">/0</small></div>
+      <div class="top-stat troop-stat"><span>ВОЙСКА</span><b id="troopCount">0</b><small id="troopCap">/0</small><small id="troopGrowth">+0/с</small></div>
       <div class="top-stat land-stat"><span>ТЕРРИТОРИЯ</span><b id="landCount">0</b><small id="landShare">0%</small></div>
-      <div class="top-stat clock-stat"><span>ВРЕМЯ</span><b id="timeLeft">12:00</b><small id="networkStatus">ОНЛАЙН</small></div>
+      <div class="top-stat clock-stat"><span>ВРЕМЯ</span><b id="timeLeft">12:00</b><small id="networkStatus">ОНЛАЙН</small></div><button id="economyToggle" class="square-button" aria-label="Показать ресурсы" title="Ресурсы">◎</button>
       <button id="menuToggle" class="square-button mobile-menu" aria-label="Меню развития"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     </header>
     <main class="game-layout">
       <section class="map-shell">
         <div class="map-toolbar">
-          <div class="map-location"><span class="location-dot"></span><strong id="myKingdom">Королевство</strong><span id="mapStatus">Коснись территории, чтобы атаковать</span></div>
+          <div class="map-location"><span class="location-dot"></span><strong id="myKingdom" title="Название королевства">Королевство</strong><span id="mapStatus" aria-live="polite">Коснись территории, чтобы выбрать цель</span></div>
           <div class="map-toolbar-actions">
-            <button id="developButton" class="develop-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V9l9-6 9 6v12H3Z M9 21v-8h6v8"/></svg><span>Развитие</span></button>
+            <button id="pauseGame" class="develop-button" title="Пауза в одиночной игре">Пауза</button><button id="helpButton" class="square-button" aria-label="Правила игры">?</button><button id="developButton" class="develop-button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21V9l9-6 9 6v12H3Z M9 21v-8h6v8"/></svg><span>Развитие</span></button>
             <button id="zoomOut" class="square-button" title="Уменьшить" aria-label="Уменьшить"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
             <span id="zoomText" class="zoom-label">100%</span>
             <button id="zoomIn" class="square-button" title="Увеличить" aria-label="Увеличить"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
@@ -73,22 +73,22 @@
           </div>
         </div>
         <div class="map-view" id="mapView">
-          <canvas id="mapCanvas" aria-label="Карта государств"></canvas>
-          <div class="map-hint">Касание — атака · Перетаскивание — карта</div>
-          <div id="mapTooltip" class="map-tooltip hidden"></div>
-          <div class="minimap-wrap"><div class="minimap-label">МИР</div><canvas id="minimap" width="160" height="104" aria-label="Мини-карта"></canvas></div>
-          <div class="map-battle-controls">
+          <canvas id="mapCanvas" tabindex="0" role="application" aria-label="Карта государств. Стрелки передвигают курсор, Enter выбирает цель."></canvas><div id="keyboardPosition" class="sr-only" aria-live="polite"></div>
+          <div class="map-hint" id="mapHint">Касание — выбрать цель · Перетаскивание — карта</div>
+          <div id="mapTooltip" class="map-tooltip hidden"></div><div id="mapStatusMobile" class="map-status-mobile hidden" aria-live="polite"></div><ul id="accessibleObjects" class="sr-only" aria-label="Доступные объекты карты"></ul>
+          <div class="minimap-wrap" id="minimapWrap"><button id="minimapToggle" aria-label="Скрыть миникарту" aria-expanded="true">Мир <span>−</span></button><canvas id="minimap" tabindex="0" width="160" height="104" role="button" aria-label="Миникарта, Enter переместиться к центру мира"></canvas></div>
+          <div id="targetPreview" class="target-preview hidden" aria-live="polite"><div class="target-info"><strong id="targetTitle">Цель</strong><span id="targetDetail">Выбери территорию</span><span id="targetForecast">—</span></div><div class="target-actions"><button id="cancelTarget" class="secondary">Отмена</button><button id="confirmTarget" class="primary">Отправить войска</button></div></div><div class="map-battle-controls" id="battleDock"><button id="dockToggle" class="dock-toggle" aria-expanded="true">Армия <span id="dockSummary">30%</span> <span aria-hidden="true">⌃</span></button>
             <div class="control-header"><div><small>ОТПРАВКА АРМИИ</small><strong id="modeLabel">Наступление</strong></div><div class="percent-pill" id="percentLabel">30%</div></div>
             <input id="attackPercent" aria-label="Процент отправляемых войск" type="range" min="5" max="95" value="30" step="5">
             <div class="attack-presets"><button data-percent="15">15%</button><button data-percent="30" class="active">30%</button><button data-percent="50">50%</button><button data-percent="75">75%</button><button data-percent="95">95%</button></div>
-            <p id="actionHint">Выбери нейтральную или чужую территорию для наступления.</p>
+            <div id="attackNumbers" class="attack-numbers">Будет отправлено: <b id="sendingTroops">0</b> · Останется: <b id="remainingTroops">0</b> · Походы: <b id="activeArmies">0/12</b></div><p id="actionHint">Сначала выбери цель на карте, затем подтверди приказ.</p>
             <button id="cancelMode" class="secondary cancel-mode hidden">Отменить строительство</button>
           </div>
         </div>
       </section>
-      <aside id="sidebar" class="sidebar">
+      <div id="panelBackdrop" class="panel-backdrop hidden"></div><aside id="sidebar" class="sidebar" role="dialog" aria-label="Управление государством" aria-modal="false">
         <div class="sidebar-heading"><div><small>УПРАВЛЕНИЕ</small><strong>Развитие государства</strong></div><button id="closePanel" class="square-button" aria-label="Закрыть панель">×</button></div>
-        <div class="tabbar"><button data-tab="build" class="active">Здания</button><button data-tab="tech">Наука</button><button data-tab="diplomacy">Союзы</button><button data-tab="info">Обзор</button></div>
+        <div class="tabbar" role="tablist" aria-label="Разделы развития"><button role="tab" aria-selected="true" data-tab="build" class="active">Здания</button><button role="tab" aria-selected="false" data-tab="tech">Наука</button><button role="tab" aria-selected="false" data-tab="diplomacy">Союзы</button><button role="tab" aria-selected="false" data-tab="info">Обзор</button></div>
         <div class="side-scroll">
           <section id="tab-build" class="tab-content"><div class="section-head"><h2>Постройки</h2><p>Выбери здание, затем коснись своей территории.</p></div><div id="buildingsPanel" class="build-grid"></div></section>
           <section id="tab-tech" class="tab-content hidden"><div class="section-head"><h2>Исследования</h2><p>Улучшения распространяются на всё государство.</p></div><div id="techPanel" class="tech-list"></div></section>
@@ -99,10 +99,10 @@
         <div class="leaderboard"><div class="section-label">ЛИДЕРЫ</div><div id="leaderboard"></div></div>
       </aside>
     </main>
-    <div id="victory" class="victory-screen hidden"><section><div class="card-eyebrow">МАТЧ ЗАВЕРШЁН</div><h1 id="victoryName">Победа</h1><p id="victoryDesc"></p><button id="restart" class="primary large">Новая игра</button></section></div>
+    <div id="quickLeadersPanel" class="quick-leaders hidden" role="dialog" aria-label="Таблица лидеров"><strong>Лидеры мира</strong><div id="quickLeadersList"></div><button id="closeQuickLeaders" class="secondary">Закрыть</button></div><div id="contextCard" class="context-card hidden"><button id="closeContext" class="context-close" aria-label="Закрыть карточку">×</button><div id="contextBody"></div></div><div id="economyPanel" class="economy-panel hidden" role="dialog" aria-label="Экономика"><strong>Экономика</strong><div id="economyDetails"></div><button id="pauseMobile" class="secondary">Пауза (одиночная игра)</button><button id="nextFront" class="secondary">К следующей армии</button><button id="quickLeaders" class="secondary">Таблица лидеров</button><button id="closeEconomy" class="secondary">Закрыть</button></div><div id="tutorial" class="tutorial hidden" role="dialog" aria-modal="true" aria-label="Как играть"><section><h2>Как играть</h2><p><b>1.</b> Коснись нейтральной земли — выбери цель.</p><p><b>2.</b> Выбери долю войск и подтверди атаку.</p><p><b>3.</b> Накопленные войска защищают границы. Развивай экономику в меню.</p><p>Перетаскивай карту пальцем, приближай двумя пальцами. Цель — 70% суши или лидерство по окончании времени.</p><button id="closeTutorial" class="primary large">Понятно</button></section></div><div id="victory" class="victory-screen hidden"><section><div class="card-eyebrow">МАТЧ ЗАВЕРШЁН</div><h1 id="victoryName">Победа</h1><p id="victoryDesc"></p><div id="victoryStats"></div><button id="restart" class="primary large">Новая игра</button><button id="downloadSave" class="secondary">Сохранить итог матча</button></section></div>
   </div>
-  <div id="toast" class="toast hidden" role="status"></div>
-  <script src="engine.js?v=5"></script>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div><div id="gameError" class="sr-only" role="alert"></div>
+  <script src="engine.js?v=6"></script>
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="game.js?v=5"></script>
+  <script src="game.js?v=6"></script>
 </body></html>
