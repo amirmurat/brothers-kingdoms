@@ -1,7 +1,7 @@
 /* Brothers Kingdoms: original territory strategy engine. Deterministic, host-authoritative. */
 (function(root,factory){const api=factory();if(typeof module!=='undefined'&&module.exports)module.exports=api;root.BKEngine=api;})(typeof window!=='undefined'?window:globalThis,function(){
 'use strict';
-const W=160,H=104,MAX=4,LIMIT=16*60,LAND=[1,2,3,4,5,6];
+const W=160,H=104,MAX=4,LIMIT=12*60,LAND=[1,2,3,4,5,6];
 const COLORS=['#43d9bd','#fbab5c','#a89dff','#fd7595','#d7e76c','#74b2fa','#f58fd7','#f1cd76','#64e0e8','#d69f76','#86dd8a','#b8aeed','#e79ba0','#b6c874'];
 const KINDS={farm:{name:'Ферма',cost:{wood:45,stone:10},income:'food'},lumber:{name:'Лесопилка',cost:{wood:40,stone:15},income:'wood'},quarry:{name:'Каменоломня',cost:{wood:45,stone:20},income:'stone'},mine:{name:'Шахта',cost:{wood:55,stone:55},income:'gold'},barracks:{name:'Казармы',cost:{wood:100,stone:65,gold:35}},fort:{name:'Крепость',cost:{wood:105,stone:130,gold:55}},port:{name:'Порт',cost:{wood:130,stone:85,gold:60}},city:{name:'Город',cost:{wood:165,stone:150,gold:100}}};
 const TECH={economy:{name:'Экономика',base:{gold:120,wood:80}},war:{name:'Военное дело',base:{gold:135,stone:75}},logistics:{name:'Логистика',base:{gold:100,wood:80}},sailing:{name:'Флот',base:{gold:170,wood:105,stone:90}}};
@@ -16,7 +16,9 @@ function generate(seed){const t=new Array(W*H);const base=(seed%611)/611;
   const nx=x/W,ny=y/H;const n= Math.sin(nx*11.2+base*5)*0.22+Math.cos(ny*14.3+base*7)*0.15+Math.sin(nx*21+ny*8+base*9)*0.1+Math.cos(nx*32-ny*25)*0.08+hash(Math.floor(x/5),Math.floor(y/5),seed)*0.21;
   const edge=Math.min(x,W-1-x,y,H-1-y);const height=n+(edge<5?-0.6+edge*0.09:0)+(Math.cos(nx*6.4-ny*4.8)*0.09);
   if(height<-.22){t[idx(x,y)]=0;continue;}
-  const r=hash(x,y,seed+53);t[idx(x,y)]=height>.65?6:r<.24?2:r<.36?3:r<.49?4:r<.57?5:1;
+  // Broad biomes instead of random terrain per cell: readable contiguous regions.
+  const r=Math.sin(nx*15.9+base*9)*.24+Math.cos(ny*21.3+base*6)*.21+Math.sin(nx*33-ny*13)*.09+(hash(Math.floor(x/10),Math.floor(y/10),seed+53)-.5)*.13;
+  t[idx(x,y)]=height>.61?6:height>.39?3:r<-.22?2:r>.27?4:(r>.23&&height>.15)?5:1;
  }
  return t;
 }
@@ -25,7 +27,7 @@ function person(s,id){return s.players.find(p=>p.id===id);}
 const available=(p,c)=>Object.entries(c||{}).every(([k,v])=>(p.res[k]||0)>=v);
 const charge=(p,c)=>Object.entries(c).forEach(([k,v])=>p.res[k]-=v);
 function log(s,msg){s.log.unshift(msg);if(s.log.length>8)s.log.length=8;}
-function lobby(seed=57283){return {version:2,phase:'lobby',seed:Math.floor(seed),tick:0,tiles:[],owners:[],players:[],buildings:[],armies:[],log:['Захватывайте земли, улучшайте экономику и защищайте столицу.'],winner:null,mode:'conquest',duration:LIMIT,nonce:0,landTotal:0};}
+function lobby(seed=57283){return {version:2,phase:'lobby',seed:Math.floor(seed),tick:0,tiles:[],owners:[],players:[],buildings:[],armies:[],log:['Захватывайте земли, улучшайте экономику и защищайте столицу.'],winner:null,mode:'conquest',duration:LIMIT,nonce:0,landTotal:0,territoryRevision:0};}
 function addPlayer(s,name,isBot=false){if(s.phase!=='lobby'||s.players.filter(p=>!p.bot).length>=MAX&&!isBot||s.players.length>=COLORS.length)return null;
  const id=s.players.length+1;let safe=String(name||('Королевство '+id)).trim().slice(0,18)||('Игрок '+id);
  s.players.push({id,name:safe,bot:!!isBot,color:COLORS[(id-1)%COLORS.length],res:{food:650,wood:390,stone:310,gold:260},troops:370,troopCap:1400,land:0,eliminated:false,tech:{economy:0,war:0,logistics:0,sailing:0},offers:[],allies:[],capital:null,kills:0});
@@ -39,14 +41,14 @@ function building(s,id,kind,x,y){const b={id:'b'+(++s.nonce),owner:id,kind,x,y,l
 function landCount(s){return s.players.filter(p=>!p.eliminated).reduce((n,p)=>n+p.land,0);}
 function gainTile(s,x,y,id){if(!inside(x,y)||tile(s,x,y)===0)return false;const i=idx(x,y),old=s.owners[i];if(old===id)return false;
  if(old){const p=person(s,old);if(p)p.land=Math.max(0,p.land-1);}
- s.owners[i]=id;if(id){const p=person(s,id);if(p)p.land++;}return true;
+ s.owners[i]=id;s.territoryRevision=(s.territoryRevision||0)+1;if(id){const p=person(s,id);if(p)p.land++;}return true;
 }
 function claim(s,x,y,id,r){for(let yy=y-r;yy<=y+r;yy++)for(let xx=x-r;xx<=x+r;xx++)if(inside(xx,yy)&&Math.hypot(xx-x,yy-y)<=r+0.25){s.tiles[idx(xx,yy)] ||=1;gainTile(s,xx,yy,id);}}
 function sites(s,n){const anchors=[[.16,.23],[.82,.76],[.82,.22],[.17,.78],[.48,.17],[.5,.83],[.27,.48],[.75,.5],[.34,.12],[.65,.9],[.91,.48],[.08,.52],[.47,.49],[.55,.48]];
  return anchors.slice(0,n).map(([fx,fy])=>({x:Math.round(fx*(W-1)),y:Math.round(fy*(H-1))}));
 }
 function start(s,bots=7){if(s.phase!=='lobby'||!s.players.length)return {ok:false,error:'Нет игроков.'};
- s.tiles=generate(s.seed);s.owners=new Array(W*H).fill(0);s.armies=[];s.buildings=[];
+ s.tiles=generate(s.seed);s.owners=new Array(W*H).fill(0);s.armies=[];s.buildings=[];s.territoryRevision=0;
  const botsCount=clamp(Math.floor(bots),0,COLORS.length-s.players.length);for(let i=0;i<botsCount;i++)addPlayer(s,['Алые пики','Северная корона','Железный союз','Вольные города','Янтарная орда','Золотые поля','Синяя стража','Каменный трон','Зеленые земли','Облачный народ'][i]||'Империя '+(i+1),true);
  sites(s,s.players.length).forEach((pos,i)=>{const p=s.players[i];claim(s,pos.x,pos.y,p.id,4);p.capital={x:pos.x,y:pos.y};building(s,p.id,'capital',pos.x,pos.y);
  const farmX=pos.x+2,farmY=pos.y+1;if(owner(s,farmX,farmY)===p.id)building(s,p.id,'farm',farmX,farmY);
@@ -64,16 +66,27 @@ function canBuild(s,id,kind,x,y){if(!KINDS[kind])return 'Нет такого з�
  if(tile(s,x,y)===6&&kind!=='quarry'&&kind!=='mine'&&kind!=='fort')return 'На вершине нельзя строить это здание.';
  return null;
 }
-function nearestBorder(s,id,tx,ty,sea=false){let best=null,score=Infinity;
- // Use entire ownership grid, so orders are possible at any distance.
- for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){if(owner(s,x,y)!==id)continue;
- const boundary=owner(s,x+1,y)!==id||owner(s,x-1,y)!==id||owner(s,x,y+1)!==id||owner(s,x,y-1)!==id;
- if(!boundary)continue;
- const d=Math.abs(x-tx)+Math.abs(y-ty);if(d<score){score=d;best={x,y};}
- }return best;
+// Border lists are reused across AI candidate queries for the same simulation tick.
+// This removes tens of thousands of repeated tile reads per bot order.
+const borderCache=new WeakMap();
+function borders(s,id){
+ let cache=borderCache.get(s);
+ if(!cache||cache.tick!==s.tick){cache={tick:s.tick,lists:new Map()};borderCache.set(s,cache);}
+ if(cache.lists.has(id))return cache.lists.get(id);
+ const list=[];
+ for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
+  const i=idx(x,y);if(s.owners[i]!==id)continue;
+  if(s.owners[i+1]!==id||s.owners[i-1]!==id||s.owners[i+W]!==id||s.owners[i-W]!==id)list.push({x,y});
+ }
+ cache.lists.set(id,list);return list;
+}
+function nearestBorder(s,id,tx,ty){
+ let best=null,score=Infinity;
+ for(const p of borders(s,id)){const d=Math.abs(p.x-tx)+Math.abs(p.y-ty);if(d<score){best=p;score=d;}}
+ return best;
 }
 function takeCapital(s,attacker,defender){const p=person(s,defender);if(!p||p.eliminated)return;p.eliminated=true;
- for(let i=0;i<s.owners.length;i++)if(s.owners[i]===defender){s.owners[i]=attacker;person(s,attacker).land++;}
+ for(let i=0;i<s.owners.length;i++)if(s.owners[i]===defender){s.owners[i]=attacker;person(s,attacker).land++;s.territoryRevision++;}
  p.land=0;p.troops=0;s.armies=s.armies.filter(a=>a.owner!==defender);s.buildings=s.buildings.filter(b=>b.owner!==defender);person(s,attacker).kills++;
  log(s,'⚔ '+person(s,attacker).name+' захватил столицу '+p.name+'!');
 }
@@ -151,7 +164,7 @@ function surrounding(s,a){for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(
  const x=a.x+dx,y=a.y+dy;if(inside(x,y)&&tile(s,x,y)!==0&&owner(s,x,y)!==a.owner){if(a.strength>15)capture(s,a,x,y);}}
 }
 function advance(s,a){const p=person(s,a.owner);if(!alive(p)){a.strength=0;return;}
- const speed=2+p.tech.logistics;
+ const speed=3+p.tech.logistics;
  for(let step=0;step<speed;step++){
   if(a.strength<8){a.strength=0;return;}
   if(a.x===a.tx&&a.y===a.ty){a.strength=0;return;}
