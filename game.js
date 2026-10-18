@@ -13,7 +13,6 @@ const iconPaths={
  mine:'<path d="M4 8c4-6 12-6 16 0M12 7v13m-4-9 8 8"/>',
  barracks:'<path d="M5 4l14 16M19 4 5 20M3 7l4-4m10 18 4-4"/>',
  fort:'<path d="M4 21V7h4v4h8V7h4v14H4Zm6 0v-5h4v5M4 7V4h4v3m8 0V4h4v3"/>',
- port:'<path d="M3 16 12 20 21 16l-2-5H5l-2 5Zm9-5V3m0 2 5 4h-5M3 22c3-2 6-2 9 0 3-2 6-2 9 0"/>',
  city:'<path d="M3 21V9h7v12H3Zm7 0V4h11v17H10ZM6 12v2m0 3v1m7-10v2m4-2v2m-4 4v2m4-2v2"/>'};
 const iconSvg=(id)=>`<svg viewBox="0 0 24 24" aria-hidden="true">${iconPaths[id]||iconPaths.city}</svg>`;
 const iconImages=Object.fromEntries(Object.keys(iconPaths).map(id=>{const im=new Image();im.src=artSrc('building-'+id+'.svg');im.onload=()=>queueDraw();return [id,im];}));
@@ -24,13 +23,12 @@ const buildingInfo={
  mine:{short:'Добывает золото для исследований.',detail:'+7 золота/с за уровень',place:'Руда, холмы или горы',resource:'gold',perLevel:7},
  barracks:{short:'Позволяют содержать больше войск.',detail:'+430 к лимиту армии · +5 к набору/с за уровень',place:'Своя земля, кроме горных вершин',cap:430,rate:5},
  fort:{short:'Защищает окружающие клетки.',detail:'Радиус 4 клетки · защита до +18,5 за уровень у крепости',place:'Своя земля, в том числе горы'},
- port:{short:'Открывает морские атаки после изучения флота.',detail:'Улучшения ускоряют морской переход и снижают потери',place:'Своя береговая клетка'},
  city:{short:'Приносит еду, золото и новых солдат.',detail:'+5 еды/с · +5 золота/с · +260 лимит · +3 набор/с за уровень',place:'Своя земля, кроме горных вершин',cap:260,rate:3}
 };
 const nameResource={food:'Еда',wood:'Дерево',stone:'Камень',gold:'Золото'};
 const briefCost=c=>Object.entries(c||{}).map(([k,v])=>`<span class="cost-unit"><img src="${artSrc(k+'.svg')}" alt="${nameResource[k]}">${number(v)}</span>`).join(' ');
-function buildingBenefit(id,p,level=1){const b=buildingInfo[id];if(!b)return '';if(b.resource)return `+${Math.round(b.perLevel*level*(1+.25*(p?.tech?.economy||0)))}/с ${({food:'еды',wood:'древесины',stone:'камня',gold:'золота'})[b.resource]}`;if(id==='city')return `+${Math.round(5*level*(1+.25*(p?.tech?.economy||0)))}/с еды и золота · +${260*level} лимит · +${3*level} набор/с`;if(id==='barracks')return `+${430*level} лимит · +${5*level} набор/с`;if(id==='fort')return `до +${(18.5*level).toFixed(1)} защиты в радиусе 4`;if(id==='port')return `морская скорость +${Math.round((level-1)*.55*100)/100} клетки/шаг`;return b.detail;}
-function techBenefit(id,level){if(id==='economy')return `Множитель дохода ×${(1+level*.25).toFixed(2)}`;if(id==='war')return `Атака эффективнее · защита +${(1.9*level).toFixed(1)} · набор +${2*level} войск/с`;if(id==='logistics')return `Затраты войск при захвате −${8*level}%`;if(id==='sailing')return level===0?'Морские атаки недоступны':`Флот: скорость +${(1.25*(level-1)).toFixed(2)} клетки/шаг; потери меньше`;return '';}
+function buildingBenefit(id,p,level=1){const b=buildingInfo[id];if(!b)return '';if(b.resource)return `+${Math.round(b.perLevel*level*(1+.25*(p?.tech?.economy||0)))}/с ${({food:'еды',wood:'древесины',stone:'камня',gold:'золота'})[b.resource]}`;if(id==='city')return `+${Math.round(5*level*(1+.25*(p?.tech?.economy||0)))}/с еды и золота · +${260*level} лимит · +${3*level} набор/с`;if(id==='barracks')return `+${430*level} лимит · +${5*level} набор/с`;if(id==='fort')return `до +${(18.5*level).toFixed(1)} защиты в радиусе 4`;return b.detail;}
+function techBenefit(id,level){if(id==='economy')return `Множитель дохода ×${(1+level*.25).toFixed(2)}`;if(id==='war')return `Атака эффективнее · защита +${(1.9*level).toFixed(1)} · набор +${2*level} войск/с`;if(id==='logistics')return `Затраты войск при захвате −${8*level}%`;return '';}
 function resourceRates(p){
  const c=E.counts(state,p.id),land=p.land||0,m=1+(p.tech.economy||0)*.25;
  const gross=p.income||{
@@ -56,12 +54,13 @@ let dragAttack=null,longPressTimer=null,dragHint=null;
 let state=null,myId=null,host=false,demo=false,peer=null,upstream=null,code='',connections=new Map(),lastSendTime=new Map(),phaseShown='',timer=0;
 let lastHudPlayer=null,lastHudTick=-1,lastHudLand=null,lastHudOwners=null,lastHudArmies=new Map(),hudNotice=null,hudAlertAction=null;
 let activeThreats=[],announcedThreats=new Set(),lastThreatSignature="",attackFocusIndex=0;
+let quickBuildOpen=false,buildPlacementChecks=0;
 let zoom=1.05,camX=0,camY=0,terrainSeed=null,pressed=new Map(),pointerStart=null,gesture=null,selected=null,buildMode=null,currentTab='build',percent=30,tooltipTimer=null,worldLayer=null,paintedRevision=-1,miniRevision=-1,renderQueued=false,panelOpen=false;let toastTimeout=null,target=null,redirectArmy=null,pauseSolo=false,moveCursor=null,lastTap=0,lastStateAt=Date.now(),pendingOrders=new Map(),seq=0,readyLocal=false,reconnectTries=0,reconnectTimer=null,connectTimer=null,tokenStore=new Map(),previousFocus=null,showTutorialOnce=true,lastRoster='',previousOwners=new Map(),previousRevs=new Map(),lastSaveTick=-1,oldArmyPositions=new Map(),movementStart=0,lastAnnounced='',frontIndex=0;
 const TILE=14;const mine=()=>state?.players.find(p=>p.id===myId);const color=id=>state?.players.find(p=>p.id===id)?.color||'#e8f3f3';
 function toast(msg,kind){const t=$('toast');
  const severity=kind||(/не хватает|отклонён|ошибк|нет связи|невозмож|не удало|недоступ|разрыв|устарел/i.test(String(msg))?'error':/готова|выполнен|побед|началось|исследован/i.test(String(msg))?'success':'info');
  t.dataset.kind=severity;t.textContent=msg;$('gameError').textContent=severity==='error'?msg:'';
- t.classList.remove('hidden');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.classList.add('hidden'),4200);} 
+ t.classList.remove('hidden');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.classList.add('hidden'),2450);} 
 function show(screen){for(const name of ['lobby','waiting','game'])$(name).classList.toggle('hidden',name!==screen);if(screen==='game')setTimeout(resize,10);if(screen==='lobby')updateResume();}
 function error(s){$('lobbyError').textContent=s;toast(s);}
 function name(){const val=$('nickname').value.trim().slice(0,18)||'Королевство';try{localStorage.setItem('bk-name',val);}catch(_){ }return val;}
@@ -164,11 +163,11 @@ function updateHudSignals(p){
  $('hudTroops').title=`Резерв: ${number(p.troops)} из ${number(cap)}. ${reason||`Набор: +${number(growth)} в секунду`}`;
  const share=p.land/Math.max(1,state.landTotal)*100;
  $('landCount').textContent=share.toFixed(1).replace('.',',')+'%';
- $('landShare').textContent='цель 70%';
- $('landProgress').style.width=Math.max(0,Math.min(100,share/70*100)).toFixed(1)+'%';
- $('landCount').title=`Земля: ${number(p.land)} из ${number(state.landTotal)} клеток. До 70%: ${Math.max(0,70-share).toFixed(1)} п.п.`;
- const sec=Math.max(0,state.duration-state.tick);$('timeLeft').textContent=`${String(Math.floor(sec/60)).padStart(2,'0')}:${String(sec%60).padStart(2,'0')}`;
- document.querySelector('.clock-stat')?.classList.toggle('is-urgent',sec<=60);
+ $('landShare').textContent='цель 100%';
+ $('landProgress').style.width=Math.max(0,Math.min(100,share)).toFixed(1)+'%';
+ $('landCount').title=`Земля: ${number(p.land)} из ${number(state.landTotal)} клеток. До 100%: ${Math.max(0,100-share).toFixed(1)} п.п.`;
+ $('frontCount').textContent=state.armies.filter(a=>a.owner===myId&&a.strength>0).length+'/12';
+ document.querySelector('.clock-stat')?.classList.remove('is-urgent');
  if(lastHudPlayer!==myId||state.tick<lastHudTick){lastHudPlayer=myId;lastHudLand=null;lastHudOwners=null;lastHudArmies=new Map();hudNotice=null;activeThreats=[];announcedThreats.clear();lastThreatSignature="";}
  const currentArmies=new Map(state.armies.filter(a=>a.owner===myId).map(a=>[a.id,a]));
  if(lastHudLand!==null&&p.land<lastHudLand){
@@ -188,7 +187,7 @@ function updateHudSignals(p){
 }
 
 function getToken(){try{let t=sessionStorage.getItem('bk-token-'+code);if(!t){t=crypto.randomUUID();sessionStorage.setItem('bk-token-'+code,t);}return t;}catch(_){return code+'-'+name();}}
-function saveSolo(){if(!demo||!state||state.phase!=='playing')return;try{localStorage.setItem('bk-v9-save',JSON.stringify(state));}catch(_){}}
+function saveSolo(){if(!demo||!state||state.phase!=='playing')return;try{localStorage.setItem('bk-v14-save',JSON.stringify(state));}catch(_){}}
 function copyText(t){navigator.clipboard?.writeText(t).then(()=>toast('Скопировано')).catch(()=>prompt('Скопируй:',t));}
 function canPay(p,c){return Object.entries(c||{}).every(([k,v])=>(p.res[k]||0)>=v);}
 function deficit(p,c){return Object.entries(c||{}).filter(([k,v])=>(p.res[k]||0)<v).map(([k,v])=>({wood:'Древесина',stone:'Камень',gold:'Золото',food:'Еда'}[k]+': −'+(v-(p.res[k]||0)))).join(', ');}
@@ -199,17 +198,17 @@ function setPreview(t){
  if(!t){queueDraw();return;}
  const owner=E.owner(state,t.x,t.y),enemy=E.person(state,owner),p=mine(),sent=Math.floor(p.troops*percent/100);
  const front=E.previewFront(state,myId,t.x,t.y);
- const naval=front.cells.length===0&&E.tile(state,t.x,t.y)===0;
+ const sea=E.tile(state,t.x,t.y)===0;
  $('targetTitle').textContent=t.type==='redirect'?'Сменить направление':enemy?'Атака на '+enemy.name:'Захват нейтральной земли';
  $('targetDetail').textContent=`${number(sent)} войск · в резерве ${number(p.troops-sent)} · ${terrainNames[E.tile(state,t.x,t.y)]}`;
  const defense=enemy?Math.round(E.tileDefense(state,owner,t.x,t.y)):0;const averageDefense=enemy&&front.cells.length?Math.round(front.cells.reduce((sum,i)=>sum+E.tileDefense(state,owner,i%E.W,Math.floor(i/E.W)),0)/front.cells.length):0;
  $('targetForecast').textContent=t.type==='redirect'?'После подтверждения армия сменит направление.':
-   naval?'Морская атака: требуется порт и флот.':
+   sea?'Море непроходимо. Выбери сушу.':
    !front.cells.length?'Нет общей границы.':
    owner?`Участок: ${front.cells.length} клеток · защита фронта в среднем ${averageDefense} (цель ${defense}) · резерв врага: ${number(enemy?.troops||0)}. Прогноз приблизительный.`:
    `Начало захвата: выделенный участок границы (${front.cells.length} клеток), затем фронт расширится.`;
  $('confirmTarget').textContent=t.type==='redirect'?'Изменить цель':owner?'Атаковать':'Начать захват';
- $('confirmTarget').disabled=!(t.type==='redirect'||(sent>=35&&(front.cells.length>0||naval)));if(t.type!=='redirect'&&p.troops-sent<Math.max(75,Math.min(300,p.troopCap*.12)))$('targetForecast').textContent+=' Внимание: после приказа останется мало войск для обороны.';
+ $('confirmTarget').disabled=!(t.type==='redirect'||(sent>=35&&(front.cells.length>0&&!sea)));if(t.type!=='redirect'&&p.troops-sent<Math.max(75,Math.min(300,p.troopCap*.12)))$('targetForecast').textContent+=' Внимание: после приказа останется мало войск для обороны.';
  box.dataset.order=t.type;
  // Preserve target visibility above the confirmation sheet, including iPhone's safe area.
  const projectedY=(t.y+.5)*TILE*zoom+camY,available=canvas.clientHeight-Math.min(270,Math.max(155,canvas.clientHeight*.37));
@@ -231,7 +230,7 @@ function contextual(item){
 }
 function createRoom(){if(!getPeer())return;setBusy(true);code=randomCode();host=true;demo=false;readyLocal=true;peer=new Peer('bk-'+code);setNetwork('ПОДКЛЮЧЕНИЕ');
  connectTimer=setTimeout(()=>{if(!state){setBusy(false);error('Не удалось создать комнату. Повтори попытку.');try{peer.destroy();}catch(_){}}},12000);
- peer.on('open',()=>{clearTimeout(connectTimer);setBusy(false);state=E.lobby(Date.now());myId=E.addPlayer(state,name());state.players[0].ready=true;state.settings={bots:Number($('botCount').value),duration:Number($('matchDuration').value)};setNetwork('ВЕДУЩИЙ');try{history.replaceState(null,'','#'+code);}catch(_){}phaseShown='';render();});
+ peer.on('open',()=>{clearTimeout(connectTimer);setBusy(false);state=E.lobby(Date.now());myId=E.addPlayer(state,name());state.players[0].ready=true;state.settings={bots:Number($('botCount').value)};setNetwork('ВЕДУЩИЙ');try{history.replaceState(null,'','#'+code);}catch(_){}phaseShown='';render();});
  peer.on('connection',joinConnection);peer.on('error',e=>{setBusy(false);error('Комната: '+(e.message||e.type||'ошибка'));});
  peer.on('disconnected',()=>setNetwork('СЕРВИС НЕДОСТУПЕН'));
 }
@@ -261,19 +260,19 @@ function joinConnection(conn){conn.on('data',m=>{if(!m||typeof m!=='object')retu
  }
  });conn.on('close',()=>{const id=connections.get(conn);connections.delete(conn);previousOwners.delete(conn);previousRevs.delete(conn);lastSendTime.delete(conn);if(id){const p=E.person(state,id);if(p){if(state.phase==='lobby'){state.players=state.players.filter(v=>v.id!==id);for(const [token,pid] of tokenStore)if(pid===id)tokenStore.delete(token);}else{p.connected=false;p.ready=false;}}broadcast();}});}
 function broadcast(includeTerrain=false){if(!state)return;const packed=pack(state,includeTerrain);for(const c of connections.keys())if(c.open){try{let delta=null,old=previousOwners.get(c);if(!includeTerrain&&old&&old.length===state.owners.length&&state.phase==='playing'){const changes=[];for(let i=0;i<old.length;i++)if(old[i]!==state.owners[i])changes.push(i,state.owners[i]);if(changes.length<state.owners.length*.32)delta=changes;}const out=delta?{...packed,owners:delta,ownerDelta:true,ownerBaseRev:previousRevs.get(c),packed:false}:packed;c.send({t:'state',state:out});previousOwners.set(c,state.owners.slice());previousRevs.set(c,state.territoryRevision);}catch(_){}}render();}
-function savedSolo(){try{const x=JSON.parse(localStorage.getItem('bk-v9-save')||localStorage.getItem('bk-v8-save')||'null');return x?.phase==='playing'?x:null;}catch(_){return null;}}
+function savedSolo(){try{const x=JSON.parse(localStorage.getItem('bk-v14-save')||'null');return x?.phase==='playing'&&x.version===14?x:null;}catch(_){return null;}}
 function updateResume(){const b=$('resumeButton');if(b)b.classList.toggle('hidden',!savedSolo());}
 function createDemo(resume=false){
  lastHudLand=null;lastHudTick=-1;lastHudOwners=null;lastHudArmies=new Map();hudNotice=null;activeThreats=[];announcedThreats.clear();lastThreatSignature="";
  worldLayer=null;paintedRevision=-1;host=true;demo=true;pauseSolo=false;code='DEMO';
  const previous=resume?savedSolo():null;state=previous||E.lobby(Date.now());
  myId=state.players[0]?.id||E.addPlayer(state,name());
- if(state.phase==='lobby'){state.settings={bots:Number($('soloBots').value),duration:720};E.start(state,Number($('soloBots').value));}
+ if(state.phase==='lobby'){state.settings={bots:Number($('soloBots').value)};E.start(state,Number($('soloBots').value));}
  phaseShown='';setNetwork('ОДИНОЧНО');render();if(!resume)showTutorial();
 }
-function startGame(){if(!host)return;const waiting=state.players.filter(p=>!p.bot&&p.connected!==false&&!p.ready);if(waiting.length)return toast('Ожидаем готовность: '+waiting.map(p=>p.name).join(', '));state.settings={bots:Number($('botCount').value),duration:Number($('matchDuration').value)};const res=E.start(state,state.settings.bots);if(!res.ok)return toast(res.error);broadcast(true);showTutorial();}
+function startGame(){if(!host)return;const waiting=state.players.filter(p=>!p.bot&&p.connected!==false&&!p.ready);if(waiting.length)return toast('Ожидаем готовность: '+waiting.map(p=>p.name).join(', '));state.settings={bots:Number($('botCount').value)};const res=E.start(state,state.settings.bots);if(!res.ok)return toast(res.error);broadcast(true);showTutorial();}
 function command(a){if(!state||state.phase!=='playing')return false;
- if(host){const r=E.action(state,myId,a);if(!r.ok){toast(r.error);return false;}broadcast();if(a.type==='build'){toast('Постройка готова');cancelMode();}else if(a.type==='send'){toast('Наступление началось');}return true;}
+ if(host){const r=E.action(state,myId,a);if(!r.ok){toast(r.error);return false;}broadcast();if(a.type==='build'){toast('Построено · можно поставить ещё');refreshQuickBuild();}else if(a.type==='send'){toast('Наступление началось');}return true;}
  if(upstream?.open){if(Date.now()-lastStateAt>4500){setNetwork('НЕТ СВЯЗИ');toast('Данные устарели. Подожди восстановления соединения перед приказом.');return false;}const id=++seq;pendingOrders.set(id,Date.now());upstream.send({t:'action',id,action:a});return true;}toast('Нет связи с комнатой.');return false;}
 function showTutorial(){if(!showTutorialOnce)return;try{localStorage.setItem('bk-v9-tutorial','yes');}catch(_){}showTutorialOnce=false;}
 
@@ -281,9 +280,9 @@ function render(){if(!state)return;
  if(state.phase==='lobby'){
   $('victory').classList.add('hidden');show('waiting');$('showCode').textContent=code;
   patchHtml('waitingPlayers',state.players.map(p=>`<div class="player-row"><i class="player-dot" style="background:${p.color}"></i><strong>${esc(p.name)}</strong><span class="muted">${p.id===myId?'Ты':p.id===1?'Ведущий':''} · ${p.connected===false?'Не в сети':p.ready?'Готов':'Ожидание'}</span></div>`).join(''));
-  $('startButton').classList.toggle('hidden',!host);$('readyButton').classList.toggle('hidden',host);$('readyButton').setAttribute('aria-pressed',String(readyLocal));$('readyButton').textContent=readyLocal?'Готов ✓':'Я готов';$('botCount').disabled=!host;$('matchDuration').disabled=!host;$('spawnChoice').disabled=!!mine()?.ready&&!host;
-  $('startButton').disabled=!state.players.filter(p=>!p.bot).every(p=>p.ready||p.connected===false);$('botCount').value=state.settings?.bots??7;$('matchDuration').value=state.settings?.duration??720;
-  $('waitingHint').textContent='Игроков: '+state.players.filter(p=>!p.bot).length+' · Ведущий должен держать страницу открытой.'; $('roomSettingsSummary').textContent=(state.settings?.bots??7)+' ботов · '+Math.round((state.settings?.duration??720)/60)+' минут';
+  $('startButton').classList.toggle('hidden',!host);$('readyButton').classList.toggle('hidden',host);$('readyButton').setAttribute('aria-pressed',String(readyLocal));$('readyButton').textContent=readyLocal?'Готов ✓':'Я готов';$('botCount').disabled=!host;$('spawnChoice').disabled=!!mine()?.ready&&!host;
+  $('startButton').disabled=!state.players.filter(p=>!p.bot).every(p=>p.ready||p.connected===false);$('botCount').value=state.settings?.bots??0;
+  $('waitingHint').textContent='Игроков: '+state.players.filter(p=>!p.bot).length+' · Ведущий должен держать страницу открытой.'; $('roomSettingsSummary').textContent=(state.settings?.bots??0)+' ботов · без ограничения времени';
   phaseShown='lobby';return;
  }
  if(phaseShown!=='playing'&&phaseShown!=='ended'){
@@ -294,9 +293,7 @@ function render(){if(!state)return;
  if(state.phase==='ended'&&phaseShown!=='ended'){
   phaseShown='ended';const w=state.players.find(p=>p.id===state.winner),me=mine();
   const outcome=!w?'draw':w.id===myId?'win':'loss';
-  const enoughLand=w&&w.land>state.landTotal*.70;
-  const remaining=state.players.filter(p=>!p.eliminated&&p.land>0);
-  const reason=!w?'Время матча закончилось без победителя.':enoughLand?'Победитель контролирует более 70% суши.':remaining.length<=1?'Все соперники потеряли свои государства.':'Время матча закончилось: победил лидер по территории.';
+  const reason='Победитель контролирует все 100% суши.';
   const duration=Math.floor(state.tick/60)+' мин '+String(state.tick%60).padStart(2,'0')+' сек';
   $('victoryName').textContent=outcome==='win'?'Победа!':outcome==='loss'?'Поражение':'Ничья';
   $('victoryEyebrow').textContent=outcome==='win'?'ТВОЁ КОРОЛЕВСТВО':outcome==='loss'?'МАТЧ ЗАВЕРШЁН':'МАТЧ ЗАВЕРШЁН';
@@ -349,7 +346,7 @@ function updateUI(){const p=mine();if(!p)return;
   patchHtml('techResourceSummary',resourceStrip(p));
   patchHtml('techPanel',Object.entries(E.TECH).map(([id,t])=>{
    const l=p.tech[id],cost=E.costTech(id,l),ok=canPay(p,cost);
-   return `<div class="tech-item tech-detail"><div class="tech-heading"><img class="tech-art" src="${artSrc(({economy:'gold',war:'swords',logistics:'army',sailing:'building-port'})[id]+'.svg')}" alt=""><strong>${esc(t.name)}</strong><span>Уровень ${l}/3</span></div>
+   return `<div class="tech-item tech-detail"><div class="tech-heading"><img class="tech-art" src="${artSrc(({economy:'gold',war:'swords',logistics:'army'})[id]+'.svg')}" alt=""><strong>${esc(t.name)}</strong><span>Уровень ${l}/3</span></div>
      <p>${esc(techBenefit(id,l))}</p><div class="tech-next">${l<3?`После исследования: ${esc(techBenefit(id,l+1))}`:'Максимальный уровень'}</div>
      ${l<3?`<small>Цена: ${briefCost(cost)}</small>`:''}
      <button data-research="${id}" ${l>=3||!ok||p.eliminated?'disabled':''}>${l>=3?'Исследовано':ok?'Исследовать':'Не хватает: '+deficit(p,cost)}</button>
@@ -357,15 +354,52 @@ function updateUI(){const p=mine();if(!p)return;
  }else if(currentTab==='diplomacy'){
   patchHtml('diplomacyPanel',state.players.filter(v=>v.id!==myId&&!v.eliminated).map(v=>`<div class="dip-item"><div class="dip-heading"><i class="dip-color" style="background:${v.color}"></i><strong>${esc(v.name)}</strong></div><p>${number(v.land)} клеток · ${p.allies.includes(v.id)?'Союзник':p.offers.includes(v.id)?'Предложение отправлено':v.offers.includes(myId)?'Предлагает союз':'Нейтральный'}</p><div class="dip-actions"><button class="${p.allies.includes(v.id)?'dip-danger':'dip-accept'}" data-ally="${v.id}">${p.allies.includes(v.id)?'Разорвать союз':v.offers.includes(myId)?'Принять союз':'Предложить союз'}</button>${p.allies.includes(v.id)?`<button data-donate="${v.id}">Подарить 100 золота</button>`:''}</div></div>`).join(''));
  }else{
-  patchHtml('infoPanel',`<div class="info-stat"><span>Территория</span><strong>${number(p.land)} / ${number(state.landTotal)} · ${(p.land/Math.max(1,state.landTotal)*100).toFixed(1)}%</strong></div><div class="info-stat"><span>До победы (70%)</span><strong>${Math.max(0,(70-p.land/Math.max(1,state.landTotal)*100)).toFixed(1)}%</strong></div><div class="info-stat"><span>Армии</span><strong>${state.armies.filter(a=>a.owner===myId).length}/12</strong></div><div class="info-stat"><span>Здания</span><strong>${state.buildings.filter(b=>b.owner===myId).length}</strong></div>`);patchHtml('events',state.log.map(msg=>`<div>${esc(msg)}</div>`).join(''));
+  patchHtml('infoPanel',`<div class="info-stat"><span>Территория</span><strong>${number(p.land)} / ${number(state.landTotal)} · ${(p.land/Math.max(1,state.landTotal)*100).toFixed(1)}%</strong></div><div class="info-stat"><span>До победы (100%)</span><strong>${Math.max(0,(100-p.land/Math.max(1,state.landTotal)*100)).toFixed(1)}%</strong></div><div class="info-stat"><span>Армии</span><strong>${state.armies.filter(a=>a.owner===myId).length}/12</strong></div><div class="info-stat"><span>Здания</span><strong>${state.buildings.filter(b=>b.owner===myId).length}</strong></div>`);patchHtml('events',state.log.map(msg=>`<div>${esc(msg)}</div>`).join(''));
  }
  patchHtml('economyDetails',resourceStrip(p)+`<div class="economy-army"><strong>Армия: ${number(p.troops)} / ${number(p.troopCap)}</strong><small>Набор: +${number(p.troopIncome||0)}/с ${p.troops>=p.troopCap?'· лимит':'· зависит от еды и зданий'}</small><small>Расход еды на набор: ≈${((p.troopIncome||0)*.2).toFixed(1)}/с</small></div>`);
  patchHtml('accessibleObjects',state.buildings.filter(b=>b.owner===myId).slice(0,30).map(b=>'<li>'+esc(E.KINDS[b.kind]?.name||'Столица')+' '+b.x+','+b.y+'</li>').join('')+state.armies.filter(a=>a.owner===myId).map(a=>'<li>Армия '+number(a.strength)+' солдат, '+a.x+','+a.y+'</li>').join(''));
  if(state.log?.[0]&&state.tick>3&&state.log[0]!==lastAnnounced){const message=state.log[0];lastAnnounced=message;if(/захватил столицу|разгром|победил|союз/.test(message.toLowerCase()))toast(message);}
- updateSelection();
+ updateSelection();refreshQuickBuild();
 }
 function updateSelection(){const item=selected?.kind==='army'?state.armies.find(a=>a.id===selected.id):selected?.kind==='building'?state.buildings.find(b=>b.id===selected.id):null;contextual(item);const box=$('selectedPanel');if(!item){box.textContent='Коснись объекта на карте. Для атаки выбери цель и подтверди приказ.';return;}box.textContent=(item.kind?E.KINDS[item.kind]?.name||'Столица':'Армия')+' · '+(E.person(state,item.owner)?.name||'')+' · '+(item.strength?number(item.strength)+' войск':'уровень '+item.level);}
-$('buildingsPanel').addEventListener('click',e=>{const b=e.target.closest('[data-build]');if(!b)return;buildMode=buildMode===b.dataset.build?null:b.dataset.build;selected=null;setPreview(null);$('cancelMode').classList.toggle('hidden',!buildMode);$('modeLabel').textContent=buildMode?'Построить: '+E.KINDS[buildMode].name:'Наступление';$('actionHint').textContent=buildMode?'Подсвечены допустимые клетки. Коснись своей земли.':'Коснись цели или удержи свою землю и проведи к цели.';updateUI();if(buildMode&&window.innerWidth<851)closePanel();queueDraw();});
+// Fast-build selection: choosing a building does not spend resources.
+// Placement is performed with a separate map tap after the player sees legal cells.
+function refreshQuickBuild(){
+ const p=mine(),container=$('quickBuildChoices');if(!container||!p||!state)return;
+ const html=Object.entries(E.KINDS).map(([id,item])=>{
+  const costs=Object.entries(item.cost).map(([r,n])=>`${({food:'Е',wood:'Д',stone:'К',gold:'З'})[r]}${n}`).join(' ');
+  const affordable=Object.entries(item.cost).every(([r,n])=>(p.res[r]||0)>=n);
+  return `<button type="button" class="quick-build-item ${buildMode===id?'chosen':''} ${!affordable?'unaffordable':''}" data-fast-build="${id}" aria-pressed="${buildMode===id}" title="${esc(item.name)} — ${esc(buildingInfo[id]?.short||'')} · ${costs}"><img alt="" src="${artSrc('building-'+id+'.svg')}"><span>${esc(item.name)}</span><small>${costs}</small></button>`;
+ }).join('');
+ if(container.dataset.html!==html){const scroll=container.scrollLeft;container.innerHTML=html;container.dataset.html=html;container.scrollLeft=scroll;}
+ const description=buildMode?`${E.KINDS[buildMode]?.name}: зелёный — можно, красный — нельзя. ${buildMode==='fort'?'Жёлтый ромб — радиус защиты.':''}`:'Выбери тип здания. Зелёные клетки доступны, красные запрещены.';
+ $('quickBuildHelp').textContent=description;
+ $('placingBuild').classList.toggle('hidden',!buildMode||quickBuildOpen);
+ if(buildMode){$('placingBuildText').textContent=E.KINDS[buildMode].name+' · выбери клетку';$('placingBuildIcon').src=artSrc('building-'+buildMode+'.svg');}
+}
+function toggleQuickBuild(force){
+ quickBuildOpen=typeof force==='boolean'?force:!quickBuildOpen;
+ $('quickBuild').classList.toggle('hidden',!quickBuildOpen);
+ $('mapView').classList.toggle('build-palette-open',quickBuildOpen);
+ if(quickBuildOpen){closePanelIfOpen();setPreview(null);}
+ refreshQuickBuild();queueDraw();
+}
+function closePanelIfOpen(){if(panelOpen)closePanel();}
+function setBuildingMode(kind){
+ buildMode=kind||null;selected=null;setPreview(null);moveCursor=null;
+ $('cancelMode').classList.toggle('hidden',!buildMode);
+ $('modeLabel').textContent=buildMode?'Построить: '+E.KINDS[buildMode].name:'Наступление';
+ $('actionHint').textContent=buildMode?'Зелёная клетка — разрешено, красная — запрещено.':'Коснись цели или проведи от своей земли.';
+ if(buildMode)toggleQuickBuild(false);
+ refreshQuickBuild();updateUI();queueDraw();
+}
+$('quickBuildChoices').addEventListener('click',e=>{const b=e.target.closest('[data-fast-build]');if(b)setBuildingMode(b.dataset.fastBuild);});
+$('quickBuildClose').onclick=()=>toggleQuickBuild(false);
+$('quickBuildInfo').onclick=()=>{toggleQuickBuild(false);currentTab='build';openPanel();document.querySelector('[data-tab="build"]')?.click();};
+$('changeBuild').onclick=()=>toggleQuickBuild(true);
+$('stopBuild').onclick=cancelMode;
+
+$('buildingsPanel').addEventListener('click',e=>{const b=e.target.closest('[data-build]');if(!b)return;setBuildingMode(buildMode===b.dataset.build?null:b.dataset.build);if(buildMode&&window.innerWidth<851)closePanel();});
 $('techPanel').addEventListener('click',e=>{const b=e.target.closest('[data-research]');if(b)command({type:'research',key:b.dataset.research});});
 $('diplomacyPanel').addEventListener('click',e=>{const b=e.target.closest('[data-ally]'),d=e.target.closest('[data-donate]');if(b){const partner=Number(b.dataset.ally),allied=mine()?.allies.includes(partner);if(!allied||window.confirm('Разорвать союз? После этого вы снова сможете нападать друг на друга.'))command({type:'diplomacy',target:partner});}if(d)command({type:'donate',target:Number(d.dataset.donate),amount:100,resource:'gold'});});
 $('contextCard').addEventListener('click',e=>{const u=e.target.closest('[data-context-upgrade]'),r=e.target.closest('[data-context-return]'),d=e.target.closest('[data-context-redirect]');if(u)command({type:'upgrade',id:u.dataset.contextUpgrade});if(r){command({type:'return',id:r.dataset.contextReturn});contextual(null);}if(d){redirectArmy=d.dataset.contextRedirect;toast('Теперь выбери новую цель на карте.');contextual(null);}});
@@ -374,11 +408,11 @@ $('selectedPanel').addEventListener('click',e=>{const b=e.target.closest('[data-
 for(const b of document.querySelectorAll('[data-tab]'))b.onclick=()=>{currentTab=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(t=>{t.classList.toggle('active',t===b);t.setAttribute('aria-selected',String(t===b));});document.querySelectorAll('.tab-content').forEach(t=>t.classList.toggle('hidden',t.id!=='tab-'+currentTab));updateUI();};
 function openPanel(){previousFocus=document.activeElement;panelOpen=true;$('sidebar').classList.add('open');$('panelBackdrop').classList.remove('hidden');$('sidebar').setAttribute('aria-modal',String(window.innerWidth<851));$('closePanel').focus();}
 function closePanel(){panelOpen=false;$('sidebar').classList.remove('open');$('panelBackdrop').classList.add('hidden');$('sidebar').setAttribute('aria-modal','false');previousFocus?.focus?.();}
-$('menuToggle').onclick=()=>panelOpen?closePanel():openPanel();$('developButton').onclick=()=>panelOpen?closePanel():openPanel();$('closePanel').onclick=closePanel;$('panelBackdrop').onclick=closePanel;
+$('menuToggle').onclick=()=>panelOpen?closePanel():openPanel();$('developButton').onclick=()=>toggleQuickBuild();$('closePanel').onclick=closePanel;$('panelBackdrop').onclick=closePanel;
 $('attackPercent').oninput=e=>{percent=Number(e.target.value);$('percentLabel').textContent=percent+'%';document.querySelectorAll('[data-percent]').forEach(t=>{const on=Number(t.dataset.percent)===percent;t.classList.toggle('active',on);t.setAttribute('aria-pressed',String(on));});if(state)updateUI();};
 document.querySelectorAll('[data-target-percent]').forEach(b=>b.onclick=()=>{$('attackPercent').value=b.dataset.targetPercent;$('attackPercent').oninput({target:$('attackPercent')});});
 for(const b of document.querySelectorAll('[data-percent]')){b.setAttribute('aria-pressed',String(Number(b.dataset.percent)===percent));b.onclick=()=>{$('attackPercent').value=b.dataset.percent;$('attackPercent').oninput({target:$('attackPercent')});};}
-$('cancelMode').onclick=cancelMode;function cancelMode(){buildMode=null;$('modeLabel').textContent='Наступление';$('actionHint').textContent='Коснись цели или проведи от своей земли.';$('cancelMode').classList.add('hidden');queueDraw();}
+$('cancelMode').onclick=cancelMode;function cancelMode(){setBuildingMode(null);}
 $('cancelTarget').onclick=()=>{setPreview(null);redirectArmy=null;lastTap=0;};$('confirmTarget').onclick=()=>{if(!target)return;const t=target;const ok=command(t.type==='redirect'?{type:'redirect',id:t.id,x:t.x,y:t.y}:{type:'send',x:t.x,y:t.y,percent});if(ok){setPreview(null);redirectArmy=null;}};
 $('dockToggle').onclick=()=>{const dock=$('battleDock');const collapsed=dock.classList.toggle('collapsed');$('dockToggle').setAttribute('aria-expanded',String(!collapsed));};
 $('minimapToggle').onclick=()=>{const v=$('minimapWrap').classList.toggle('minimized');$('minimapToggle').setAttribute('aria-expanded',String(!v));document.querySelector('#minimapToggle span').textContent=v?'+':'−';};
@@ -397,18 +431,28 @@ $('pauseGame').onclick=()=>{if(!demo)return toast('Пауза только дл�
 $('myKingdom').onclick=()=>toast(mine()?.name||'Королевство');
 function resize(){const rect=canvas.getBoundingClientRect();if(rect.width<1)return;const dpr=Math.min(window.innerWidth<900?1:1.5,devicePixelRatio||1);const w=Math.round(rect.width*dpr),h=Math.round(rect.height*dpr);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;queueDraw();}}
 function centerOnCapital(){const p=mine();if(!p?.capital)return;const c=p.capital;const r=canvas.getBoundingClientRect();camX=r.width/2-(c.x+.5)*TILE*zoom;camY=r.height/2-(c.y+.5)*TILE*zoom;clampCamera();queueDraw();}
-function clampCamera(){const rect=canvas.getBoundingClientRect();camX=Math.min(70,Math.max(rect.width-E.W*TILE*zoom-70,camX));camY=Math.min(70,Math.max(rect.height-E.H*TILE*zoom-70,camY));}
+function clampCamera(){
+ const r=canvas.getBoundingClientRect(),mapW=E.W*TILE*zoom,mapH=E.H*TILE*zoom;
+ // Pan past the map edges so a boundary cell can be placed into the free middle of the screen,
+ // out from under the build bar, minimap and mobile toolbars.
+ const pan=(view,extent,current)=>{
+   if(extent<view*.35)return (view-extent)/2;
+   const lower=view*.58-extent,upper=view*.42;
+   return Math.max(lower,Math.min(upper,current));
+ };
+ camX=pan(r.width,mapW,camX);camY=pan(r.height,mapH,camY);
+}
 function zoomAt(factor,cx,cy){const old=zoom;zoom=Math.max(.14,Math.min(5,zoom*factor));camX=cx-(cx-camX)*zoom/old;camY=cy-(cy-camY)*zoom/old;clampCamera();$('zoomText').textContent=Math.round(zoom*100)+'%';queueDraw();}
 function pixelAt(clientX,clientY){const r=canvas.getBoundingClientRect();return {x:clientX-r.left,y:clientY-r.top};}
 function gridAt(clientX,clientY){const p=pixelAt(clientX,clientY);return {x:Math.floor((p.x-camX)/(TILE*zoom)),y:Math.floor((p.y-camY)/(TILE*zoom))};}
-function nearestObject(px,py,kind){const arr=kind==='army'?state.armies:state.buildings,worldX=(px-camX)/(TILE*zoom),worldY=(py-camY)/(TILE*zoom);let nearest=null,best=Infinity;for(const v of arr){const d=Math.hypot(v.x+.5-worldX,v.y+.5-worldY)*TILE*zoom;if(d<best&&d<(kind==='army'?19:17)){best=d;nearest=v;}}return nearest;}
+function nearestObject(px,py,kind){const arr=kind==='army'?state.armies:state.buildings,worldX=(px-camX)/(TILE*zoom),worldY=(py-camY)/(TILE*zoom);let nearest=null,best=Infinity;for(const v of arr){const d=Math.hypot(v.x+.5-worldX,v.y+.5-worldY)*TILE*zoom;if(d<best&&d<(kind==='army'?23:25)){best=d;nearest=v;}}return nearest;}
 function selectMap(clientX,clientY){if(state?.phase!=='playing'||mine()?.eliminated)return;const pt=pixelAt(clientX,clientY),p=gridAt(clientX,clientY);if(!E.inside(p.x,p.y))return;inspectCell(p.x,p.y);$('mapHint').classList.add('hidden');
- if(buildMode){if(E.owner(state,p.x,p.y)!==myId)return toast('Строительство: выбери свою землю.');const fail=E.canBuild(state,myId,buildMode,p.x,p.y);if(fail)return toast(fail);command({type:'build',kind:buildMode,x:p.x,y:p.y});return;}
+ if(buildMode){moveCursor=p;if(E.owner(state,p.x,p.y)!==myId)return toast('Нужна своя территория', 'error');const fail=E.canBuild(state,myId,buildMode,p.x,p.y);if(fail)return toast(fail,'error');command({type:'build',kind:buildMode,x:p.x,y:p.y});queueDraw();return;}
  if(redirectArmy){setPreview({type:'redirect',id:redirectArmy,x:p.x,y:p.y,valid:true});return;}
  const a=nearestObject(pt.x,pt.y,'army');if(a&&a.owner===myId){selected={kind:'army',id:a.id};updateSelection();setPreview(null);return;}
  const b=nearestObject(pt.x,pt.y,'building');if(b){selected={kind:'building',id:b.id};updateSelection();setPreview(null);return;}
  if(E.owner(state,p.x,p.y)===myId){setPreview(null);return;}selected=null;contextual(null);
- if(E.tile(state,p.x,p.y)===0&&mine().tech.sailing<1)return toast('Для морского похода нужны порт и исследование флота.');
+ if(E.tile(state,p.x,p.y)===0)return toast('Море не захватывается. Выбери сушу.');
  if(target?.type==='send'&&target.x===p.x&&target.y===p.y)return;
  setPreview({type:'send',x:p.x,y:p.y,valid:true});}
 function updateMapStatus(x,y){inspectCell(x,y);}
@@ -436,6 +480,12 @@ function onPointerDown(e){
  }
 }
 function onPointerMove(e){
+ if(buildMode&&state?.phase==='playing'){
+  const cell=gridAt(e.clientX,e.clientY);
+  if(E.inside(cell.x,cell.y)&&(moveCursor?.x!==cell.x||moveCursor?.y!==cell.y)){
+   moveCursor=cell;queueDraw();
+  }
+ }
  if(!pressed.has(e.pointerId))return;
  pressed.set(e.pointerId,{x:e.clientX,y:e.clientY});
  if(dragAttack){dragAttack.to=gridAt(e.clientX,e.clientY);queueDraw();return;}
@@ -512,6 +562,14 @@ function repaintWorld(){
  terrainSeed=state.seed;paintedRevision=revision;miniRevision=-1;
 }
 function hexAlpha(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;}
+function drawFortRange(x,y,preview){
+ const t=TILE,r=4;
+ ctx.save();ctx.fillStyle=preview?'rgba(255,210,71,.23)':'rgba(255,211,95,.18)';
+ ctx.strokeStyle=preview?'#ffe3a6':'#eec05e';ctx.lineWidth=Math.max(2/Math.max(.5,zoom),1);
+ ctx.beginPath();ctx.moveTo((x+.5)*t,(y-r)*t);ctx.lineTo((x+r+1)*t,(y+.5)*t);
+ ctx.lineTo((x+.5)*t,(y+r+1)*t);ctx.lineTo((x-r)*t,(y+.5)*t);ctx.closePath();
+ ctx.fill();ctx.stroke();ctx.restore();
+}
 function queueDraw(){if(renderQueued)return;renderQueued=true;requestAnimationFrame(()=>{renderQueued=false;draw();});}
 function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr=canvas.width/Math.max(1,canvas.clientWidth);const w=canvas.clientWidth,h=canvas.clientHeight;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#2c688e';ctx.fillRect(0,0,w,h);
  ctx.save();ctx.translate(camX,camY);ctx.scale(zoom,zoom);ctx.imageSmoothingEnabled=true;ctx.drawImage(worldLayer,0,0,worldLayer.width,worldLayer.height,0,0,E.W*TILE,E.H*TILE);
@@ -563,7 +621,30 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   if(a.owner===myId&&a.targetOwner){ctx.strokeStyle=hexAlpha(color(a.owner),.55);ctx.setLineDash([2,3]);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo((a.tx+.5)*TILE,(a.ty+.5)*TILE);ctx.stroke();ctx.setLineDash([]);}
  }
  if(selected){const b=selected.kind==='building'?state.buildings.find(v=>v.id===selected.id):state.armies.find(v=>v.id===selected.id);if(b){ctx.strokeStyle='#ffffff';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.strokeRect(b.x*TILE-5,b.y*TILE-5,TILE+10,TILE+10);ctx.setLineDash([]);}}
- if(buildMode){const minX=Math.max(0,Math.floor(-camX/(TILE*zoom))-1),maxX=Math.min(E.W-1,Math.ceil((w-camX)/(TILE*zoom))+1),minY=Math.max(0,Math.floor(-camY/(TILE*zoom))-1),maxY=Math.min(E.H-1,Math.ceil((h-camY)/(TILE*zoom))+1);ctx.fillStyle='rgba(5,114,85,.19)';for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++)if(E.owner(state,x,y)===myId&&!E.canBuild(state,myId,buildMode,x,y))ctx.fillRect(x*TILE,y*TILE,TILE,TILE);}
+ if(buildMode){
+  const minX=Math.max(0,Math.floor(-camX/(TILE*zoom))-1),maxX=Math.min(E.W-1,Math.ceil((w-camX)/(TILE*zoom))+1);
+  const minY=Math.max(0,Math.floor(-camY/(TILE*zoom))-1),maxY=Math.min(E.H-1,Math.ceil((h-camY)/(TILE*zoom))+1);
+  const p=mine(),price=E.KINDS[buildMode]?.cost||{},affordable=Object.entries(price).every(([k,v])=>(p?.res[k]||0)>=v);
+  const allowedColor=affordable?'rgba(111,244,126,.29)':'rgba(251,184,48,.26)';
+  const blockedColor='rgba(231,65,70,.32)';
+  for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
+   if(E.owner(state,x,y)!==myId)continue;
+   ctx.fillStyle=E.canBuild(state,myId,buildMode,x,y)?blockedColor:allowedColor;
+   ctx.fillRect(x*TILE,y*TILE,TILE,TILE);
+  }
+  // Four-neighbour tile range is exactly Manhattan radius 4, matching tileDefense().
+  if(buildMode==='fort'&&moveCursor&&E.inside(moveCursor.x,moveCursor.y))drawFortRange(moveCursor.x,moveCursor.y,true);
+  if(moveCursor&&E.inside(moveCursor.x,moveCursor.y)){
+   ctx.strokeStyle=E.canBuild(state,myId,buildMode,moveCursor.x,moveCursor.y)?'#f15d50':'#ecffe9';
+   ctx.lineWidth=Math.max(2/Math.max(.5,zoom),1);
+   ctx.strokeRect(moveCursor.x*TILE-2,moveCursor.y*TILE-2,TILE+4,TILE+4);
+  }
+ }
+ // Display the selected existing fort's real defence range without entering build mode.
+ if(selected?.kind==='building'){
+  const b=state.buildings.find(v=>v.id===selected.id);
+  if(b?.kind==='fort')drawFortRange(b.x,b.y,false);
+ }
  if(target||dragAttack){
   const to=dragAttack?.to||target;
   const actual=E.previewFront(state,myId,to.x,to.y);
@@ -602,7 +683,7 @@ window.addEventListener('resize',()=>{resize();clampCamera();queueDraw();});docu
  if(!state||state.phase!=='playing'||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;if(e.key==='+'||e.key==='=')zoomAt(1.2,canvas.clientWidth/2,canvas.clientHeight/2);if(e.key==='-')zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);if(document.activeElement===canvas){if(!moveCursor)moveCursor=mine()?.capital?{...mine().capital}:{x:80,y:52};if(e.key.startsWith('Arrow')){e.preventDefault();const d={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[e.key];moveCursor.x=Math.max(0,Math.min(E.W-1,moveCursor.x+d[0]));moveCursor.y=Math.max(0,Math.min(E.H-1,moveCursor.y+d[1]));camX=canvas.clientWidth/2-(moveCursor.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(moveCursor.y+.5)*TILE*zoom;clampCamera();inspectCell(moveCursor.x,moveCursor.y);$('keyboardPosition').textContent=$('mapStatus').textContent;queueDraw();}if(e.key==='Enter'){e.preventDefault();const x=moveCursor.x,y=moveCursor.y;const r=canvas.getBoundingClientRect();selectMap(r.left+camX+(x+.5)*TILE*zoom,r.top+camY+(y+.5)*TILE*zoom);}}});
 $('hostButton').onclick=createRoom;$('joinButton').onclick=joinRoom;$('demoButton').onclick=()=>createDemo(false);$('resumeButton').onclick=()=>createDemo(true);$('leaveRoom').onclick=()=>{try{peer?.destroy();}catch(_){}for(const c of connections.keys()){try{c.close();}catch(_){}}connections.clear();upstream=null;peer=null;host=false;demo=false;state=null;code='';phaseShown='';setBusy(false);history.replaceState(null,'',location.pathname+location.search);show('lobby');};$('startButton').onclick=startGame;$('copyLink').onclick=()=>copyText(urlRoom());$('copyCode').onclick=()=>copyText(code);
 $('readyButton').onclick=()=>{readyLocal=!readyLocal;$('readyButton').setAttribute('aria-pressed',String(readyLocal));upstream?.send({t:'ready',value:readyLocal});};
-for(const id of ['botCount','matchDuration'])$(id).onchange=()=>{if(host&&state?.phase==='lobby'){state.settings={bots:Number($('botCount').value),duration:Number($('matchDuration').value)};broadcast();}};
+for(const id of ['botCount'])$(id).onchange=()=>{if(host&&state?.phase==='lobby'){state.settings={bots:Number($('botCount').value)};broadcast();}};
 $('spawnChoice').onchange=()=>{if(state?.phase!=='lobby')return;if(host){mine().spawnPreference=$('spawnChoice').value;broadcast();}else upstream?.send({t:'spawn',choice:$('spawnChoice').value});};
 $('resultExit').onclick=()=>{if(window.confirm('Вернуться в главное меню? Текущий завершённый матч будет закрыт.'))location.href=location.pathname;};$('restart').onclick=()=>{if(host&&state?.phase==='ended'){const players=state.players.filter(p=>!p.bot).map(p=>({id:p.id,name:p.name,connected:p.connected}));const fresh=E.lobby(Date.now());Object.assign(state,fresh);const newIds=new Map();players.forEach((p,i)=>{const id=E.addPlayer(state,p.name);newIds.set(p.id,id);const v=E.person(state,id);v.connected=p.connected;v.ready=i===0;});for(const [tok,id] of tokenStore)tokenStore.set(tok,newIds.get(id)||id);for(const [conn,id] of connections)connections.set(conn,newIds.get(id)||id);worldLayer=null;pixelLayer=null;paintedRevision=-1;selected=null;setPreview(null);cancelMode();contextual(null);closePanel();$('victory').classList.add('hidden');phaseShown='';broadcast(true);}else if(demo){try{localStorage.removeItem('bk-v9-save');}catch(_){}$('victory').classList.add('hidden');createDemo(false);}else toast('Новый матч запускает ведущий.');};
 $('downloadSave').onclick=()=>{const blob=new Blob([JSON.stringify({tick:state.tick,winner:state.winner,players:state.players.map(p=>({name:p.name,land:p.land,kills:p.kills}))},null,2)],{type:'application/json'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='brothers-kingdoms-results.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);};
