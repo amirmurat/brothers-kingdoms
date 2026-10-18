@@ -1,0 +1,38 @@
+import asyncio, json, os, re
+from pathlib import Path
+from playwright.async_api import async_playwright
+ROOT=Path('/mnt/data/brothers-kingdoms-v9')
+async def run():
+ async with async_playwright() as p:
+  br=await p.chromium.launch(headless=True,executable_path='/usr/bin/chromium',args=['--no-sandbox','--no-proxy-server','--proxy-bypass-list=*'],env={k:v for k,v in os.environ.items() if 'proxy' not in k.lower()})
+  for label,w,h,touch in [('iphone13',390,844,True),('small',320,568,True),('landscape',844,390,True),('desktop',1440,900,False)]:
+   page=await br.new_page(viewport={'width':w,'height':h},device_scale_factor=1,has_touch=touch,is_mobile=touch)
+   errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+   raw=(ROOT/'index.html').read_text()
+   raw=re.sub(r'<script[^>]*>.*?</script>','',raw,flags=re.S)
+   raw=re.sub(r'<link[^>]+stylesheet[^>]+>','',raw)
+   await page.set_content(raw)
+   for name in ('style.css','frontline-v7.css','refined-v9.css'):await page.add_style_tag(content=(ROOT/name).read_text())
+   for name in ('engine.js','game.js'):await page.add_script_tag(content=(ROOT/name).read_text())
+   await page.wait_for_timeout(500)
+   print(label,'lobby',await page.locator('#lobby').is_visible(),'title',await page.locator('.start-actions h1').inner_text(), 'choices',await page.locator('.start-choice').count(),'scroll',await page.evaluate('document.documentElement.scrollHeight - innerHeight'))
+   await page.screenshot(path=str(ROOT/f'{label}-menu.png'))
+   await page.locator('#demoButton').click()
+   await page.wait_for_timeout(850)
+   if await page.locator('#tutorial').is_visible():await page.locator('#closeTutorial').click()
+   print(label,'game',await page.locator('#game').is_visible(), 'map',await page.locator('#mapCanvas').bounding_box())
+   await page.screenshot(path=str(ROOT/f'{label}-game.png'))
+   await page.locator('#developButton').click()
+   await page.wait_for_timeout(230)
+   print(' build panels',await page.locator('.build-detail').count(),'benefits first',await page.locator('.build-gain').first.inner_text(),'resources',await page.locator('#buildResourceSummary').inner_text())
+   await page.screenshot(path=str(ROOT/f'{label}-buildings.png'))
+   await page.locator('[data-tab=tech]').click();await page.wait_for_timeout(200)
+   print(' tech',await page.locator('.tech-detail').count(),'next',await page.locator('.tech-next').first.inner_text())
+   await page.screenshot(path=str(ROOT/f'{label}-research.png'))
+   await page.locator('#closePanel').click()
+   await page.locator('#armiesToggle').click()
+   print(' armies open',await page.locator('#armiesPanel').is_visible())
+   await page.screenshot(path=str(ROOT/f'{label}-armies.png'))
+   print(' ERRORS',errors[:4]); await page.close()
+  await br.close()
+asyncio.run(run())
