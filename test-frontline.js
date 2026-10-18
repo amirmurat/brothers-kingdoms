@@ -1,25 +1,75 @@
-const E=require('./engine.js');
+'use strict';
 const assert=require('node:assert/strict');
-function check(seed){
- const s=E.lobby(seed),id=E.addPlayer(s,'Test');E.start(s,1);
- const p=E.person(s,id),first=p.land,cap=p.capital;
- let target=null,closest=Infinity;
- const seenPath=new Set([E.idx(cap.x,cap.y)]),bfs=[E.idx(cap.x,cap.y)];
- for(let q=0;q<bfs.length;q++){let i=bfs[q],x=i%E.W,y=Math.floor(i/E.W);for(let [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){let px=x+dx,py=y+dy;if(!E.inside(px,py))continue;let z=E.idx(px,py);if(!seenPath.has(z)&&E.tile(s,px,py)!==0){seenPath.add(z);bfs.push(z);}}}
- for(const i of bfs){let x=i%E.W,y=Math.floor(i/E.W);if(E.owner(s,x,y)!==0)continue;const d=Math.hypot(cap.x-x,cap.y-y);if(d<closest&&d>8){closest=d;target={x,y};}}
- assert(target);
- const a=E.action(s,id,{type:'send',...target,percent:85});assert(a.ok,a.error);
- // Verify after each tick that all land is connected to capital (no isolated slivers)
- for(let t=0;t<25;t++){
-  E.tick(s); const claimed=[];
-  for(let i=0;i<s.owners.length;i++)if(s.owners[i]===id)claimed.push(i);
-  const seen=new Set([E.idx(cap.x,cap.y)]),stack=[E.idx(cap.x,cap.y)];
-  while(stack.length){const i=stack.pop(),x=i%E.W,y=Math.floor(i/E.W);for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy;if(!E.inside(nx,ny))continue;const z=E.idx(nx,ny);if(s.owners[z]===id&&!seen.has(z)){seen.add(z);stack.push(z)}}}
-  assert.equal(seen.size,claimed.length,`disconnected territory tick ${t}`);
+const E=require('./engine');
+function arena(seed=123, troopBank=3300){
+ const s=E.lobby(seed),id=E.addPlayer(s,'Player');
+ assert(E.start(s,0).ok);
+ s.tiles.fill(1);s.owners.fill(0);s.buildings=[];s.landTotal=E.W*E.H;
+ const p=E.person(s,id);p.land=0;p.capital={x:80,y:52};p.troops=troopBank;p.troopCap=15000;
+ for(let y=48;y<=56;y++)for(let x=76;x<=84;x++){
+  if(Math.hypot(x-80,y-52)>4.25)continue;
+  s.owners[E.idx(x,y)]=id;p.land++;
  }
- assert(p.land>=first+25,`too little expansion ${p.land-first}`);
- const remaining=p.troops;
- assert(remaining>0);
- return {seed,initial:first,land:p.land,gain:p.land-first,army:remaining,waves:s.armies.length};
+ return {s,id,p};
 }
-for(const seed of [1,45,782,42043,299999])console.log(check(seed));
+function runAttack(s,id,tar,percent=30){
+ const res=E.action(s,id,{type:'send',x:tar.x,y:tar.y,percent});
+ assert(res.ok,res.error);
+ for(let k=0;k<190&&s.armies.some(a=>a.owner===id);k++)E.combatStep(s);
+ assert(!s.armies.some(a=>a.owner===id),'attack should finish');
+}
+function extensions(s,id){
+ const pts=[];
+ for(let i=0;i<s.owners.length;i++)if(s.owners[i]===id)pts.push([i%E.W,(i/E.W)|0]);
+ const r={west:80-Math.min(...pts.map(([x])=>x)),east:Math.max(...pts.map(([x])=>x))-80,north:52-Math.min(...pts.map(([,y])=>y)),south:Math.max(...pts.map(([,y])=>y))-52};
+ return r;
+}
+// Neutral conquest must sweep ALL connected exposed border layers; the tap is
+// *not* a destination and must not produce a 1-tile corridor to that spot.
+for(const seed of [11,42,782,42043,299999]){
+ const {s,id,p}=arena(seed);
+ const first=p.land;
+ runAttack(s,id,{x:133,y:52},30);
+ const gain=p.land-first,spans=extensions(s,id);
+ assert(gain>200,`neutral expansion too small: ${gain}`);
+ assert(spans.north>=8&&spans.south>=8&&spans.east>=8&&spans.west>=8,`expansion was not broad: ${JSON.stringify(spans)}`);
+ const max=Math.max(...Object.values(spans)),min=Math.min(...Object.values(spans));
+ assert(max/min<1.6,`corridor/tendril detected: ${JSON.stringify(spans)}`);
+ // 4-connected islands are prohibited for land expansion.
+ const seen=new Set([E.idx(80,52)]),queue=[E.idx(80,52)];
+ for(let i=0;i<queue.length;i++){
+  const c=queue[i],x=c%E.W,y=(c/E.W)|0;
+  for(const [dx,dy] of [[-1,0],[1,0],[0,-1],[0,1]]){
+   const nx=x+dx,ny=y+dy;if(!E.inside(nx,ny))continue;
+   const j=E.idx(nx,ny);if(s.owners[j]===id&&!seen.has(j)){seen.add(j);queue.push(j);}
+  }
+ }
+ assert.equal(seen.size,p.land,'newly conquered land must be connected');
+ console.log('PASS neutral seed',seed,'land',gain,'radii',spans);
+}
+// Attacks into enemy territory must spread along the SHARED hostile border,
+// without eating neighbouring neutral / third-party pixels.
+{
+ const {s,id,p}=arena(9,5500),foe=E.addPlayer; // setup enemy directly in running state
+ const id2=2;
+ s.players.push({id:id2,name:'Enemy',bot:false,color:'#f00',res:{food:999,wood:999,stone:999,gold:999},troops:100,troopCap:10000,land:0,ready:true,connected:true,spawnPreference:'auto',eliminated:false,tech:{economy:0,war:0,logistics:0,sailing:0},offers:[],allies:[],capital:{x:110,y:52},kills:0});
+ for(let y=34;y<=70;y++)for(let x=85;x<=125;x++){s.owners[E.idx(x,y)]=id2;s.players[1].land++;}
+ const untouched=E.owner(s,83,52),origEnemy=s.players[1].land;
+ runAttack(s,id,{x:90,y:52},85);
+ assert(s.players[1].land<origEnemy,'enemy must lose land');
+ assert.equal(E.owner(s,83,52),untouched,'neutral side must not be captured by enemy-only order');
+ assert.equal(s.players[1].land+ s.owners.filter(v=>v===id2).length,2*s.players[1].land,'enemy count metadata consistent');
+ console.log('PASS hostile broad assault:',origEnemy,'->',s.players[1].land);
+}
+// A refund/retreat must stop new layers immediately.
+{
+ const {s,id,p}=arena(99);const before=p.land;
+ const r=E.action(s,id,{type:'send',x:100,y:50,percent:50});assert(r.ok);
+ E.combatStep(s);const post=p.land;
+ assert(post>before);
+ assert(E.action(s,id,{type:'return',id:s.armies[0].id}).ok);
+ for(let i=0;i<8;i++)E.combatStep(s);
+ assert.equal(p.land,post);
+ console.log('PASS instant retreat');
+}
+console.log('ALL LAYERED CONQUEST TESTS PASS');
