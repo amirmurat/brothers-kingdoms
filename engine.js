@@ -1,10 +1,10 @@
 /* Brothers Kingdoms: original territory strategy engine. Deterministic, host-authoritative. */
 (function(root,factory){const api=factory();if(typeof module!=='undefined'&&module.exports)module.exports=api;root.BKEngine=api;})(typeof window!=='undefined'?window:globalThis,function(){
 'use strict';
-const W=160,H=104,MAX=4,LIMIT=12*60,LAND=[1,2,3,4,5,6];
+const W=160,H=104,MAX=4,LAND=[1,2,3,4,5,6];
 const COLORS=['#2F80ED','#27AE60','#F2994A','#EB5757','#9B51E0','#14B8A6','#F2C94C','#56CCF2','#BB6BD9','#F97316','#10B981','#6366F1','#FB7185','#84CC16'];
-const KINDS={farm:{name:'Ферма',cost:{wood:45,stone:10},income:'food'},lumber:{name:'Лесопилка',cost:{wood:40,stone:15},income:'wood'},quarry:{name:'Каменоломня',cost:{wood:45,stone:20},income:'stone'},mine:{name:'Шахта',cost:{wood:55,stone:55},income:'gold'},barracks:{name:'Казармы',cost:{wood:100,stone:65,gold:35}},fort:{name:'Крепость',cost:{wood:105,stone:130,gold:55}},port:{name:'Порт',cost:{wood:130,stone:85,gold:60}},city:{name:'Город',cost:{wood:165,stone:150,gold:100}}};
-const TECH={economy:{name:'Экономика',base:{gold:120,wood:80}},war:{name:'Военное дело',base:{gold:135,stone:75}},logistics:{name:'Логистика',base:{gold:100,wood:80}},sailing:{name:'Флот',base:{gold:170,wood:105,stone:90}}};
+const KINDS={farm:{name:'Ферма',cost:{wood:45,stone:10},income:'food'},lumber:{name:'Лесопилка',cost:{wood:40,stone:15},income:'wood'},quarry:{name:'Каменоломня',cost:{wood:45,stone:20},income:'stone'},mine:{name:'Шахта',cost:{wood:55,stone:55},income:'gold'},barracks:{name:'Казармы',cost:{wood:100,stone:65,gold:35}},fort:{name:'Крепость',cost:{wood:105,stone:130,gold:55}},city:{name:'Город',cost:{wood:165,stone:150,gold:100}}};
+const TECH={economy:{name:'Экономика',base:{gold:120,wood:80}},war:{name:'Военное дело',base:{gold:135,stone:75}},logistics:{name:'Логистика',base:{gold:100,wood:80}}};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const idx=(x,y)=>y*W+x;
 const inside=(x,y)=>Number.isInteger(x)&&Number.isInteger(y)&&x>=0&&x<W&&y>=0&&y<H;
@@ -22,15 +22,51 @@ function generate(seed){const t=new Array(W*H);const base=(seed%611)/611;
  }
  return t;
 }
+// Mainland-only ruleset: every conquerable tile can be reached from every other one on foot.
+// Delete detached islands instead of making players research a navy for a few pixels.
+function singleContinent(t){
+ const seen=new Uint8Array(W*H);let largest=[];
+ for(let i=0;i<t.length;i++){
+  if(!t[i]||seen[i])continue;
+  const queue=[i];seen[i]=1;
+  for(let k=0;k<queue.length;k++){
+   const pos=queue[k],x=pos%W,y=(pos/W)|0;
+   for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+    const nx=x+dx,ny=y+dy;
+    if(!inside(nx,ny))continue;
+    const next=idx(nx,ny);
+    if(t[next]&&!seen[next]){seen[next]=1;queue.push(next);}
+   }
+  }
+  if(queue.length>largest.length)largest=queue;
+ }
+ const mainland=new Uint8Array(t.length);
+ for(const i of largest)mainland[i]=1;
+ for(let i=0;i<t.length;i++)if(t[i]&&!mainland[i])t[i]=0;
+ return t;
+}
+// Place capitals on the main landmass, including when the preferred anchor falls in the sea.
+function safeSpawn(s,anchor,used){
+ let best=null,bestScore=Infinity;
+ for(let y=5;y<H-5;y++)for(let x=5;x<W-5;x++){
+  if(!tile(s,x,y)||tile(s,x,y)===6)continue;
+  if(used.some(p=>(p.x-x)**2+(p.y-y)**2<14*14))continue;
+  const coast=(tile(s,x-1,y)===0||tile(s,x+1,y)===0||tile(s,x,y-1)===0||tile(s,x,y+1)===0)?14:0;
+  const score=(x-anchor.x)**2+(y-anchor.y)**2+coast;
+  if(score<bestScore){bestScore=score;best={x,y};}
+ }
+ if(!best)throw new Error('Нет подходящего места появления на материке.');
+ return best;
+}
 const alive=p=>p&&!p.eliminated;
 function person(s,id){return s.players.find(p=>p.id===id);}
 const available=(p,c)=>Object.entries(c||{}).every(([k,v])=>(p.res[k]||0)>=v);
 const charge=(p,c)=>Object.entries(c).forEach(([k,v])=>p.res[k]-=v);
 function log(s,msg){s.log.unshift(msg);if(s.log.length>8)s.log.length=8;}
-function lobby(seed=57283){return {version:9,settings:{bots:7,duration:720},phase:'lobby',seed:Math.floor(seed),tick:0,tiles:[],owners:[],players:[],buildings:[],armies:[],log:['Захватывайте земли, улучшайте экономику и защищайте столицу.'],winner:null,mode:'conquest',duration:LIMIT,nonce:0,landTotal:0,territoryRevision:0};}
+function lobby(seed=57283){return {version:14,settings:{bots:0},phase:'lobby',seed:Math.floor(seed),tick:0,tiles:[],owners:[],players:[],buildings:[],armies:[],log:['Захватывайте земли, улучшайте экономику и защищайте столицу.'],winner:null,mode:'conquest',duration:null,nonce:0,landTotal:0,territoryRevision:0};}
 function addPlayer(s,name,isBot=false){if(s.phase!=='lobby'||s.players.filter(p=>!p.bot).length>=MAX&&!isBot||s.players.length>=COLORS.length)return null;
  let id=1;while(s.players.some(p=>p.id===id))id++;let safe=String(name||('Королевство '+id)).trim().slice(0,18)||('Игрок '+id);
- s.players.push({id,name:safe,bot:!!isBot,color:COLORS[(id-1)%COLORS.length],res:{food:650,wood:390,stone:310,gold:260},troops:450,troopCap:1700,land:0,ready:!!isBot,connected:true,spawnPreference:'auto',eliminated:false,tech:{economy:0,war:0,logistics:0,sailing:0},offers:[],allies:[],capital:null,kills:0});
+ s.players.push({id,name:safe,bot:!!isBot,color:COLORS[(id-1)%COLORS.length],res:{food:650,wood:390,stone:310,gold:260},troops:450,troopCap:1700,land:0,ready:!!isBot,connected:true,spawnPreference:'auto',eliminated:false,tech:{economy:0,war:0,logistics:0},offers:[],allies:[],capital:null,kills:0});
  log(s,safe+' вступил в борьбу.');return id;
 }
 function tile(s,x,y){return inside(x,y)?s.tiles[idx(x,y)]:0;}
@@ -65,20 +101,20 @@ function sealTerritories(s){
 function sites(s,n){const anchors=[[.16,.23],[.82,.76],[.82,.22],[.17,.78],[.48,.17],[.5,.83],[.27,.48],[.75,.5],[.34,.12],[.65,.9],[.91,.48],[.08,.52],[.47,.49],[.55,.48]];
  return anchors.slice(0,n).map(([fx,fy])=>({x:Math.round(fx*(W-1)),y:Math.round(fy*(H-1))}));
 }
-function start(s,bots=7){if(s.phase!=='lobby'||!s.players.length)return {ok:false,error:'Нет игроков.'};
- s.tiles=generate(s.seed);s.owners=new Array(W*H).fill(0);s.armies=[];s.buildings=[];s.territoryRevision=0;
+function start(s,bots=0){if(s.phase!=='lobby'||!s.players.length)return {ok:false,error:'Нет игроков.'};
+ s.tiles=singleContinent(generate(s.seed));s.owners=new Array(W*H).fill(0);s.armies=[];s.buildings=[];s.territoryRevision=0;
  const botsCount=clamp(Math.floor(bots),0,COLORS.length-s.players.length);for(let i=0;i<botsCount;i++)addPlayer(s,['Алые пики','Северная корона','Железный союз','Вольные города','Янтарная орда','Золотые поля','Синяя стража','Каменный трон','Зеленые земли','Облачный народ'][i]||'Империя '+(i+1),true);
  let positions=sites(s,s.players.length);
  const targets={northwest:{x:Math.round(W*.16),y:Math.round(H*.23)},northeast:{x:Math.round(W*.82),y:Math.round(H*.22)},southwest:{x:Math.round(W*.17),y:Math.round(H*.78)},southeast:{x:Math.round(W*.82),y:Math.round(H*.76)}};
  const taken=new Set();const placement=[];
  for(const p of s.players){const wish=targets[p.spawnPreference];let best=-1,score=Infinity;
   if(wish){for(let i=0;i<positions.length;i++)if(!taken.has(i)){const d=Math.abs(positions[i].x-wish.x)+Math.abs(positions[i].y-wish.y);if(d<score){score=d;best=i;}}}
-  if(best<0)best=positions.findIndex((_,i)=>!taken.has(i));taken.add(best);placement.push(positions[best]);}
+  if(best<0)best=positions.findIndex((_,i)=>!taken.has(i));taken.add(best);placement.push(safeSpawn(s,positions[best],placement));}
  placement.forEach((pos,i)=>{const p=s.players[i];claim(s,pos.x,pos.y,p.id,4);p.capital={x:pos.x,y:pos.y};building(s,p.id,'capital',pos.x,pos.y);
  const farmX=pos.x+2,farmY=pos.y+1;if(owner(s,farmX,farmY)===p.id)building(s,p.id,'farm',farmX,farmY);
  });
  for(let i=0;i<2;i++)sealTerritories(s);
- s.landTotal=s.tiles.filter(Boolean).length;s.duration=Math.max(180,Math.min(1800,Number(s.settings?.duration)||LIMIT));s.phase='playing';log(s,'Война началась. Карта: '+W+' × '+H+'.');return {ok:true};
+ s.landTotal=s.tiles.filter(Boolean).length;s.duration=null;s.rules={victory:100,timeLimit:false,naval:false,continent:true};s.phase='playing';log(s,'Матч начался. Победа — 100% суши. Временного ограничения нет.');return {ok:true};
 }
 
 function costUpgrade(b){return {wood:50*b.level+25,stone:50*b.level+20,gold:35*b.level};}
@@ -89,7 +125,6 @@ function canBuild(s,id,kind,x,y){if(!KINDS[kind])return 'Нет такого з�
  if(kind==='lumber'&&tile(s,x,y)!==2)return 'Лесопилку нужно строить в лесу.';
  if(kind==='quarry'&&![3,6].includes(tile(s,x,y)))return 'Каменоломне нужны холмы или горы.';
  if(kind==='mine'&&![3,5,6].includes(tile(s,x,y)))return 'Шахте нужны горы, холмы или месторождения.';
- if(kind==='port'&&!isCoast(s,x,y))return 'Порт строится только на побережье.';
  if(tile(s,x,y)===6&&kind!=='quarry'&&kind!=='mine'&&kind!=='fort')return 'На вершине нельзя строить это здание.';
  return null;
 }
@@ -127,21 +162,6 @@ function nearestBorderLand(s,id,tx,ty){
  }
  return null;
 }
-function coastalOwner(s,id,tx,ty){
- let best=null,dist=Infinity;
- for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if(owner(s,x,y)===id&&isCoast(s,x,y)){
-  const d=(tx-x)*(tx-x)+(ty-y)*(ty-y);if(d<dist){dist=d;best={x,y};}
- }
- return best;
-}
-function landingCoast(s,id,tx,ty){
- let best=null,dist=Infinity;
- for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
-  const old=owner(s,x,y);if(!tile(s,x,y)||old===id||!isCoast(s,x,y))continue;
-  const d=(tx-x)*(tx-x)+(ty-y)*(ty-y);if(d<dist){dist=d;best={x,y};}
- }
- return best;
-}
 function takeCapital(s,attacker,defender){
  const p=person(s,defender);if(!p||p.eliminated)return;
  // Losing the capital is a major setback, but never teleports distant provinces.
@@ -156,30 +176,26 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Матч 
   if(!inside(tx,ty))return {ok:false,error:'Укажи цель на карте.'};
   if(s.armies.filter(u=>u.owner===id).length>=12)return {ok:false,error:'Не более 12 активных наступлений.'};
   if(owner(s,tx,ty)===id)return {ok:false,error:'Выбери нейтральную или чужую территорию.'};
-  if(tile(s,tx,ty)===0){const coast=landingCoast(s,id,tx,ty);if(!coast)return {ok:false,error:'Здесь нет доступного острова.'};tx=coast.x;ty=coast.y;}
+  if(tile(s,tx,ty)===0)return {ok:false,error:'Море не захватывается. Выбери клетку суши.'};
   const strength=Math.floor(p.troops*percent/100);if(strength<35)return {ok:false,error:'Для наступления нужно минимум 35 солдат.'};
-  let src=nearestBorderLand(s,id,tx,ty),naval=false,landing=null;
-  if(!src){
-    if(p.tech.sailing<1||!s.buildings.some(b=>b.owner===id&&b.kind==='port'))return {ok:false,error:'Для высадки на остров необходимы порт и исследование флота.'};
-    src=coastalOwner(s,id,tx,ty);landing=landingCoast(s,id,tx,ty);naval=true;
-    if(!src||!landing)return {ok:false,error:'Не удалось выбрать место для высадки.'};
-  }
+  const src=nearestBorderLand(s,id,tx,ty);
+  if(!src)return {ok:false,error:'Нет сухопутного пути к этой территории.'};
   // A land assault must begin on an existing shared border. Neutral attacks
   // automatically expand the whole accessible neutral perimeter (layer by layer).
   // Hostile attacks expand only into the clicked opponent, never across bystanders.
   const targetOwner=owner(s,tx,ty);
-  if(!naval&&!borderCandidates(s,id,targetOwner).length){
+  if(!borderCandidates(s,id,targetOwner).length){
    return {ok:false,error:targetOwner?'Сначала выйди к границе этого противника.':'Нет общей границы с доступной нейтральной землёй.'};
   }
   p.troops-=strength;
-  s.armies.push({id:'a'+(++s.nonce),owner:id,x:src.x,y:src.y,ox:src.x,oy:src.y,tx,ty,targetOwner,strength,initialStrength:strength,captured:0,naval,landing,turns:0,stuck:0});
+  s.armies.push({id:'a'+(++s.nonce),owner:id,x:src.x,y:src.y,ox:src.x,oy:src.y,tx,ty,targetOwner,strength,initialStrength:strength,captured:0,turns:0,stuck:0});
   return {ok:true};
  }
  if(a.type==='redirect'){
   const army=s.armies.find(v=>v.id===a.id&&v.owner===id);if(!army||!inside(a.x,a.y))return {ok:false,error:'Армия не найдена.'};
   const tx=Math.floor(a.x),ty=Math.floor(a.y),targetOwner=owner(s,tx,ty);
   if(!tile(s,tx,ty)||targetOwner===id||p.allies.includes(targetOwner))return {ok:false,error:'Выбери нейтральную или вражескую землю.'};
-  if(!army.naval&&!borderCandidates(s,id,targetOwner).length)return {ok:false,error:'Нужна общая граница для смены направления.'};
+  if(!borderCandidates(s,id,targetOwner).length)return {ok:false,error:'Нужна общая граница для смены направления.'};
   army.tx=tx;army.ty=ty;army.targetOwner=targetOwner;army.stuck=0;attackFronts.delete(army);return {ok:true};
  }
  if(a.type==='return'){
@@ -306,17 +322,6 @@ function balancedLayer(cells,s,step){
 }
 function advance(s,a){
  const p=person(s,a.owner);if(!alive(p)){a.strength=0;attackFronts.delete(a);return;}
- if(a.naval){
-  if(!a.landing){finishWave(s,a,p);return;}
-  const dx=a.landing.x-a.x,dy=a.landing.y-a.y,d=Math.hypot(dx,dy);
-  const portLevel=s.buildings.filter(b=>b.owner===a.owner&&b.kind==='port').reduce((m,b)=>Math.max(m,b.level),1);
-  const speed=4+Math.max(0,p.tech.sailing-1)*1.25+(portLevel-1)*.55;
-  if(d>speed){a.x+=dx/d*speed;a.y+=dy/d*speed;a.strength-=Math.max(.25,1.2-(p.tech.sailing-1)*.25-(portLevel-1)*.12);a.turns++;return;}
-  a.x=a.landing.x;a.y=a.landing.y;a.naval=false;a.ox=a.x;a.oy=a.y;
-  a.targetOwner=owner(s,a.x,a.y);
-  if(!capture(s,a,a.x,a.y)){finishWave(s,a,p);return;}
-  a.landing=null;
- }
  const f=waveFront(s,a);
  // Alliances or a completed conquest can invalidate a target while in flight.
  if(f.targetOwner&&p.allies.includes(f.targetOwner)){finishWave(s,a,p);return;}
@@ -347,7 +352,7 @@ function advance(s,a){
  a.turns++;a.stuck=gained?0:a.stuck+1;
  if(a.strength<3||a.stuck>=3||a.turns>140||!f.candidates.size)finishWave(s,a,p);
 }
-function counts(s,id){const stats={farm:0,lumber:0,quarry:0,mine:0,barracks:0,fort:0,city:0,port:0};for(const b of s.buildings)if(b.owner===id&&stats[b.kind]!==undefined)stats[b.kind]+=b.level;return stats;}
+function counts(s,id){const stats={farm:0,lumber:0,quarry:0,mine:0,barracks:0,fort:0,city:0};for(const b of s.buildings)if(b.owner===id&&stats[b.kind]!==undefined)stats[b.kind]+=b.level;return stats;}
 function income(s,p){const c=counts(s,p.id),l=p.land,e=1+p.tech.economy*.25;
  const income={food:Math.round((2+l/100+c.farm*8+c.city*5)*e),wood:Math.round((1+l/180+c.lumber*7)*e),stone:Math.round((1+l/200+c.quarry*7)*e),gold:Math.round((1+l/220+c.mine*7+c.city*5)*e)};
  for(const k of Object.keys(income))p.res[k]=Math.min(250000,p.res[k]+income[k]);
@@ -387,11 +392,12 @@ function bot(s,id){const p=person(s,id);if(!alive(p)||s.phase!=='playing')return
  }
  if(s.tick%38===id%38){const choices=['economy','war','logistics'];action(s,id,{type:'research',key:choices[(Math.floor(s.tick/38)+id)%3]});}
 }
-function checkWin(s){const live=s.players.filter(alive);if(live.length<=1&&s.players.length>1){s.phase='ended';s.winner=live[0]?.id||null;return;}
- const current=live.sort((a,b)=>b.land-a.land);
- if(current[0]&&current[0].land>s.landTotal*.70){s.phase='ended';s.winner=current[0].id;return;}
- if(s.tick>=s.duration){s.phase='ended';s.winner=current[0]?.id||null;}
- if(s.phase==='ended'){const p=person(s,s.winner);log(s,p?p.name+' выиграл войну!':'Война окончена.');}
+function checkWin(s){
+ if(s.phase!=='playing')return;
+ // Only full ownership wins. No time-based leader, and the last survivor still
+ // has to settle all remaining neutral territory.
+ const winner=s.players.find(p=>alive(p)&&p.land===s.landTotal);
+ if(winner){s.phase='ended';s.winner=winner.id;log(s,winner.name+' контролирует 100% суши и победил!');}
 }
 function combatStep(s){if(s.phase!=='playing')return;
  for(const a of [...s.armies])if(a.strength>0)advance(s,a);
@@ -406,5 +412,5 @@ function tick(s){if(s.phase!=='playing')return;s.tick++;
  checkWin(s);
 }
 
-return{W,H,MAX,LIMIT,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,lobby,addPlayer,start,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,lobby,addPlayer,start,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });
