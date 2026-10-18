@@ -4,7 +4,18 @@
 const E=window.BKEngine,$=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const view=$('mapView'),canvas=$('mapCanvas'),ctx=canvas.getContext('2d',{alpha:false}),mini=$('minimap'),mctx=mini.getContext('2d');
 const terrainNames=['Море','Равнина','Лес','Холмы','Плодородная земля','Рудное месторождение','Горы'];
-const symbols={capital:'♛',farm:'♨',lumber:'♣',quarry:'◆',mine:'✦',barracks:'⚔',fort:'♜',port:'⚓',city:'⌂'};
+const iconPaths={
+ capital:'<path d="M4 21V7l8-4 8 4v14H4Z"/><path d="M9 21v-8h6v8M4 10h16"/>',
+ farm:'<path d="M12 21V11m0 4c-5 0-7-3-7-7 4 0 7 2 7 7Zm0-3c0-5 3-7 7-7 0 4-2 7-7 7Z"/>',
+ lumber:'<path d="m12 3 7 9h-4l5 6H4l5-6H5l7-9ZM12 18v4"/>',
+ quarry:'<path d="m3 18 5-9 5 9H3Zm9 0 4-13 5 13h-9Z"/>',
+ mine:'<path d="M4 8c4-6 12-6 16 0M12 7v13m-4-9 8 8"/>',
+ barracks:'<path d="M5 4l14 16M19 4 5 20M3 7l4-4m10 18 4-4"/>',
+ fort:'<path d="M4 21V7h4v4h8V7h4v14H4Zm6 0v-5h4v5M4 7V4h4v3m8 0V4h4v3"/>',
+ port:'<path d="M3 16 12 20 21 16l-2-5H5l-2 5Zm9-5V3m0 2 5 4h-5M3 22c3-2 6-2 9 0 3-2 6-2 9 0"/>',
+ city:'<path d="M3 21V9h7v12H3Zm7 0V4h11v17H10ZM6 12v2m0 3v1m7-10v2m4-2v2m-4 4v2m4-2v2"/>'};
+const iconSvg=(id)=>`<svg viewBox="0 0 24 24" aria-hidden="true">${iconPaths[id]||iconPaths.city}</svg>`;
+const iconImages=Object.fromEntries(Object.entries(iconPaths).map(([id,path])=>{const im=new Image();const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1c4a55" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);im.onload=()=>queueDraw();return[id,im];}));
 const textTech={economy:'Увеличивает производство всех ресурсов на 25% за уровень.',war:'Усиливает атаки и оборону; ускоряет набор войск.',logistics:'Ускоряет походы на одну клетку за ход.',sailing:'Позволяет морские походы через проливы, нужен порт.'};
 const costText=c=>Object.entries(c||{}).map(([k,v])=>({wood:'Д',stone:'К',gold:'З',food:'Е'}[k]||k)+': '+v).join(' · ');
 const number=n=>Math.floor(n||0).toLocaleString('ru-RU');
@@ -19,8 +30,10 @@ function randomCode(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',v=new Uint8
 function urlRoom(){return location.origin+location.pathname+'#'+code;}
 function compress(arr){let chunks=[];for(let i=0;i<arr.length;i+=8192)chunks.push(String.fromCharCode(...arr.slice(i,i+8192)));return btoa(chunks.join(''));}
 function expand(str){const raw=atob(str),out=new Array(raw.length);for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);return out;}
-function pack(s,includeTerrain=true){if(!s||!s.owners?.length)return s;return {...s,tiles:includeTerrain?compress(s.tiles):null,owners:compress(s.owners),packed:true};}
-function unpack(s){if(s?.packed){s.tiles=s.tiles?expand(s.tiles):(state?.tiles||[]);s.owners=expand(s.owners);delete s.packed;}return s;}
+function rlePack(arr){const b=[];for(let i=0;i<arr.length;){const id=arr[i];let n=1;while(i+n<arr.length&&arr[i+n]===id&&n<65535)n++;b.push(id,n&255,n>>8);i+=n;}return compress(b);}
+function rleUnpack(data){const a=expand(data),out=[];for(let i=0;i<a.length;i+=3){const id=a[i],n=a[i+1]+256*a[i+2];for(let j=0;j<n;j++)out.push(id);}return out;}
+function pack(s,includeTerrain=true){if(!s||!s.owners?.length)return s;return {...s,tiles:includeTerrain?compress(s.tiles):null,owners:rlePack(s.owners),ownerRle:true,packed:true};}
+function unpack(s){if(s?.packed){s.tiles=s.tiles?expand(s.tiles):(state?.tiles||[]);s.owners=s.ownerRle?rleUnpack(s.owners):expand(s.owners);delete s.ownerRle;delete s.packed;}return s;}
 function getPeer(){if(window.Peer)return true;error('Не загрузилась библиотека PeerJS. Проверь интернет.');return false;}
 function createRoom(){if(!getPeer())return;code=randomCode();host=true;demo=false;peer=new Peer('bk-'+code);$('networkStatus').textContent='ПОДКЛЮЧЕНИЕ…';
  peer.on('open',()=>{state=E.lobby(Date.now());myId=E.addPlayer(state,name());$('networkStatus').textContent='● ВЕДУЩИЙ';history.replaceState(null,'','#'+code);phaseShown='';render();});
@@ -75,11 +88,11 @@ function updateUI(){const p=mine();if(!p)return;
  for(const r of ['food','wood','stone','gold']){$('res'+r[0].toUpperCase()+r.slice(1)).textContent=number(p.res[r]);$('inc'+r[0].toUpperCase()+r.slice(1)).textContent='+'+number(p.income?.[r]);}
  $('troopCount').textContent=number(p.troops);$('troopCap').textContent='/ '+number(p.troopCap);
  const sec=Math.max(0,state.duration-state.tick);$('timeLeft').textContent=String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');$('landCount').textContent=number(p.land);$('landShare').textContent=(p.land/Math.max(1,state.landTotal)*100).toFixed(1)+'%';
- $('myKingdom').textContent=p.name.toUpperCase()+ (p.eliminated?' · РАЗГРОМЛЕНО':'');$('myKingdom').style.color=p.color;
+ $('myKingdom').textContent=p.name+ (p.eliminated?' · РАЗГРОМЛЕНО':'');$('myKingdom').style.color=p.color;
  const top=[...state.players].filter(p=>p.land>0).sort((a,b)=>b.land-a.land);
  $('leaderboard').innerHTML=top.slice(0,9).map((v,i)=>`<div class="leader-row"><span>${i+1}.</span><i class="player-dot" style="background:${v.color}"></i><span class="leader-name">${esc(v.name)}${v.bot?' · AI':''}</span><div class="bar"><i style="width:${Math.max(3,v.land/Math.max(1,top[0].land)*100)}%;background:${v.color}"></i></div><div>${number(v.land)}</div></div>`).join('');
  if(currentTab==='build'){
-  $('buildingsPanel').innerHTML=Object.entries(E.KINDS).map(([id,k])=>`<button data-build="${id}" class="build-btn ${buildMode===id?'active':''}" ${p.eliminated?'disabled':''}><span class="symbol">${symbols[id]}</span><strong>${esc(k.name)}</strong><span>${costText(k.cost)}</span></button>`).join('');
+  $('buildingsPanel').innerHTML=Object.entries(E.KINDS).map(([id,k])=>`<button data-build="${id}" class="build-btn ${buildMode===id?'active':''}" ${p.eliminated?'disabled':''}><span class="build-icon">${iconSvg(id)}</span><strong>${esc(k.name)}</strong><span>${costText(k.cost)}</span></button>`).join('');
  }else if(currentTab==='tech'){
   $('techPanel').innerHTML=Object.entries(E.TECH).map(([id,t])=>{const l=p.tech[id];return `<div class="tech-item"><strong>${esc(t.name)} · Уровень ${l}/3</strong><p>${textTech[id]}</p><button data-research="${id}" ${l>=3||p.eliminated?'disabled':''}>${l>=3?'ИЗУЧЕНО':'ИССЛЕДОВАТЬ · '+costText(E.costTech(id,l))}</button></div>`;}).join('');
  }else if(currentTab==='diplomacy'){
@@ -90,13 +103,13 @@ function updateUI(){const p=mine();if(!p)return;
  }
  updateSelection();
 }
-function updateSelection(){const p=mine(),item=selected?.kind==='army'?state.armies.find(a=>a.id===selected.id):selected?.kind==='building'?state.buildings.find(b=>b.id===selected.id):null;
+function updateSelection(){const item=selected?.kind==='army'?state.armies.find(a=>a.id===selected.id):selected?.kind==='building'?state.buildings.find(b=>b.id===selected.id):null;
  const box=$('selectedPanel');if(!item){box.textContent='Нажми на здание или армию, чтобы увидеть подробности. Для атаки нажми на чужую территорию.';return;}
  const own=item.owner===myId,op=E.person(state,item.owner);
- if(selected.kind==='army')box.innerHTML=`<strong>⚔ Отряд ${esc(op?.name||'')}</strong><div>Солдаты: ${number(item.strength)}</div><div>Цель: ${item.tx}, ${item.ty}</div>${own?'<button data-retreat="'+esc(item.id)+'">ВЕРНУТЬ В СТОЛИЦУ</button><div>Чтобы сменить цель, нажми на другую клетку карты.</div>':''}`;
- else box.innerHTML=`<strong>${symbols[item.kind]} ${esc(E.KINDS[item.kind]?.name||'Столица')}</strong><div>Владелец: ${esc(op?.name||'')}</div><div>Уровень: ${item.level}/4</div>${own?`<button data-upgrade="${esc(item.id)}" ${item.level>=4?'disabled':''}>${item.level>=4?'МАКС. УРОВЕНЬ':'УЛУЧШИТЬ · '+costText(E.costUpgrade(item))}</button>`:''}`;
+ if(selected.kind==='army')box.innerHTML=`<strong>Армия · ${esc(op?.name||'')}</strong><div>Солдаты: ${number(item.strength)}</div><div>Цель: ${item.tx}, ${item.ty}</div>${own?'<button data-retreat="'+esc(item.id)+'">Вернуть в столицу</button><div>Чтобы сменить цель, нажми на другую клетку карты.</div>':''}`;
+ else box.innerHTML=`<strong>${esc(E.KINDS[item.kind]?.name||'Столица')}</strong><div>Владелец: ${esc(op?.name||'')}</div><div>Уровень: ${item.level}/4</div>${own?`<button data-upgrade="${esc(item.id)}" ${item.level>=4?'disabled':''}>${item.level>=4?'Максимум':'Улучшить · '+costText(E.costUpgrade(item))}</button>`:''}`;
 }
-$('buildingsPanel').addEventListener('click',e=>{const b=e.target.closest('[data-build]');if(!b)return;buildMode=buildMode===b.dataset.build?null:b.dataset.build;selected=null;$('cancelMode').classList.toggle('hidden',!buildMode);$('modeLabel').textContent=buildMode?'⌂ Строительство: '+E.KINDS[buildMode].name:'⚔ Отправить войска';$('actionHint').textContent=buildMode?'Нажми на свою землю для строительства.':'Нажми на цель на карте для похода.';updateUI();if(buildMode&&window.innerWidth<871){panelOpen=false;$('sidebar').classList.remove('open');}});
+$('buildingsPanel').addEventListener('click',e=>{const b=e.target.closest('[data-build]');if(!b)return;buildMode=buildMode===b.dataset.build?null:b.dataset.build;selected=null;$('cancelMode').classList.toggle('hidden',!buildMode);$('modeLabel').textContent=buildMode?'Построить: '+E.KINDS[buildMode].name:'Наступление';$('actionHint').textContent=buildMode?'Нажми на свою землю для строительства.':'Нажми на цель на карте для похода.';updateUI();if(buildMode&&window.innerWidth<871){panelOpen=false;$('sidebar').classList.remove('open');}});
 $('techPanel').addEventListener('click',e=>{const b=e.target.closest('[data-research]');if(b)command({type:'research',key:b.dataset.research});});
 $('diplomacyPanel').addEventListener('click',e=>{const b=e.target.closest('[data-ally]'),d=e.target.closest('[data-donate]');if(b)command({type:'diplomacy',target:Number(b.dataset.ally)});if(d)command({type:'donate',target:Number(d.dataset.donate),amount:100,resource:'gold'});});
 $('selectedPanel').addEventListener('click',e=>{const b=e.target.closest('[data-upgrade]'),r=e.target.closest('[data-retreat]');if(b)command({type:'upgrade',id:b.dataset.upgrade});if(r)command({type:'return',id:r.dataset.retreat});});
@@ -106,7 +119,7 @@ $('developButton').onclick=()=>{panelOpen=!panelOpen;$('sidebar').classList.togg
 $('closePanel').onclick=()=>{panelOpen=false;$('sidebar').classList.remove('open');};
 $('attackPercent').oninput=e=>{percent=Number(e.target.value);$('percentLabel').textContent=percent+'%';document.querySelectorAll('[data-percent]').forEach(t=>t.classList.toggle('active',Number(t.dataset.percent)===percent));};
 for(const b of document.querySelectorAll('[data-percent]'))b.onclick=()=>{$('attackPercent').value=b.dataset.percent;$('attackPercent').oninput({target:$('attackPercent')});};
-$('cancelMode').onclick=cancelMode;function cancelMode(){buildMode=null;$('modeLabel').textContent='⚔ Отправить войска';$('actionHint').textContent='Нажми на цель на карте для похода.';$('cancelMode').classList.add('hidden');updateUI();}
+$('cancelMode').onclick=cancelMode;function cancelMode(){buildMode=null;$('modeLabel').textContent='Наступление';$('actionHint').textContent='Выбери нейтральную или чужую территорию.';$('cancelMode').classList.add('hidden');updateUI();}
 function resize(){const rect=canvas.getBoundingClientRect();if(rect.width<1)return;const dpr=Math.min(window.innerWidth<900?1:1.5,devicePixelRatio||1);const w=Math.round(rect.width*dpr),h=Math.round(rect.height*dpr);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;queueDraw();}}
 function centerOnCapital(){const p=mine();if(!p?.capital)return;const c=p.capital;const r=canvas.getBoundingClientRect();camX=r.width/2-(c.x+.5)*TILE*zoom;camY=r.height/2-(c.y+.5)*TILE*zoom;clampCamera();queueDraw();}
 function clampCamera(){const rect=canvas.getBoundingClientRect();camX=Math.min(70,Math.max(rect.width-E.W*TILE*zoom-70,camX));camY=Math.min(70,Math.max(rect.height-E.H*TILE*zoom-70,camY));}
@@ -136,38 +149,37 @@ $('zoomIn').onclick=()=>zoomAt(1.24,canvas.clientWidth/2,canvas.clientHeight/2);
 mini.addEventListener('pointerdown',e=>{const r=mini.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*E.W,y=(e.clientY-r.top)/r.height*E.H;camX=canvas.clientWidth/2-x*TILE*zoom;camY=canvas.clientHeight/2-y*TILE*zoom;clampCamera();queueDraw();});
 // Low-resolution territory bitmap: one pixel per world tile. The GPU enlarges it.
 // It is updated only when a territory changes, NOT once per animation frame.
-const TERRAIN_RGB=[[24,64,91],[59,100,77],[36,87,71],[96,104,90],[86,120,83],[118,105,72],[115,121,123]];
-let minimapCached=null;
+const TERRAIN_RGB=[[185,207,221],[226,232,224],[218,228,215],[221,222,215],[234,234,214],[219,217,206],[196,205,206]];
+let minimapCached=null,pixelLayer=null;
 function repaintWorld(){
  if(!state?.owners?.length||!state?.tiles?.length)return;
  const revision=state.territoryRevision??state.tick;
  if(worldLayer&&paintedRevision===revision&&terrainSeed===state.seed)return;
- if(!worldLayer){worldLayer=document.createElement('canvas');worldLayer.width=E.W;worldLayer.height=E.H;}
- const c=worldLayer.getContext('2d',{alpha:false});const img=c.createImageData(E.W,E.H);
+ if(!worldLayer){worldLayer=document.createElement('canvas');worldLayer.width=E.W*6;worldLayer.height=E.H*6;}
+ if(!pixelLayer){pixelLayer=document.createElement('canvas');pixelLayer.width=E.W;pixelLayer.height=E.H;}
+ const c=pixelLayer.getContext('2d',{alpha:false});const img=c.createImageData(E.W,E.H);
  const colors=state.players.map(p=>{const x=parseInt(p.color.slice(1),16);return[(x>>>16)&255,(x>>>8)&255,x&255];});
  const owners=state.owners,tiles=state.tiles,d=img.data;
  for(let i=0;i<owners.length;i++){
   const terr=TERRAIN_RGB[tiles[i]]||TERRAIN_RGB[1],id=owners[i],col=id?colors[id-1]:null;
   const p=i*4;
-  // Tint occupied tiles heavily for readable borders at every zoom level.
-  const k=col ? 0.75 : 0;
-  const noise=(i*13+(i/E.W|0)*7)%5-2;
-  d[p]=Math.max(0,Math.min(255,Math.round(terr[0]*(1-k)+(col?.[0]||0)*k+noise)));
-  d[p+1]=Math.max(0,Math.min(255,Math.round(terr[1]*(1-k)+(col?.[1]||0)*k+noise)));
-  d[p+2]=Math.max(0,Math.min(255,Math.round(terr[2]*(1-k)+(col?.[2]||0)*k+noise)));
+  const k=col ? 0.82 : 0;
+  d[p]=Math.round(terr[0]*(1-k)+(col?.[0]||0)*k);
+  d[p+1]=Math.round(terr[1]*(1-k)+(col?.[1]||0)*k);
+  d[p+2]=Math.round(terr[2]*(1-k)+(col?.[2]||0)*k);
   d[p+3]=255;
  }
- c.putImageData(img,0,0);terrainSeed=state.seed;paintedRevision=revision;miniRevision=-1;
+ c.putImageData(img,0,0);const wc=worldLayer.getContext('2d',{alpha:false});wc.imageSmoothingEnabled=false;wc.drawImage(pixelLayer,0,0,worldLayer.width,worldLayer.height);terrainSeed=state.seed;paintedRevision=revision;miniRevision=-1;
 }
 function hexAlpha(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;}
 function queueDraw(){if(renderQueued)return;renderQueued=true;requestAnimationFrame(()=>{renderQueued=false;draw();});}
-function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr=canvas.width/Math.max(1,canvas.clientWidth);const w=canvas.clientWidth,h=canvas.clientHeight;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#112e42';ctx.fillRect(0,0,w,h);
- ctx.save();ctx.translate(camX,camY);ctx.scale(zoom,zoom);ctx.imageSmoothingEnabled=false;ctx.drawImage(worldLayer,0,0,E.W,E.H,0,0,E.W*TILE,E.H*TILE);
+function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr=canvas.width/Math.max(1,canvas.clientWidth);const w=canvas.clientWidth,h=canvas.clientHeight;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#bad2e1';ctx.fillRect(0,0,w,h);
+ ctx.save();ctx.translate(camX,camY);ctx.scale(zoom,zoom);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(worldLayer,0,0,worldLayer.width,worldLayer.height,0,0,E.W*TILE,E.H*TILE);
  // Draw vector borders only when zoomed in sufficiently; avoid per-tile work otherwise.
- if(zoom>1.12){
+ if(zoom>=0.72){
   const minX=Math.max(0,Math.floor(-camX/(TILE*zoom))-1),maxX=Math.min(E.W-1,Math.ceil((w-camX)/(TILE*zoom))+1);
   const minY=Math.max(0,Math.floor(-camY/(TILE*zoom))-1),maxY=Math.min(E.H-1,Math.ceil((h-camY)/(TILE*zoom))+1);
-  ctx.lineWidth=Math.max(.5,1.7/zoom);ctx.strokeStyle='#07151a95';ctx.beginPath();
+  ctx.lineWidth=Math.max(.4,1.3/zoom);ctx.strokeStyle='#31536188';ctx.beginPath();
   const o=state.owners;
   for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
    const i=y*E.W+x,id=o[i];if(!id)continue;
@@ -178,12 +190,16 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
  }
  const capF=Math.max(9,13/zoom);ctx.font='800 '+capF+'px DM Sans, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
  for(const b of state.buildings){const x=(b.x+.5)*TILE,y=(b.y+.5)*TILE;if(x*zoom+camX<-40||x*zoom+camX>w+40||y*zoom+camY<-40||y*zoom+camY>h+40)continue;
-  const c=color(b.owner);const rad=b.kind==='capital'?12:8;ctx.fillStyle='#101b29';ctx.strokeStyle=c;ctx.lineWidth=2/zoom;ctx.beginPath();ctx.arc(x,y,rad,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle=b.kind==='capital'?'#edcc83':'#f7f7ed';ctx.font=(b.kind==='capital'?'bold ':'')+Math.max(11,14/zoom)+'px Georgia,serif';ctx.fillText(symbols[b.kind]||'◇',x,y+1);
-  if(b.kind==='capital'&&zoom>.8){const p=E.person(state,b.owner);const text=p?.name||'';ctx.font='bold '+Math.max(9,12/zoom)+'px DM Sans, sans-serif';ctx.fillStyle='#071725dd';const tw=ctx.measureText(text).width+12;ctx.fillRect(x-tw/2,y+15,tw,18);ctx.fillStyle='#fff';ctx.fillText(text,x,y+24);}
+  const c=color(b.owner),r=b.kind==='capital'?10:8;
+  ctx.fillStyle='#ffffffee';ctx.strokeStyle=c;ctx.lineWidth=2/Math.max(0.75,zoom);
+  ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.stroke();
+  const im=iconImages[b.kind];if(im?.complete&&im.naturalWidth)ctx.drawImage(im,x-r*.62,y-r*.62,r*1.24,r*1.24);
+  if(b.kind==='capital'&&zoom>.8){const p=E.person(state,b.owner),t=p?.name||'';ctx.font='700 '+Math.max(9,10/zoom)+'px system-ui';const tw=ctx.measureText(t).width+14;ctx.fillStyle='#ffffffef';ctx.beginPath();ctx.roundRect(x-tw/2,y+15,tw,18,6);ctx.fill();ctx.fillStyle='#203b47';ctx.fillText(t,x,y+24);}
+
  }
  for(const a of state.armies){const x=(a.x+.5)*TILE,y=(a.y+.5)*TILE;if(x*zoom+camX<-50||x*zoom+camX>w+50||y*zoom+camY<-50||y*zoom+camY>h+50)continue;
-  ctx.fillStyle='#09131cf1';ctx.strokeStyle=color(a.owner);ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,7,0,2*Math.PI);ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 8px Arial';ctx.fillText('➤',x,y+.5);
-  if(zoom>1.15){ctx.font='bold 8px DM Sans';const n=number(a.strength);ctx.fillStyle='#031320b5';ctx.fillRect(x-20,y+9,40,12);ctx.fillStyle='#fff';ctx.fillText(n,x,y+15);}
+  ctx.fillStyle='rgba(255,255,255,.95)';ctx.strokeStyle=color(a.owner);ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,6.5,0,2*Math.PI);ctx.fill();ctx.stroke();ctx.fillStyle='#0f1720';ctx.font='700 7px system-ui';ctx.fillText('↗',x,y+.5);
+  if(zoom>1.15){ctx.font='700 8px system-ui';const n=number(a.strength);ctx.fillStyle='rgba(255,255,255,.95)';ctx.beginPath();ctx.roundRect(x-20,y+9,40,12,5);ctx.fill();ctx.fillStyle='#0f1720';ctx.fillText(n,x,y+15);}
   if(a.owner===myId){ctx.strokeStyle=hexAlpha(color(a.owner),.55);ctx.setLineDash([2,3]);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo((a.tx+.5)*TILE,(a.ty+.5)*TILE);ctx.stroke();ctx.setLineDash([]);}
  }
  if(selected){const b=selected.kind==='building'?state.buildings.find(v=>v.id===selected.id):state.armies.find(v=>v.id===selected.id);if(b){ctx.strokeStyle='#ffffff';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.strokeRect(b.x*TILE-5,b.y*TILE-5,TILE+10,TILE+10);ctx.setLineDash([]);}}
@@ -193,7 +209,7 @@ function drawMini(){
  const revision=state.territoryRevision??state.tick;
  if(miniRevision!==revision){
   if(!minimapCached){minimapCached=document.createElement('canvas');minimapCached.width=E.W;minimapCached.height=E.H;}
-  const mc=minimapCached.getContext('2d',{alpha:false});mc.imageSmoothingEnabled=false;mc.drawImage(worldLayer,0,0);
+  const mc=minimapCached.getContext('2d',{alpha:false});mc.imageSmoothingEnabled=true;mc.drawImage(worldLayer,0,0);
   miniRevision=revision;
  }
  mctx.clearRect(0,0,E.W,E.H);mctx.drawImage(minimapCached,0,0);
