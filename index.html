@@ -987,6 +987,35 @@ body:has(#waiting:not(.hidden)) #toast:not(.hidden),body:has(#lobby:not(.hidden)
 @media(max-height:620px){#waiting.waiting-screen{display:block;min-height:100dvh}#waiting .waiting-card{margin:6px auto!important}}
 @media(prefers-reduced-motion:reduce){#waiting *,#toast,.aux-backdrop{transition:none!important;animation:none!important}}
 
+/* v17: actionable threats with one clear mobile overlay hierarchy. */
+.game-screen .threat-rail{position:absolute;top:60px;left:8px;z-index:18;display:flex;align-items:stretch;gap:6px;max-width:calc(100% - 16px)}
+.game-screen #incomingAttack.incoming-attack{
+ position:relative!important;top:auto!important;left:auto!important;right:auto!important;
+ flex:0 1 auto;width:min(215px,calc(100vw - 103px))!important;min-width:0!important;
+ min-height:44px!important;margin:0!important;box-shadow:0 3px 0 #6a302a,0 5px 12px #0003!important
+}
+.game-screen .threat-expand{flex:0 0 auto;min-width:66px;min-height:44px;padding:4px 8px;background:#fff2d6;color:#603c2a;border:2px solid #936641;border-radius:11px;font-size:11px;font-weight:850;box-shadow:0 3px 0 #624a36}
+.game-screen .threat-expand b{display:inline-grid;place-items:center;background:#b83b35;color:white;border-radius:100px;min-width:19px;padding:2px 4px;margin-left:2px}
+.game-screen .threat-list{position:absolute;top:calc(100% + 8px);left:0;z-index:19;width:min(314px,calc(100vw - 16px));max-height:min(43dvh,350px);overflow-y:auto;background:#fff4db;color:#2b4133;border:2px solid #a4824e;border-radius:14px;box-shadow:0 15px 40px #0b231cb3;overscroll-behavior:contain}
+.game-screen .threat-list header{position:sticky;top:0;z-index:1;padding:9px 11px;display:flex;justify-content:space-between;align-items:center;background:#f2deb4;border-bottom:1px solid #cab48b;font-size:13px}
+.game-screen .threat-list header button{height:33px;width:36px;border:1px solid #af9873;border-radius:9px;font-size:21px;color:#344a3e}
+.game-screen .threat-items{padding:4px;display:grid;gap:3px}
+.game-screen .threat-item{width:100%;display:flex;align-items:center;gap:9px;text-align:left;padding:9px;border-radius:9px;min-height:55px;background:#fffaf0;border:1px solid #ddcba8;color:#2d4235}
+.game-screen .threat-item:active,.game-screen .threat-item:focus-visible{background:#e6efdc}
+.game-screen .threat-item i{width:11px;height:11px;border-radius:50%;flex:0 0 auto;border:1px solid #fff}
+.game-screen .threat-item span{min-width:0;flex:1;display:grid;gap:2px}
+.game-screen .threat-item strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:#293e30}
+.game-screen .threat-item small{font-size:11px;color:#556652}
+.game-screen .threat-item b{white-space:nowrap;font-size:13px;color:#a24431}
+@media(max-width:850px){
+ .game-screen .threat-rail{top:58px;left:6px}
+ .game-screen .map-view:has(#threatRail:not(.hidden)) #hudAlert.hud-alert{top:111px!important;right:7px!important}
+}
+@media(max-height:480px) and (orientation:landscape){
+ .game-screen .threat-rail{top:49px}
+ .game-screen .map-view:has(#threatRail:not(.hidden)) #hudAlert.hud-alert{top:98px!important}
+ .game-screen .threat-list{max-height:43dvh}
+}
 </style>
 </head>
 <body>
@@ -1053,11 +1082,15 @@ body:has(#waiting:not(.hidden)) #toast:not(.hidden),body:has(#lobby:not(.hidden)
 </div>
 </div>
 <div class="map-view" id="mapView">
-<button aria-label="Перейти к атакованной границе" aria-live="off" class="incoming-attack hidden" id="incomingAttack" type="button">
+<div class="threat-rail hidden" id="threatRail" role="group" aria-label="Входящие атаки">
+<button aria-label="Перейти к ближайшей угрозе" class="incoming-attack" id="incomingAttack" type="button">
 <span aria-hidden="true" class="incoming-icon">!</span>
 <span class="incoming-body"><strong id="incomingTitle">НА ВАС НАПАЛИ</strong><small id="incomingDetail">Противник атакует границу</small></span>
-<span class="incoming-action">К ГРАНИЦЕ <span aria-hidden="true">↗</span></span>
-</button><canvas aria-label="Карта государств. Стрелки передвигают курсор, Enter выбирает цель." id="mapCanvas" role="application" tabindex="0"></canvas><div aria-live="polite" class="sr-only" id="keyboardPosition"></div>
+<span class="incoming-action">К БОЮ <span aria-hidden="true">↗</span></span>
+</button>
+<button type="button" class="threat-expand hidden" id="threatExpand" aria-controls="threatList" aria-expanded="false" aria-label="Список входящих атак">Фронты <b id="threatCount">0</b></button>
+<div class="threat-list hidden" id="threatList" aria-label="Список входящих атак"><header><strong>Входящие атаки</strong><button type="button" id="threatClose" aria-label="Закрыть список угроз">×</button></header><div class="threat-items" id="threatItems"></div></div>
+</div><canvas aria-label="Карта государств. Стрелки передвигают курсор, Enter выбирает цель." id="mapCanvas" role="application" tabindex="0"></canvas><div aria-live="polite" class="sr-only" id="keyboardPosition"></div>
 <div class="map-hint" id="mapHint">Нейтральная земля — широкий фронт · Сосед — атака по границе</div>
 <button aria-live="polite" class="hud-alert hidden" id="hudAlert" type="button"><span aria-hidden="true" id="hudAlertIcon">!</span><span id="hudAlertText"></span><span aria-hidden="true">›</span></button><div class="map-tooltip hidden" id="mapTooltip"></div><div aria-live="polite" class="map-status-mobile hidden" id="mapStatusMobile"></div><ul aria-label="Доступные объекты карты" class="sr-only" id="accessibleObjects"></ul>
 <div class="minimap-wrap" id="minimapWrap"><button aria-expanded="true" aria-label="Скрыть миникарту" id="minimapToggle">Мир <span>−</span></button><canvas aria-label="Миникарта, Enter переместиться к центру мира" height="104" id="minimap" role="button" tabindex="0" width="160"></canvas></div>
@@ -1601,11 +1634,18 @@ function show(screen){for(const name of ['lobby','waiting','game'])$(name).class
 function error(s){$('lobbyError').textContent=s;toast(s);}
 // One auxiliary surface at a time. No panel stacks above another.
 const AUX_IDS=['economyPanel','armiesPanel','quickLeadersPanel','contextCard'];
-function hideAux(){for(const id of AUX_IDS)$(id)?.classList.add('hidden');$('auxBackdrop')?.classList.add('hidden');document.body.classList.remove('aux-open');}
+function hideAux(){
+ const closingContext=!$('contextCard').classList.contains('hidden');
+ for(const id of AUX_IDS)$(id)?.classList.add('hidden');
+ $('auxBackdrop')?.classList.add('hidden');document.body.classList.remove('aux-open');
+ // Never reopen a dismissed object card on the next network tick.
+ if(closingContext)selected=null;
+}
 function showAux(id){
  const el=$(id);if(!el)return;
  const wasOpen=!el.classList.contains('hidden');
  hideAux();if(wasOpen)return;
+ if(id!=='contextCard')selected=null;
  if(panelOpen)closePanel();
  el.classList.remove('hidden');$('auxBackdrop')?.classList.remove('hidden');document.body.classList.add('aux-open');
 }
@@ -1630,38 +1670,64 @@ function hostileAttacks(p){
 function focusThreat(a){
  if(!a)return;
  const tx=Math.max(0,Math.min(E.W-1,Math.round(a.x))),ty=Math.max(0,Math.min(E.H-1,Math.round(a.y)));
+ hideAux();if(panelOpen)closePanel();
  const r=canvas.getBoundingClientRect();
  zoom=Math.max(.9,zoom);$('zoomText').textContent=Math.round(zoom*100)+'%';
  camX=r.width/2-(tx+.5)*TILE*zoom;
  camY=r.height/2-(ty+.5)*TILE*zoom;
  clampCamera();setPreview(null);queueDraw();
 }
+function threatDistance(a,p){
+ const c=p?.capital;return c?Math.round(Math.hypot(a.x-c.x,a.y-c.y)):999;
+}
+function setThreatList(open){
+ const expanded=!!open&&activeThreats.length>1;
+ $('threatList').classList.toggle('hidden',!expanded);
+ $('threatExpand').setAttribute('aria-expanded',String(expanded));
+}
 function updateIncomingAttack(p){
- const button=$('incomingAttack');if(!button)return;
- const threats=hostileAttacks(p);
+ const threats=hostileAttacks(p).sort((a,b)=>threatDistance(a,p)-threatDistance(b,p)||b.strength-a.strength);
  activeThreats=threats;
- button.classList.toggle('hidden',!threats.length);
- if(!threats.length){lastThreatSignature='';announcedThreats.clear();return;}
- const attackerIds=[...new Set(threats.map(a=>a.owner))];
- const names=attackerIds.map(id=>E.person(state,id)?.name||'Противник');
+ $('threatRail').classList.toggle('hidden',!threats.length);
+ $('threatExpand').classList.toggle('hidden',threats.length<2);
+ if(!threats.length){lastThreatSignature='';announcedThreats.clear();setThreatList(false);return;}
+ const attackers=[...new Set(threats.map(a=>a.owner))].map(id=>E.person(state,id)?.name||'Противник');
  const force=threats.reduce((sum,a)=>sum+Math.max(0,a.strength),0);
  const signature=threats.map(a=>a.id).sort().join(',');
- $('incomingTitle').textContent=threats.length===1?'НА ВАС НАПАЛИ':`НА ВАС НАПАЛИ · ${threats.length} ФРОНТА`;
- $('incomingDetail').textContent=`${names.join(', ')} · ${number(force)} войск противника`;
+ $('incomingTitle').textContent=threats.length===1?'НА ВАС НАПАЛИ':`АТАКИ · ${threats.length} ФРОНТА`;
+ $('incomingDetail').textContent=`${attackers.join(', ')} · ${number(force)} войск противника`;
+ $('threatCount').textContent=threats.length;
+ $('incomingAttack').setAttribute('aria-label',threats.length>1?'Перейти к следующей из '+threats.length+' угроз':'Перейти к месту нападения');
+ patchHtml('threatItems',threats.map((a,i)=>{
+  const attacker=E.person(state,a.owner),distance=threatDistance(a,p);
+  return `<button type="button" data-focus-threat="${esc(a.id)}" class="threat-item"><i style="background:${attacker?.color||'#b94d40'}"></i><span><strong>${esc(attacker?.name||'Противник')}</strong><small>${number(a.strength)} войск · ${distance<999?'≈'+distance+' кл. от столицы':'на границе'}</small></span><b>${i+1} ↗</b></button>`;
+ }).join(''));
+ if(threats.length<2)setThreatList(false);
  if(signature!==lastThreatSignature){
   const fresh=threats.filter(a=>!announcedThreats.has(a.id));
   if(fresh.length){
    const name=E.person(state,fresh[0].owner)?.name||'Противник';
    $('incomingAnnouncement').textContent=`Внимание! ${name} атакует вашу территорию. Нажмите на предупреждение, чтобы перейти к месту сражения.`;
   }
+  attackFocusIndex=0;
   announcedThreats=new Set(threats.map(a=>a.id));
   lastThreatSignature=signature;
  }
 }
 $('incomingAttack').onclick=()=>{
  if(!activeThreats.length)return;
- focusThreat(activeThreats[attackFocusIndex++%activeThreats.length]);
+ focusThreat(activeThreats[attackFocusIndex++%activeThreats.length]);setThreatList(false);
 };
+$('threatExpand').onclick=()=>setThreatList($('threatList').classList.contains('hidden'));
+$('threatClose').onclick=()=>setThreatList(false);
+$('threatItems').onclick=e=>{
+ const b=e.target.closest('[data-focus-threat]');if(!b)return;
+ const a=activeThreats.find(a=>a.id===b.dataset.focusThreat);
+ if(a){focusThreat(a);setThreatList(false);}
+};
+document.addEventListener('pointerdown',e=>{
+ if(!$('threatRail').contains(e.target)&&!$('threatList').classList.contains('hidden'))setThreatList(false);
+});
 function refreshHudAlert(p){
  const box=$('hudAlert');if(!box||!p||state?.phase!=='playing'){box?.classList.add('hidden');return;}
  let text='',kind='',action=null;
@@ -1693,8 +1759,8 @@ function refreshHudAlert(p){
 }
 $('hudAlert').onclick=()=>{
  if(hudAlertAction==='capital'){centerOnCapital();queueDraw();}
- else if(hudAlertAction==='economy'){$('economyPanel').classList.remove('hidden');}
- else if(hudAlertAction==='armies'){$('armiesPanel').classList.remove('hidden');renderArmies();}
+ else if(hudAlertAction==='economy')showAux('economyPanel');
+ else if(hudAlertAction==='armies'){showAux('armiesPanel');renderArmies();}
  else if(hudAlertAction&&typeof hudAlertAction==='object'){
   const {x,y}=hudAlertAction;camX=canvas.clientWidth/2-(x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(y+.5)*TILE*zoom;clampCamera();queueDraw();
  }
@@ -1765,7 +1831,7 @@ function setPreview(t){
  queueDraw();
 }
 function contextual(item){
- const box=$('contextCard'),content=$('contextBody');if(!item){box.classList.add('hidden');return;}
+ const box=$('contextCard'),content=$('contextBody');if(!item){if(!box.classList.contains('hidden'))hideAux();return;}
  const me=mine(),own=item.owner===myId,other=E.person(state,item.owner);let html='';
  if(item.kind&&item.kind!=='army'){
   const details=buildingInfo[item.kind],cost=E.costUpgrade(item),maxed=item.level>=4;
@@ -1773,7 +1839,7 @@ function contextual(item){
   const next=details?buildingBenefit(item.kind,me,item.level+1):'Защита столицы увеличится';
   html=`<strong>${esc(E.KINDS[item.kind]?.name||'Столица')} · ур. ${item.level}</strong><span>${esc(other?.name||'')}</span><p class="context-benefit">Сейчас: ${esc(effect)}</p>${maxed?'':`<p class="context-next">После улучшения: ${esc(next)}</p>`}${own?`<button data-context-upgrade="${esc(item.id)}" ${maxed||!canPay(me,cost)?'disabled':''}>${maxed?'Максимальный уровень':`Улучшить · ${briefCost(cost)}`}</button>${!maxed&&!canPay(me,cost)?`<small>Не хватает: ${deficit(me,cost)}</small>`:''}`:''}`;
  }else html=`<strong>Армия · ${esc(other?.name||'')}</strong><span>${number(item.strength)} солдат · ${item.tx},${item.ty}</span>${own?`<button data-context-redirect="${esc(item.id)}">Сменить цель</button><button data-context-return="${esc(item.id)}">Отступить</button>`:''}`;
- if(content.__last!==html){content.innerHTML=html;content.__last=html;}box.classList.remove('hidden');
+ if(content.__last!==html){content.innerHTML=html;content.__last=html;}if(box.classList.contains('hidden'))showAux('contextCard');
 }
 function createRoom(){if(!getPeer())return;setBusy(true);code=randomCode();host=true;demo=false;readyLocal=true;peer=new Peer('bk-'+code);setNetwork('ПОДКЛЮЧЕНИЕ');
  connectTimer=setTimeout(()=>{if(!state){setBusy(false);error('Не удалось создать комнату. Повтори попытку.');try{peer.destroy();}catch(_){}}},12000);
@@ -1971,8 +2037,8 @@ function renderArmies(){if(!state||!myId)return;const mineArmies=state.armies.fi
 }
 $('armiesToggle').onclick=()=>{showAux('armiesPanel');renderArmies();};
 $('closeArmies').onclick=hideAux;
-$('armiesList').onclick=e=>{const r=e.target.closest('[data-recall-army]'),f=e.target.closest('[data-focus-army]');if(r){if(command({type:'return',id:r.dataset.recallArmy}))renderArmies();}if(f){const a=state?.armies.find(v=>v.id===f.dataset.focusArmy);if(a){camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();$('armiesPanel').classList.add('hidden');queueDraw();}}};
-$('economyToggle').onclick=()=>showAux('economyPanel');$('closeEconomy').onclick=hideAux;$('pauseMobile').onclick=()=>$('pauseGame').click();$('quickLeaders').onclick=()=>{$('economyPanel').classList.add('hidden');showAux('quickLeadersPanel');};$('closeQuickLeaders').onclick=hideAux;$('nextFront').onclick=()=>{const armies=state?.armies.filter(a=>a.owner===myId)||[];if(!armies.length)return toast('Нет действующих армий');const a=armies[frontIndex++%armies.length];camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();selected={kind:'army',id:a.id};updateSelection();$('economyPanel').classList.add('hidden');queueDraw();};
+$('armiesList').onclick=e=>{const r=e.target.closest('[data-recall-army]'),f=e.target.closest('[data-focus-army]');if(r){if(command({type:'return',id:r.dataset.recallArmy}))renderArmies();}if(f){const a=state?.armies.find(v=>v.id===f.dataset.focusArmy);if(a){camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();hideAux();queueDraw();}}};
+$('economyToggle').onclick=()=>showAux('economyPanel');$('closeEconomy').onclick=hideAux;$('pauseMobile').onclick=()=>$('pauseGame').click();$('quickLeaders').onclick=()=>{$('economyPanel').classList.add('hidden');showAux('quickLeadersPanel');};$('closeQuickLeaders').onclick=hideAux;$('nextFront').onclick=()=>{const armies=state?.armies.filter(a=>a.owner===myId)||[];if(!armies.length)return toast('Нет действующих армий');const a=armies[frontIndex++%armies.length];camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();selected={kind:'army',id:a.id};updateSelection();hideAux();queueDraw();};
 $('helpButton').onclick=()=>{$('tutorial').classList.remove('hidden');$('closeTutorial').focus();};$('helpMenu').onclick=()=>{closePanel();$('helpButton').click();};$('closeTutorial').onclick=()=>{$('tutorial').classList.add('hidden');showTutorialOnce=false;try{localStorage.setItem('bk-v9-tutorial','yes');}catch(_){}$('mapCanvas').focus();};
 $('pauseGame').onclick=()=>{if(!demo)return toast('Пауза только для одиночной игры.');pauseSolo=!pauseSolo;$('pauseGame').textContent=pauseSolo?'Продолжить':'Пауза';saveSolo();};
 $('myKingdom').onclick=()=>toast(mine()?.name||'Королевство');
@@ -2226,7 +2292,7 @@ function drawMini(){
  mctx.lineWidth=.65;mctx.strokeStyle='#ffffff';const scale=zoom*TILE;
  mctx.strokeRect(-camX/scale,-camY/scale,canvas.clientWidth/scale,canvas.clientHeight/scale);
 }
-window.addEventListener('resize',()=>{resize();clampCamera();queueDraw();});document.addEventListener('keydown',e=>{if(e.key==='Escape'){hideAux();setPreview(null);redirectArmy=null;if(panelOpen)closePanel();else cancelMode();$('tutorial').classList.add('hidden');return;}if(panelOpen&&window.innerWidth<851&&e.key==='Tab'){const items=[...$('sidebar').querySelectorAll('button:not([disabled]), select:not([disabled])')].filter(el=>el.offsetParent!==null);if(items.length){const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}}
+window.addEventListener('resize',()=>{resize();clampCamera();queueDraw();});document.addEventListener('keydown',e=>{if(e.key==='Escape'){setThreatList(false);hideAux();setPreview(null);redirectArmy=null;if(panelOpen)closePanel();else cancelMode();$('tutorial').classList.add('hidden');return;}if(panelOpen&&window.innerWidth<851&&e.key==='Tab'){const items=[...$('sidebar').querySelectorAll('button:not([disabled]), select:not([disabled])')].filter(el=>el.offsetParent!==null);if(items.length){const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}}
  if(!state||state.phase!=='playing'||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;if(e.key==='+'||e.key==='=')zoomAt(1.2,canvas.clientWidth/2,canvas.clientHeight/2);if(e.key==='-')zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);if(document.activeElement===canvas){if(!moveCursor)moveCursor=mine()?.capital?{...mine().capital}:{x:80,y:52};if(e.key.startsWith('Arrow')){e.preventDefault();const d={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[e.key];moveCursor.x=Math.max(0,Math.min(E.W-1,moveCursor.x+d[0]));moveCursor.y=Math.max(0,Math.min(E.H-1,moveCursor.y+d[1]));camX=canvas.clientWidth/2-(moveCursor.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(moveCursor.y+.5)*TILE*zoom;clampCamera();inspectCell(moveCursor.x,moveCursor.y);$('keyboardPosition').textContent=$('mapStatus').textContent;queueDraw();}if(e.key==='Enter'){e.preventDefault();const x=moveCursor.x,y=moveCursor.y;const r=canvas.getBoundingClientRect();selectMap(r.left+camX+(x+.5)*TILE*zoom,r.top+camY+(y+.5)*TILE*zoom);}}});
 $('hostButton').onclick=createRoom;$('joinButton').onclick=joinRoom;$('demoButton').onclick=()=>createDemo(false);$('resumeButton').onclick=()=>createDemo(true);$('leaveRoom').onclick=()=>{try{peer?.destroy();}catch(_){}for(const c of connections.keys()){try{c.close();}catch(_){}}connections.clear();upstream=null;peer=null;host=false;demo=false;state=null;code='';phaseShown='';setBusy(false);history.replaceState(null,'',location.pathname+location.search);show('lobby');};$('startButton').onclick=startGame;$('copyLink').onclick=()=>copyText(urlRoom());$('copyCode').onclick=()=>copyText(code);
 $('readyButton').onclick=()=>{readyLocal=!readyLocal;$('readyButton').setAttribute('aria-pressed',String(readyLocal));upstream?.send({t:'ready',value:readyLocal});};

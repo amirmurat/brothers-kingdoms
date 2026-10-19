@@ -63,6 +63,24 @@ function toast(msg,kind){const t=$('toast');
  t.classList.remove('hidden');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.classList.add('hidden'),2450);} 
 function show(screen){for(const name of ['lobby','waiting','game'])$(name).classList.toggle('hidden',name!==screen);if(screen==='game')setTimeout(resize,10);if(screen==='lobby')updateResume();}
 function error(s){$('lobbyError').textContent=s;toast(s);}
+// One auxiliary surface at a time. No panel stacks above another.
+const AUX_IDS=['economyPanel','armiesPanel','quickLeadersPanel','contextCard'];
+function hideAux(){
+ const closingContext=!$('contextCard').classList.contains('hidden');
+ for(const id of AUX_IDS)$(id)?.classList.add('hidden');
+ $('auxBackdrop')?.classList.add('hidden');document.body.classList.remove('aux-open');
+ // Never reopen a dismissed object card on the next network tick.
+ if(closingContext)selected=null;
+}
+function showAux(id){
+ const el=$(id);if(!el)return;
+ const wasOpen=!el.classList.contains('hidden');
+ hideAux();if(wasOpen)return;
+ if(id!=='contextCard')selected=null;
+ if(panelOpen)closePanel();
+ el.classList.remove('hidden');$('auxBackdrop')?.classList.remove('hidden');document.body.classList.add('aux-open');
+}
+
 function name(){const val=$('nickname').value.trim().slice(0,18)||'Королевство';try{localStorage.setItem('bk-name',val);}catch(_){ }return val;}
 function randomCode(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',v=new Uint8Array(6);crypto.getRandomValues(v);return Array.from(v,b=>chars[b%chars.length]).join('');}
 function urlRoom(){return location.origin+location.pathname+'#'+code;}
@@ -83,38 +101,64 @@ function hostileAttacks(p){
 function focusThreat(a){
  if(!a)return;
  const tx=Math.max(0,Math.min(E.W-1,Math.round(a.x))),ty=Math.max(0,Math.min(E.H-1,Math.round(a.y)));
+ hideAux();if(panelOpen)closePanel();
  const r=canvas.getBoundingClientRect();
  zoom=Math.max(.9,zoom);$('zoomText').textContent=Math.round(zoom*100)+'%';
  camX=r.width/2-(tx+.5)*TILE*zoom;
  camY=r.height/2-(ty+.5)*TILE*zoom;
  clampCamera();setPreview(null);queueDraw();
 }
+function threatDistance(a,p){
+ const c=p?.capital;return c?Math.round(Math.hypot(a.x-c.x,a.y-c.y)):999;
+}
+function setThreatList(open){
+ const expanded=!!open&&activeThreats.length>1;
+ $('threatList').classList.toggle('hidden',!expanded);
+ $('threatExpand').setAttribute('aria-expanded',String(expanded));
+}
 function updateIncomingAttack(p){
- const button=$('incomingAttack');if(!button)return;
- const threats=hostileAttacks(p);
+ const threats=hostileAttacks(p).sort((a,b)=>threatDistance(a,p)-threatDistance(b,p)||b.strength-a.strength);
  activeThreats=threats;
- button.classList.toggle('hidden',!threats.length);
- if(!threats.length){lastThreatSignature='';announcedThreats.clear();return;}
- const attackerIds=[...new Set(threats.map(a=>a.owner))];
- const names=attackerIds.map(id=>E.person(state,id)?.name||'Противник');
+ $('threatRail').classList.toggle('hidden',!threats.length);
+ $('threatExpand').classList.toggle('hidden',threats.length<2);
+ if(!threats.length){lastThreatSignature='';announcedThreats.clear();setThreatList(false);return;}
+ const attackers=[...new Set(threats.map(a=>a.owner))].map(id=>E.person(state,id)?.name||'Противник');
  const force=threats.reduce((sum,a)=>sum+Math.max(0,a.strength),0);
  const signature=threats.map(a=>a.id).sort().join(',');
- $('incomingTitle').textContent=threats.length===1?'НА ВАС НАПАЛИ':`НА ВАС НАПАЛИ · ${threats.length} ФРОНТА`;
- $('incomingDetail').textContent=`${names.join(', ')} · ${number(force)} войск противника`;
+ $('incomingTitle').textContent=threats.length===1?'НА ВАС НАПАЛИ':`АТАКИ · ${threats.length} ФРОНТА`;
+ $('incomingDetail').textContent=`${attackers.join(', ')} · ${number(force)} войск противника`;
+ $('threatCount').textContent=threats.length;
+ $('incomingAttack').setAttribute('aria-label',threats.length>1?'Перейти к следующей из '+threats.length+' угроз':'Перейти к месту нападения');
+ patchHtml('threatItems',threats.map((a,i)=>{
+  const attacker=E.person(state,a.owner),distance=threatDistance(a,p);
+  return `<button type="button" data-focus-threat="${esc(a.id)}" class="threat-item"><i style="background:${attacker?.color||'#b94d40'}"></i><span><strong>${esc(attacker?.name||'Противник')}</strong><small>${number(a.strength)} войск · ${distance<999?'≈'+distance+' кл. от столицы':'на границе'}</small></span><b>${i+1} ↗</b></button>`;
+ }).join(''));
+ if(threats.length<2)setThreatList(false);
  if(signature!==lastThreatSignature){
   const fresh=threats.filter(a=>!announcedThreats.has(a.id));
   if(fresh.length){
    const name=E.person(state,fresh[0].owner)?.name||'Противник';
    $('incomingAnnouncement').textContent=`Внимание! ${name} атакует вашу территорию. Нажмите на предупреждение, чтобы перейти к месту сражения.`;
   }
+  attackFocusIndex=0;
   announcedThreats=new Set(threats.map(a=>a.id));
   lastThreatSignature=signature;
  }
 }
 $('incomingAttack').onclick=()=>{
  if(!activeThreats.length)return;
- focusThreat(activeThreats[attackFocusIndex++%activeThreats.length]);
+ focusThreat(activeThreats[attackFocusIndex++%activeThreats.length]);setThreatList(false);
 };
+$('threatExpand').onclick=()=>setThreatList($('threatList').classList.contains('hidden'));
+$('threatClose').onclick=()=>setThreatList(false);
+$('threatItems').onclick=e=>{
+ const b=e.target.closest('[data-focus-threat]');if(!b)return;
+ const a=activeThreats.find(a=>a.id===b.dataset.focusThreat);
+ if(a){focusThreat(a);setThreatList(false);}
+};
+document.addEventListener('pointerdown',e=>{
+ if(!$('threatRail').contains(e.target)&&!$('threatList').classList.contains('hidden'))setThreatList(false);
+});
 function refreshHudAlert(p){
  const box=$('hudAlert');if(!box||!p||state?.phase!=='playing'){box?.classList.add('hidden');return;}
  let text='',kind='',action=null;
@@ -146,8 +190,8 @@ function refreshHudAlert(p){
 }
 $('hudAlert').onclick=()=>{
  if(hudAlertAction==='capital'){centerOnCapital();queueDraw();}
- else if(hudAlertAction==='economy'){$('economyPanel').classList.remove('hidden');}
- else if(hudAlertAction==='armies'){$('armiesPanel').classList.remove('hidden');renderArmies();}
+ else if(hudAlertAction==='economy')showAux('economyPanel');
+ else if(hudAlertAction==='armies'){showAux('armiesPanel');renderArmies();}
  else if(hudAlertAction&&typeof hudAlertAction==='object'){
   const {x,y}=hudAlertAction;camX=canvas.clientWidth/2-(x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(y+.5)*TILE*zoom;clampCamera();queueDraw();
  }
@@ -218,7 +262,7 @@ function setPreview(t){
  queueDraw();
 }
 function contextual(item){
- const box=$('contextCard'),content=$('contextBody');if(!item){box.classList.add('hidden');return;}
+ const box=$('contextCard'),content=$('contextBody');if(!item){if(!box.classList.contains('hidden'))hideAux();return;}
  const me=mine(),own=item.owner===myId,other=E.person(state,item.owner);let html='';
  if(item.kind&&item.kind!=='army'){
   const details=buildingInfo[item.kind],cost=E.costUpgrade(item),maxed=item.level>=4;
@@ -226,7 +270,7 @@ function contextual(item){
   const next=details?buildingBenefit(item.kind,me,item.level+1):'Защита столицы увеличится';
   html=`<strong>${esc(E.KINDS[item.kind]?.name||'Столица')} · ур. ${item.level}</strong><span>${esc(other?.name||'')}</span><p class="context-benefit">Сейчас: ${esc(effect)}</p>${maxed?'':`<p class="context-next">После улучшения: ${esc(next)}</p>`}${own?`<button data-context-upgrade="${esc(item.id)}" ${maxed||!canPay(me,cost)?'disabled':''}>${maxed?'Максимальный уровень':`Улучшить · ${briefCost(cost)}`}</button>${!maxed&&!canPay(me,cost)?`<small>Не хватает: ${deficit(me,cost)}</small>`:''}`:''}`;
  }else html=`<strong>Армия · ${esc(other?.name||'')}</strong><span>${number(item.strength)} солдат · ${item.tx},${item.ty}</span>${own?`<button data-context-redirect="${esc(item.id)}">Сменить цель</button><button data-context-return="${esc(item.id)}">Отступить</button>`:''}`;
- if(content.__last!==html){content.innerHTML=html;content.__last=html;}box.classList.remove('hidden');
+ if(content.__last!==html){content.innerHTML=html;content.__last=html;}if(box.classList.contains('hidden'))showAux('contextCard');
 }
 function createRoom(){if(!getPeer())return;setBusy(true);code=randomCode();host=true;demo=false;readyLocal=true;peer=new Peer('bk-'+code);setNetwork('ПОДКЛЮЧЕНИЕ');
  connectTimer=setTimeout(()=>{if(!state){setBusy(false);error('Не удалось создать комнату. Повтори попытку.');try{peer.destroy();}catch(_){}}},12000);
@@ -278,7 +322,7 @@ function showTutorial(){if(!showTutorialOnce)return;try{localStorage.setItem('bk
 
 function render(){if(!state)return;
  if(state.phase==='lobby'){
-  $('victory').classList.add('hidden');show('waiting');$('showCode').textContent=code;
+  $('victory').classList.add('hidden');show('waiting');$('showCode').textContent=code;$('roomHeadingLabel').textContent=host?'КОМНАТА ГОТОВА':'ТЫ В КОМНАТЕ';$('roomMembersCount').textContent=state.players.filter(p=>!p.bot).length+' участн.';
   patchHtml('waitingPlayers',state.players.map(p=>`<div class="player-row"><i class="player-dot" style="background:${p.color}"></i><strong>${esc(p.name)}</strong><span class="muted">${p.id===myId?'Ты':p.id===1?'Ведущий':''} · ${p.connected===false?'Не в сети':p.ready?'Готов':'Ожидание'}</span></div>`).join(''));
   $('startButton').classList.toggle('hidden',!host);$('readyButton').classList.toggle('hidden',host);$('readyButton').setAttribute('aria-pressed',String(readyLocal));$('readyButton').textContent=readyLocal?'Готов ✓':'Я готов';$('botCount').disabled=!host;$('spawnChoice').disabled=!!mine()?.ready&&!host;
   $('startButton').disabled=!state.players.filter(p=>!p.bot).every(p=>p.ready||p.connected===false);$('botCount').value=state.settings?.bots??0;
@@ -403,12 +447,12 @@ $('buildingsPanel').addEventListener('click',e=>{const b=e.target.closest('[data
 $('techPanel').addEventListener('click',e=>{const b=e.target.closest('[data-research]');if(b)command({type:'research',key:b.dataset.research});});
 $('diplomacyPanel').addEventListener('click',e=>{const b=e.target.closest('[data-ally]'),d=e.target.closest('[data-donate]');if(b){const partner=Number(b.dataset.ally),allied=mine()?.allies.includes(partner);if(!allied||window.confirm('Разорвать союз? После этого вы снова сможете нападать друг на друга.'))command({type:'diplomacy',target:partner});}if(d)command({type:'donate',target:Number(d.dataset.donate),amount:100,resource:'gold'});});
 $('contextCard').addEventListener('click',e=>{const u=e.target.closest('[data-context-upgrade]'),r=e.target.closest('[data-context-return]'),d=e.target.closest('[data-context-redirect]');if(u)command({type:'upgrade',id:u.dataset.contextUpgrade});if(r){command({type:'return',id:r.dataset.contextReturn});contextual(null);}if(d){redirectArmy=d.dataset.contextRedirect;toast('Теперь выбери новую цель на карте.');contextual(null);}});
-$('closeContext').onclick=()=>{selected=null;contextual(null)};
+$('closeContext').onclick=()=>{selected=null;contextual(null);hideAux()};
 $('selectedPanel').addEventListener('click',e=>{const b=e.target.closest('[data-upgrade]'),r=e.target.closest('[data-retreat]');if(b)command({type:'upgrade',id:b.dataset.upgrade});if(r)command({type:'return',id:r.dataset.retreat});});
 for(const b of document.querySelectorAll('[data-tab]'))b.onclick=()=>{currentTab=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(t=>{t.classList.toggle('active',t===b);t.setAttribute('aria-selected',String(t===b));});document.querySelectorAll('.tab-content').forEach(t=>t.classList.toggle('hidden',t.id!=='tab-'+currentTab));updateUI();};
-function openPanel(){previousFocus=document.activeElement;panelOpen=true;$('sidebar').classList.add('open');$('panelBackdrop').classList.remove('hidden');$('sidebar').setAttribute('aria-modal',String(window.innerWidth<851));$('closePanel').focus();}
+function openPanel(){hideAux();previousFocus=document.activeElement;panelOpen=true;$('sidebar').classList.add('open');$('panelBackdrop').classList.remove('hidden');$('sidebar').setAttribute('aria-modal',String(window.innerWidth<851));$('closePanel').focus();}
 function closePanel(){panelOpen=false;$('sidebar').classList.remove('open');$('panelBackdrop').classList.add('hidden');$('sidebar').setAttribute('aria-modal','false');previousFocus?.focus?.();}
-$('menuToggle').onclick=()=>panelOpen?closePanel():openPanel();$('developButton').onclick=()=>toggleQuickBuild();$('closePanel').onclick=closePanel;$('panelBackdrop').onclick=closePanel;
+$('menuToggle').onclick=()=>panelOpen?closePanel():openPanel();$('developButton').onclick=()=>toggleQuickBuild();$('closePanel').onclick=closePanel;$('panelBackdrop').onclick=closePanel;$('auxBackdrop').onclick=hideAux;
 $('attackPercent').oninput=e=>{percent=Number(e.target.value);$('percentLabel').textContent=percent+'%';document.querySelectorAll('[data-percent]').forEach(t=>{const on=Number(t.dataset.percent)===percent;t.classList.toggle('active',on);t.setAttribute('aria-pressed',String(on));});if(state)updateUI();};
 document.querySelectorAll('[data-target-percent]').forEach(b=>b.onclick=()=>{$('attackPercent').value=b.dataset.targetPercent;$('attackPercent').oninput({target:$('attackPercent')});});
 for(const b of document.querySelectorAll('[data-percent]')){b.setAttribute('aria-pressed',String(Number(b.dataset.percent)===percent));b.onclick=()=>{$('attackPercent').value=b.dataset.percent;$('attackPercent').oninput({target:$('attackPercent')});};}
@@ -422,10 +466,10 @@ function renderArmies(){if(!state||!myId)return;const mineArmies=state.armies.fi
   return `<div class="army-line"><div><strong>${number(a.strength)} войск <small>из ${number(initial)}</small></strong><small>${esc(E.person(state,a.targetOwner)?.name||'Нейтральные земли')} · ${a.naval?'Морской переход':a.stuck>0?'Фронт встретил сопротивление':'Наступает'}</small><small class="army-stats${percentSpent>=80?' army-critical':''}">Захвачено ${number(a.captured||0)} клеток · Потери ${number(spent)}</small></div><button data-focus-army="${esc(a.id)}" aria-label="Перейти к армии">Найти</button><button data-recall-army="${esc(a.id)}" aria-label="Отозвать армию">Отозвать</button></div>`;
  }).join(''):'<div class="empty-armies"><strong>Пока нет походов</strong><p>Выбери нейтральную или вражескую границу, чтобы отправить армию.</p></div>');
 }
-$('armiesToggle').onclick=()=>{$('armiesPanel').classList.toggle('hidden');renderArmies();};
-$('closeArmies').onclick=()=>$('armiesPanel').classList.add('hidden');
-$('armiesList').onclick=e=>{const r=e.target.closest('[data-recall-army]'),f=e.target.closest('[data-focus-army]');if(r){if(command({type:'return',id:r.dataset.recallArmy}))renderArmies();}if(f){const a=state?.armies.find(v=>v.id===f.dataset.focusArmy);if(a){camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();$('armiesPanel').classList.add('hidden');queueDraw();}}};
-$('economyToggle').onclick=()=>$('economyPanel').classList.toggle('hidden');$('closeEconomy').onclick=()=>$('economyPanel').classList.add('hidden');$('pauseMobile').onclick=()=>$('pauseGame').click();$('quickLeaders').onclick=()=>{$('economyPanel').classList.add('hidden');$('quickLeadersPanel').classList.remove('hidden');};$('closeQuickLeaders').onclick=()=>$('quickLeadersPanel').classList.add('hidden');$('nextFront').onclick=()=>{const armies=state?.armies.filter(a=>a.owner===myId)||[];if(!armies.length)return toast('Нет действующих армий');const a=armies[frontIndex++%armies.length];camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();selected={kind:'army',id:a.id};updateSelection();$('economyPanel').classList.add('hidden');queueDraw();};
+$('armiesToggle').onclick=()=>{showAux('armiesPanel');renderArmies();};
+$('closeArmies').onclick=hideAux;
+$('armiesList').onclick=e=>{const r=e.target.closest('[data-recall-army]'),f=e.target.closest('[data-focus-army]');if(r){if(command({type:'return',id:r.dataset.recallArmy}))renderArmies();}if(f){const a=state?.armies.find(v=>v.id===f.dataset.focusArmy);if(a){camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();hideAux();queueDraw();}}};
+$('economyToggle').onclick=()=>showAux('economyPanel');$('closeEconomy').onclick=hideAux;$('pauseMobile').onclick=()=>$('pauseGame').click();$('quickLeaders').onclick=()=>{$('economyPanel').classList.add('hidden');showAux('quickLeadersPanel');};$('closeQuickLeaders').onclick=hideAux;$('nextFront').onclick=()=>{const armies=state?.armies.filter(a=>a.owner===myId)||[];if(!armies.length)return toast('Нет действующих армий');const a=armies[frontIndex++%armies.length];camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();selected={kind:'army',id:a.id};updateSelection();hideAux();queueDraw();};
 $('helpButton').onclick=()=>{$('tutorial').classList.remove('hidden');$('closeTutorial').focus();};$('helpMenu').onclick=()=>{closePanel();$('helpButton').click();};$('closeTutorial').onclick=()=>{$('tutorial').classList.add('hidden');showTutorialOnce=false;try{localStorage.setItem('bk-v9-tutorial','yes');}catch(_){}$('mapCanvas').focus();};
 $('pauseGame').onclick=()=>{if(!demo)return toast('Пауза только для одиночной игры.');pauseSolo=!pauseSolo;$('pauseGame').textContent=pauseSolo?'Продолжить':'Пауза';saveSolo();};
 $('myKingdom').onclick=()=>toast(mine()?.name||'Королевство');
@@ -679,7 +723,7 @@ function drawMini(){
  mctx.lineWidth=.65;mctx.strokeStyle='#ffffff';const scale=zoom*TILE;
  mctx.strokeRect(-camX/scale,-camY/scale,canvas.clientWidth/scale,canvas.clientHeight/scale);
 }
-window.addEventListener('resize',()=>{resize();clampCamera();queueDraw();});document.addEventListener('keydown',e=>{if(e.key==='Escape'){setPreview(null);redirectArmy=null;if(panelOpen)closePanel();else cancelMode();$('tutorial').classList.add('hidden');return;}if(panelOpen&&window.innerWidth<851&&e.key==='Tab'){const items=[...$('sidebar').querySelectorAll('button:not([disabled]), select:not([disabled])')].filter(el=>el.offsetParent!==null);if(items.length){const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}}
+window.addEventListener('resize',()=>{resize();clampCamera();queueDraw();});document.addEventListener('keydown',e=>{if(e.key==='Escape'){setThreatList(false);hideAux();setPreview(null);redirectArmy=null;if(panelOpen)closePanel();else cancelMode();$('tutorial').classList.add('hidden');return;}if(panelOpen&&window.innerWidth<851&&e.key==='Tab'){const items=[...$('sidebar').querySelectorAll('button:not([disabled]), select:not([disabled])')].filter(el=>el.offsetParent!==null);if(items.length){const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}}
  if(!state||state.phase!=='playing'||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;if(e.key==='+'||e.key==='=')zoomAt(1.2,canvas.clientWidth/2,canvas.clientHeight/2);if(e.key==='-')zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);if(document.activeElement===canvas){if(!moveCursor)moveCursor=mine()?.capital?{...mine().capital}:{x:80,y:52};if(e.key.startsWith('Arrow')){e.preventDefault();const d={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[e.key];moveCursor.x=Math.max(0,Math.min(E.W-1,moveCursor.x+d[0]));moveCursor.y=Math.max(0,Math.min(E.H-1,moveCursor.y+d[1]));camX=canvas.clientWidth/2-(moveCursor.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(moveCursor.y+.5)*TILE*zoom;clampCamera();inspectCell(moveCursor.x,moveCursor.y);$('keyboardPosition').textContent=$('mapStatus').textContent;queueDraw();}if(e.key==='Enter'){e.preventDefault();const x=moveCursor.x,y=moveCursor.y;const r=canvas.getBoundingClientRect();selectMap(r.left+camX+(x+.5)*TILE*zoom,r.top+camY+(y+.5)*TILE*zoom);}}});
 $('hostButton').onclick=createRoom;$('joinButton').onclick=joinRoom;$('demoButton').onclick=()=>createDemo(false);$('resumeButton').onclick=()=>createDemo(true);$('leaveRoom').onclick=()=>{try{peer?.destroy();}catch(_){}for(const c of connections.keys()){try{c.close();}catch(_){}}connections.clear();upstream=null;peer=null;host=false;demo=false;state=null;code='';phaseShown='';setBusy(false);history.replaceState(null,'',location.pathname+location.search);show('lobby');};$('startButton').onclick=startGame;$('copyLink').onclick=()=>copyText(urlRoom());$('copyCode').onclick=()=>copyText(code);
 $('readyButton').onclick=()=>{readyLocal=!readyLocal;$('readyButton').setAttribute('aria-pressed',String(readyLocal));upstream?.send({t:'ready',value:readyLocal});};
