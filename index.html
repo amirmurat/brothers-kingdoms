@@ -916,6 +916,77 @@ body>.toast{position:fixed!important;top:calc(env(safe-area-inset-top, 0px) + 76
  .game-screen .map-view.build-palette-open .minimap-wrap{top:64px!important;bottom:auto!important;left:6px!important}
 }
 
+/* v16: coherent lobby, safe overlays, readable game UI. */
+#waiting.waiting-screen{
+ min-height:100svh;display:flex;align-items:center;justify-content:center;
+ padding:clamp(14px,4vw,28px);background:radial-gradient(circle at 15% 0%,#486d59 0,transparent 44%),linear-gradient(155deg,#153b35,#284e40 64%,#1c3e34)!important;
+ color:#2d4335;overflow-y:auto;
+}
+#waiting .waiting-card{
+ width:min(100%,478px)!important;max-width:478px!important;margin:0 auto!important;
+ padding:clamp(19px,4vw,27px)!important;border:2px solid #ad905e!important;border-radius:23px!important;
+ background:linear-gradient(160deg,#fff8e6 0%,#f2e5c5 100%)!important;
+ color:#2b4031!important;box-shadow:0 7px 0 #14352bb0,0 18px 60px #091e1880,inset 0 1px #fff;
+ display:flex;flex-direction:column;gap:0;
+}
+#waiting .room-heading{margin-bottom:19px}
+#waiting .room-heading h2{font-size:clamp(24px,5vw,30px)!important;letter-spacing:-.055em;line-height:1.12;margin:10px 0 5px;color:#263f32!important}
+#waiting .room-heading .card-subtitle{font-size:14px!important;line-height:1.5;color:#5a6852!important;margin:0}
+#waiting .room-state{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:900;letter-spacing:.13em;color:#326f48}
+#waiting .room-state-dot{height:9px;width:9px;border-radius:50%;background:#68be75;box-shadow:0 0 0 4px #d5ecd3}
+#waiting .room-invite{border:1px solid #ccb88f;border-radius:16px;padding:13px;background:#fffdf3;box-shadow:inset 0 1px white}
+#waiting .room-token-label{font-size:11px;font-weight:900;letter-spacing:.12em;color:#64725c;margin-bottom:9px}
+#waiting .room-token{display:flex;justify-content:space-between;align-items:center;flex-wrap:nowrap;min-height:55px;gap:9px;margin:0!important;padding:4px 2px!important;border:0!important;border-radius:0!important;background:transparent!important}
+#waiting .room-token strong{display:block;min-width:0;color:#244b37!important;font-size:clamp(25px,6.5vw,31px)!important;font-weight:950;letter-spacing:.13em;line-height:1.15;text-shadow:none!important;margin:0}
+#waiting .room-token #copyCode{flex-shrink:0;display:flex;gap:6px;align-items:center;justify-content:center;min-height:44px!important;padding:8px 11px!important;border-radius:11px!important;border:1px solid #b7c2ac!important;background:#e5ebdc!important;color:#294736!important;font-size:12px;font-weight:800}
+#waiting .room-token #copyCode img,#waiting .room-share img,#waiting .leave-room img{display:block;width:18px;height:18px;object-fit:contain}
+#waiting .room-share{width:100%;min-height:46px;margin-top:6px;border:1px solid #467a51!important;border-radius:11px!important;background:#37754a!important;color:#fffbed!important;display:flex;align-items:center;justify-content:center;gap:10px;font-size:14px;font-weight:900;cursor:pointer}
+#waiting .room-share img{filter:brightness(0) invert(1)}
+#waiting .room-roster-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:19px 1px 8px}
+#waiting .room-roster-heading strong{font-size:15px;font-weight:900;color:#2b4433}
+#waiting .room-roster-heading>span{font-size:12px;font-weight:700;color:#66755f}
+#waiting .waiting-players{display:grid;gap:7px;margin:0 0 10px}
+#waiting .player-row{display:flex;align-items:center;gap:10px;background:#e7eddc!important;border:1px solid #c3d0b6!important;border-radius:11px;min-height:47px;padding:10px 12px;color:#233e2f!important}
+#waiting .player-row strong{font-size:14px;font-weight:850;color:#254632!important;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+#waiting .player-row .player-dot{width:11px;height:11px;box-shadow:0 0 0 3px #fffcf3}
+#waiting .player-row .muted{margin-left:auto;font-size:12px;font-weight:800;color:#42674b!important;white-space:nowrap}
+#waiting .room-settings,#waiting .room-rules{display:block;border:1px solid #c6ba99!important;border-radius:12px!important;background:#f7efd8!important;overflow:hidden;margin:8px 0 0!important;color:#344d3a!important}
+#waiting .room-settings>summary,#waiting .room-rules>summary{display:flex!important;justify-content:space-between;align-items:center;gap:8px;min-height:47px;padding:12px 13px!important;font-size:13px!important;font-weight:850;color:#334d3a!important;cursor:pointer;list-style:none}
+#waiting .room-settings summary::-webkit-details-marker,#waiting .room-rules summary::-webkit-details-marker{display:none}
+#waiting .room-settings>summary span{font-size:11px!important;font-weight:800!important;color:#56705c!important;text-align:right}
+#waiting .room-settings[open],#waiting .room-rules[open]{background:#fdf4dd!important}
+#waiting .room-settings>.input-label{color:#455c46!important;font-weight:850!important;font-size:12px!important;display:block;margin:8px 12px 6px!important}
+#waiting .room-settings>select{background:#fffaf0!important;color:#2b4232!important;border:1px solid #b6ad91!important;border-radius:9px!important;min-height:44px;margin:0 12px 12px!important;width:calc(100% - 24px)!important;font-size:14px}
+#waiting .room-rules p{margin:0;padding:0 14px 13px;color:#4e644c!important;font-size:12px;line-height:1.55}
+#waiting #startButton,#waiting #readyButton{margin-top:15px!important;min-height:53px!important;border-radius:13px!important;font-size:16px!important;font-weight:900!important;color:#143d29!important;background:linear-gradient(#b7f0a1,#7fd078)!important;border:2px solid #579b56!important;box-shadow:0 4px 0 #4d824e!important}
+#waiting #startButton[disabled],#waiting #readyButton[disabled]{opacity:.56;filter:grayscale(.3);cursor:not-allowed}
+#waiting .room-foot{font-size:11px!important;text-align:center;color:#5c6d56!important;margin:14px 0 4px!important;line-height:1.45}
+#waiting .leave-room{display:flex;align-items:center;justify-content:center;gap:8px;background:transparent!important;color:#6a493e!important;border:1px solid #c4aa91!important;border-radius:12px!important;min-height:44px;font-weight:800!important;font-size:13px!important;margin:6px 0 0!important;opacity:1!important}
+#waiting .leave-room img{opacity:.85}
+#waiting button:focus-visible,#waiting summary:focus-visible{outline:3px solid #33865f!important;outline-offset:3px}
+/* One consistent layering model for noncritical overlays; no nested floating cards. */
+.aux-backdrop:not(.hidden){position:fixed;inset:0;display:block!important;z-index:60!important;background:rgba(14,29,23,.48);backdrop-filter:blur(2px)}
+.game-screen #economyPanel:not(.hidden),.game-screen #armiesPanel:not(.hidden),.game-screen #quickLeadersPanel:not(.hidden),.game-screen #contextCard:not(.hidden){position:fixed!important;z-index:63!important;top:50%!important;left:50%!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%)!important;width:min(94vw,450px)!important;max-width:450px!important;max-height:min(76dvh,740px)!important;overflow:auto!important;box-shadow:0 22px 75px #07170fc9!important;border:2px solid #b28f5d!important;border-radius:19px!important;background:#fff1d3!important;color:#304435!important}
+.game-screen :is(#economyPanel,#armiesPanel,#quickLeadersPanel,#contextCard) :is(p,span,small){color:#4b5845!important}
+.game-screen :is(#economyPanel,#armiesPanel,#quickLeadersPanel,#contextCard) :is(strong,b,h3){color:#263f31!important}
+.game-screen :is(#economyPanel,#armiesPanel,#quickLeadersPanel,#contextCard) .square-button{color:#314b3a!important;background:#ead9b8!important}
+/* Toast never steals gameplay touches or floats above a whole modal. */
+#toast:not(.hidden){position:fixed!important;z-index:94!important;pointer-events:none!important;touch-action:none!important;left:10px!important;right:auto!important;bottom:calc(105px + env(safe-area-inset-bottom))!important;top:auto!important;transform:none!important;max-width:min(252px,70vw)!important;min-width:0!important;padding:9px 12px!important;text-align:left!important;font-size:12px!important;line-height:1.3!important;border-radius:11px!important;box-shadow:0 4px 15px #0004!important}
+body:has(#waiting:not(.hidden)) #toast:not(.hidden),body:has(#lobby:not(.hidden)) #toast:not(.hidden){bottom:calc(25px + env(safe-area-inset-bottom))!important;max-width:min(330px,90vw)!important}
+#waiting .leave-room:hover,#waiting .room-token #copyCode:hover,#waiting .room-share:hover{filter:brightness(.95)}
+/* Compact mobile safe area and scrollable sheet when keyboard is open. */
+@media(max-width:600px){
+ #waiting.waiting-screen{align-items:safe center;padding:12px;min-height:100dvh}
+ #waiting .waiting-card{padding:17px!important;width:100%!important}
+ #waiting .room-heading{margin-bottom:12px}
+ #waiting .room-roster-heading{margin-top:14px}
+ #waiting .room-token strong{letter-spacing:.09em}
+ .game-screen #economyPanel:not(.hidden),.game-screen #armiesPanel:not(.hidden),.game-screen #quickLeadersPanel:not(.hidden),.game-screen #contextCard:not(.hidden){top:auto!important;bottom:0!important;left:0!important;right:0!important;transform:none!important;max-height:min(75dvh,660px)!important;width:100%!important;max-width:none!important;border-radius:18px 18px 0 0!important;padding-bottom:max(18px,env(safe-area-inset-bottom))!important}
+ #toast:not(.hidden){bottom:calc(102px + env(safe-area-inset-bottom))!important}
+}
+@media(max-height:620px){#waiting.waiting-screen{display:block;min-height:100dvh}#waiting .waiting-card{margin:6px auto!important}}
+@media(prefers-reduced-motion:reduce){#waiting *,#toast,.aux-backdrop{transition:none!important;animation:none!important}}
+
 </style>
 </head>
 <body>
@@ -943,15 +1014,15 @@ body>.toast{position:fixed!important;top:calc(env(safe-area-inset-top, 0px) + 76
 </main>
 </div>
 <div class="waiting-screen hidden" id="waiting"><section class="entry-card waiting-card">
-<div class="card-eyebrow">КОМНАТА СОЗДАНА</div><h2>Пригласи братьев</h2><p class="card-subtitle">Отправь им ссылку или код комнаты.</p>
-<div class="room-token"><strong id="showCode">------</strong><button class="secondary" id="copyCode">Код</button><button class="secondary" id="copyLink">Ссылка</button></div>
-<div class="waiting-players" id="waitingPlayers"></div>
+<header class="room-heading"><span class="room-state"><span class="room-state-dot"></span><span id="roomHeadingLabel">КОМНАТА ГОТОВА</span></span><h2>Игра с братьями</h2><p class="card-subtitle">Пригласи игроков и начинай матч.</p></header>
+<div class="room-invite"><div class="room-token-label">КОД КОМНАТЫ</div><div class="room-token"><strong id="showCode">------</strong><button class="secondary" id="copyCode" type="button" aria-label="Скопировать код комнаты"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMyOTRhMzciIHN0cm9rZS13aWR0aD0iMi4xIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxyZWN0IHg9IjgiIHk9IjQiIHdpZHRoPSIxMSIgaGVpZ2h0PSIxNiIgcng9IjIiLz48cGF0aCBkPSJNMTUgNC41VjRhMiAyIDAgMCAwLTItMmgtN2EyIDIgMCAwIDAtMiAydjEyYTIgMiAwIDAgMCAyIDJoMiIvPjxwYXRoIGQ9Ik0xMCA4aDZNMTAgMTJoNiIvPjwvc3ZnPg==" alt="" aria-hidden="true"/> <span>Копировать</span></button></div><button class="room-share" id="copyLink" type="button"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMyOTRhMzciIHN0cm9rZS13aWR0aD0iMi4xIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0xMCAxM2E1IDUgMCAwIDAgNy41NC41NGwzLTNhNSA1IDAgMCAwLTcuMDctNy4wN2wtMS43MiAxLjcxIi8+PHBhdGggZD0iTTE0IDExYTUgNSAwIDAgMC03LjU0LS41NGwtMyAzYTUgNSAwIDAgMCA3LjA3IDcuMDdsMS43MS0xLjcxIi8+PC9zdmc+" alt="" aria-hidden="true"/> Скопировать приглашение</button></div>
+<div class="room-roster-heading"><strong>Игроки</strong><span id="roomMembersCount">1 участник</span></div><div class="waiting-players" id="waitingPlayers"></div>
 <details class="room-settings" id="roomSettings"><summary>Параметры матча <span id="roomSettingsSummary">0 ботов · без таймера</span></summary>
 <label class="input-label" for="botCount">Количество ботов</label>
 <select id="botCount"><option selected="" value="0">Без ботов</option><option value="3">3 · спокойно</option><option value="7">7 · стандартно</option><option value="10">10 · напряжённо</option></select><label class="input-label" for="spawnChoice">Место появления</label><select id="spawnChoice"><option value="auto">Автоматически</option><option value="northwest">Северо-запад</option><option value="northeast">Северо-восток</option><option value="southwest">Юго-запад</option><option value="southeast">Юго-восток</option></select></details>
-<button aria-pressed="false" class="secondary large hidden" id="readyButton">Готов</button><p class="hint" id="roomRules">Победа — 100% суши. Без таймера. Порты и флот не нужны: вся карта соединена по суше. Ведущий должен оставить вкладку открытой.</p>
+<button aria-pressed="false" class="secondary large hidden" id="readyButton">Готов</button><details class="room-rules"><summary>Правила партии</summary><p id="roomRules">Победа — 100% суши. Без таймера. Порты и флот не нужны: вся карта соединена по суше. Ведущий должен оставить вкладку открытой.</p></details>
 <button class="primary large" id="startButton">Начать матч <span aria-hidden="true">→</span></button>
-<p class="card-foot" id="waitingHint">Можно играть даже одному.</p><button class="leave-room" id="leaveRoom">Покинуть комнату</button>
+<p class="room-foot" id="waitingHint">Ожидаем игроков…</p><button class="leave-room" id="leaveRoom"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMyOTRhMzciIHN0cm9rZS13aWR0aD0iMi4xIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0xMCAxN2w1LTUtNS01TTE1IDEySDMiLz48cGF0aCBkPSJNMTIgM2g2YTMgMyAwIDAgMSAzIDN2MTJhMyAzIDAgMCAxLTMgM2gtNiIvPjwvc3ZnPg==" alt="" aria-hidden="true"/> Покинуть комнату</button>
 </section></div>
 <div class="game-screen hidden" id="game">
 <header class="topbar">
@@ -1026,7 +1097,7 @@ body>.toast{position:fixed!important;top:calc(env(safe-area-inset-top, 0px) + 76
 <div class="leaderboard"><div class="section-label">ЛИДЕРЫ</div><div id="leaderboard"></div></div>
 </aside>
 </main>
-<div aria-label="Таблица лидеров" class="quick-leaders hidden" id="quickLeadersPanel" role="dialog"><strong>Лидеры мира</strong><div id="quickLeadersList"></div><button class="secondary" id="closeQuickLeaders">Закрыть</button></div><div class="context-card hidden" id="contextCard"><button aria-label="Закрыть карточку" class="context-close" id="closeContext">×</button><div id="contextBody"></div></div><div aria-label="Текущие походы" class="armies-panel hidden" id="armiesPanel" role="dialog"><div class="armies-panel-head"><strong>Мои походы</strong><button aria-label="Закрыть список походов" class="square-button" id="closeArmies">×</button></div><div id="armiesList" aria-live="polite"></div></div><div aria-label="Экономика и доходы" class="economy-panel hidden" id="economyPanel" role="dialog" aria-modal="false" aria-labelledby="economyTitle">
+<div class="aux-backdrop hidden" id="auxBackdrop" aria-hidden="true"></div><div aria-label="Таблица лидеров" class="quick-leaders hidden" id="quickLeadersPanel" role="dialog"><strong>Лидеры мира</strong><div id="quickLeadersList"></div><button class="secondary" id="closeQuickLeaders">Закрыть</button></div><div class="context-card hidden" id="contextCard"><button aria-label="Закрыть карточку" class="context-close" id="closeContext">×</button><div id="contextBody"></div></div><div aria-label="Текущие походы" class="armies-panel hidden" id="armiesPanel" role="dialog"><div class="armies-panel-head"><strong>Мои походы</strong><button aria-label="Закрыть список походов" class="square-button" id="closeArmies">×</button></div><div id="armiesList" aria-live="polite"></div></div><div aria-label="Экономика и доходы" class="economy-panel hidden" id="economyPanel" role="dialog" aria-modal="false" aria-labelledby="economyTitle">
 <div class="aux-head"><div><small>КОРОЛЕВСТВО</small><strong id="economyTitle">Экономика</strong></div><button class="icon-close" id="closeEconomy" aria-label="Закрыть экономику">×</button></div>
 <p class="panel-intro">Запасы, производство и расходы на содержание армии.</p><div id="economyDetails"></div></div><div aria-label="Как играть" aria-modal="true" class="tutorial hidden" id="tutorial" role="dialog"><section><h2>Как играть</h2><p><b>1.</b> Коснись чужой или нейтральной земли, чтобы выбрать цель.</p><p><b>2.</b> Выбери долю войск и нажми «Атаковать»; подтверди приказ кнопкой. На телефоне удержи свою землю и проведи к цели.</p><p><b>3.</b> Накопленные войска защищают границы. Развивай экономику в меню.</p><p>Перетаскивай карту пальцем, приближай двумя пальцами. Победа — только при 100% территории. Временного ограничения нет.</p><button class="primary large" id="closeTutorial">Понятно</button></section></div><div class="victory-screen hidden" id="victory" role="dialog" aria-modal="true" aria-labelledby="victoryName">
 <section class="result-sheet" id="resultSheet">
@@ -1528,6 +1599,17 @@ function toast(msg,kind){const t=$('toast');
  t.classList.remove('hidden');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.classList.add('hidden'),2450);} 
 function show(screen){for(const name of ['lobby','waiting','game'])$(name).classList.toggle('hidden',name!==screen);if(screen==='game')setTimeout(resize,10);if(screen==='lobby')updateResume();}
 function error(s){$('lobbyError').textContent=s;toast(s);}
+// One auxiliary surface at a time. No panel stacks above another.
+const AUX_IDS=['economyPanel','armiesPanel','quickLeadersPanel','contextCard'];
+function hideAux(){for(const id of AUX_IDS)$(id)?.classList.add('hidden');$('auxBackdrop')?.classList.add('hidden');document.body.classList.remove('aux-open');}
+function showAux(id){
+ const el=$(id);if(!el)return;
+ const wasOpen=!el.classList.contains('hidden');
+ hideAux();if(wasOpen)return;
+ if(panelOpen)closePanel();
+ el.classList.remove('hidden');$('auxBackdrop')?.classList.remove('hidden');document.body.classList.add('aux-open');
+}
+
 function name(){const val=$('nickname').value.trim().slice(0,18)||'Королевство';try{localStorage.setItem('bk-name',val);}catch(_){ }return val;}
 function randomCode(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',v=new Uint8Array(6);crypto.getRandomValues(v);return Array.from(v,b=>chars[b%chars.length]).join('');}
 function urlRoom(){return location.origin+location.pathname+'#'+code;}
@@ -1743,7 +1825,7 @@ function showTutorial(){if(!showTutorialOnce)return;try{localStorage.setItem('bk
 
 function render(){if(!state)return;
  if(state.phase==='lobby'){
-  $('victory').classList.add('hidden');show('waiting');$('showCode').textContent=code;
+  $('victory').classList.add('hidden');show('waiting');$('showCode').textContent=code;$('roomHeadingLabel').textContent=host?'КОМНАТА ГОТОВА':'ТЫ В КОМНАТЕ';$('roomMembersCount').textContent=state.players.filter(p=>!p.bot).length+' участн.';
   patchHtml('waitingPlayers',state.players.map(p=>`<div class="player-row"><i class="player-dot" style="background:${p.color}"></i><strong>${esc(p.name)}</strong><span class="muted">${p.id===myId?'Ты':p.id===1?'Ведущий':''} · ${p.connected===false?'Не в сети':p.ready?'Готов':'Ожидание'}</span></div>`).join(''));
   $('startButton').classList.toggle('hidden',!host);$('readyButton').classList.toggle('hidden',host);$('readyButton').setAttribute('aria-pressed',String(readyLocal));$('readyButton').textContent=readyLocal?'Готов ✓':'Я готов';$('botCount').disabled=!host;$('spawnChoice').disabled=!!mine()?.ready&&!host;
   $('startButton').disabled=!state.players.filter(p=>!p.bot).every(p=>p.ready||p.connected===false);$('botCount').value=state.settings?.bots??0;
@@ -1868,12 +1950,12 @@ $('buildingsPanel').addEventListener('click',e=>{const b=e.target.closest('[data
 $('techPanel').addEventListener('click',e=>{const b=e.target.closest('[data-research]');if(b)command({type:'research',key:b.dataset.research});});
 $('diplomacyPanel').addEventListener('click',e=>{const b=e.target.closest('[data-ally]'),d=e.target.closest('[data-donate]');if(b){const partner=Number(b.dataset.ally),allied=mine()?.allies.includes(partner);if(!allied||window.confirm('Разорвать союз? После этого вы снова сможете нападать друг на друга.'))command({type:'diplomacy',target:partner});}if(d)command({type:'donate',target:Number(d.dataset.donate),amount:100,resource:'gold'});});
 $('contextCard').addEventListener('click',e=>{const u=e.target.closest('[data-context-upgrade]'),r=e.target.closest('[data-context-return]'),d=e.target.closest('[data-context-redirect]');if(u)command({type:'upgrade',id:u.dataset.contextUpgrade});if(r){command({type:'return',id:r.dataset.contextReturn});contextual(null);}if(d){redirectArmy=d.dataset.contextRedirect;toast('Теперь выбери новую цель на карте.');contextual(null);}});
-$('closeContext').onclick=()=>{selected=null;contextual(null)};
+$('closeContext').onclick=()=>{selected=null;contextual(null);hideAux()};
 $('selectedPanel').addEventListener('click',e=>{const b=e.target.closest('[data-upgrade]'),r=e.target.closest('[data-retreat]');if(b)command({type:'upgrade',id:b.dataset.upgrade});if(r)command({type:'return',id:r.dataset.retreat});});
 for(const b of document.querySelectorAll('[data-tab]'))b.onclick=()=>{currentTab=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(t=>{t.classList.toggle('active',t===b);t.setAttribute('aria-selected',String(t===b));});document.querySelectorAll('.tab-content').forEach(t=>t.classList.toggle('hidden',t.id!=='tab-'+currentTab));updateUI();};
-function openPanel(){previousFocus=document.activeElement;panelOpen=true;$('sidebar').classList.add('open');$('panelBackdrop').classList.remove('hidden');$('sidebar').setAttribute('aria-modal',String(window.innerWidth<851));$('closePanel').focus();}
+function openPanel(){hideAux();previousFocus=document.activeElement;panelOpen=true;$('sidebar').classList.add('open');$('panelBackdrop').classList.remove('hidden');$('sidebar').setAttribute('aria-modal',String(window.innerWidth<851));$('closePanel').focus();}
 function closePanel(){panelOpen=false;$('sidebar').classList.remove('open');$('panelBackdrop').classList.add('hidden');$('sidebar').setAttribute('aria-modal','false');previousFocus?.focus?.();}
-$('menuToggle').onclick=()=>panelOpen?closePanel():openPanel();$('developButton').onclick=()=>toggleQuickBuild();$('closePanel').onclick=closePanel;$('panelBackdrop').onclick=closePanel;
+$('menuToggle').onclick=()=>panelOpen?closePanel():openPanel();$('developButton').onclick=()=>toggleQuickBuild();$('closePanel').onclick=closePanel;$('panelBackdrop').onclick=closePanel;$('auxBackdrop').onclick=hideAux;
 $('attackPercent').oninput=e=>{percent=Number(e.target.value);$('percentLabel').textContent=percent+'%';document.querySelectorAll('[data-percent]').forEach(t=>{const on=Number(t.dataset.percent)===percent;t.classList.toggle('active',on);t.setAttribute('aria-pressed',String(on));});if(state)updateUI();};
 document.querySelectorAll('[data-target-percent]').forEach(b=>b.onclick=()=>{$('attackPercent').value=b.dataset.targetPercent;$('attackPercent').oninput({target:$('attackPercent')});});
 for(const b of document.querySelectorAll('[data-percent]')){b.setAttribute('aria-pressed',String(Number(b.dataset.percent)===percent));b.onclick=()=>{$('attackPercent').value=b.dataset.percent;$('attackPercent').oninput({target:$('attackPercent')});};}
@@ -1887,10 +1969,10 @@ function renderArmies(){if(!state||!myId)return;const mineArmies=state.armies.fi
   return `<div class="army-line"><div><strong>${number(a.strength)} войск <small>из ${number(initial)}</small></strong><small>${esc(E.person(state,a.targetOwner)?.name||'Нейтральные земли')} · ${a.naval?'Морской переход':a.stuck>0?'Фронт встретил сопротивление':'Наступает'}</small><small class="army-stats${percentSpent>=80?' army-critical':''}">Захвачено ${number(a.captured||0)} клеток · Потери ${number(spent)}</small></div><button data-focus-army="${esc(a.id)}" aria-label="Перейти к армии">Найти</button><button data-recall-army="${esc(a.id)}" aria-label="Отозвать армию">Отозвать</button></div>`;
  }).join(''):'<div class="empty-armies"><strong>Пока нет походов</strong><p>Выбери нейтральную или вражескую границу, чтобы отправить армию.</p></div>');
 }
-$('armiesToggle').onclick=()=>{$('armiesPanel').classList.toggle('hidden');renderArmies();};
-$('closeArmies').onclick=()=>$('armiesPanel').classList.add('hidden');
+$('armiesToggle').onclick=()=>{showAux('armiesPanel');renderArmies();};
+$('closeArmies').onclick=hideAux;
 $('armiesList').onclick=e=>{const r=e.target.closest('[data-recall-army]'),f=e.target.closest('[data-focus-army]');if(r){if(command({type:'return',id:r.dataset.recallArmy}))renderArmies();}if(f){const a=state?.armies.find(v=>v.id===f.dataset.focusArmy);if(a){camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();$('armiesPanel').classList.add('hidden');queueDraw();}}};
-$('economyToggle').onclick=()=>$('economyPanel').classList.toggle('hidden');$('closeEconomy').onclick=()=>$('economyPanel').classList.add('hidden');$('pauseMobile').onclick=()=>$('pauseGame').click();$('quickLeaders').onclick=()=>{$('economyPanel').classList.add('hidden');$('quickLeadersPanel').classList.remove('hidden');};$('closeQuickLeaders').onclick=()=>$('quickLeadersPanel').classList.add('hidden');$('nextFront').onclick=()=>{const armies=state?.armies.filter(a=>a.owner===myId)||[];if(!armies.length)return toast('Нет действующих армий');const a=armies[frontIndex++%armies.length];camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();selected={kind:'army',id:a.id};updateSelection();$('economyPanel').classList.add('hidden');queueDraw();};
+$('economyToggle').onclick=()=>showAux('economyPanel');$('closeEconomy').onclick=hideAux;$('pauseMobile').onclick=()=>$('pauseGame').click();$('quickLeaders').onclick=()=>{$('economyPanel').classList.add('hidden');showAux('quickLeadersPanel');};$('closeQuickLeaders').onclick=hideAux;$('nextFront').onclick=()=>{const armies=state?.armies.filter(a=>a.owner===myId)||[];if(!armies.length)return toast('Нет действующих армий');const a=armies[frontIndex++%armies.length];camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();selected={kind:'army',id:a.id};updateSelection();$('economyPanel').classList.add('hidden');queueDraw();};
 $('helpButton').onclick=()=>{$('tutorial').classList.remove('hidden');$('closeTutorial').focus();};$('helpMenu').onclick=()=>{closePanel();$('helpButton').click();};$('closeTutorial').onclick=()=>{$('tutorial').classList.add('hidden');showTutorialOnce=false;try{localStorage.setItem('bk-v9-tutorial','yes');}catch(_){}$('mapCanvas').focus();};
 $('pauseGame').onclick=()=>{if(!demo)return toast('Пауза только для одиночной игры.');pauseSolo=!pauseSolo;$('pauseGame').textContent=pauseSolo?'Продолжить':'Пауза';saveSolo();};
 $('myKingdom').onclick=()=>toast(mine()?.name||'Королевство');
@@ -2144,7 +2226,7 @@ function drawMini(){
  mctx.lineWidth=.65;mctx.strokeStyle='#ffffff';const scale=zoom*TILE;
  mctx.strokeRect(-camX/scale,-camY/scale,canvas.clientWidth/scale,canvas.clientHeight/scale);
 }
-window.addEventListener('resize',()=>{resize();clampCamera();queueDraw();});document.addEventListener('keydown',e=>{if(e.key==='Escape'){setPreview(null);redirectArmy=null;if(panelOpen)closePanel();else cancelMode();$('tutorial').classList.add('hidden');return;}if(panelOpen&&window.innerWidth<851&&e.key==='Tab'){const items=[...$('sidebar').querySelectorAll('button:not([disabled]), select:not([disabled])')].filter(el=>el.offsetParent!==null);if(items.length){const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}}
+window.addEventListener('resize',()=>{resize();clampCamera();queueDraw();});document.addEventListener('keydown',e=>{if(e.key==='Escape'){hideAux();setPreview(null);redirectArmy=null;if(panelOpen)closePanel();else cancelMode();$('tutorial').classList.add('hidden');return;}if(panelOpen&&window.innerWidth<851&&e.key==='Tab'){const items=[...$('sidebar').querySelectorAll('button:not([disabled]), select:not([disabled])')].filter(el=>el.offsetParent!==null);if(items.length){const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}}
  if(!state||state.phase!=='playing'||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;if(e.key==='+'||e.key==='=')zoomAt(1.2,canvas.clientWidth/2,canvas.clientHeight/2);if(e.key==='-')zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);if(document.activeElement===canvas){if(!moveCursor)moveCursor=mine()?.capital?{...mine().capital}:{x:80,y:52};if(e.key.startsWith('Arrow')){e.preventDefault();const d={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[e.key];moveCursor.x=Math.max(0,Math.min(E.W-1,moveCursor.x+d[0]));moveCursor.y=Math.max(0,Math.min(E.H-1,moveCursor.y+d[1]));camX=canvas.clientWidth/2-(moveCursor.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(moveCursor.y+.5)*TILE*zoom;clampCamera();inspectCell(moveCursor.x,moveCursor.y);$('keyboardPosition').textContent=$('mapStatus').textContent;queueDraw();}if(e.key==='Enter'){e.preventDefault();const x=moveCursor.x,y=moveCursor.y;const r=canvas.getBoundingClientRect();selectMap(r.left+camX+(x+.5)*TILE*zoom,r.top+camY+(y+.5)*TILE*zoom);}}});
 $('hostButton').onclick=createRoom;$('joinButton').onclick=joinRoom;$('demoButton').onclick=()=>createDemo(false);$('resumeButton').onclick=()=>createDemo(true);$('leaveRoom').onclick=()=>{try{peer?.destroy();}catch(_){}for(const c of connections.keys()){try{c.close();}catch(_){}}connections.clear();upstream=null;peer=null;host=false;demo=false;state=null;code='';phaseShown='';setBusy(false);history.replaceState(null,'',location.pathname+location.search);show('lobby');};$('startButton').onclick=startGame;$('copyLink').onclick=()=>copyText(urlRoom());$('copyCode').onclick=()=>copyText(code);
 $('readyButton').onclick=()=>{readyLocal=!readyLocal;$('readyButton').setAttribute('aria-pressed',String(readyLocal));upstream?.send({t:'ready',value:readyLocal});};
