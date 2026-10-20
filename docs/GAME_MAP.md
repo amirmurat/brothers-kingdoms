@@ -539,3 +539,8 @@ _Актуальный реестр, извлечённый из `index.html` н�
 - `spatialArmyStep`: peace base garrisons; war sectors weighted by incoming attacks/important positions plus safe rear reserve; friendly-land routing, no teleports, retreat/encirclement handling. `tileDefense` uses nearby squads.
 - Wave `columns`: mobilized troops march to frontier before existing atomic full-front combat; recall returns survivors at actual positions. Returning reserve is unavailable to `planAllocation`/mobilization until home arrival. Both bots and players use this.
 - Existing canvas draws compact squads/columns. Existing `#armiesPanel` (My army) gains home-army summary and march states. Help updated; no new DOM layers or controls.
+
+### v73 distributed attack front
+- Fixes v72's single-point assembly/global conquest mismatch. A wave retains physical columns throughout combat. frontSectors groups a frontier into small locally connected sectors; positionAttack/marchWave deploy survivors to their own sector anchors.
+- localAttackStrength/spendAttack allow only arrived, assigned troops within range 7 to pay a sector's capture cost. Manual layers remain atomic across all sectors; recovery can advance funded local sectors separately. a.strength is only the aggregate military total, not an independent remote budget.
+- frontDeployment supplies ready/total sector counts to existing army rows. Canvas aggregates actual co-located columns, keeps them visible after arrival and highlights only manned cells. Saved/server states retain columns, sectors, destinations and paths.

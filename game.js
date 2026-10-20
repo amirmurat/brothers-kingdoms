@@ -1020,7 +1020,7 @@ function renderArmies(){
    status:active?(active.marching?'Marching to front · ':'Wave ')+number(p.waves)+' · '+number(active.strength)+' troops · '+estimate.cells+' frontier cells':
     estimate.cells&&estimate.committed<Math.max(35,estimate.required)?'Front needs '+number(Math.max(35,estimate.required))+' troops · allocated '+number(estimate.committed):
     !capturable?'Choose opponents in Nations':'Waiting for route / troops',
-   detail:'Shared army · '+p.percent+'% commitment · more fronts divide troops',
+   detail:active?E.frontDeployment(active).ready+'/'+E.frontDeployment(active).sectors+' sectors ready · each sector uses its own troops':'Shared army · '+p.percent+'% commitment · more fronts divide troops',
    buttons:'<button data-edit-plan="'+esc(p.id)+'" aria-label="Edit offensive region">Edit</button><button data-cancel-plan="'+esc(p.id)+'" aria-label="Cancel offensive plan">Cancel</button>'});
  }
  for(const p of recovery){
@@ -1028,7 +1028,7 @@ function renderArmies(){
   const pending=p.zoneCells.filter(i=>state.tiles[i]&&state.owners[i]===p.targetOwner).length;if(!pending)continue;
   rows.push({key:'recovery-'+p.id,title:'Recovery · '+(E.person(state,p.targetOwner)?.name||'Enemy')+' · '+number(pending)+' cells',
    status:active?(active.marching?'Marching to recovery · ':'Counterattack underway · ')+number(active.strength)+' troops':'Preparing troops for recapture',
-   detail:'Automatic during war · stops after peace',
+   detail:active?E.frontDeployment(active).ready+'/'+E.frontDeployment(active).sectors+' sectors ready · local recovery':'Automatic during war · stops after peace',
    buttons:'<button data-focus-plan="'+esc(p.id)+'" aria-label="Locate recovery front">Locate</button>'});
  }
  for(const a of state.armies.filter(a=>a.owner===myId&&!plannedIDs.has(a.planId))){
@@ -1352,24 +1352,30 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
  }
  drawAttackPlanning();
  // Compact spatial squads; no independent DOM overlays over match windows.
- const drawSquad=(g,id,marching=false)=>{
+ const drawSquad=(g,id,marching=false,active=false)=>{
   if(g.strength<1)return;const x=(g.x+.5)*TILE,y=(g.y+.5)*TILE;
   if(x*zoom+camX<0||x*zoom+camX>w||y*zoom+camY<0||y*zoom+camY>h)return;
-  ctx.fillStyle='#101218';ctx.strokeStyle=color(id);ctx.lineWidth=1.4/zoom;
+  ctx.fillStyle=active?hexAlpha(color(id),.85):'#101218';ctx.strokeStyle=color(id);ctx.lineWidth=1.4/zoom;
   ctx.beginPath();ctx.arc(x,y,4/zoom,0,Math.PI*2);ctx.fill();ctx.stroke();
   if(marching){ctx.beginPath();ctx.moveTo(x-2/zoom,y);ctx.lineTo(x+2/zoom,y);ctx.stroke();}
   if(id===myId&&zoom>=1.3){ctx.font='700 '+(9/zoom)+'px system-ui';ctx.textAlign='center';ctx.fillStyle='#f1f5fa';ctx.fillText(number(g.strength),x,y-7/zoom);}
  };
- for(const p of state.players)if(p.id===myId&&!p.eliminated)for(const g of p.garrisons||[])drawSquad(g,p.id,g.returning||g.x!==g.tx||g.y!==g.ty);
- for(const a of state.armies)for(const c of a.columns||[])drawSquad(c,a.owner,true);
+ const squadMarkers=new Map();
+ const addSquad=(c,id,active,marching)=>{
+  const key=id+':'+c.x+':'+c.y,marker=squadMarkers.get(key);
+  if(marker){marker.strength+=c.strength;marker.active||=active;marker.marching||=marching;}
+  else squadMarkers.set(key,{x:c.x,y:c.y,strength:c.strength,id,active,marching});
+ };
+ for(const p of state.players)if(p.id===myId&&!p.eliminated)for(const c of p.garrisons||[])addSquad(c,p.id,false,c.returning||c.x!==c.tx||c.y!==c.ty);
+ for(const a of state.armies)for(const c of a.columns||[])addSquad(c,a.owner,true,!!c.route?.length);
+ for(const c of squadMarkers.values())drawSquad(c,c.id,c.marching,c.active);
  // Front cells come from the authoritative conquest wave, including online snapshots.
  for(const a of state.armies){
   if(a.strength<=0)continue;
-  if(a.marching)continue;
   const cells=Array.isArray(a.frontCells)?a.frontCells:E.previewFront(state,a.owner,a.tx,a.ty).cells;
   ctx.fillStyle=hexAlpha(color(a.owner),.85);ctx.strokeStyle='#eef2f8';ctx.lineWidth=1/zoom;
   for(const i of cells){
-   if(i<0||i>=E.W*E.H||state.owners[i]===a.owner)continue;
+   if(i<0||i>=E.W*E.H||state.owners[i]===a.owner||E.localAttackStrength(a,i)<=0)continue;
    const x=(i%E.W)*TILE,y=Math.floor(i/E.W)*TILE;
    if(x*zoom+camX<-TILE*zoom||x*zoom+camX>w||y*zoom+camY<-TILE*zoom||y*zoom+camY>h)continue;
    ctx.fillRect(x,y,TILE,TILE);
@@ -1413,7 +1419,7 @@ function drawMini(){
   miniRevision=revision;
  }
  mctx.clearRect(0,0,E.W,E.H);mctx.drawImage(minimapCached,0,0);
- for(const a of state.armies){mctx.fillStyle=color(a.owner);for(const i of a.frontCells||[]){if(i>=0&&i<E.W*E.H&&state.owners[i]!==a.owner)mctx.fillRect(i%E.W,Math.floor(i/E.W),1,1);}}
+ for(const a of state.armies){mctx.fillStyle=color(a.owner);for(const i of a.frontCells||[]){if(i>=0&&i<E.W*E.H&&state.owners[i]!==a.owner&&E.localAttackStrength(a,i)>0)mctx.fillRect(i%E.W,Math.floor(i/E.W),1,1);}}
 
  mctx.lineWidth=.65;mctx.strokeStyle='#ffffff';const scale=zoom*TILE;
  mctx.strokeRect(-camX/scale,-camY/scale,canvas.clientWidth/scale,canvas.clientHeight/scale);
