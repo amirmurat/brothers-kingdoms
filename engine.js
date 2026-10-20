@@ -214,7 +214,7 @@ function createPaintedPlan(s,id,a,percent){
  const planned={id:'p'+(++s.nonce),owner:id,targetOwner:targets[0],targets,zoneCells:remaining,
   percent,initialStrength:Math.floor(p.troops*percent/100),waves:0,nextWaveTick:s.tick};
  s.attackPlans??=[];s.attackPlans.push(planned);
- declareApprovedWars(s,id,targets.filter(t=>remaining.some(i=>s.owners[i]===t)));
+ declareApprovedWars(s,id,targets);
  // An inaccessible region is a waiting plan, not an invalid plan.
  sendNextPlannedWave(s,planned);
  return {ok:true,planId:planned.id,waiting:planned.waves===0};
@@ -237,7 +237,7 @@ function changePaintedPlan(s,id,a){
  }
  s.armies=s.armies.filter(w=>w.strength>=8);
  plan.zoneCells=next;plan.targets=targets;plan.targetOwner=targets[0];plan.percent=clamp(Number(a.percent)||plan.percent,5,95);
- declareApprovedWars(s,id,targets.filter(t=>next.some(i=>s.owners[i]===t)));
+ declareApprovedWars(s,id,targets);
  plan.nextWaveTick=Math.max(s.tick+1,plan.nextWaveTick||0);
  return {ok:true,planId:plan.id};
 }
