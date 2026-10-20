@@ -12,7 +12,39 @@ const uiIcon=name=>{
 };
 const view=$('mapView'),canvas=$('mapCanvas'),ctx=canvas.getContext('2d',{alpha:false}),mini=$('minimap'),mctx=mini.getContext('2d');
 const terrainNames=['Море','Равнина','Лес','Холмы','Плодородная земля','Рудное месторождение','Горы'];
+/* v25: assemble complete Tiny Town buildings from original CC0 16px tiles. */
 const iconImages=Object.fromEntries(['capital','farm','lumber','quarry','mine','barracks','fort','city'].map(id=>{const im=new Image();im.src=artSrc('building-'+id+'.svg');im.onload=()=>queueDraw();return [id,im];}));
+const townTileIds=[48,49,50,52,53,54,57,60,61,62,64,65,66,72,74,75,76,78,79,83,92,94,96,97,98,104,105,106,107,108,109,110,115,119,120,121,122];
+const townTiles=Object.create(null),townSprites=Object.create(null);
+const blueRoof=[48,49,50,60,61,62],redRoof=[52,53,54,64,65,66],woodFront=[72,74,75],stoneFront=[76,78,79],stoneTop=[96,97,98,108,109,110],stoneBase=[120,121,122];
+const townRecipes={
+ farm:{parts:[...redRoof,...woodFront],deco:94},
+ lumber:{parts:[...blueRoof,...woodFront],deco:106},
+ quarry:{parts:[...stoneTop,...stoneBase],deco:104},
+ mine:{parts:[...blueRoof,...stoneFront],deco:57},
+ barracks:{parts:[...redRoof,...stoneFront],deco:119},
+ fort:{parts:[...stoneTop,...stoneBase],deco:92},
+ city:{parts:[...blueRoof,...stoneFront],deco:83},
+ capital:{parts:[...redRoof,...stoneFront],deco:92}
+};
+function assembleTownBuildings(){
+ let changed=false;
+ for(const [kind,spec] of Object.entries(townRecipes)){
+  if(townSprites[kind]||![...spec.parts,spec.deco].every(id=>townTiles[id]?.naturalWidth))continue;
+  const surface=document.createElement('canvas');surface.width=48;surface.height=48;
+  const brush=surface.getContext('2d');brush.imageSmoothingEnabled=false;
+  spec.parts.forEach((id,i)=>brush.drawImage(townTiles[id],(i%3)*16,Math.floor(i/3)*16,16,16));
+  brush.drawImage(townTiles[spec.deco],31,31,15,15);
+  townSprites[kind]=surface;changed=true;
+ }
+ if(changed)queueDraw();
+}
+townTileIds.forEach(id=>{
+ const img=new Image();townTiles[id]=img;
+ img.onload=assembleTownBuildings;
+ img.onerror=()=>{console.warn('Tiny Town tile unavailable',id);queueDraw();};
+ img.src='assets/tiny-town/tile_'+String(id).padStart(4,'0')+'.png';
+});
 const buildingInfo={
  farm:{short:'Обеспечивает армию едой.',detail:'+8 еды/с за каждый уровень',place:'Своя земля, кроме горных вершин',resource:'food',perLevel:8},
  lumber:{short:'Добывает древесину для развития.',detail:'+7 древесины/с за уровень',place:'Только лес',resource:'wood',perLevel:7},
@@ -735,14 +767,32 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   }
   ctx.stroke();
  }
- const capF=Math.max(9,13/zoom);ctx.font='800 '+capF+'px DM Sans, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
- for(const b of state.buildings){const x=(b.x+.5)*TILE,y=(b.y+.5)*TILE;if(x*zoom+camX<-40||x*zoom+camX>w+40||y*zoom+camY<-40||y*zoom+camY>h+40)continue;
-  const c=color(b.owner),r=(b.kind==='capital'?11:8.5)/Math.max(.62,zoom);
-  ctx.fillStyle='#fbefc8ed';ctx.strokeStyle=c;ctx.lineWidth=2/Math.max(0.75,zoom);
-  ctx.beginPath();if(b.kind==='capital'||b.kind==='fort'){ctx.roundRect(x-r,y-r,2*r,2*r,b.kind==='capital'?5:2);}else{ctx.arc(x,y,r,0,Math.PI*2);}ctx.fill();ctx.stroke();
-  const im=iconImages[b.kind];if(im?.complete&&im.naturalWidth){const smoothing=ctx.imageSmoothingEnabled;ctx.imageSmoothingEnabled=false;ctx.drawImage(im,x-r,y-r,2*r,2*r);ctx.imageSmoothingEnabled=smoothing;}
-  if(b.kind==='capital'&&zoom>.39){const p=E.person(state,b.owner),t=(p?.id||'?')+' · '+(p?.name||'');ctx.font='750 '+Math.max(9,11/zoom)+'px system-ui';const tw=ctx.measureText(t).width+20/zoom,lh=20/zoom,ly=y+r+11/zoom;ctx.fillStyle='#283a31ef';ctx.strokeStyle=c;ctx.lineWidth=1.2/Math.max(.5,zoom);ctx.beginPath();ctx.roundRect(x-tw/2,ly-lh/2,tw,lh,8/Math.max(.5,zoom));ctx.fill();ctx.stroke();ctx.fillStyle='#f1fff6';ctx.fillText(t,x,ly);}
-
+ // Logical footprint is exactly one cell; 3/4 roofs rise above it uncropped.
+ ctx.textAlign='center';ctx.textBaseline='middle';
+ for(const b of [...state.buildings].sort((a,b)=>a.y-b.y)){
+  const x=(b.x+.5)*TILE,y=(b.y+.5)*TILE;
+  if(x*zoom+camX<-55||x*zoom+camX>w+55||y*zoom+camY<-55||y*zoom+camY>h+55)continue;
+  const ownerColor=color(b.owner);
+  ctx.save();ctx.globalAlpha=.22;ctx.fillStyle=ownerColor;
+  ctx.fillRect(b.x*TILE+.8,b.y*TILE+.8,TILE-1.6,TILE-1.6);ctx.restore();
+  ctx.strokeStyle=ownerColor;ctx.lineWidth=1.5/Math.max(.7,zoom);
+  ctx.strokeRect(b.x*TILE+.8,b.y*TILE+.8,TILE-1.6,TILE-1.6);
+  const spriteW=Math.min(32/Math.max(.3,zoom),Math.max(TILE*1.22,24/Math.max(.3,zoom)));
+  const spriteH=spriteW*1.08,footY=y+TILE*.49;
+  const sprite=townSprites[b.kind]||iconImages[b.kind];
+  if(sprite?.width&&(!('naturalWidth' in sprite)||sprite.naturalWidth)){
+   const smoothing=ctx.imageSmoothingEnabled;ctx.imageSmoothingEnabled=false;
+   ctx.drawImage(sprite,x-spriteW*.5,footY-spriteH,spriteW,spriteH);
+   ctx.imageSmoothingEnabled=smoothing;
+  }
+  if(b.kind==='capital'&&zoom>.39){
+   const p=E.person(state,b.owner),label=(p?.id||'?')+' · '+(p?.name||'');
+   ctx.font='750 '+Math.max(9,11/zoom)+'px system-ui';
+   const tw=ctx.measureText(label).width+20/zoom,lh=20/zoom,ly=footY+11/zoom;
+   ctx.fillStyle='#283a31ef';ctx.strokeStyle=ownerColor;ctx.lineWidth=1.2/Math.max(.5,zoom);
+   ctx.beginPath();ctx.roundRect(x-tw/2,ly-lh/2,tw,lh,8/Math.max(.5,zoom));ctx.fill();ctx.stroke();
+   ctx.fillStyle='#f1fff6';ctx.fillText(label,x,ly);
+  }
  }
  // Incoming hostile fronts are highlighted on the battlefield, not only in the HUD.
  for(const a of activeThreats){
