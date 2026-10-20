@@ -337,7 +337,7 @@ function brushAt(pt){
   const cell=y*E.W+x;
   if(plan.mode==='erase'){if(plan.erasable.has(cell))plan.cells.add(cell);continue;}
   if(plan.tool==='erase'){plan.cells.delete(cell);continue;}
-  if(E.owner(state,x,y)===myId||plan.cells.size>=E.W*E.H)continue;
+  if(plan.cells.size>=E.W*E.H)continue;
   plan.cells.add(cell);
  }
 }
