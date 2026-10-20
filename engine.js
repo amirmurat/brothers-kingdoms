@@ -335,7 +335,8 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
   if(owner(s,tx,ty)===id)return {ok:false,error:'Choose neutral or enemy territory.'};
   if(p.allies.includes(owner(s,tx,ty)))return {ok:false,error:'Cannot attack an ally. End the alliance first.'};
   if(tile(s,tx,ty)===0)return {ok:false,error:'You cannot conquer the sea. Choose land.'};
-  const strength=Math.floor(p.troops*percent/100);if(strength<35)return {ok:false,error:'An offensive requires at least 35 troops.'};
+  const force=militaryStrength(s,id);
+  const strength=Math.max(0,Math.floor(Math.min(p.troops,force.total*percent/100-force.deployed)));if(strength<35)return {ok:false,error:'An offensive requires at least 35 troops.'};
   const src=nearestBorderLand(s,id,tx,ty);
   if(!src)return {ok:false,error:'There is no land route to this territory.'};
   // A land assault must begin on an existing shared border. Neutral attacks
@@ -587,12 +588,27 @@ function planTileCost(s,plan,i){
  const raw=def?tileDefense(s,def,i%W,(i/W)|0)/(.95+.19*p.tech.war):kind===6?8:kind===3?4:2.8;
  return raw*(1-.08*p.tech.logistics);
 }
+// A soldier belongs to either the home reserve or one deployed wave.
+function militaryStrength(s,id){
+ const reserve=Math.max(0,person(s,id)?.troops||0);
+ const deployed=s.armies.reduce((n,a)=>n+(a.owner===id?Math.max(0,a.strength):0),0);
+ return {reserve,deployed,total:reserve+deployed};
+}
+function planAllocation(s,plan){
+ const force=militaryStrength(s,plan.owner);
+ const plans=[...(s.attackPlans||[]),...(s.recoveryPlans||[])].filter(p=>p.owner===plan.owner&&planFrontier(s,p).length);
+ if(!plans.some(p=>p.id===plan.id))plans.push(plan);
+ const weight=plans.reduce((n,p)=>n+p.percent,0);
+ const budget=force.total*Math.max(...plans.map(p=>p.percent))/100;
+ const assigned=s.armies.reduce((n,a)=>n+(a.planId===plan.id?Math.max(0,a.strength):0),0);
+ return Math.max(0,Math.floor(Math.min(force.reserve,budget-force.deployed,budget*plan.percent/weight-assigned)));
+}
 function estimatePlanFront(s,plan){
  const cells=planFrontier(s,plan);
  let total=0,needsTen=false;
  for(const i of cells){total+=planTileCost(s,plan,i);if(s.tiles[i]===6)needsTen=true;}
  return {cells:cells.length,required:cells.length?Math.max(needsTen?10:0,Math.ceil(total*1000)/1000):0,
-  committed:Math.floor((person(s,plan.owner)?.troops||0)*plan.percent/100)};
+  committed:planAllocation(s,plan)};
 }
 function advancePlannedWave(s,a,plan){
  const p=person(s,a.owner),front=planFrontier(s,plan);
@@ -640,7 +656,7 @@ function sendNextPlannedWave(s,plan){
  const front=planFrontier(s,plan);
  if(!front.length||s.armies.filter(a=>a.owner===plan.owner).length>=12)return false;
  const estimated=estimatePlanFront(s,plan);
- const strength=Math.floor(p.troops*plan.percent/100);
+ const strength=estimated.committed;
  const minimum=plan.autoRecovery?Math.max(35,Math.min(estimated.required,50)):Math.max(35,estimated.required);
  if(strength<minimum)return false;
  const first=front[(front.length/2)|0],tx=first%W,ty=(first/W)|0;
@@ -752,7 +768,7 @@ function income(s,p){const c=counts(s,p.id),l=p.land,e=1+p.tech.economy*.25;
  const income={food:Math.round((2+l/100+c.farm*8+c.city*5)*e),wood:Math.round((1+l/180+c.lumber*7)*e),stone:Math.round((1+l/200+c.quarry*7)*e),gold:Math.round((1+l/220+c.mine*7+c.city*5)*e)};
  for(const k of Object.keys(income))p.res[k]=Math.min(250000,p.res[k]+income[k]);
  p.troopCap=Math.floor(900+l*2.4+c.barracks*430+c.city*260);
- const newTroops=Math.max(0,Math.min(p.troopCap-p.troops,Math.round(4+l/100+p.troops*.018+c.barracks*5+c.city*3+p.tech.war*2)));const supply=Math.max(0,Math.min(newTroops,Math.floor(p.res.food/0.20)));
+ const newTroops=Math.max(0,Math.min(p.troopCap-militaryStrength(s,p.id).total,Math.round(4+l/100+p.troops*.018+c.barracks*5+c.city*3+p.tech.war*2)));const supply=Math.max(0,Math.min(newTroops,Math.floor(p.res.food/0.20)));
  p.troopIncome=supply;p.troops+=supply;p.res.food=Math.max(0,p.res.food-Math.ceil(supply*.20));p.income=income;
 }
 function bot(s,id){const p=person(s,id);if(!alive(p)||s.phase!=='playing')return;
@@ -809,5 +825,5 @@ function tick(s){if(s.phase!=='playing')return;s.tick++;
  checkWin(s);
 }
 
-return{BUILD:'v70',W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v71',militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });

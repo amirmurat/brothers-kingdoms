@@ -39,7 +39,7 @@ function resourceRates(p){
   gold:Math.round((1+land/220+c.mine*7+c.city*5)*m)
  };
  const cap=p.troopCap||Math.floor(900+land*2.4+c.barracks*430+c.city*260);
- const expected=Math.max(0,Math.min(cap-p.troops,Math.round(4+land/100+p.troops*.018+c.barracks*5+c.city*3+p.tech.war*2)));
+ const expected=Math.max(0,Math.min(cap-E.militaryStrength(state,p.id).total,Math.round(4+land/100+p.troops*.018+c.barracks*5+c.city*3+p.tech.war*2)));
  const recruited=p.troopIncome===undefined?Math.min(expected,Math.floor(((p.res.food||0)+gross.food)/.2)):p.troopIncome;
  const foodNet=Math.floor(gross.food||0)-Math.ceil(Math.max(0,recruited||0)*.2);
  return {gross,recruited,foodNet};
@@ -230,12 +230,12 @@ $('hudAlert').onclick=()=>{
 };
 function updateHudSignals(p){
  const pendingIncome=p.troopIncome===undefined,counts=E.counts(state,myId),estimatedCap=Math.floor(900+p.land*2.4+counts.barracks*430+counts.city*260),cap=pendingIncome?estimatedCap:p.troopCap;
- const projected=Math.max(0,Math.min(cap-p.troops,Math.round(4+p.land/100+p.troops*.018+counts.barracks*5+counts.city*3+p.tech.war*2)));
- const growth=pendingIncome?Math.min(projected,Math.floor((p.res.food||0)/.20)):Math.floor(p.troopIncome||0),full=p.troops>=cap-.5,lowFood=Number(p.res.food||0)<1;
+ const projected=Math.max(0,Math.min(cap-E.militaryStrength(state,p.id).total,Math.round(4+p.land/100+p.troops*.018+counts.barracks*5+counts.city*3+p.tech.war*2)));
+ const growth=pendingIncome?Math.min(projected,Math.floor((p.res.food||0)/.20)):Math.floor(p.troopIncome||0),full=E.militaryStrength(state,p.id).total>=cap-.5,lowFood=Number(p.res.food||0)<1;
  let reason='';if(growth===0){reason=full?'FULL':lowFood?'NO FOOD':'NO RECRUITS';}
  if(pendingIncome){$('troopGrowth').textContent='≈+'+number(growth)+'/s';$('troopCap').textContent='/ '+number(cap);}
  const cause=$('troopReason');cause.textContent=reason;cause.classList.toggle('hidden',!reason);
- $('hudTroops').title=`Reserve: ${number(p.troops)} of ${number(cap)}. ${reason||`Recruitment: +${number(growth)} per second`}`;
+ $('hudTroops').title=`Reserve: ${number(p.troops)} · Deployed: ${number(E.militaryStrength(state,p.id).deployed)} · Total capacity: ${number(cap)}. ${reason||`Recruitment: +${number(growth)} per second`}`;
  const share=p.land/Math.max(1,state.landTotal)*100;
  $('landCount').textContent=share.toFixed(1)+'%';
  $('landShare').textContent='goal 100%';
@@ -1014,13 +1014,13 @@ function renderArmies(){
   const left=p.zoneCells.filter(i=>state.tiles[i]&&state.owners[i]!==myId).length;
   const choices=selectedNationTargets(),label=choices.map(id=>E.person(state,id)?.name||'Neutral land').join(', ');
   const capturable=p.zoneCells.some(i=>state.tiles[i]&&state.owners[i]!==myId&&choices.includes(state.owners[i]));
-  const estimate=E.estimatePlanFront(state,p),reserve=Math.ceil(Math.max(35,estimate.required)*100/Math.max(5,p.percent));
+  const estimate=E.estimatePlanFront(state,p);
   rows.push({key:'plan-'+p.id,
    title:label+' · '+number(left)+' cells left',
    status:active?'Wave '+number(p.waves)+' · '+number(active.strength)+' troops · '+estimate.cells+' frontier cells':
-    estimate.cells&&reserve>mine().troops?'Waiting for '+number(reserve)+' reserve troops · full-front expansion':
+    estimate.cells&&estimate.committed<Math.max(35,estimate.required)?'Front needs '+number(Math.max(35,estimate.required))+' troops · allocated '+number(estimate.committed):
     !capturable?'Choose opponents in Nations':'Waiting for route / troops',
-   detail:'Persistent plan · '+p.percent+'% per wave',
+   detail:'Shared army · '+p.percent+'% commitment · more fronts divide troops',
    buttons:'<button data-edit-plan="'+esc(p.id)+'" aria-label="Edit offensive region">Edit</button><button data-cancel-plan="'+esc(p.id)+'" aria-label="Cancel offensive plan">Cancel</button>'});
  }
  for(const p of recovery){

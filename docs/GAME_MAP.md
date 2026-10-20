@@ -530,3 +530,6 @@ _Актуальный реестр, извлечённый из `index.html` н�
 - tests/cloudflare-server.cjs now reserves creator, lets guest join first, tests temporary lobby disconnect, then existing selection/gameplay/rejoin cases.
 - Added tests/network-lobby.cjs: actual HTTP/WebSocket bridge to KingdomRoom with two isolated browser contexts, real touch tap, creator reconnect/close/rejoin, guest visibility and exact in-match capital in Chromium and WebKit. Uses mock Durable Object storage, real transport and production engine/room/client. Cloudflare-specific storage lifecycle and physical Safari remain separate.
 - v70 engine/cache. Working branch only; Node/browser CI and deployment checked after push.
+
+### v71 military commitment
+`engine.militaryStrength` counts reserve + active waves for recruitment capacity. `planAllocation` shares total commitment among reachable manual/recovery fronts; active waves consume their share. `estimatePlanFront.committed` is the actually available allocation. Full-front manual expansion remains atomic. Offensives rows explain allocated vs required strength; reserve tooltip separates deployed troops from home defense. No new UI controls.
