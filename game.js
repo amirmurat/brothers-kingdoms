@@ -805,7 +805,7 @@ function selectMap(clientX,clientY){
  if(!E.inside(p.x,p.y))return;
  if(attackPlanner)return;
  const regionIndex=p.y*E.W+p.x;
- const savedPlan=(state.attackPlans||[]).find(p=>p.owner===myId&&p.zoneCells.includes(regionIndex));
+ const savedPlan=(state.attackPlans||[]).find(p=>p.owner===myId&&state.owners[regionIndex]!==myId&&p.zoneCells.includes(regionIndex));
  if(savedPlan){openCancelPlan(savedPlan);return;}
  const activePlan=state.armies.find(a=>a.owner===myId&&a.strength>0&&Array.isArray(a.zoneCells)&&!a.planId&&a.zoneCells.includes(regionIndex));
  if(activePlan){openCancelPlan(activePlan);return;}
