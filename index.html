@@ -9,7 +9,7 @@
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
 <link rel="stylesheet" href="styles/legacy.css?v=49-visible-camp"/>
-<link rel="stylesheet" href="styles/theme.css?v=59-choice-zones"/>
+<link rel="stylesheet" href="styles/theme.css?v=60-merge-fullfront"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -82,6 +82,10 @@
 <div class="plan-guide hidden" id="planGuide" role="region" aria-label="Paint attack zone">
  <div class="paint-heading"><strong id="planHeading">PAINT ATTACK ZONE</strong><span id="planPaintCount">0 cells</span></div>
  <p id="planGuideHint" role="status">One finger paints · Two fingers move the map.</p>
+ <div class="plan-tool-switch" role="group" aria-label="Paint or erase">
+  <button type="button" id="planToolPaint" aria-pressed="true">Paint</button>
+  <button type="button" id="planToolErase" aria-pressed="false">Eraser</button>
+ </div>
  <div class="paint-control"><label for="planBrushSize">BRUSH SIZE <b id="planBrushValue">2 tiles</b></label><input id="planBrushSize" type="range" min="1" max="6" step="1" value="2" aria-label="Brush size"/></div>
  <div class="paint-control"><label for="planTroopsPercent">TROOPS <b id="planTroopsValue">30%</b></label><input id="planTroopsPercent" type="range" min="5" max="95" step="5" value="30" aria-label="Percentage of troops"/></div>
  <div class="plan-targets" id="planTargets" role="group" aria-label="Territories allowed for conquest">
@@ -165,7 +169,7 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="engine.js?v=59-choice-zones"></script>
+<script src="engine.js?v=60-merge-fullfront"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=59-choice-zones"></script>
+<script src="game.js?v=60-merge-fullfront"></script>
 </body></html>
