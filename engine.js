@@ -181,14 +181,14 @@ function parseTargets(s,id,values){
  }
  return [...targets];
 }
-function validatePaintedRegion(s,request){
- if(!Array.isArray(request)||request.length<2||request.length>3500)return {error:'Paint at least 2 and at most 3,500 land cells.'};
+function validatePaintedRegion(s,request,min=2){
+ if(!Array.isArray(request)||request.length<min||request.length>3500)return {error:'Paint at least '+min+' and at most 3,500 land cells.'};
  const cells=new Set();
  for(const i of request){
   if(!Number.isInteger(i)||i<0||i>=W*H||!s.tiles[i])return {error:'Only land cells can be planned.'};
   cells.add(i);
  }
- if(cells.size<2)return {error:'Paint a larger area.'};
+ if(cells.size<min)return {error:'Paint a larger area.'};
  return {cells:[...cells].sort((a,b)=>a-b)};
 }
 function declareApprovedWars(s,id,targets){
@@ -202,58 +202,74 @@ function declareApprovedWars(s,id,targets){
   log(s,person(s,id).name+' declared war on '+person(s,target)?.name);
  }
 }
+
+function upsertPaintedPlan(s,id,request,rawTargets,percent,editId=null){
+ const p=person(s,id),checked=validatePaintedRegion(s,request,editId?1:2);
+ if(checked.error)return {ok:false,error:checked.error};
+ const own=(s.attackPlans||[]).filter(plan=>plan.owner===id);
+ const original=editId?own.find(plan=>plan.id===editId):null;
+ if(editId&&!original)return {ok:false,error:'Offensive plan no longer exists.'};
+ const selected=new Set(checked.cells),merged=new Set(original?[original]:[]);
+ // Transitive union: if this stroke bridges two active plans, absorb both.
+ let found=true;
+ while(found){
+  found=false;
+  for(const plan of own){
+   if(merged.has(plan))continue;
+   if(plan.zoneCells.some(i=>selected.has(i))){
+    merged.add(plan);for(const i of plan.zoneCells)selected.add(i);found=true;
+   }
+  }
+ }
+ if(original){
+  const keep=new Set(checked.cells);
+  for(const i of original.zoneCells)if(!keep.has(i))selected.delete(i);
+  for(const pl of merged)if(pl!==original)for(const i of pl.zoneCells)selected.add(i);
+ }
+ if(selected.size>3500)return {ok:false,error:'Merged area exceeds 3,500 cells. Use the eraser to reduce it.'};
+ if(!selected.size)return {ok:false,error:'Keep one cell or cancel this plan from Offensives.'};
+ const selectedTargets=parseTargets(s,id,rawTargets);
+ const prior=[...merged].filter(pl=>pl!==original).flatMap(pl=>pl.targets??[pl.targetOwner]);
+ const targets=[...new Set([...selectedTargets,...prior])].filter(t=>t===0||!p.allies.includes(t));
+ if(!editId&&!targets.length)return {ok:false,error:'Choose a territory owner to attack.'};
+ if(!editId&&!merged.size&&![...selected].some(i=>targets.includes(s.owners[i])))
+  return {ok:false,error:'Enable an owner inside the painted area.'};
+ if(!merged.size&&own.length>=12)return {ok:false,error:'Maximum 12 offensive plans.'};
+ const plan=original||[...merged][0]||{id:'p'+(++s.nonce),owner:id,waves:0,initialStrength:Math.max(35,Math.floor(p.troops*percent/100))};
+ if(merged.size){
+  const removedIds=new Set([...merged].map(pl=>pl.id));
+  // Withdraw active waves with the normal survivor refund; new geometry starts
+  // from the current border on the following tick.
+  for(const wave of s.armies.filter(w=>removedIds.has(w.planId)))finishWave(s,wave,person(s,wave.owner));
+  s.armies=s.armies.filter(w=>!removedIds.has(w.planId));
+  s.attackPlans=s.attackPlans.filter(pl=>!removedIds.has(pl.id));
+ }
+ plan.zoneCells=[...selected].sort((a,b)=>a-b);
+ plan.targets=targets;plan.targetOwner=targets[0]??0;plan.percent=percent;
+ plan.nextWaveTick=merged.size?s.tick+1:s.tick;
+ s.attackPlans??=[];s.attackPlans.push(plan);
+ declareApprovedWars(s,id,selectedTargets);
+ if(!merged.size)sendNextPlannedWave(s,plan);
+ return {ok:true,merged:merged.size>0,planId:plan.id,waiting:!s.armies.some(a=>a.planId===plan.id)};
+}
 function createPaintedPlan(s,id,a,percent){
- const p=person(s,id);
- const result=validatePaintedRegion(s,a.zone);
- if(result.error)return {ok:false,error:result.error};
- const occupied=new Set((s.attackPlans||[]).filter(plan=>plan.owner===id).flatMap(plan=>plan.zoneCells));
- const remaining=result.cells.filter(i=>!occupied.has(i));
- if(remaining.length<2)return {ok:false,error:'These cells are already in an existing plan. Edit that plan instead.'};
- const targets=parseTargets(s,id,a.targets??[s.owners[remaining[0]]]);
- if(!targets.length)return {ok:false,error:'Choose at least one territory owner to attack.'};
- if(!remaining.some(i=>targets.includes(s.owners[i])))return {ok:false,error:'Enable at least one owner inside the painted area.'};
- const planned={id:'p'+(++s.nonce),owner:id,targetOwner:targets[0],targets,zoneCells:remaining,
-  percent,initialStrength:Math.floor(p.troops*percent/100),waves:0,nextWaveTick:s.tick};
- s.attackPlans??=[];s.attackPlans.push(planned);
- declareApprovedWars(s,id,targets);
- // An inaccessible region is a waiting plan, not an invalid plan.
- sendNextPlannedWave(s,planned);
- return {ok:true,planId:planned.id,waiting:planned.waves===0};
+ return upsertPaintedPlan(s,id,a.zone,a.targets??[0],percent);
 }
 function changePaintedPlan(s,id,a){
  const plan=(s.attackPlans||[]).find(p=>p.id===a.id&&p.owner===id);
  if(!plan)return {ok:false,error:'Offensive plan not found.'};
- const request=a.zone??plan.zoneCells,result=validatePaintedRegion(s,request);
- if(result.error)return {ok:false,error:result.error};
- const occupied=new Set((s.attackPlans||[]).filter(other=>other!==plan&&other.owner===id).flatMap(other=>other.zoneCells));
- const next=result.cells.filter(i=>!occupied.has(i));
- if(next.length<2)return {ok:false,error:'That region is already covered by another plan.'};
- const targets=parseTargets(s,id,a.targets??plan.targets??[plan.targetOwner]);
- if(!targets.length)return {ok:false,error:'Select at least one target before saving.'};
- const oldTargets=plan.targets??[plan.targetOwner],changes=next.length!==plan.zoneCells.length||next.some((i,k)=>i!==plan.zoneCells[k]);
- const removed=new Set(oldTargets.filter(t=>!targets.includes(t)));
- // Geometry changed: stop current wave safely before applying a different set of cells.
- for(const wave of s.armies.filter(w=>w.planId===plan.id)){
-  if(changes||removed.has(wave.targetOwner)){finishWave(s,wave,person(s,wave.owner));}
-  else {wave.zoneCells=next.slice();attackFronts.delete(wave);}
- }
- s.armies=s.armies.filter(w=>w.strength>=8);
- plan.zoneCells=next;plan.targets=targets;plan.targetOwner=targets[0];plan.percent=clamp(Number(a.percent)||plan.percent,5,95);
- declareApprovedWars(s,id,targets);
- plan.nextWaveTick=Math.max(s.tick+1,plan.nextWaveTick||0);
- return {ok:true,planId:plan.id};
+ return upsertPaintedPlan(s,id,a.zone??plan.zoneCells,a.targets??plan.targets??[plan.targetOwner],
+  clamp(Number(a.percent)||plan.percent,5,95),plan.id);
 }
 function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is not active.'};const p=person(s,id);
  if(!alive(p)||!a||typeof a!=='object')return {ok:false,error:'Command unavailable.'};
  if(a.type==='send'){
   let tx=Math.floor(a.x),ty=Math.floor(a.y);const percent=clamp(Number(a.percent)||30,5,95);
   if(!inside(tx,ty))return {ok:false,error:'Choose a target on the map.'};
-  if(s.armies.filter(u=>u.owner===id).length>=12||!p.bot&&(s.attackPlans||[]).filter(plan=>plan.owner===id).length>=12)return {ok:false,error:'You can have at most 12 active offensives.'};
-  if(!p.bot&&Array.isArray(a.zone)){
-   const strength=Math.floor(p.troops*percent/100);
-   if(strength<35)return {ok:false,error:'An offensive requires at least 35 troops.'};
-   return createPaintedPlan(s,id,a,percent);
-  }
+  if(p.bot&&s.armies.filter(u=>u.owner===id).length>=12)return {ok:false,error:'You can have at most 12 active offensives.'};
+  if(!p.bot&&Array.isArray(a.zone))return createPaintedPlan(s,id,a,percent);
+  if(!p.bot&&(s.attackPlans||[]).filter(plan=>plan.owner===id).length>=12)return {ok:false,error:'Maximum 12 active plans.'};
+
   if(owner(s,tx,ty)===id)return {ok:false,error:'Choose neutral or enemy territory.'};
   if(p.allies.includes(owner(s,tx,ty)))return {ok:false,error:'Cannot attack an ally. End the alliance first.'};
   if(tile(s,tx,ty)===0)return {ok:false,error:'You cannot conquer the sea. Choose land.'};
