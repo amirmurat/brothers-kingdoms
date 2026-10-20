@@ -317,9 +317,9 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
  if(a.type==='erasePlanCells'){
   // Only the owner can trim their own saved geometry. Other kingdoms' plans,
   // troop reserves and ownership of already captured cells remain untouched.
-  if(!Array.isArray(a.cells)||a.cells.length<1||a.cells.length>3500||
+  if(!Array.isArray(a.cells)||a.cells.length<1||a.cells.length>W*H||
     a.cells.some(i=>!Number.isInteger(i)||i<0||i>=W*H))
-   return {ok:false,error:'Choose up to 3,500 valid cells to erase.'};
+   return {ok:false,error:'Choose cells within the map to erase.'};
   const erased=new Set(a.cells),owned=(s.attackPlans||[]).filter(plan=>plan.owner===id);
   let changed=0,affected=0,deleted=0;
   for(const plan of owned){
@@ -429,7 +429,7 @@ const SIDE=[1,-1,W,-W];
 const warKey=(a,b)=>Math.min(a,b)+':'+Math.max(a,b);
 function validateZone(s,id,targetOwner,request){
  if(request==null)return {cells:null}; // Legacy/AI commands can use border targeting.
- if(!Array.isArray(request)||request.length<2||request.length>3500)return {error:'Paint between 2 and 3,500 target cells.'};
+ if(!Array.isArray(request)||request.length<2||request.length>W*H)return {error:'Paint a valid land area.'};
  const zone=new Set();for(const i of request){if(!Number.isInteger(i)||i<0||i>=W*H||!s.tiles[i]||s.owners[i]!==targetOwner||targetOwner===id)return {error:'The planned area must belong to one kingdom and be on land.'};zone.add(i);}
  if(zone.size<2)return {error:'Draw a larger area.'};
  const seeds=[];for(const i of zone){const x=i%W,y=(i/W)|0;for(const j of [x>0?i-1:-1,x<W-1?i+1:-1,y>0?i-W:-1,y<H-1?i+W:-1])if(j>=0&&s.owners[j]===id){seeds.push(i);break;}}
@@ -711,5 +711,5 @@ function tick(s){if(s.phase!=='playing')return;s.tick++;
  checkWin(s);
 }
 
-return{W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v64',W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });
