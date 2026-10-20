@@ -8,15 +8,15 @@
 <meta content="Brothers Kingdoms — стратегия за территорию в реальном времени. Играй с братьями или против ботов." name="description"/>
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
-<link rel="stylesheet" href="styles/legacy.css?v=27-preview"/>
-<link rel="stylesheet" href="styles/theme.css?v=27-preview"/>
+<link rel="stylesheet" href="styles/legacy.css?v=28-neon"/>
+<link rel="stylesheet" href="styles/theme.css?v=28-neon"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
 <main aria-label="Главное меню" class="start-screen">
 <header class="start-brand">
 <span aria-hidden="true" class="start-emblem"><svg viewbox="0 0 24 24"><path d="M4 19V9l5 3 3-7 3 7 5-3v10H4Z M4 19h16"></path></svg></span>
-<div><strong>BROTHERS KINGDOMS</strong><small>ЗАВОЕВАНИЕ МИРА</small></div>
+<div><strong>BROTHERS KINGDOMS</strong><small>СТРАТЕГИЯ В РЕАЛЬНОМ ВРЕМЕНИ</small></div>
 </header>
 <section aria-label="Начать партию" class="start-actions">
 <h1>Выбери сражение</h1>
@@ -72,9 +72,9 @@
 <div class="map-location"><span class="location-dot"></span><strong id="myKingdom" title="Название королевства">Королевство</strong><span aria-live="polite" id="mapStatus">Выбери цель на карте — отправь армию</span></div>
 <div class="map-toolbar-actions"><button aria-label="Открыть список походов" class="action-armies" id="armiesToggle" title="Мои походы"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#flag-banner"></use></svg><span id="frontCountBadge">0</span></button>
 <button class="develop-button" id="pauseGame" title="Пауза в одиночной игре">Пауза</button><button aria-label="Правила игры" class="square-button" id="helpButton"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#question"></use></svg></button>
-<button aria-label="Уменьшить" class="square-button" id="zoomOut" title="Уменьшить"><img class="pixel-glyph" alt="" aria-hidden="true" src="assets/pixel-ui/icon-minus.png"/></button>
+<button aria-label="Уменьшить" class="square-button" id="zoomOut" title="Уменьшить"><span class="zoom-glyph" aria-hidden="true">−</span></button>
 <span class="zoom-label" id="zoomText">100%</span>
-<button aria-label="Увеличить" class="square-button" id="zoomIn" title="Увеличить"><img class="pixel-glyph" alt="" aria-hidden="true" src="assets/pixel-ui/icon-plus.png"/></button>
+<button aria-label="Увеличить" class="square-button" id="zoomIn" title="Увеличить"><span class="zoom-glyph" aria-hidden="true">+</span></button>
 <button aria-label="Вся карта" class="square-button" id="viewAll" title="Вся карта"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#map-trifold"></use></svg></button>
 <button aria-label="Моя столица" class="square-button" id="centerMap" title="Моя столица"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#crown"></use></svg></button>
 </div>
@@ -144,7 +144,7 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="engine.js?v=27-preview"></script>
+<script src="engine.js?v=28-neon"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=27-preview"></script>
+<script src="game.js?v=28-neon"></script>
 </body></html>

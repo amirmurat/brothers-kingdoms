@@ -12,11 +12,10 @@ const uiIcon=name=>{
 };
 const view=$('mapView'),canvas=$('mapCanvas'),ctx=canvas.getContext('2d',{alpha:false}),mini=$('minimap'),mctx=mini.getContext('2d');
 const terrainNames=['Море','Равнина','Лес','Холмы','Плодородная земля','Рудное месторождение','Горы'];
-/* One precomposed, licensed building image for map and catalogue. */
-const buildingArt=kind=>`<img class="building-art" src="assets/buildings/${kind}.png" alt="" aria-hidden="true"/>`;
-const iconImages=Object.fromEntries(['capital','farm','lumber','quarry','mine','barracks','fort','city'].map(id=>{
- const im=new Image();im.src='assets/buildings/'+id+'.png';im.onload=()=>queueDraw();return [id,im];
-}));
+/* Same geometry in catalogue, placement indicator and map. Color identifies ownership. */
+const BUILDING_PATHS={"farm": "M32 7 A25 25 0 1 1 31.99 7 Z", "lumber": "M32 6 L59 55 L5 55 Z", "quarry": "M32 4 L60 32 L32 60 L4 32 Z", "mine": "M32 5 L58 24 L48 56 L16 56 L6 24 Z", "barracks": "M18 6 L46 6 L60 32 L46 58 L18 58 L4 32 Z", "fort": "M8 8 H56 V56 H8 Z M20 20 V44 H44 V20 Z", "city": "M5 27 H18 V57 H5 Z M25 7 H39 V57 H25 Z M46 19 H59 V57 H46 Z", "capital": "M32 3 L40 23 L61 25 L45 39 L50 60 L32 48 L14 60 L19 39 L3 25 L24 23 Z"};
+const buildingPaths=Object.fromEntries(Object.entries(BUILDING_PATHS).map(([id,d])=>[id,new Path2D(d)]));
+const buildingArt=kind=>`<img class="building-art" src="assets/shapes/${kind}.svg" alt="" aria-hidden="true"/>`;
 const buildingInfo={
  farm:{short:'Обеспечивает армию едой.',detail:'+8 еды/с за каждый уровень',place:'Своя земля, кроме горных вершин',resource:'food',perLevel:8},
  lumber:{short:'Добывает древесину для развития.',detail:'+7 древесины/с за уровень',place:'Только лес',resource:'wood',perLevel:7},
@@ -483,7 +482,7 @@ function refreshQuickBuild(){
  const description=buildMode?`${E.KINDS[buildMode]?.name}: зелёный — можно, красный — нельзя. ${buildMode==='fort'?'Жёлтый ромб — радиус защиты.':''}`:'Выбери тип здания. Зелёные клетки доступны, красные запрещены.';
  $('quickBuildHelp').textContent=description;
  $('placingBuild').classList.toggle('hidden',!buildMode||quickBuildOpen);
- if(buildMode){$('placingBuildText').textContent=E.KINDS[buildMode].name+' · выбери клетку';$('placingBuildIcon').src=artSrc('building-'+buildMode+'.svg');}
+ if(buildMode){$('placingBuildText').textContent=E.KINDS[buildMode].name+' · выбери клетку';$('placingBuildIcon').src='assets/shapes/'+buildMode+'.svg';}
 }
 function toggleQuickBuild(force){
  quickBuildOpen=typeof force==='boolean'?force:!quickBuildOpen;
@@ -669,7 +668,7 @@ $('zoomIn').onclick=()=>zoomAt(1.24,canvas.clientWidth/2,canvas.clientHeight/2);
 mini.addEventListener('pointerdown',e=>{const r=mini.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*E.W,y=(e.clientY-r.top)/r.height*E.H;camX=canvas.clientWidth/2-x*TILE*zoom;camY=canvas.clientHeight/2-y*TILE*zoom;clampCamera();queueDraw();});mini.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('viewAll').click();}});
 // Low-resolution territory bitmap: one pixel per world tile. The GPU enlarges it.
 // It is updated only when a territory changes, NOT once per animation frame.
-const TERRAIN_RGB=[[57,102,119],[163,184,134],[94,139,111],[177,166,138],[185,195,143],[155,151,137],[183,181,166]];
+const TERRAIN_RGB=[[8,10,14],[36,40,48],[25,34,39],[53,55,64],[47,53,54],[65,66,78],[79,81,91]];
 let minimapCached=null,pixelLayer=null;
 function repaintWorld(){
  if(!state?.owners?.length||!state?.tiles?.length)return;
@@ -683,7 +682,7 @@ function repaintWorld(){
  for(let i=0;i<owners.length;i++){
   const terr=TERRAIN_RGB[tiles[i]]||TERRAIN_RGB[1],id=owners[i],col=id?colors[id-1]:null;
   const p=i*4;
-  const k=col ? 0.82 : 0;
+  const k=col ? 0.48 : 0;
   let h=Math.imul(i% E.W+state.seed*3,374761393)^Math.imul((i/E.W)|0,668265263);h=Math.imul(h^(h>>>13),1274126177);const noise=((h>>>24)&15)-7;
   const shade=tiles[i]===0?noise*.08:noise*.20;
   d[p]=Math.max(0,Math.min(255,Math.round(terr[0]*(1-k)+(col?.[0]||0)*k+shade)));
@@ -696,10 +695,10 @@ function repaintWorld(){
  for(let y=1;y<E.H-1;y++)for(let x=1;x<E.W-1;x++){
   const i=y*E.W+x,t=tiles[i];if(owners[i]||!t||((x*41+y*73+state.seed*13)%17))continue;
   const px=x*6+3,py=y*6+3;
-  if(t===2){wc.fillStyle='#315c3f99';wc.fillRect(px-2,py-1,2,3);wc.fillRect(px+1,py-2,2,4);wc.fillStyle='#93bf82aa';wc.fillRect(px,py+1,2,1);}
-  else if(t===3||t===6){wc.strokeStyle='#eee4bd7d';wc.lineWidth=.9;wc.beginPath();wc.moveTo(px-2,py+1);wc.lineTo(px,py-2);wc.lineTo(px+2,py+1);wc.stroke();}
-  else if(t===4){wc.fillStyle='#e4d89088';wc.fillRect(px-2,py,4,1);}
-  else if(t===5){wc.fillStyle='#f2cd6d99';wc.fillRect(px-1,py-2,2,2);}
+  if(t===2){wc.fillStyle='#a5b5bd55';wc.fillRect(px-2,py-1,2,3);wc.fillRect(px+1,py-2,2,4);wc.fillStyle='#a5b5bd55';wc.fillRect(px,py+1,2,1);}
+  else if(t===3||t===6){wc.strokeStyle='#d7dce066';wc.lineWidth=.9;wc.beginPath();wc.moveTo(px-2,py+1);wc.lineTo(px,py-2);wc.lineTo(px+2,py+1);wc.stroke();}
+  else if(t===4){wc.fillStyle='#d7dce044';wc.fillRect(px-2,py,4,1);}
+  else if(t===5){wc.fillStyle='#e7ddff88';wc.fillRect(px-1,py-2,2,2);}
  }
  terrainSeed=state.seed;paintedRevision=revision;miniRevision=-1;
 }
@@ -713,13 +712,13 @@ function drawFortRange(x,y,preview){
  ctx.fill();ctx.stroke();ctx.restore();
 }
 function queueDraw(){if(renderQueued)return;renderQueued=true;requestAnimationFrame(()=>{renderQueued=false;draw();});}
-function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr=canvas.width/Math.max(1,canvas.clientWidth);const w=canvas.clientWidth,h=canvas.clientHeight;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#396677';ctx.fillRect(0,0,w,h);
+function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr=canvas.width/Math.max(1,canvas.clientWidth);const w=canvas.clientWidth,h=canvas.clientHeight;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#080a0e';ctx.fillRect(0,0,w,h);
  ctx.save();ctx.translate(camX,camY);ctx.scale(zoom,zoom);ctx.imageSmoothingEnabled=true;ctx.drawImage(worldLayer,0,0,worldLayer.width,worldLayer.height,0,0,E.W*TILE,E.H*TILE);
  // Draw vector borders only when zoomed in sufficiently; avoid per-tile work otherwise.
  if(zoom>=0.28){
   const minX=Math.max(0,Math.floor(-camX/(TILE*zoom))-1),maxX=Math.min(E.W-1,Math.ceil((w-camX)/(TILE*zoom))+1);
   const minY=Math.max(0,Math.floor(-camY/(TILE*zoom))-1),maxY=Math.min(E.H-1,Math.ceil((h-camY)/(TILE*zoom))+1);
-  ctx.lineWidth=Math.max(.55,1.65/zoom);ctx.strokeStyle='#203a2dcc';ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();
+  ctx.lineWidth=Math.max(.55,1.65/zoom);ctx.strokeStyle='#e6f3ffb0';ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();
   const o=state.owners;
   for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
    const i=y*E.W+x,id=o[i];if(!id)continue;
@@ -728,7 +727,7 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   }
   ctx.stroke();
   // Thin coast outline separates land and sea without heavy biome gridlines.
-  ctx.beginPath();ctx.strokeStyle='#f5e4b5aa';ctx.lineWidth=Math.max(.55,1.2/zoom);
+  ctx.beginPath();ctx.strokeStyle='#7b849355';ctx.lineWidth=Math.max(.55,1.2/zoom);
   const tiles=state.tiles;
   for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
    const i=y*E.W+x;if(!tiles[i])continue;
@@ -746,18 +745,10 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   const x=(b.x+.5)*TILE,y=(b.y+.5)*TILE;
   if(x*zoom+camX<-55||x*zoom+camX>w+55||y*zoom+camY<-55||y*zoom+camY>h+55)continue;
   const ownerColor=color(b.owner);
-  ctx.save();ctx.globalAlpha=.22;ctx.fillStyle=ownerColor;
-  ctx.fillRect(b.x*TILE+.8,b.y*TILE+.8,TILE-1.6,TILE-1.6);ctx.restore();
-  ctx.strokeStyle=ownerColor;ctx.lineWidth=1.5/Math.max(.7,zoom);
-  ctx.strokeRect(b.x*TILE+.8,b.y*TILE+.8,TILE-1.6,TILE-1.6);
-  const sprite=iconImages[b.kind];
-  const spriteW=TILE*1.12;
-  const spriteH=spriteW*(sprite?.naturalHeight||48)/(sprite?.naturalWidth||48),footY=y+TILE*.49;
-  if(sprite?.width&&(!('naturalWidth' in sprite)||sprite.naturalWidth)){
-   const smoothing=ctx.imageSmoothingEnabled;ctx.imageSmoothingEnabled=false;
-   ctx.drawImage(sprite,x-spriteW*.5,footY-spriteH,spriteW,spriteH);
-   ctx.imageSmoothingEnabled=smoothing;
-  }
+  const spriteH=TILE*.82,footY=y+TILE*.41;
+  ctx.save();ctx.translate(x-spriteH/2,y-spriteH/2);ctx.scale(spriteH/64,spriteH/64);
+  ctx.fillStyle='#f1f5fa';ctx.fill(buildingPaths[b.kind]||buildingPaths.city,'evenodd');
+  ctx.strokeStyle='#080a0e';ctx.lineWidth=3;ctx.stroke(buildingPaths[b.kind]||buildingPaths.city);ctx.restore();
   if(b.kind==='capital'&&zoom>.39){
    capitalLabels.push({b,x,footY,spriteH,ownerColor});
   }
@@ -771,9 +762,9 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
    const box={x:x-tw/2,y:ly-lh/2,w:tw,h:lh};
    if(labelBoxes.some(r=>box.x<r.x+r.w&&box.x+box.w>r.x&&box.y<r.y+r.h&&box.y+box.h>r.y))continue;
    labelBoxes.push(box);
-   ctx.fillStyle='#283a31ef';ctx.strokeStyle=ownerColor;ctx.lineWidth=1.2/Math.max(.5,zoom);
+   ctx.fillStyle='#101218f2';ctx.strokeStyle=ownerColor;ctx.lineWidth=1.2/Math.max(.5,zoom);
    ctx.beginPath();ctx.roundRect(x-tw/2,ly-lh/2,tw,lh,8/Math.max(.5,zoom));ctx.fill();ctx.stroke();
-   ctx.fillStyle='#f1fff6';ctx.fillText(label,x,ly);
+   ctx.fillStyle='#f1f5fa';ctx.fillText(label,x,ly);
  }
  // Incoming hostile fronts are highlighted on the battlefield, not only in the HUD.
  for(const a of activeThreats){
@@ -785,7 +776,7 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   ctx.restore();
  }
  for(const a of state.armies){const old=oldArmyPositions.get(a.id),t=Math.min(1,(performance.now()-movementStart)/260),x=((old?old.x+(a.x-old.x)*t:a.x)+.5)*TILE,y=((old?old.y+(a.y-old.y)*t:a.y)+.5)*TILE;if(x*zoom+camX<-50||x*zoom+camX>w+50||y*zoom+camY<-50||y*zoom+camY>h+50)continue;
-  ctx.fillStyle='#0d2234';ctx.strokeStyle=(a.owner===myId&&a.initialStrength&&a.strength/a.initialStrength<.2)?'#ff968e':color(a.owner);ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(x,y,8.5,0,2*Math.PI);ctx.fill();ctx.stroke();ctx.fillStyle='#ffffff';ctx.font='700 7px system-ui';ctx.fillText('↗',x,y+.5);
+  ctx.fillStyle='#101218';ctx.strokeStyle=(a.owner===myId&&a.initialStrength&&a.strength/a.initialStrength<.2)?'#ff968e':color(a.owner);ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(x,y,8.5,0,2*Math.PI);ctx.fill();ctx.stroke();ctx.fillStyle='#ffffff';ctx.font='700 7px system-ui';ctx.fillText('↗',x,y+.5);
   if(zoom>0.27){ctx.font='700 '+Math.max(8,9/Math.max(.8,zoom))+'px system-ui';const n=number(a.strength);ctx.fillStyle='rgba(255,255,255,.95)';ctx.beginPath();ctx.roundRect(x-20,y+9,40,12,5);ctx.fill();ctx.fillStyle='#0f1720';ctx.fillText(n,x,y+15);}
   if(a.owner===myId&&a.targetOwner){ctx.strokeStyle=hexAlpha(color(a.owner),.55);ctx.setLineDash([2,3]);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo((a.tx+.5)*TILE,(a.ty+.5)*TILE);ctx.stroke();ctx.setLineDash([]);}
  }

@@ -420,3 +420,86 @@ body :is(button,input,select,summary){font-family:var(--ui-font)!important}
 #game #quickBuild .quick-build-item.chosen{background:#d5e8ca!important;border-color:#44714c!important}
 #waiting :is(.room-token-label,.room-members-title,.player-row,.room-settings,.room-rules,.room-foot){color:#47583f!important}
 #waiting :is(.room-settings,.room-rules,.player-row) :is(span,small,strong,p,label){color:#47583f!important}
+
+/* v28 NEON: complete palette reset across the three screens; keep existing layout mechanics.
+   Shape = building type. Neon color = player. White = content. Pink = danger. */
+:root{--ui-bg:#090c11;--ui-bg-high:#171c25;--ui-surface:#121720;--ui-surface-raised:#1a202b;--ui-surface-muted:#1e2531;--ui-ink:#eef2f8;--ui-muted:#b0bac9;--ui-border:#353f50;--ui-border-strong:#465265;--ui-primary:#39d5ff;--ui-primary-hover:#7be5ff;--ui-success:#b6f36a;--ui-danger:#ff5d80;--ui-radius:12px;--ui-radius-lg:16px;--ui-focus:#39d5ff;--ui-shadow:none;--ui-shadow-soft:none;color-scheme:dark}
+html,body{background:#090c11!important;color:#eef2f8!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game){background:#090c11!important;color:#eef2f8!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) *{background-image:none!important;border-image:none!important;box-shadow:none!important;text-shadow:none!important;color:inherit!important;border-color:#353f50!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) *:not([style*="background"]){background-color:transparent!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(button,input,select,summary){border-radius:10px!important;font-weight:650!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(button,summary){transition:background-color .12s,border-color .12s!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(button,input,select){color:#eef2f8!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(input,select){background:#0d1119!important;border:1px solid #465265!important;min-height:44px!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) input::placeholder{color:#9ca9bd!important;opacity:1!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) button{background:#1e2531!important;border:1px solid #465265!important;transform:none!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) button:hover:not(:disabled){border-color:#39d5ff!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) button:active:not(:disabled){background:#293547!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) button:disabled{background:#191e27!important;color:#a0aaba!important;opacity:1!important;border-color:#353f50!important;cursor:not-allowed!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(p,small,label,.card-subtitle,.room-foot,.build-meta,.tech-availability,.target-detail,.map-hint){color:#b0bac9!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(h1,h2,h3,strong,b){color:#eef2f8!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.entry-card,.waiting-card,.start-choice,.start-settings,.join-inputs,#sidebar,#economyPanel,#armiesPanel,#contextCard,#quickLeadersPanel,#targetPreview,#quickBuild,#resultSheet,.tutorial section){background:#121720!important;border:1px solid #353f50!important;border-radius:16px!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.room-invite,.room-settings,.room-rules,.player-row,.build-btn,.tech-item,.dip-item,.info-stat,.ledger-item,.army-line,.result-stat,.economy-army,.threat-item,.target-forecast){background:#1a202b!important;border:1px solid #353f50!important;border-radius:10px!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.start-choice-primary,.room-share,#startButton,#readyButton,.primary,.dip-accept,[data-research]:not(:disabled),[data-context-upgrade]:not(:disabled),#developButton,.tabbar button.active){background:#39d5ff!important;color:#08131b!important;border-color:#39d5ff!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.start-choice-primary,.room-share,#startButton,#readyButton,.primary,.dip-accept,[data-research]:not(:disabled),[data-context-upgrade]:not(:disabled),#developButton,.tabbar button.active) :is(strong,span,small,b){color:#08131b!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.secondary,.leave-room,.result-exit,#dockToggle,.target-diplomacy){background:#1e2531!important;color:#eef2f8!important;border-color:#465265!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.start-emblem,.choice-symbol,.brand-symbol,.build-icon){background:#1e2531!important;border:1px solid #353f50!important;color:#eef2f8!important;border-radius:12px!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .start-choice-primary .choice-symbol{background:#0d2530!important;color:#39d5ff!important;border-color:#0d2530!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .start-choice-primary .choice-symbol *{color:#39d5ff!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .start-brand{border-color:#353f50!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .start-brand small{letter-spacing:.09em!important;font-size:10px!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .start-actions h1{font-size:28px!important;letter-spacing:-.04em!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .start-choice{min-height:76px!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.room-token-label,.room-state,.room-state-dot,.feedback-dot){color:#b6f36a!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.room-state-dot,.feedback-dot){background:#b6f36a!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) #showCode{font-variant-numeric:tabular-nums;color:#39d5ff!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .topbar{background:#10141c!important;border-bottom:1px solid #353f50!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .topbar :is(.top-stat>span,.top-stat small){color:#b0bac9!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) #resourceSummary.resource-hud{background:#121720!important;border-bottom:1px solid #353f50!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) #resourceSummary.resource-hud :is(span,small){color:#b0bac9!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) #resourceSummary.resource-hud b{color:#eef2f8!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .game-feedback{background:#10141c!important;border-bottom:1px solid #353f50!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.topbar .square-button,.map-toolbar button,#minimapWrap,#minimapToggle){background:#171d27!important;color:#eef2f8!important;border-color:#465265!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) #minimapWrap{border-radius:12px!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) #minimapToggle{border:0!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .zoom-glyph{font-size:27px!important;line-height:1!important;font-weight:500!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.map-view,.game-layout){background:#090c11!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.sidebar-heading,.tabbar){background:#171d27!important;border-color:#353f50!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .tabbar button{background:transparent!important;color:#b0bac9!important;border:0!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .tabbar button.active{background:#39d5ff!important;color:#08131b!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.building-art,#placingBuildIcon){filter:none!important;image-rendering:auto!important;object-fit:contain!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .build-icon{width:52px!important;height:52px!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .build-icon .building-art{width:32px!important;height:32px!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .quick-build-item .building-art{width:34px!important;height:34px!important;flex:0 0 34px!important;margin:6px!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .quick-build-item{background:#1a202b!important;min-height:114px!important;opacity:1!important;filter:none!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .quick-build-item.chosen{background:#19333d!important;border-color:#39d5ff!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.build-copy strong,.tech-heading strong,.dip-heading strong){color:#eef2f8!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.build-gain,.tech-next,.can-research){color:#b6f36a!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .tech-next{background:#202d22!important;border-color:#b6f36a!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.cost-unit,.tech-cost .cost-unit){background:#252c38!important;color:#dfe6f1!important;border-radius:5px!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.build-meta,.build-short,.tech-cost,.tech-availability,.info-stat span){color:#b0bac9!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.resource-strip,.resource-ledger){background:transparent!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.is-negative,.resource-negative,.dip-danger,.error,.context-next small){color:#ff8da5!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.resource-low,.hud-alert.danger){background:#34202b!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.incoming-attack,.threat-rail,.threat-list){background:#28151f!important;border-color:#ff5d80!important;color:#ffe5ec!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .incoming-icon{background:#ff5d80!important;color:#12090d!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) #frontCountBadge{background:#ff5d80!important;color:#12090d!important;border-color:#10141c!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .placing-build{background:#122831!important;border:1px solid #39d5ff!important;color:#eef2f8!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.target-quick-percents button.active,.percent-presets button.active){background:#39d5ff!important;color:#08131b!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.target-actions .primary,.target-diplomacy){background:#39d5ff!important;color:#08131b!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.panel-backdrop,.aux-backdrop){background:rgba(0,0,0,.68)!important;backdrop-filter:blur(3px)!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.tutorial,.victory-screen){background:rgba(0,0,0,.8)!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.context-benefit,.context-next){color:#d4deec!important;background:#1a202b!important;border-color:#353f50!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.result-emblem,.incoming-action,.target-forecast){color:#eef2f8!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) #resultExit{color:#b0bac9!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .ui-icon{color:inherit!important;fill:currentColor!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) #resourceSummary .ui-icon{color:#b0bac9!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(.map-battle-controls,.attack-numbers,.percent-pill){background:#121720!important;color:#eef2f8!important;border-color:#353f50!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .map-battle-controls.collapsed{background:transparent!important;border:0!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) #battleDock.collapsed .dock-toggle{background:#171d27!important;color:#eef2f8!important;border:1px solid #465265!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) #dockToggle .ui-icon{color:#eef2f8!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) #developButton .ui-icon{color:#08131b!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(#quickBuildChoices,.tab-content){scrollbar-color:#465265 #121720!important;scrollbar-width:thin!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) input[type=range]{accent-color:#39d5ff!important}
+#toast{background:#171d27!important;color:#eef2f8!important;border:1px solid #465265!important;box-shadow:none!important}

@@ -2,7 +2,7 @@
 (function(root,factory){const api=factory();if(typeof module!=='undefined'&&module.exports)module.exports=api;root.BKEngine=api;})(typeof window!=='undefined'?window:globalThis,function(){
 'use strict';
 const W=160,H=104,MAX=4,LAND=[1,2,3,4,5,6];
-const COLORS=['#2F80ED','#27AE60','#F2994A','#EB5757','#9B51E0','#14B8A6','#F2C94C','#56CCF2','#BB6BD9','#F97316','#10B981','#6366F1','#FB7185','#84CC16'];
+const COLORS=['#39D5FF','#B6F36A','#FFAE57','#FF5D80','#B38CFF','#59E2C5','#FFE66B','#88A4FF','#EF96E6','#FF885D','#8CE3A1','#C3B5FF','#F8B9CA','#B7CCD9'];
 const KINDS={farm:{name:'Ферма',cost:{wood:45,stone:10},income:'food'},lumber:{name:'Лесопилка',cost:{wood:40,stone:15},income:'wood'},quarry:{name:'Каменоломня',cost:{wood:45,stone:20},income:'stone'},mine:{name:'Шахта',cost:{wood:55,stone:55},income:'gold'},barracks:{name:'Казармы',cost:{wood:100,stone:65,gold:35}},fort:{name:'Крепость',cost:{wood:105,stone:130,gold:55}},city:{name:'Город',cost:{wood:165,stone:150,gold:100}}};
 const TECH={economy:{name:'Экономика',base:{gold:120,wood:80}},war:{name:'Военное дело',base:{gold:135,stone:75}},logistics:{name:'Логистика',base:{gold:100,wood:80}}};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
