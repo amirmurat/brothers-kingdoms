@@ -23,7 +23,7 @@ function run(){
  const removal=E.action(s,user,{type:'erasePlanCells',cells:[a,d]});
  assert(removal.ok);assert.equal(removal.deleted,2);
  assert.equal(s.attackPlans.length,1);assert.equal(s.attackPlans[0].owner,other);
- for(const cells of [[],[-1],[E.W*E.H],[2.5],Array(3501).fill(a)]){
+ for(const cells of [[],[-1],[E.W*E.H],[2.5],Array(E.W*E.H+1).fill(a)]){
   assert.equal(E.action(s,user,{type:'erasePlanCells',cells}).ok,false);
  }
 }
