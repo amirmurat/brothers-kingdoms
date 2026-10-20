@@ -84,3 +84,6 @@ Adaptations: original black backgrounds removed, fills recolored for visibility,
 
 ### v55 — Paint attack zones (preview)
 - Attack now uses a direct tile brush instead of a closed outline. Multiple strokes build one area; Clear resets it; Review attack checks border contact, connectivity, single target owner and the 2–3,500 cell limit. Edit area preserves painted cells. Existing conquest, war and peace remain host-authoritative. Preview branch only; physical Safari and multiplayer tests pending.
+
+### v56 — direct brush attack UX (preview)
+- Brush size (1–6 tile radius) and committed troops (5–95%) sliders now share the Paint Attack Zone panel. The Exit, Clear and Start offensive buttons are aligned on one row; Start dispatches the validated painted region directly, with no second review step. Ordinary taps outside your kingdom no longer show the old attack arrow. Host-authoritative zone, war and peace mechanics remain. iPhone Safari and live multiplayer still need testing.
