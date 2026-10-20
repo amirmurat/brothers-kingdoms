@@ -368,6 +368,18 @@ function sendNextPlannedWave(s,plan){
  log(s,'Reinforcements launched for '+p.name+' offensive plan.');
  return true;
 }
+// Existing v56 solo saves stored painted zones only on their current army.
+function adoptLegacyOffensives(s){
+ s.attackPlans??=[];
+ for(const a of s.armies){
+  if(!Array.isArray(a.zoneCells)||a.planId||a.strength<=0||person(s,a.owner)?.bot)continue;
+  const p=person(s,a.owner);if(!alive(p))continue;
+  const original=a.initialStrength||a.strength;
+  const estimated=clamp(Math.round(original/Math.max(1,original+p.troops)*100),5,95);
+  const plan={id:'p'+(++s.nonce),owner:a.owner,targetOwner:a.targetOwner,zoneCells:a.zoneCells,percent:estimated,initialStrength:original,waves:1,nextWaveTick:s.tick+4};
+  a.planId=plan.id;s.attackPlans.push(plan);
+ }
+}
 function advanceOffensivePlans(s){
  if(!s.attackPlans?.length)return;
  for(const plan of [...s.attackPlans]){
@@ -492,6 +504,7 @@ function combatStep(s){if(s.phase!=='playing')return;
  s.armies=s.armies.filter(a=>a.strength>=8);
 }
 function tick(s){if(s.phase!=='playing')return;s.tick++;
+ adoptLegacyOffensives(s);
  for(const p of s.players){if(!alive(p))continue;income(s,p);}
  combatStep(s);
  for(const p of s.players){if(!p.eliminated&&p.land<=0){p.eliminated=true;p.troops=0;s.armies=s.armies.filter(a=>a.owner!==p.id);log(s,p.name+' lost all territory.');}}
