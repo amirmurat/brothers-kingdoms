@@ -823,7 +823,8 @@ function refreshQuickBuild(){
  $('quickBuildHelp').textContent=description;
  $('placingBuild').classList.toggle('hidden',!buildMode||quickBuildOpen);
  if(buildMode){
-  $('placingBuildText').textContent=E.KINDS[buildMode].name+' · '+Object.entries(E.costBuilding(state,myId,buildMode)).map(([r,n])=>n+' '+nameResource[r]).join(' · ');
+  $('placingBuildName').textContent=E.KINDS[buildMode].name;
+  $('placingBuildCost').textContent=Object.entries(E.costBuilding(state,myId,buildMode)).map(([r,n])=>hudNumber(n)+' '+nameResource[r]).join(' · ');
   $('placingBuildIcon').src='assets/shapes/'+buildMode+'.svg';
  }
 }

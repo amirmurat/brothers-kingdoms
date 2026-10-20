@@ -1558,8 +1558,33 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
 #game#game#game #quickBuild .cost-unit{white-space:nowrap!important}
 #game#game#game #quickBuild .cost-missing{color:#ff9ba9!important}
 #game#game#game #quickBuild .quick-build-help{display:block!important;margin-top:9px!important;font-size:11px!important;line-height:1.4!important;color:#b5c6d7!important}
-#game#game#game #placingBuild{max-width:calc(100% - 16px)!important;box-sizing:border-box!important}
-#game#game#game #placingBuildText{min-width:0!important;overflow-wrap:anywhere!important;white-space:normal!important;line-height:1.35!important}
+/* Placement is a full-width compact bar, never a shrink-to-fit flex chip. */
+#game#game#game #placingBuild{
+ display:grid!important;grid-template-columns:32px minmax(0,1fr) auto 44px!important;
+ align-items:center!important;gap:8px!important;
+ width:min(460px,calc(100% - 16px))!important;max-width:calc(100% - 16px)!important;
+ left:50%!important;right:auto!important;bottom:calc(8px + env(safe-area-inset-bottom))!important;
+ transform:translateX(-50%)!important;box-sizing:border-box!important;padding:8px!important;
+ max-height:none!important;border-radius:12px!important;
+}
+#game#game#game #placingBuildIcon{width:32px!important;height:32px!important;margin:0!important}
+#game#game#game #placingBuildText{
+ display:flex!important;flex-direction:column!important;gap:3px!important;
+ min-width:0!important;width:100%!important;overflow:hidden!important;
+ white-space:normal!important;overflow-wrap:normal!important;word-break:normal!important;line-height:1.3!important;
+}
+#game#game#game #placingBuildName{
+ display:block!important;min-width:0!important;white-space:nowrap!important;overflow:hidden!important;
+ text-overflow:ellipsis!important;font-size:12px!important;line-height:17px!important;
+}
+#game#game#game #placingBuildCost{
+ display:block!important;min-width:0!important;white-space:normal!important;
+ overflow-wrap:normal!important;word-break:normal!important;font-size:10px!important;line-height:14px!important;
+ color:#bed0dc!important;font-weight:500!important;
+}
+#game#game#game #placingBuild #changeBuild{width:auto!important;min-width:62px!important;padding:7px!important;font-size:11px!important}
+#game#game#game #placingBuild #stopBuild{width:44px!important;min-width:44px!important;flex:none!important}
+
 #game#game#game :is(#contextBody .context-heading,#contextBody .context-effect,#contextBody .context-upgrade-price>div,#sessionPanel .session-action-list){min-width:0!important}
 #game#game#game #contextBody .context-upgrade-price>div{display:flex!important;flex-wrap:wrap!important;gap:6px!important}
 #game#game#game #contextCard{box-sizing:border-box!important;max-height:calc(100dvh - 24px)!important;overflow-y:auto!important}
@@ -1591,3 +1616,10 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
 #game#game#game .army-line>div{grid-column:1/-1!important;min-width:0!important}
 #game#game#game .army-line :is(strong,small){display:block!important;min-width:0!important;white-space:normal!important;overflow-wrap:anywhere!important}
 #game#game#game .army-line button{min-width:0!important;width:100%!important}
+
+/* Exactly one message owns the feedback slot: danger > toast > ordinary notice.
+   Match the specificity of the current message layout, not legacy selectors. */
+#game#game#game #gameFeedback:has(#gameToast:not(.hidden)) #hudAlert:not(.danger){display:none!important}
+#game#game#game #gameFeedback:has(#hudAlert.danger:not(.hidden)) #gameToast{display:none!important}
+#game#game#game #gameFeedback{display:block!important}
+#game#game#game #gameFeedback:has(#hudAlert.hidden):has(#gameToast.hidden){display:none!important}

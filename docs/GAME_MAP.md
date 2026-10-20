@@ -507,3 +507,10 @@ _Актуальный реестр, извлечённый из `index.html` н�
 - Border cache now also invalidates on territoryRevision within the same tick.
 - Engine build/cache tags v67. Main untouched; all changes on design/visual-review-v26.
 - Eleven suites passed in available V8 adapters: 7 offensive regressions, Cloudflare client/server, building pricing, UI window behavior. No usable shell/browser environment; Node commands, real CSS layout, physical iPhone Safari and separate-network multiplayer not executed in this pass. Actual Cloudflare deployment check is reported separately after commit.
+
+## v68 — screenshot-driven placement and feedback repair (21.10.2026)
+- User iPhone screenshot showed placement label compressed to 1–2 characters per line and two concurrent feedback messages. v67's static/DOM checks did not establish real CSS geometry.
+- Placement has explicit responsive width and four grid columns (icon, flexible copy, Change, Close); name and prices are separate nodes. Name ellipsizes on one line, resource words wrap normally. Removed anywhere-wrapping from this compact component.
+- Current feedback precedence uses the same specificity as its layout: danger > toast > ordinary notice; one message in the slot.
+- Cache/engine v68. Added tests/mobile-layout.cjs and GitHub Mobile layout workflow: real Chromium and WebKit at 320x568, 390x780, 844x390; actual bounds, feedback priority, Research tool visibility and three-screen transitions. Browser CI status must be verified after commit; physical Safari still separate.
+- Existing UI transitions, Cloudflare client and build-marker suites passed in V8 after this change. Main unchanged.

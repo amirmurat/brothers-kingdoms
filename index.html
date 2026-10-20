@@ -9,7 +9,7 @@
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
 <link rel="stylesheet" href="styles/legacy.css?v=49-visible-camp"/>
-<link rel="stylesheet" href="styles/theme.css?v=67-layout-prices"/>
+<link rel="stylesheet" href="styles/theme.css?v=68-build-chip"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -131,7 +131,7 @@
   <div id="quickBuildChoices" class="quick-build-choices" role="group" aria-label="Available buildings"></div>
   <div class="quick-build-help" id="quickBuildHelp">Choose a building to highlight valid and invalid tiles.</div>
 </div>
-<div id="placingBuild" class="placing-build hidden" role="status"><img id="placingBuildIcon" alt=""/><span id="placingBuildText">Choose a tile</span><button type="button" id="changeBuild" aria-label="Choose another building">Change</button><button type="button" id="stopBuild" aria-label="Cancel building"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button></div>
+<div id="placingBuild" class="placing-build hidden" role="status"><img id="placingBuildIcon" alt=""/><span id="placingBuildText"><strong id="placingBuildName">Choose a building</strong><small id="placingBuildCost">Then choose a tile</small></span><button type="button" id="changeBuild" aria-label="Choose another building">Change</button><button type="button" id="stopBuild" aria-label="Cancel building"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button></div>
 
 <div class="map-battle-controls collapsed" id="battleDock"><button aria-expanded="false" aria-label="Set army size" class="dock-toggle" id="dockToggle"><svg class="ui-icon dock-symbol" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#sword"></use></svg> <span class="dock-name">Troops</span> <span id="dockSummary">30%</span> <span aria-hidden="true" class="dock-chevron">⌄</span></button>
 <div class="control-header"><div><small>ATTACK SIZE</small><strong id="modeLabel">Offensive</strong></div><div class="percent-pill" id="percentLabel">30%</div></div>
@@ -174,8 +174,8 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="server-config.js?v=67-layout-prices"></script>
-<script src="engine.js?v=67-layout-prices"></script>
+<script src="server-config.js?v=68-build-chip"></script>
+<script src="engine.js?v=68-build-chip"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=67-layout-prices"></script>
+<script src="game.js?v=68-build-chip"></script>
 </body></html>
