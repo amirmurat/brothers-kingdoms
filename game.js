@@ -286,6 +286,7 @@ function beginAttackPlanner(){
  $('warPanel').classList.add('hidden');$('warChip').setAttribute('aria-expanded','false');
  clearTimeout(longPressTimer);dragAttack=null;pointerStart=null;pressed.clear();
  attackPlanner={mode:'paint',cells:new Set(),targetOwner:null,pointerId:null,lastPoint:null,brushPoint:null,zoneCells:null,brushRadius:2};
+ $('planTroopsPercent').value=String(percent);$('planBrushSize').value='2';
  $('game').classList.add('plan-drawing');$('game').classList.remove('plan-reviewing');
  $('planGuide').classList.remove('hidden');$('planReview').classList.add('hidden');
  $('planAttackButton').setAttribute('aria-pressed','true');
@@ -294,15 +295,15 @@ function beginAttackPlanner(){
 // A brush paints cross-shaped five-tile stamps, keeping exactly one target owner.
 function brushAt(pt){
  const plan=attackPlanner;if(plan?.mode!=='paint')return;
- const radius=plan.brushRadius;
+ const radius=plan.brushRadius,candidates=[];
  for(let dy=-radius;dy<=radius;dy++)for(let dx=-radius;dx<=radius;dx++){
   if(dx*dx+dy*dy>radius*radius)continue;
   const x=pt.x+dx,y=pt.y+dy;if(!E.inside(x,y)||!E.tile(state,x,y))continue;
   const owner=E.owner(state,x,y);if(owner===myId||mine()?.allies.includes(owner))continue;
-  if(plan.targetOwner===null)plan.targetOwner=owner;
-  if(owner!==plan.targetOwner||plan.cells.size>=3500)continue;
-  plan.cells.add(y*E.W+x);
+  candidates.push({owner,index:y*E.W+x,d:dx*dx+dy*dy});
  }
+ if(plan.targetOwner===null&&candidates.length)plan.targetOwner=candidates.reduce((best,c)=>c.d<best.d?c:best).owner;
+ for(const c of candidates)if(c.owner===plan.targetOwner&&plan.cells.size<3500)plan.cells.add(c.index);
 }
 // Interpolate missing pointer events so quick drags stay continuous.
 function paintLine(from,to){
@@ -350,7 +351,8 @@ function refreshPaintGuide(){
  $('planReviewButton').disabled=!!check.error||Math.floor((mine()?.troops||0)*percent/100)<35||(state.armies||[]).filter(a=>a.owner===myId).length>=12;
  $('planBrushValue').textContent=String(plan.brushRadius)+' tiles';
  $('planTroopsValue').textContent=percent+'% · '+number(Math.floor((mine()?.troops||0)*percent/100));
- $('planGuideHint').textContent=check.error||'Ready to start the offensive.';
+ const lowTroops=Math.floor((mine()?.troops||0)*percent/100)<35;
+ $('planGuideHint').textContent=check.error||(lowTroops?'At least 35 troops required.':'Ready to start the offensive.');
 }
 function clearPaintedZone(){
  const plan=attackPlanner;if(plan?.mode!=='paint')return;
