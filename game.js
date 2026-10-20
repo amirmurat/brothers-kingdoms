@@ -75,7 +75,7 @@ function show(screen){
 }
 function error(s){$('lobbyError').textContent=s;toast(s);}
 // One auxiliary surface at a time. No panel stacks above another.
-const AUX_IDS=['economyPanel','armiesPanel','quickLeadersPanel','contextCard','sessionPanel','exitPanel'];
+const AUX_IDS=['armiesPanel','quickLeadersPanel','contextCard','sessionPanel','exitPanel'];
 function hideAux(){
  if(menuPausedSolo){pauseSolo=false;menuPausedSolo=false;}
  const closingContext=!$('contextCard').classList.contains('hidden');
@@ -195,7 +195,7 @@ function refreshHudAlert(p){
   if(attackers||hostileBorder){text='Capital under threat — check defenses';kind='danger';action='capital';}
  }
  if(!text&&hudNotice&&Date.now()<hudNotice.until){text=hudNotice.text;kind=hudNotice.kind;action=hudNotice.action;}
- if(!text&&p.troopIncome===0&&p.troops<p.troopCap&&p.res.food<1){text='No food — recruitment stopped';kind='notice';action='economy';}
+ if(!text&&p.troopIncome===0&&p.troops<p.troopCap&&p.res.food<1){text='No food — recruitment stopped';kind='notice';action='build';}
  if(!text){
   const weak=state.armies.find(a=>a.owner===myId&&a.initialStrength>0&&a.strength/a.initialStrength<.15);
   if(weak){text='An offensive is nearly depleted';kind='notice';action='armies';}
@@ -207,7 +207,7 @@ function refreshHudAlert(p){
 }
 $('hudAlert').onclick=()=>{
  if(hudAlertAction==='capital'){centerOnCapital();queueDraw();}
- else if(hudAlertAction==='economy')showAux('economyPanel');
+ else if(hudAlertAction==='build')toggleQuickBuild(true);
  else if(hudAlertAction==='armies'){showAux('armiesPanel');renderArmies();}
  else if(hudAlertAction&&typeof hudAlertAction==='object'){
   const {x,y}=hudAlertAction;camX=canvas.clientWidth/2-(x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(y+.5)*TILE*zoom;clampCamera();queueDraw();
@@ -415,7 +415,6 @@ function updateUI(){const p=mine();if(!p)return;
  }else{
   patchHtml('infoPanel',`<div class="info-stat"><span>Territory</span><strong>${number(p.land)} / ${number(state.landTotal)} · ${(p.land/Math.max(1,state.landTotal)*100).toFixed(1)}%</strong></div><div class="info-stat"><span>To victory (100%)</span><strong>${Math.max(0,(100-p.land/Math.max(1,state.landTotal)*100)).toFixed(1)}%</strong></div><div class="info-stat"><span>Armies</span><strong>${state.armies.filter(a=>a.owner===myId).length}/12</strong></div><div class="info-stat"><span>Buildings</span><strong>${state.buildings.filter(b=>b.owner===myId).length}</strong></div>`);patchHtml('events',state.log.map(msg=>`<div>${esc(msg)}</div>`).join(''));
  }
- patchHtml('economyDetails',resourceStrip(p)+`<div class="economy-army"><strong>Army: ${number(p.troops)} / ${number(p.troopCap)}</strong><small>Recruitment: +${number(p.troopIncome||0)}/s ${p.troops>=p.troopCap?'· full':'· depends on food and buildings'}</small><small>Recruitment food consumption: ≈${((p.troopIncome||0)*.2).toFixed(1)}/s</small></div>`);
  patchHtml('accessibleObjects',state.buildings.filter(b=>b.owner===myId).slice(0,30).map(b=>'<li>'+esc(E.KINDS[b.kind]?.name||'Capital')+' '+b.x+','+b.y+'</li>').join('')+state.armies.filter(a=>a.owner===myId).map(a=>'<li>Army '+number(a.strength)+' troops, '+a.x+','+a.y+'</li>').join(''));
  if(state.log?.[0]&&state.tick>3&&state.log[0]!==lastAnnounced){const message=state.log[0];lastAnnounced=message;if(!/researched|completed/i.test(message)&&/captured the capital|eliminated|won|alliance/.test(message.toLowerCase()))toast(message);}
  updateSelection();refreshQuickBuild();
@@ -560,7 +559,7 @@ function renderArmies(){if(!state||!myId)return;const mineArmies=state.armies.fi
 $('armiesToggle').onclick=()=>{showAux('armiesPanel');renderArmies();};
 $('closeArmies').onclick=hideAux;
 $('armiesList').onclick=e=>{const r=e.target.closest('[data-recall-army]'),f=e.target.closest('[data-focus-army]');if(r){if(command({type:'return',id:r.dataset.recallArmy}))renderArmies();}if(f){const a=state?.armies.find(v=>v.id===f.dataset.focusArmy);if(a){camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();hideAux();queueDraw();}}};
-$('resourceSummary').onclick=()=>showAux('economyPanel');$('resourceSummary').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showAux('economyPanel');}};$('closeEconomy').onclick=hideAux;$('pauseMobile').onclick=()=>$('pauseGame').click();$('quickLeaders').onclick=()=>{$('economyPanel').classList.add('hidden');showAux('quickLeadersPanel');};$('closeQuickLeaders').onclick=hideAux;$('nextFront').onclick=()=>{const armies=state?.armies.filter(a=>a.owner===myId)||[];if(!armies.length)return toast('No active armies');const a=armies[frontIndex++%armies.length];camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();selected={kind:'army',id:a.id};updateSelection();hideAux();queueDraw();};
+$('pauseMobile').onclick=()=>$('pauseGame').click();$('quickLeaders').onclick=()=>showAux('quickLeadersPanel');$('closeQuickLeaders').onclick=hideAux;$('nextFront').onclick=()=>{const armies=state?.armies.filter(a=>a.owner===myId)||[];if(!armies.length)return toast('No active armies');const a=armies[frontIndex++%armies.length];camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();selected={kind:'army',id:a.id};updateSelection();hideAux();queueDraw();};
 $('helpButton').onclick=()=>{hideAux();$('tutorial').classList.remove('hidden');$('closeTutorial').focus();};$('helpMenu').onclick=()=>{closePanel();$('helpButton').click();};$('closeTutorial').onclick=()=>{$('tutorial').classList.add('hidden');showTutorialOnce=false;try{localStorage.setItem('bk-v9-tutorial','yes');}catch(_){}$('mapCanvas').focus();};
 $('pauseGame').onclick=()=>{if(!demo)return toast('Pause is only available in solo mode.');pauseSolo=!pauseSolo;$('pauseGame').textContent=pauseSolo?'Resume':'Pause';saveSolo();};
 $('myKingdom').onclick=()=>toast(mine()?.name||'Kingdom');

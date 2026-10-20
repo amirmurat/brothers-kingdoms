@@ -8,8 +8,8 @@
 <meta content="Brothers Kingdoms — real-time conquest strategy. Play against bots or with friends." name="description"/>
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
-<link rel="stylesheet" href="styles/legacy.css?v=41-english"/>
-<link rel="stylesheet" href="styles/theme.css?v=41-english"/>
+<link rel="stylesheet" href="styles/legacy.css?v=42-hud-only"/>
+<link rel="stylesheet" href="styles/theme.css?v=42-hud-only"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -49,7 +49,7 @@
 <div class="top-stat clock-stat" id="hudFronts" role="button" tabindex="0" aria-label="Open my offensives"><span>OFFENSIVES</span><b id="frontCount">0/12</b><small id="networkStatus">ONLINE</small></div>
 <button aria-label="Match menu" class="square-button mobile-menu" id="menuToggle"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#list"></use></svg></button>
 </header>
-<div aria-label="Resources and income: view details" class="top-resources resource-hud" id="resourceSummary" role="button" tabindex="0" title="View economy and income">
+<div aria-label="Resources and income" class="top-resources resource-hud" id="resourceSummary" role="group">
 <div data-resource="food"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#grains"></use></svg><span>FOOD</span><b id="resFood">0</b><small aria-label="Change per second" id="incFood">+0</small></div>
 <div data-resource="wood"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#tree"></use></svg><span>WOOD</span><b id="resWood">0</b><small aria-label="Change per second" id="incWood">+0</small></div>
 <div data-resource="stone"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#mountains"></use></svg><span>STONE</span><b id="resStone">0</b><small aria-label="Change per second" id="incStone">+0</small></div>
@@ -134,9 +134,7 @@
 <button id="exitMatch">Leave match</button>
 <p id="sessionHint"></p></div>
 <div id="exitPanel" class="session-panel hidden" role="dialog" aria-modal="true" aria-labelledby="exitTitle"><h2 id="exitTitle">Leave match?</h2><p id="exitExplanation"></p><div class="exit-actions"><button id="cancelExit">Stay</button><button id="confirmExit">Leave</button></div></div>
-<div class="aux-backdrop hidden" id="auxBackdrop" aria-hidden="true"></div><div aria-label="Leaderboard" class="quick-leaders hidden" id="quickLeadersPanel" role="dialog"><strong>World leaders</strong><div id="quickLeadersList"></div><button class="secondary" id="closeQuickLeaders">Close</button></div><div class="context-card hidden" id="contextCard"><button aria-label="Close details" class="context-close" id="closeContext"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button><div id="contextBody"></div></div><div aria-label="Current offensives" class="armies-panel hidden" id="armiesPanel" role="dialog"><div class="armies-panel-head"><strong>My offensives</strong><button aria-label="Close offensives list" class="square-button" id="closeArmies"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button></div><div id="armiesList" aria-live="polite"></div></div><div aria-label="Economy and income" class="economy-panel hidden" id="economyPanel" role="dialog" aria-modal="false" aria-labelledby="economyTitle">
-<div class="aux-head"><div><small>KINGDOM</small><strong id="economyTitle">Economy</strong></div><button class="icon-close" id="closeEconomy" aria-label="Close economy"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button></div>
-<p class="panel-intro">Stockpiles, production, and army upkeep.</p><div id="economyDetails"></div></div><div aria-label="How to play" aria-modal="true" class="tutorial hidden" id="tutorial" role="dialog"><section><h2>How to play</h2><p><b>1.</b> Tap enemy or neutral land to select a target.</p><p><b>2.</b> Choose the troops to send and confirm your attack. On mobile, hold your land and drag to a target.</p><p><b>3.</b> Reserve troops defend your borders. Improve your economy through the menu.</p><p>Drag to pan and pinch to zoom. Victory requires 100% territory. No time limit.</p><button class="primary large" id="closeTutorial">Got it</button></section></div><div class="victory-screen hidden" id="victory" role="dialog" aria-modal="true" aria-labelledby="victoryName">
+<div class="aux-backdrop hidden" id="auxBackdrop" aria-hidden="true"></div><div aria-label="Leaderboard" class="quick-leaders hidden" id="quickLeadersPanel" role="dialog"><strong>World leaders</strong><div id="quickLeadersList"></div><button class="secondary" id="closeQuickLeaders">Close</button></div><div class="context-card hidden" id="contextCard"><button aria-label="Close details" class="context-close" id="closeContext"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button><div id="contextBody"></div></div><div aria-label="Current offensives" class="armies-panel hidden" id="armiesPanel" role="dialog"><div class="armies-panel-head"><strong>My offensives</strong><button aria-label="Close offensives list" class="square-button" id="closeArmies"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button></div><div id="armiesList" aria-live="polite"></div></div><div aria-label="How to play" aria-modal="true" class="tutorial hidden" id="tutorial" role="dialog"><section><h2>How to play</h2><p><b>1.</b> Tap enemy or neutral land to select a target.</p><p><b>2.</b> Choose the troops to send and confirm your attack. On mobile, hold your land and drag to a target.</p><p><b>3.</b> Reserve troops defend your borders. Build farms and cities to strengthen your economy.</p><p>Drag to pan and pinch to zoom. Victory requires 100% territory. No time limit.</p><button class="primary large" id="closeTutorial">Got it</button></section></div><div class="victory-screen hidden" id="victory" role="dialog" aria-modal="true" aria-labelledby="victoryName">
 <section class="result-sheet" id="resultSheet">
   <div class="result-emblem" id="resultEmblem" aria-hidden="true">★</div>
   <div class="card-eyebrow" id="victoryEyebrow">MATCH ENDED</div>
@@ -150,7 +148,7 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="engine.js?v=41-english"></script>
+<script src="engine.js?v=42-hud-only"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=41-english"></script>
+<script src="game.js?v=42-hud-only"></script>
 </body></html>

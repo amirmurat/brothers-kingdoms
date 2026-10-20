@@ -650,8 +650,7 @@ html,body{background:#090c11!important;color:#eef2f8!important}
 #game#game#game #hudTroops #troopReason{display:none!important}
 #game#game#game .topbar :is(#landShare,.land-progress,#networkStatus){display:none!important}
 #game#game#game .topbar #menuToggle{width:44px!important;min-width:44px!important;max-width:44px!important;height:44px!important;min-height:44px!important;max-height:44px!important;align-self:center!important;justify-self:end!important}
-#game#game#game #resourceSummary{cursor:pointer!important}
-#game#game#game #resourceSummary:focus-visible{outline:2px solid #39d5ff!important;outline-offset:-2px!important}
+#game#game#game #resourceSummary{cursor:default!important}
 #game#game#game #minimapWrap.minimized{width:48px!important;height:48px!important;min-width:48px!important;padding:0!important;border:1px solid #465265!important;box-sizing:border-box!important;left:12px!important;right:auto!important;top:auto!important;bottom:calc(88px + env(safe-area-inset-bottom))!important;overflow:hidden!important;border-radius:12px!important}
 #game#game#game #minimapWrap.minimized #minimapToggle{display:flex!important;align-items:center!important;justify-content:center!important;position:static!important;width:100%!important;height:100%!important;min-width:0!important;max-width:none!important;min-height:0!important;max-height:none!important;padding:0!important;margin:0!important;gap:0!important;border:0!important;border-radius:0!important;box-sizing:border-box!important;line-height:1!important}
 #game#game#game #minimapWrap.minimized #minimapToggle :is(.minimap-label,.minimap-chevron){display:none!important}
