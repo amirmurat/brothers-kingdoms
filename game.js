@@ -411,15 +411,13 @@ function setPreview(t){
  box.dataset.diplomacy=allied?'allied':received?'received':sentOffer?'sent':enemy?.bot?'bot':'offer';
  const building=E.buildingAt(state,t.x,t.y);
  $('targetTitle').textContent=t.type==='redirect'?'Redirect offensive':allied?'Ally: '+enemy.name:enemy?'Territory: '+enemy.name:'Conquer neutral land';
- $('targetDetail').textContent=`${number(sent)} troops · reserve ${number(p.troops-sent)} · ${terrainNames[E.tile(state,t.x,t.y)]}${building?' · '+(E.KINDS[building.kind]?.name||'Capital'):''}`;
+ $('targetDetail').textContent=t.type==='redirect'?`${number(sent)} troops · reserve ${number(p.troops-sent)} · ${terrainNames[E.tile(state,t.x,t.y)]}`:`${terrainNames[E.tile(state,t.x,t.y)]}${building?' · '+(E.KINDS[building.kind]?.name||'Capital'):''} · No troops sent yet`;
  const defense=enemy?Math.round(E.tileDefense(state,owner,t.x,t.y)):0;const averageDefense=enemy&&front.cells.length?Math.round(front.cells.reduce((sum,i)=>sum+E.tileDefense(state,owner,i%E.W,Math.floor(i/E.W)),0)/front.cells.length):0;
- $('targetForecast').textContent=allied?'This territory belongs to an ally. You cannot attack until the alliance ends.':
+ $('targetForecast').textContent=allied?'Allied territory cannot be attacked. End the alliance first.':
    t.type==='redirect'?'Confirm to redirect your army.':
-    'No troops move when selecting a tile. Use Draw attack zone to outline and confirm the exact area.',
    sea?'Sea is impassable. Choose land.':
-   !front.cells.length?'No shared border for an offensive. Diplomacy is still available.':
-   owner?`Front: ${front.cells.length} cells · average defense ${averageDefense} (target ${defense}) · enemy reserve: ${number(enemy?.troops||0)}. Approximate forecast.`:
-   `Conquest begins at the highlighted border section (${front.cells.length} cells), then expands.`;
+   owner?(war?'War is active. Use Draw attack zone to mark a new advance.':'Draw a zone to plan an offensive. The first confirmed attack declares war.'):
+   'Draw an outline from your land and back to it. The area is a plan until you confirm.';
  $('confirmTarget').textContent=t.type==='redirect'?'Change target':'Draw attack zone';
  $('confirmTarget').disabled=allied;
  if(t.type==='redirect'&&!allied&&p.troops-sent<Math.max(75,Math.min(300,p.troopCap*.12)))$('targetForecast').textContent+=' Warning: your reserve will be low after this order.';

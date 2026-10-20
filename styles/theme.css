@@ -1068,3 +1068,6 @@ body :is(input,textarea,[contenteditable="true"]){-webkit-user-select:text!impor
  #game#game#game .plan-review-actions button{min-height:40px!important}
  #game#game#game #planGuide{bottom:5px!important;padding:8px!important}
 }
+
+/* v54: one-tile preview is for planning/diplomacy, not troop allocation. */
+#game#game#game #targetPreview[data-order="send"] #targetQuickPercents{display:none!important}
