@@ -8,8 +8,8 @@
 <meta content="Brothers Kingdoms — real-time conquest strategy. Play against bots or with friends." name="description"/>
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
-<link rel="stylesheet" href="styles/legacy.css?v=45-leaderboard-close"/>
-<link rel="stylesheet" href="styles/theme.css?v=45-leaderboard-close"/>
+<link rel="stylesheet" href="styles/legacy.css?v=46-compact-alert"/>
+<link rel="stylesheet" href="styles/theme.css?v=46-compact-alert"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -61,7 +61,7 @@
 <section class="map-shell">
 <div class="game-feedback" id="gameFeedback" aria-label="Match alerts and connection status">
 <div class="feedback-idle" id="feedbackIdle"><span class="feedback-dot" aria-hidden="true"></span><span id="feedbackStatus">MATCH ACTIVE</span></div>
-<button aria-live="polite" class="hud-alert hidden" id="hudAlert" type="button"><span aria-hidden="true" id="hudAlertIcon">!</span><span id="hudAlertText"></span><span aria-hidden="true">›</span></button>
+<button aria-live="polite" class="hud-alert hidden" id="hudAlert" type="button"><span aria-hidden="true" id="hudAlertIcon">!</span><span id="hudAlertText"></span><span aria-hidden="true" class="hud-alert-arrow">›</span></button>
 <div aria-live="polite" class="game-toast hidden" id="gameToast" role="status"></div>
 </div>
 <div class="map-toolbar">
@@ -133,7 +133,7 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="engine.js?v=45-leaderboard-close"></script>
+<script src="engine.js?v=46-compact-alert"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=45-leaderboard-close"></script>
+<script src="game.js?v=46-compact-alert"></script>
 </body></html>

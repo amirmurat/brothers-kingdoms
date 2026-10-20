@@ -693,8 +693,39 @@ html,body{background:#090c11!important;color:#eef2f8!important}
 
 /* v32: feedback never participates in map layout or changes input coordinates. */
 #game#game#game .map-shell{position:relative!important}
-#game#game#game #gameFeedback{position:absolute!important;top:8px!important;left:12px!important;right:12px!important;width:auto!important;height:36px!important;min-height:36px!important;max-height:36px!important;box-sizing:border-box!important;display:flex!important;z-index:35!important;border:1px solid #465265!important;border-radius:9px!important;pointer-events:none!important}
+/* Compact, content-sized status below HUD: avoid the full-width empty alert frame. */
+#game#game#game #gameFeedback{
+  position:absolute!important;top:10px!important;left:12px!important;right:auto!important;
+  width:max-content!important;max-width:min(360px,calc(100% - 24px))!important;
+  height:36px!important;min-height:36px!important;max-height:36px!important;
+  display:inline-flex!important;align-items:center!important;box-sizing:border-box!important;
+  padding:0 11px!important;z-index:35!important;
+  border:0!important;border-radius:9px!important;
+  background:#151c27!important;color:#eef2f8!important;
+  box-shadow:none!important;pointer-events:none!important;
+}
 #game#game#game #gameFeedback #hudAlert{pointer-events:auto!important}
+#game#game#game #gameFeedback:has(#hudAlert.danger:not(.hidden)){
+  background:#47292d!important;max-width:min(390px,calc(100% - 24px))!important;
+}
+#game#game#game #gameFeedback #hudAlert{
+  gap:7px!important;font-size:12px!important;font-weight:650!important;
+}
+#game#game#game #gameFeedback #hudAlert #hudAlertText{flex:0 1 auto!important}
+#game#game#game #gameFeedback #hudAlert[data-actionable="false"] .hud-alert-arrow{
+  display:none!important;
+}
+#game#game#game #gameFeedback #hudAlert .hud-alert-arrow{
+  flex:0 0 auto!important;color:#b0bac9!important;font-weight:700!important;
+}
+#game#game#game #gameFeedback #hudAlert #hudAlertIcon{
+  width:17px!important;height:17px!important;flex:0 0 17px!important;
+  background:transparent!important;color:#aebdcc!important;font-weight:750!important;
+}
+#game#game#game #gameFeedback #hudAlert.danger #hudAlertIcon{color:#ff9bad!important}
+#game#game#game #gameFeedback .game-toast{
+  width:auto!important;min-width:0!important;color:#eef2f8!important;
+}
 #game#game#game #gameFeedback:has(#hudAlert.hidden):has(#gameToast.hidden){display:none!important}
 
 /* v33: one entry per task; country diplomacy stays with its target. */

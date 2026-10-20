@@ -196,7 +196,7 @@ function refreshHudAlert(p){
   if(weak){text='An offensive is nearly depleted';kind='notice';action='armies';}
  }
  if(!text){box.classList.add('hidden');hudAlertAction=null;return;}
- box.classList.remove('hidden');box.classList.toggle('danger',kind==='danger');
+ box.classList.remove('hidden');box.classList.toggle('danger',kind==='danger');box.dataset.actionable=String(Boolean(action));
  $('hudAlertIcon').textContent=kind==='danger'?'!':'i';$('hudAlertText').textContent=text;
  hudAlertAction=action;box.title=action?'Tap to view this event':text;
 }
@@ -233,7 +233,7 @@ function updateHudSignals(p){
  }
  if(lastHudLand!==null&&lastHudArmies.size){for(const [id,a] of lastHudArmies)if(!currentArmies.has(id)){
   const taken=Number(a.captured||0);
-  warnHud(`Offensive ended${taken?' · conquered '+number(taken)+' cells':''}`, 'notice','armies',5);break;
+  warnHud(`Offensive ended${taken?' · conquered '+number(taken)+' cells':''}`, 'notice',null,3);break;
  }}
  if(lastHudLand===null||state.territoryRevision!==updateHudSignals.lastRevision){
   lastHudOwners=Uint8Array.from(state.owners,v=>v===myId?1:0);updateHudSignals.lastRevision=state.territoryRevision;
