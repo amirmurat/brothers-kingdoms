@@ -190,7 +190,7 @@ function refreshHudAlert(p){
    const id=E.owner(state,x,y);
    if(id!==0&&id!==myId&&!p.allies.includes(id)){hostileBorder=true;break;}
   }
-  if(attackers||hostileBorder){text='Capital under threat — check defenses';kind='danger';action='capital';}
+  if(attackers||hostileBorder){text='Capital threatened · defend';kind='danger';action='capital';}
  }
  if(!text&&hudNotice&&Date.now()<hudNotice.until){text=hudNotice.text;kind=hudNotice.kind;action=hudNotice.action;}
  if(!text&&p.troopIncome===0&&p.troops<p.troopCap&&p.res.food<1){text='No food — recruitment stopped';kind='notice';action='build';}
@@ -201,7 +201,7 @@ function refreshHudAlert(p){
  if(!text){box.classList.add('hidden');hudAlertAction=null;return;}
  box.classList.remove('hidden');box.classList.toggle('danger',kind==='danger');box.dataset.actionable=String(Boolean(action));
  $('hudAlertIcon').textContent=kind==='danger'?'!':'i';$('hudAlertText').textContent=text;
- hudAlertAction=action;box.title=action?'Tap to view this event':text;
+ hudAlertAction=action;box.title=text+(action?' · tap to locate':'');
 }
 $('hudAlert').onclick=()=>{
  if(hudAlertAction==='capital'){centerOnCapital();queueDraw();}
@@ -232,7 +232,7 @@ function updateHudSignals(p){
  if(lastHudLand!==null&&p.land<lastHudLand){
   let lost=null;
   if(lastHudOwners){for(let i=0;i<state.owners.length;i++)if(lastHudOwners[i]&&state.owners[i]!==myId){lost={x:i%E.W,y:Math.floor(i/E.W)};break;}}
-  warnHud(`Lost ${number(lastHudLand-p.land)} territory cells`, 'danger',lost,7);
+  warnHud(`Lost ${number(lastHudLand-p.land)} cells · locate`, 'danger',lost,7);
  }
  if(lastHudLand!==null&&lastHudArmies.size){for(const [id,a] of lastHudArmies)if(!currentArmies.has(id)){
   const taken=Number(a.captured||0);
