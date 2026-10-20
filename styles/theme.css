@@ -543,3 +543,6 @@ html,body{background:#090c11!important;color:#eef2f8!important}
 #game#game#game #quickBuild.with-descriptions .quick-build-item{width:auto!important;min-width:0!important;min-height:150px!important;padding:10px!important}
 #game#game#game .quick-description{white-space:normal!important;font-size:11px!important;line-height:1.35!important;color:#b0bac9!important}
 #game#game#game #sessionPanel .square-button .ui-icon{color:#eef2f8!important}
+
+#game#game#game :is(#sessionPanel,#exitPanel) .hidden{display:none!important}
+#lobby#lobby#lobby #demoButton .choice-symbol{color:#39d5ff!important}

@@ -50,7 +50,7 @@ function resourceStrip(p){const {gross,recruited,foodNet}=resourceRates(p);retur
 const costText=c=>Object.entries(c||{}).map(([k,v])=>({wood:'Древесина',stone:'Камень',gold:'Золото',food:'Еда'}[k]||k)+' '+v).join(' · ');
 const number=n=>Math.floor(n||0).toLocaleString('ru-RU');
 let dragAttack=null,longPressTimer=null,dragHint=null;
-let defeatDismissed=false;
+let defeatDismissed=false,menuPausedSolo=false;
 let state=null,myId=null,host=false,demo=false,peer=null,upstream=null,code='',connections=new Map(),lastSendTime=new Map(),phaseShown='',timer=0;
 let lastHudPlayer=null,lastHudTick=-1,lastHudLand=null,lastHudOwners=null,lastHudArmies=new Map(),hudNotice=null,hudAlertAction=null;
 let activeThreats=[],announcedThreats=new Set(),lastThreatSignature="",attackFocusIndex=0;
@@ -76,6 +76,7 @@ function error(s){$('lobbyError').textContent=s;toast(s);}
 // One auxiliary surface at a time. No panel stacks above another.
 const AUX_IDS=['economyPanel','armiesPanel','quickLeadersPanel','contextCard','sessionPanel','exitPanel'];
 function hideAux(){
+ if(menuPausedSolo){pauseSolo=false;menuPausedSolo=false;}
  const closingContext=!$('contextCard').classList.contains('hidden');
  for(const id of AUX_IDS)$(id)?.classList.add('hidden');
  $('auxBackdrop')?.classList.add('hidden');document.body.classList.remove('aux-open');
@@ -89,7 +90,7 @@ function showAux(id){
  if(id!=='contextCard')selected=null;
  toggleQuickBuild(false);setPreview(null);$('battleDock').classList.add('collapsed');
  if(panelOpen)closePanel();
- el.classList.remove('hidden');$('auxBackdrop')?.classList.remove('hidden');document.body.classList.add('aux-open');
+ el.classList.remove('hidden');el.querySelector('button:not([disabled]):not(.hidden)')?.focus();$('auxBackdrop')?.classList.remove('hidden');document.body.classList.add('aux-open');
 }
 
 function name(){const val=$('nickname').value.trim().slice(0,18)||'Королевство';try{localStorage.setItem('bk-name',val);}catch(_){ }return val;}
@@ -246,7 +247,7 @@ function updateHudSignals(p){
 }
 
 function getToken(){try{let t=sessionStorage.getItem('bk-token-'+code);if(!t){t=crypto.randomUUID();sessionStorage.setItem('bk-token-'+code,t);}return t;}catch(_){return code+'-'+name();}}
-function saveSolo(){if(!demo||!state||state.phase!=='playing')return false;try{localStorage.setItem('bk-v14-save',JSON.stringify(state));return true;}catch(_){return false;}}
+function saveSolo(){if(!demo||!state||state.phase!=='playing'||mine()?.eliminated)return false;try{localStorage.setItem('bk-v14-save',JSON.stringify(state));return true;}catch(_){return false;}}
 async function copyText(t){try{if(!navigator.clipboard?.writeText)throw Error('clipboard');await navigator.clipboard.writeText(t);toast('Скопировано');}catch(_){window.prompt('Скопируй приглашение или код:',t);}}
 function canPay(p,c){return Object.entries(c||{}).every(([k,v])=>(p.res[k]||0)>=v);}
 function deficit(p,c){return Object.entries(c||{}).filter(([k,v])=>(p.res[k]||0)<v).map(([k,v])=>({wood:'Древесина',stone:'Камень',gold:'Золото',food:'Еда'}[k]+': −'+(v-(p.res[k]||0)))).join(', ');}
@@ -681,10 +682,10 @@ function repaintWorld(){
  if(!worldLayer){worldLayer=document.createElement('canvas');worldLayer.width=E.W*6;worldLayer.height=E.H*6;}
  if(!pixelLayer){pixelLayer=document.createElement('canvas');pixelLayer.width=E.W;pixelLayer.height=E.H;}
  const c=pixelLayer.getContext('2d',{alpha:false});const img=c.createImageData(E.W,E.H);
- const colors=state.players.map(p=>{const x=parseInt(p.color.slice(1),16);return[(x>>>16)&255,(x>>>8)&255,x&255];});
+ const colors=Object.fromEntries(state.players.map(p=>{const x=parseInt(p.color.slice(1),16);return[p.id,[(x>>>16)&255,(x>>>8)&255,x&255]];}));
  const owners=state.owners,tiles=state.tiles,d=img.data;
  for(let i=0;i<owners.length;i++){
-  const terr=TERRAIN_RGB[tiles[i]]||TERRAIN_RGB[1],id=owners[i],col=id?colors[id-1]:null;
+  const terr=TERRAIN_RGB[tiles[i]]||TERRAIN_RGB[1],id=owners[i],col=id?colors[id]:null;
   const p=i*4;
   const k=col ? 0.48 : 0;
   let h=Math.imul(i% E.W+state.seed*3,374761393)^Math.imul((i/E.W)|0,668265263);h=Math.imul(h^(h>>>13),1274126177);const noise=((h>>>24)&15)-7;
@@ -865,9 +866,11 @@ function openSession(){
  $('sessionReconnect').classList.toggle('hidden',host||demo||!state||!/ПЕРЕПОДКЛЮЧ|НЕТ СВЯЗИ|ЗАДЕРЖ|СИНХРОНИЗ/.test($('networkStatus').textContent));
  $('sessionHint').textContent=demo?'При выходе одиночная партия сохраняется на этом устройстве.':host?'Ты ведущий. Если выйдешь, матч завершится у всех.':'Можно выйти и вернуться в эту комнату с того же устройства, пока ведущий в игре.';
  showAux('sessionPanel');
+ if(demo&&!$('sessionPanel').classList.contains('hidden')&&!pauseSolo){pauseSolo=true;menuPausedSolo=true;saveSolo();}
+ $('sessionPause').textContent=pauseSolo?'Продолжить игру':'Пауза';
 }
 function requestExit(){
- if(!state||state.phase==='ended')return goHome();
+ if(!state||state.phase==='ended'||demo&&mine()?.eliminated)return goHome();
  if(demo&&saveSolo())return goHome();
  $('exitExplanation').textContent=demo?'Не удалось сохранить партию на этом устройстве. Выйти без сохранения?':host?'Ты ведущий. Матч остановится у всех участников. Передачи ведущего пока нет.':'Твоя армия останется в матче. Вернуться можно с того же устройства по коду комнаты, пока ведущий в игре.';
  showAux('exitPanel');
@@ -882,7 +885,7 @@ $('hostButton').onclick=createRoom;$('joinButton').onclick=joinRoom;$('demoButto
 $('leaveRoom').onclick=()=>{if(host)for(const c of connections.keys())try{c.send({t:'room-closed'});}catch(_){}goHome();};
 $('startButton').onclick=startGame;$('copyLink').onclick=inviteFriends;$('copyCode').onclick=()=>copyText(code);
 $('closeSession').onclick=hideAux;$('openDevelopment').onclick=()=>{hideAux();openPanel();};
-$('sessionPause').onclick=()=>{$('pauseGame').click();$('sessionPause').textContent=pauseSolo?'Продолжить игру':'Пауза';};
+$('sessionPause').onclick=()=>{menuPausedSolo=false;pauseSolo=false;hideAux();};
 $('sessionReconnect').onclick=()=>{reconnectTries=0;retryUpstream();toast('Пробуем восстановить соединение');};
 $('exitMatch').onclick=requestExit;$('exitFromOverview').onclick=requestExit;$('cancelExit').onclick=openSession;
 $('confirmExit').onclick=()=>{if(host&&!demo)for(const c of connections.keys())try{c.send({t:'room-closed'});}catch(_){}goHome();};

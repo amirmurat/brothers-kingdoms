@@ -318,3 +318,5 @@ _Актуальный реестр, извлечённый из `index.html` н�
 
 Новые ID: `cancelConnect`, `sessionPanel`, `closeSession`, `openDevelopment`, `sessionPause`, `sessionReconnect`, `mapTools`, `exitMatch`, `sessionHint`, `exitPanel`, `exitTitle`, `exitExplanation`, `cancelExit`, `confirmExit`, `exitFromOverview`, `spectateMatch`.
 Ранее постоянные инструменты карты перенесены в меню матча, ID сохранены. `tab-build` и повтор ресурсов скрыты, меню развития содержит науку/союзы/обзор. Idle-строка соединения скрыта, ошибки и события появляются по необходимости.
+
+Проверка v29: JS/DOM-ID целостность, node tests/lifecycle.cjs, реальный Chromium solo save/resume. Создание online-room прошло, guest join в двух тестовых вкладках вернул timeout; сетевые пути остаются неподтверждёнными. Меню solo автоматически приостанавливает игру.
