@@ -47,7 +47,7 @@ function resourceRates(p){
 const costText=c=>Object.entries(c||{}).map(([k,v])=>({wood:'Wood',stone:'Stone',gold:'Gold',food:'Food'}[k]||k)+' '+v).join(' · ');
 const number=n=>Math.floor(n||0).toLocaleString('en-US');
 const hudNumber=n=>{const value=Math.floor(Number(n)||0);return Math.abs(value)<10000?number(value):(Math.trunc(value/100)/10).toLocaleString('en-US')+'k';};
-let dragAttack=null,longPressTimer=null,dragHint=null;
+let dragHint=null;
 let attackPlanner=null,planCancelArmy=null;
 let defeatDismissed=false,menuPausedSolo=false;
 let state=null,myId=null,host=false,demo=false,peer=null,upstream=null,code='',connections=new Map(),lastSendTime=new Map(),phaseShown='',timer=0;
@@ -284,7 +284,7 @@ function beginAttackPlanner(){
  if(!state||state.phase!=='playing'||mine()?.eliminated)return;
  hideAux();toggleQuickBuild(false);setPreview(null);buildMode=null;redirectArmy=null;selected=null;moveCursor=null;
  $('warPanel').classList.add('hidden');$('warChip').setAttribute('aria-expanded','false');
- clearTimeout(longPressTimer);dragAttack=null;pointerStart=null;pressed.clear();
+ pointerStart=null;pressed.clear();
  attackPlanner={mode:'paint',cells:new Set(),targetOwner:null,pointerId:null,lastPoint:null,brushPoint:null,zoneCells:null,brushRadius:2};
  $('planTroopsPercent').value=String(percent);$('planBrushSize').value='2';
  $('game').classList.add('plan-drawing');$('game').classList.remove('plan-reviewing');
@@ -789,8 +789,7 @@ function selectMap(clientX,clientY){
  setPreview(null);
 }
 function updateMapStatus(x,y){inspectCell(x,y);}
-// Tap a target, or long-press on your own land and drag toward the destination.
-// Moving immediately still pans the map, avoiding an accidental attack gesture.
+// Normal mode pans and inspects the map. Attack mode exclusively paints.
 function onPointerDown(e){
  if(!state)return;
  if(attackPlanner){
@@ -801,22 +800,12 @@ function onPointerDown(e){
  }
  canvas.setPointerCapture(e.pointerId);
  pressed.set(e.pointerId,{x:e.clientX,y:e.clientY});
- clearTimeout(longPressTimer);dragAttack=null;
  if(pressed.size===1){
   pointerStart={x:e.clientX,y:e.clientY,camX,camY,moved:false};gesture=null;
-  const at=gridAt(e.clientX,e.clientY);
-  if(false&&e.pointerType==='touch'&&state.phase==='playing'&&!buildMode&&E.inside(at.x,at.y)&&E.owner(state,at.x,at.y)===myId){
-   longPressTimer=setTimeout(()=>{
-    if(pressed.size!==1||!pointerStart||pointerStart.moved)return;
-    dragAttack={from:at,to:at};pointerStart=null;
-    if(navigator.vibrate)navigator.vibrate(15);
-    $('mapHint').textContent='Drag to the target and release';$('mapHint').classList.remove('hidden');queueDraw();
-   },320);
-  }
  }else if(pressed.size===2){
   const v=[...pressed.values()],r=canvas.getBoundingClientRect(),cx=(v[0].x+v[1].x)/2-r.left,cy=(v[0].y+v[1].y)/2-r.top;
   gesture={dist:Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y),zoom,worldX:(cx-camX)/(TILE*zoom),worldY:(cy-camY)/(TILE*zoom)};
-  pointerStart=null;dragAttack=null;
+  pointerStart=null;
  }
 }
 function onPointerMove(e){
@@ -834,7 +823,6 @@ function onPointerMove(e){
  }
  if(!pressed.has(e.pointerId))return;
  pressed.set(e.pointerId,{x:e.clientX,y:e.clientY});
- if(dragAttack){dragAttack.to=gridAt(e.clientX,e.clientY);queueDraw();return;}
  if(pressed.size===2&&gesture){
   const vals=[...pressed.values()],r=canvas.getBoundingClientRect();
   zoom=Math.max(.2,Math.min(5,gesture.zoom*Math.hypot(vals[0].x-vals[1].x,vals[0].y-vals[1].y)/Math.max(1,gesture.dist)));
@@ -844,7 +832,7 @@ function onPointerMove(e){
  }
  if(pointerStart){
   const dx=e.clientX-pointerStart.x,dy=e.clientY-pointerStart.y;
-  if(Math.hypot(dx,dy)>(e.pointerType==='touch'?11:6)){pointerStart.moved=true;clearTimeout(longPressTimer);}
+  if(Math.hypot(dx,dy)>(e.pointerType==='touch'?11:6))pointerStart.moved=true;
   if(pointerStart.moved){camX=pointerStart.camX+dx;camY=pointerStart.camY+dy;clampCamera();queueDraw();}
  }
 }
@@ -856,16 +844,8 @@ function onPointerUp(e){
   }
   return;
  }
- clearTimeout(longPressTimer);
- const drag=null,was=pointerStart,touch=pressed.size;
- pressed.delete(e.pointerId);dragAttack=null;
- if(drag){
-  const pos=gridAt(e.clientX,e.clientY);
-  if(E.inside(pos.x,pos.y)&&E.owner(state,pos.x,pos.y)!==myId&&E.tile(state,pos.x,pos.y)!==0){
-   setPreview({type:'send',x:pos.x,y:pos.y,valid:true});
-  }else toast('Release over enemy or neutral land.');
-  pointerStart=null;queueDraw();return;
- }
+ const was=pointerStart,touch=pressed.size;
+ pressed.delete(e.pointerId);
  if(touch===1){
   pointerStart=null;
   if(was&&!was.moved){const now=Date.now(),g=gridAt(e.clientX,e.clientY),friendly=E.inside(g.x,g.y)&&E.owner(state,g.x,g.y)===myId;if(friendly&&!target&&!buildMode&&now-lastTap<280){const p=pixelAt(e.clientX,e.clientY);zoomAt(1.45,p.x,p.y);lastTap=0;}else{selectMap(e.clientX,e.clientY);lastTap=friendly?now:0;}}
@@ -878,7 +858,7 @@ document.addEventListener('selectstart',e=>{
 canvas.addEventListener('pointerdown',onPointerDown);
 canvas.addEventListener('pointermove',onPointerMove);
 canvas.addEventListener('pointerup',onPointerUp);
-canvas.addEventListener('pointercancel',e=>{if(attackPlanner?.pointerId===e.pointerId){attackPlanner.pointerId=null;attackPlanner.lastPoint=null;refreshPaintGuide();queueDraw();}clearTimeout(longPressTimer);pressed.delete(e.pointerId);pointerStart=null;gesture=null;dragAttack=null;});
+canvas.addEventListener('pointercancel',e=>{if(attackPlanner?.pointerId===e.pointerId){attackPlanner.pointerId=null;attackPlanner.lastPoint=null;refreshPaintGuide();queueDraw();}pressed.delete(e.pointerId);pointerStart=null;gesture=null;});
 canvas.addEventListener('wheel',e=>{e.preventDefault();const p=pixelAt(e.clientX,e.clientY);zoomAt(e.deltaY<0?1.13:.885,p.x,p.y);},{passive:false});canvas.addEventListener('contextmenu',e=>e.preventDefault());
 $('zoomIn').onclick=()=>zoomAt(1.24,canvas.clientWidth/2,canvas.clientHeight/2);$('zoomOut').onclick=()=>zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);function fitWorld(){hideAux();zoom=Math.min((canvas.clientWidth-16)/(E.W*TILE),(canvas.clientHeight-16)/(E.H*TILE));camX=(canvas.clientWidth-E.W*TILE*zoom)/2;camY=(canvas.clientHeight-E.H*TILE*zoom)/2;$('zoomText').textContent=Math.round(zoom*100)+'%';queueDraw();}
 mini.addEventListener('pointerdown',e=>{const r=mini.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*E.W,y=(e.clientY-r.top)/r.height*E.H;camX=canvas.clientWidth/2-x*TILE*zoom;camY=canvas.clientHeight/2-y*TILE*zoom;clampCamera();queueDraw();});mini.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();fitWorld();}});
@@ -1023,25 +1003,6 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
  if(selected?.kind==='building'){
   const b=state.buildings.find(v=>v.id===selected.id);
   if(b?.kind==='fort')drawFortRange(b.x,b.y,false);
- }
- if(target?.type==='redirect'){
-  const to=dragAttack?.to||target;
-  const actual=E.previewFront(state,myId,to.x,to.y);
-  if(actual.cells.length){
-   ctx.save();ctx.fillStyle='#a9f5c666';ctx.strokeStyle='#f1fdd5';ctx.lineWidth=1.6/Math.max(.5,zoom);
-   for(const i of actual.cells){const x=i%E.W,y=Math.floor(i/E.W);ctx.fillRect(x*TILE,y*TILE,TILE,TILE);ctx.strokeRect(x*TILE,y*TILE,TILE,TILE);}
-   ctx.restore();
-  }
-  // Display the strategic origin. The real frontline stays separately highlighted.
-   const from=(target?.type==='redirect'?state.armies.find(a=>a.id===target.id):null)||mine()?.capital||dragAttack?.from;
-  if(to&&from){
-   const ax=(from.x+.5)*TILE,ay=(from.y+.5)*TILE,bx=(to.x+.5)*TILE,by=(to.y+.5)*TILE;
-   ctx.save();ctx.strokeStyle='#ffffffd8';ctx.lineWidth=3/Math.max(.45,zoom);ctx.setLineDash([10/Math.max(.5,zoom),7/Math.max(.5,zoom)]);
-   ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.stroke();ctx.setLineDash([]);
-   const angle=Math.atan2(by-ay,bx-ax),head=11/Math.max(.5,zoom);
-   ctx.fillStyle='#fff';ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(bx-Math.cos(angle-.55)*head,by-Math.sin(angle-.55)*head);ctx.lineTo(bx-Math.cos(angle+.55)*head,by-Math.sin(angle+.55)*head);ctx.closePath();ctx.fill();
-   ctx.strokeStyle='#fff';ctx.lineWidth=2.5/Math.max(.5,zoom);ctx.beginPath();ctx.arc(bx,by,14/Math.max(.55,zoom),0,Math.PI*2);ctx.stroke();ctx.restore();
-  }
  }
  if(moveCursor){ctx.strokeStyle='#2c3139';ctx.lineWidth=1.5/Math.max(.5,zoom);ctx.strokeRect(moveCursor.x*TILE,moveCursor.y*TILE,TILE,TILE);}
  ctx.restore();drawMini();if(movementStart&&performance.now()-movementStart<280)queueDraw();}
