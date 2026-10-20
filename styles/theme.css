@@ -1094,3 +1094,35 @@ body :is(input,textarea,[contenteditable="true"]){-webkit-user-select:text!impor
 @media(max-height:480px) and (orientation:landscape){
  #game#game#game #planGuide{left:auto!important;right:8px!important;width:min(350px,85%)!important;bottom:5px!important;padding:8px!important;gap:5px!important}
 }
+
+/* v56 — one paint surface, no confirmation step and no legacy tap-to-attack CTA. */
+#game#game#game #planGuide{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:10px!important;padding:12px 14px!important}
+#game#game#game .paint-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+#game#game#game .paint-heading strong{font-size:12px;letter-spacing:.1em;color:#eef5ff;font-weight:800}
+#game#game#game .paint-heading #planPaintCount{font-size:12px;font-weight:700;color:#93dcf6;white-space:nowrap}
+#game#game#game #planGuideHint{min-height:15px;margin:0!important;font-size:11px!important;line-height:1.35!important;color:#b1c4d5!important}
+#game#game#game .paint-control{display:flex;flex-direction:column;gap:2px;min-width:0}
+#game#game#game .paint-control label{display:flex;justify-content:space-between;align-items:center;font-size:10px;line-height:15px;letter-spacing:.06em;color:#abbdd0;font-weight:750}
+#game#game#game .paint-control label b{font-size:12px;color:#ecf8ff;letter-spacing:0;font-variant-numeric:tabular-nums}
+#game#game#game .paint-control input[type="range"]{appearance:none;-webkit-appearance:none;width:100%;height:25px!important;min-height:25px!important;margin:0!important;padding:0!important;border:0!important;background:transparent!important;touch-action:pan-x;cursor:pointer}
+#game#game#game .paint-control input[type="range"]::-webkit-slider-runnable-track{height:6px;background:#3b5267;border-radius:12px}
+#game#game#game .paint-control input[type="range"]::-moz-range-track{height:6px;background:#3b5267;border-radius:12px}
+#game#game#game .paint-control input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:25px;height:25px;margin-top:-9.5px;background:#62d8ff;border:3px solid #dcf7ff;border-radius:50%;box-shadow:0 2px 8px #0008}
+#game#game#game .paint-control input[type="range"]::-moz-range-thumb{width:21px;height:21px;background:#62d8ff;border:3px solid #dcf7ff;border-radius:50%}
+#game#game#game .plan-guide-actions{display:grid!important;grid-template-columns:minmax(0,.73fr) minmax(0,.73fr) minmax(0,1.72fr)!important;align-items:stretch!important;gap:7px!important}
+#game#game#game .plan-guide-actions button{min-width:0!important;width:100%!important;height:46px!important;min-height:46px!important;max-height:46px!important;margin:0!important;padding:6px!important;border-radius:10px!important;font-size:12px!important;font-weight:800!important;line-height:1.2!important;white-space:nowrap!important;box-sizing:border-box!important}
+#game#game#game #planReviewButton{background:#52d4ff!important;border:1px solid #85e8ff!important;color:#061b27!important}
+#game#game#game #planReviewButton:disabled{opacity:.43!important;cursor:not-allowed!important}
+#game#game#game :is(#planGuideExit,#planPaintClear){background:#263443!important;color:#e7f0fb!important;border:1px solid #506378!important}
+#game#game#game #targetPreview[data-order="send"] #confirmTarget,#game#game#game #targetPreview[data-order="send"] #targetForecast{display:none!important}
+#game#game#game #targetPreview[data-order="send"] .target-actions{grid-template-columns:1fr!important}
+#game#game#game #targetPreview[data-order="send"] #cancelTarget{width:100%!important}
+@media(max-width:360px){
+ #game#game#game #planGuide{left:8px!important;right:8px!important;padding:9px 10px!important;gap:7px!important}
+ #game#game#game .plan-guide-actions{gap:5px!important;grid-template-columns:minmax(0,.7fr) minmax(0,.7fr) minmax(0,1.85fr)!important}
+ #game#game#game .plan-guide-actions button{font-size:11px!important}
+}
+@media(max-height:480px) and (orientation:landscape){
+ #game#game#game #planGuide{padding:8px!important;gap:5px!important}
+ #game#game#game .plan-guide-actions button{height:40px!important;min-height:40px!important;max-height:40px!important}
+}
