@@ -629,3 +629,11 @@ html,body{background:#090c11!important;color:#eef2f8!important}
  #game#game#game #quickBuildChoices{grid-template-columns:repeat(4,minmax(0,1fr))!important;max-height:45dvh!important}
  #game#game#game #quickBuild{width:min(680px,calc(100% - 24px))!important}
 }
+/* Availability shares the price column instead of reserving a separate blank row. */
+#game#game#game #techPanel .tech-price{display:flex!important;flex-direction:column!important;justify-content:center!important;min-width:0!important;min-height:48px!important;gap:3px!important}
+#game#game#game #techPanel .tech-availability{height:auto!important;min-height:0!important;max-height:28px!important}
+#game#game#game #techPanel .tech-availability:empty{display:none!important}
+#game#game#game #techPanel .tech-next{min-height:30px!important}
+#game#game#game #quickBuild .quick-build-item>.building-name{overflow-wrap:anywhere!important;hyphens:auto!important}
+#game#game#game #quickBuild .building-cost,#game#game#game #quickBuild .cost-unit{font-size:12px!important}
+#game#game#game #techPanel .tech-price{height:56px!important;min-height:56px!important;max-height:56px!important;overflow:hidden!important}

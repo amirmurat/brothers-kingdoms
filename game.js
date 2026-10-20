@@ -427,8 +427,7 @@ function updateTechCards(p){
      <div class="tech-heading">${uiIcon(id)}<strong>${esc(t.name)}</strong><span title="Уровень исследования">${level}/3</span></div>
      <p>${esc(techBenefit(id,level))}</p>
      <div class="tech-next">${level<3?'→ '+esc(techBenefit(id,level+1)):'Максимальный уровень'}</div>
-     <div class="tech-availability" data-tech-status="${esc(id)}"></div>
-     <div class="tech-footer"><small class="tech-cost">${level<3?briefCost(cost):''}</small><button type="button" data-research="${esc(id)}">${level<3?'Исследовать':'Готово'}</button></div>
+     <div class="tech-footer"><div class="tech-price"><small class="tech-cost">${level<3?briefCost(cost):''}</small><div class="tech-availability" data-tech-status="${esc(id)}"></div></div><button type="button" data-research="${esc(id)}">${level<3?'Исследовать':'Готово'}</button></div>
    </div>`;
   }).join('');
   panel.dataset.structure=key;
@@ -439,7 +438,7 @@ function updateTechCards(p){
   const button=panel.querySelector('[data-research="'+id+'"]'),status=panel.querySelector('[data-tech-status="'+id+'"]');
   if(!button||!status)continue;
   button.disabled=!affordable;
-  const message=level>=3?'Максимальный уровень':p.eliminated?'Королевство разгромлено':affordable?'':'Не хватает: '+deficit(p,cost);
+  const message=level>=3?'Максимальный уровень':p.eliminated?'Королевство разгромлено':affordable?'':'Не хватает: '+Object.entries(cost).filter(([r,n])=>(p.res[r]||0)<n).map(([r,n])=>nameResource[r]+' '+(n-(p.res[r]||0))).join(' · ');
   if(status.textContent!==message)status.textContent=message;
   status.title=message;
   status.classList.toggle('can-research',affordable);
