@@ -363,12 +363,15 @@ function openCancelPlan(army){
 function drawAttackPlanning(){
  // Called inside the world-space Canvas transform. Use region strokes rather than a filled rectangle.
  const plans=state.armies.filter(a=>a.owner===myId&&a.strength>0&&Array.isArray(a.zoneCells));
+ const left=Math.max(0,Math.floor(-camX/(TILE*zoom))-2),right=Math.min(E.W-1,Math.ceil((canvas.clientWidth-camX)/(TILE*zoom))+2),
+  top=Math.max(0,Math.floor(-camY/(TILE*zoom))-2),bottom=Math.min(E.H-1,Math.ceil((canvas.clientHeight-camY)/(TILE*zoom))+2);
  if(attackPlanner?.mode==='review'&&attackPlanner.zoneCells)plans.push({zoneCells:attackPlanner.zoneCells,preview:true});
  const T=TILE;
  for(const plan of plans){
-  const pending=plan.preview,visible=plan.zoneCells.filter(i=>state.owners[i]!==myId&&state.tiles[i]);
+  const pending=plan.preview,remaining=plan.zoneCells.filter(i=>state.owners[i]!==myId&&state.tiles[i]);
+  if(!remaining.length)continue;
+  const cells=new Set(remaining),visible=remaining.filter(i=>{const x=i%E.W,y=(i/E.W)|0;return x>=left&&x<=right&&y>=top&&y<=bottom;});
   if(!visible.length)continue;
-  const cells=new Set(visible);
   ctx.save();ctx.fillStyle=pending?'rgba(96,220,255,.31)':'rgba(99,204,255,.13)';
   ctx.strokeStyle=pending?'#98edff':'#66c8ec';ctx.lineWidth=Math.max(1.2,2.1/zoom);
   if(!pending)ctx.setLineDash([5/zoom,5/zoom]);
@@ -412,12 +415,13 @@ function setPreview(t){
  const defense=enemy?Math.round(E.tileDefense(state,owner,t.x,t.y)):0;const averageDefense=enemy&&front.cells.length?Math.round(front.cells.reduce((sum,i)=>sum+E.tileDefense(state,owner,i%E.W,Math.floor(i/E.W)),0)/front.cells.length):0;
  $('targetForecast').textContent=allied?'This territory belongs to an ally. You cannot attack until the alliance ends.':
    t.type==='redirect'?'Confirm to redirect your army.':
+    'No troops move when selecting a tile. Use Draw attack zone to outline and confirm the exact area.',
    sea?'Sea is impassable. Choose land.':
    !front.cells.length?'No shared border for an offensive. Diplomacy is still available.':
    owner?`Front: ${front.cells.length} cells · average defense ${averageDefense} (target ${defense}) · enemy reserve: ${number(enemy?.troops||0)}. Approximate forecast.`:
    `Conquest begins at the highlighted border section (${front.cells.length} cells), then expands.`;
- $('confirmTarget').textContent=t.type==='redirect'?'Change target':'Use Attack mode';
- $('confirmTarget').disabled=t.type!=='redirect'||allied;
+ $('confirmTarget').textContent=t.type==='redirect'?'Change target':'Draw attack zone';
+ $('confirmTarget').disabled=allied;
  if(t.type==='redirect'&&!allied&&p.troops-sent<Math.max(75,Math.min(300,p.troopCap*.12)))$('targetForecast').textContent+=' Warning: your reserve will be low after this order.';
  box.dataset.order=t.type;
  const projectedY=(t.y+.5)*TILE*zoom+camY,available=canvas.clientHeight-Math.min(270,Math.max(155,canvas.clientHeight*.37));
@@ -629,7 +633,7 @@ $('attackPercent').oninput=e=>{percent=Number(e.target.value);$('percentLabel').
 document.querySelectorAll('[data-target-percent]').forEach(b=>b.onclick=()=>{$('attackPercent').value=b.dataset.targetPercent;$('attackPercent').oninput({target:$('attackPercent')});});
 for(const b of document.querySelectorAll('[data-percent]')){b.setAttribute('aria-pressed',String(Number(b.dataset.percent)===percent));b.onclick=()=>{$('attackPercent').value=b.dataset.percent;$('attackPercent').oninput({target:$('attackPercent')});};}
 $('cancelMode').onclick=cancelMode;function cancelMode(){setBuildingMode(null);}
-$('cancelTarget').onclick=()=>{setPreview(null);redirectArmy=null;lastTap=0;};$('confirmTarget').onclick=()=>{if(!target||target.type!=="redirect")return;const t=target;const ok=command({type:'redirect',id:t.id,x:t.x,y:t.y});if(ok){setPreview(null);redirectArmy=null;}};
+$('cancelTarget').onclick=()=>{setPreview(null);redirectArmy=null;lastTap=0;};$('confirmTarget').onclick=()=>{if(!target)return;if(target.type!=='redirect'){beginAttackPlanner();return;}const t=target;const ok=command({type:'redirect',id:t.id,x:t.x,y:t.y});if(ok){setPreview(null);redirectArmy=null;}};
 
 $('planAttackButton').onclick=()=>attackPlanner?resetAttackPlanner():beginAttackPlanner();
 $('planGuideExit').onclick=resetAttackPlanner;
