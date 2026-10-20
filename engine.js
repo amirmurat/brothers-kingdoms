@@ -189,7 +189,7 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Матч 
    return {ok:false,error:targetOwner?'Сначала выйди к границе этого противника.':'Нет общей границы с доступной нейтральной землёй.'};
   }
   p.troops-=strength;
-  s.armies.push({id:'a'+(++s.nonce),owner:id,x:src.x,y:src.y,ox:src.x,oy:src.y,tx,ty,targetOwner,strength,initialStrength:strength,captured:0,turns:0,stuck:0});
+  s.armies.push({id:'a'+(++s.nonce),owner:id,x:src.x,y:src.y,ox:src.x,oy:src.y,tx,ty,targetOwner,frontCells:initialFront(s,id,tx,ty,targetOwner),strength,initialStrength:strength,captured:0,turns:0,stuck:0});
   return {ok:true};
  }
  if(a.type==='redirect'){
@@ -197,7 +197,7 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Матч 
   const tx=Math.floor(a.x),ty=Math.floor(a.y),targetOwner=owner(s,tx,ty);
   if(!tile(s,tx,ty)||targetOwner===id||p.allies.includes(targetOwner))return {ok:false,error:'Выбери нейтральную или вражескую землю.'};
   if(!borderCandidates(s,id,targetOwner).length)return {ok:false,error:'Нужна общая граница для смены направления.'};
-  army.tx=tx;army.ty=ty;army.targetOwner=targetOwner;army.stuck=0;attackFronts.delete(army);return {ok:true};
+  army.tx=tx;army.ty=ty;army.targetOwner=targetOwner;army.frontCells=initialFront(s,id,tx,ty,targetOwner);army.stuck=0;attackFronts.delete(army);return {ok:true};
  }
  if(a.type==='return'){
   const army=s.armies.find(v=>v.id===a.id&&v.owner===id);if(!army)return {ok:false,error:'Армия не найдена.'};
@@ -298,7 +298,7 @@ function waveFront(s,a){
 }
 function finishWave(s,a,p){
  if(p&&!p.eliminated&&a.strength>0)p.troops=Math.min(p.troopCap,p.troops+Math.floor(a.strength*.96));
- a.strength=0;attackFronts.delete(a);
+ a.strength=0;a.frontCells=[];attackFronts.delete(a);
 }
 // Distribute any *partially funded* final layer across the whole frontage, not
 // in a sequential snake at one end. Ordered buckets cover 16 angular sectors.
@@ -322,7 +322,7 @@ function balancedLayer(cells,s,step){
  return order;
 }
 function advance(s,a){
- const p=person(s,a.owner);if(!alive(p)){a.strength=0;attackFronts.delete(a);return;}
+ const p=person(s,a.owner);if(!alive(p)){a.strength=0;a.frontCells=[];attackFronts.delete(a);return;}
  const f=waveFront(s,a);
  // Alliances or a completed conquest can invalidate a target while in flight.
  if(f.targetOwner&&p.allies.includes(f.targetOwner)){finishWave(s,a,p);return;}
@@ -348,6 +348,7 @@ function advance(s,a){
   }
  }
  if(point){a.x=point.x;a.y=point.y;}
+ a.frontCells=[...f.candidates].filter(i=>s.tiles[i]&&s.owners[i]===f.targetOwner);
  // After a finished complete layer, remaining candidates form the NEXT layer.
  // An attack continues while its committed troops can pay for that next layer.
  a.turns++;a.stuck=gained?0:a.stuck+1;

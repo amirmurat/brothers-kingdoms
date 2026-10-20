@@ -729,3 +729,18 @@ html,body{background:#090c11!important;color:#eef2f8!important}
 #game#game#game :is(.res-icon,.cost-unit .ui-icon){width:16px!important;height:16px!important}
 :is(#game#game#game,#waiting#waiting#waiting) :is(.square-button,.icon-close,#closeSession,#closeContext,#closeArmies,#closeQuickLeaders)>.ui-icon{width:22px!important;height:22px!important;margin:0!important}
 #game#game#game :is(.building-art,#placingBuildIcon){object-fit:contain!important;image-rendering:auto!important}
+
+/* v36: metric identity is separate from the sign of its change. */
+#game#game#game .topbar .top-stat{border-radius:8px!important;border-right:0!important;margin-right:4px!important}
+#game#game#game #hudTroops{background:#172b3b!important;color:#8cdaff!important}
+#game#game#game .topbar .land-stat{background:#172f26!important;color:#a8e8bb!important}
+#game#game#game #hudFronts{background:#29213d!important;color:#d1b8ff!important}
+#game#game#game .topbar .top-stat>:is(span,b){color:inherit!important}
+#game#game#game #resourceSummary [data-resource="food"]{background:#27301b!important;color:#d4eaa0!important}
+#game#game#game #resourceSummary [data-resource="wood"]{background:#192f29!important;color:#a4dfc0!important}
+#game#game#game #resourceSummary [data-resource="stone"]{background:#252c3a!important;color:#becde9!important}
+#game#game#game #resourceSummary [data-resource="gold"]{background:#342c18!important;color:#f3d38b!important}
+#game#game#game #resourceSummary [data-resource]>:is(svg,span,b){color:inherit!important}
+#game#game#game #resourceSummary [data-trend="positive"],#game#game#game #hudTroops #troopGrowth[data-trend="positive"]{color:#8ee5a1!important}
+#game#game#game #resourceSummary [data-trend="negative"],#game#game#game #hudTroops #troopGrowth[data-trend="negative"]{color:#ff8e9e!important}
+#game#game#game #resourceSummary [data-trend="neutral"],#game#game#game #hudTroops #troopGrowth[data-trend="neutral"]{color:#bec7d5!important}

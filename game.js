@@ -381,6 +381,7 @@ function render(){if(!state)return;
   $('victory').classList.remove('hidden');
  }
 }
+function setRate(node,value){const rate=Math.round(Number(value)||0);node.dataset.trend=rate>0?'positive':rate<0?'negative':'neutral';node.textContent=(rate>0?'+':rate<0?'−':'')+number(Math.abs(rate))+'/с';}
 function updateUI(){const p=mine();if(!p)return;
  // Before the first economy tick, derive the same production formula as the engine,
  // rather than showing a misleading +0/s for every resource.
@@ -390,14 +391,14 @@ function updateUI(){const p=mine();if(!p)return;
   const rate=r==='food'?foodNet:Math.floor(gross[r]||0);
   $('res'+suffix).textContent=number(amount);
   const rateNode=$('inc'+suffix),item=rateNode.closest('[data-resource]');
-  rateNode.textContent=(rate>=0?'+':'−')+number(Math.abs(rate))+'/с';
+  setRate(rateNode,rate);
   rateNode.classList.toggle('resource-negative',rate<0);
   item.classList.toggle('resource-low',r==='food'&&amount<Math.max(12,Math.abs(rate)*5));
   item.setAttribute('title',`${nameResource[r]}: ${number(amount)}. ${r==='food'?'Примерный чистый прирост после набора войск':'Производство'}: ${rate>=0?'+':'−'}${number(Math.abs(rate))} в секунду`);
  }
 
  updateIncomingAttack(p);
- $('troopCount').textContent=number(p.troops);$('troopCap').textContent='/ '+number(p.troopCap);$('troopGrowth').textContent='+'+number(p.troopIncome||0)+'/с';updateHudSignals(p);$('myKingdom').textContent=p.name+(p.eliminated?' · РАЗГРОМ':'');$('myKingdom').title=p.name;$('myKingdom').style.color=p.color;
+ $('troopCount').textContent=number(p.troops);$('troopCap').textContent='/ '+number(p.troopCap);setRate($('troopGrowth'),p.troopIncome||0);updateHudSignals(p);$('myKingdom').textContent=p.name+(p.eliminated?' · РАЗГРОМ':'');$('myKingdom').title=p.name;$('myKingdom').style.color=p.color;
  const sent=Math.floor(p.troops*percent/100);$('sendingTroops').textContent=number(sent);$('remainingTroops').textContent=number(p.troops-sent);$('activeArmies').textContent=state.armies.filter(a=>a.owner===myId).length+'/12';$('dockSummary').textContent=percent+'%';if(target)setPreview(target);const frontNum=state.armies.filter(a=>a.owner===myId).length;$('frontCountBadge').textContent=String(frontNum);$('frontCountBadge').classList.toggle('hidden',frontNum===0);$('armiesToggle').setAttribute('aria-label',`Мои походы: ${frontNum}`);$('armiesToggle').classList.toggle('has-fronts',state.armies.some(a=>a.owner===myId));renderArmies();
  const top=[...state.players].filter(p=>p.land>0).sort((a,b)=>b.land-a.land);
  patchHtml('quickLeadersList',top.slice(0,6).map(v=>'<div class="quick-row"><span style="background:'+v.color+'"></span><b>'+esc(v.name)+'</b><small>'+number(v.land)+' клеток</small></div>').join(''));
@@ -775,22 +776,21 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
    ctx.beginPath();ctx.roundRect(x-tw/2,ly-lh/2,tw,lh,8/Math.max(.5,zoom));ctx.fill();ctx.stroke();
    ctx.fillStyle='#f1f5fa';ctx.fillText(label,x,ly);
  }
- // Incoming hostile fronts are highlighted on the battlefield, not only in the HUD.
- for(const a of activeThreats){
-  const x=(a.x+.5)*TILE,y=(a.y+.5)*TILE;
-  ctx.save();ctx.strokeStyle='#ff5f6c';ctx.lineWidth=3/Math.max(.45,zoom);
-  ctx.beginPath();ctx.arc(x,y,19/Math.max(.55,zoom),0,Math.PI*2);ctx.stroke();
-  ctx.fillStyle='#ff5f6c';ctx.beginPath();ctx.arc(x+12/Math.max(.65,zoom),y-12/Math.max(.65,zoom),8/Math.max(.7,zoom),0,2*Math.PI);ctx.fill();
-  ctx.fillStyle='#fff';ctx.font='900 '+(10/Math.max(.7,zoom))+'px system-ui';ctx.textAlign='center';ctx.fillText('!',x+12/Math.max(.65,zoom),y-12/Math.max(.65,zoom)+1);
-  ctx.restore();
+ // Front cells come from the authoritative conquest wave, including online snapshots.
+ for(const a of state.armies){
+  if(a.strength<=0)continue;
+  const cells=Array.isArray(a.frontCells)?a.frontCells:E.previewFront(state,a.owner,a.tx,a.ty).cells;
+  ctx.fillStyle=hexAlpha(color(a.owner),.85);ctx.strokeStyle='#eef2f8';ctx.lineWidth=1/zoom;
+  for(const i of cells){
+   if(i<0||i>=E.W*E.H||state.owners[i]===a.owner)continue;
+   const x=(i%E.W)*TILE,y=Math.floor(i/E.W)*TILE;
+   if(x*zoom+camX<-TILE*zoom||x*zoom+camX>w||y*zoom+camY<-TILE*zoom||y*zoom+camY>h)continue;
+   ctx.fillRect(x,y,TILE,TILE);
+   if(selected?.kind==='army'&&selected.id===a.id)ctx.strokeRect(x,y,TILE,TILE);
+  }
  }
- for(const a of state.armies){const old=oldArmyPositions.get(a.id),t=Math.min(1,(performance.now()-movementStart)/260),x=((old?old.x+(a.x-old.x)*t:a.x)+.5)*TILE,y=((old?old.y+(a.y-old.y)*t:a.y)+.5)*TILE;if(x*zoom+camX<-50||x*zoom+camX>w+50||y*zoom+camY<-50||y*zoom+camY>h+50)continue;
-  const armyRadius=Math.max(6,9/zoom),heading=Math.atan2(a.ty-a.y,a.tx-a.x);
-  ctx.save();ctx.translate(x,y);ctx.rotate(heading);ctx.beginPath();ctx.moveTo(armyRadius,0);ctx.lineTo(-armyRadius*.8,-armyRadius*.75);ctx.lineTo(-armyRadius*.35,0);ctx.lineTo(-armyRadius*.8,armyRadius*.75);ctx.closePath();ctx.fillStyle=(a.owner===myId&&a.initialStrength&&a.strength/a.initialStrength<.2)?'#ff968e':color(a.owner);ctx.strokeStyle='#080a0e';ctx.lineWidth=2/zoom;ctx.fill();ctx.stroke();ctx.restore();
-  if(zoom>0.27){ctx.font='700 '+Math.max(8,9/Math.max(.8,zoom))+'px system-ui';const n=number(a.strength);ctx.fillStyle='rgba(255,255,255,.95)';ctx.beginPath();ctx.roundRect(x-20,y+9,40,12,5);ctx.fill();ctx.fillStyle='#0f1720';ctx.fillText(n,x,y+15);}
-  if(a.owner===myId&&a.targetOwner){ctx.strokeStyle=hexAlpha(color(a.owner),.55);ctx.setLineDash([2,3]);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo((a.tx+.5)*TILE,(a.ty+.5)*TILE);ctx.stroke();ctx.setLineDash([]);}
- }
- if(selected){const b=selected.kind==='building'?state.buildings.find(v=>v.id===selected.id):state.armies.find(v=>v.id===selected.id);if(b){ctx.strokeStyle='#ffffff';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.strokeRect(b.x*TILE-5,b.y*TILE-5,TILE+10,TILE+10);ctx.setLineDash([]);}}
+
+ if(selected?.kind==='building'){const b=selected.kind==='building'?state.buildings.find(v=>v.id===selected.id):state.armies.find(v=>v.id===selected.id);if(b){ctx.strokeStyle='#ffffff';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.strokeRect(b.x*TILE-5,b.y*TILE-5,TILE+10,TILE+10);ctx.setLineDash([]);}}
  if(buildMode){
   const minX=Math.max(0,Math.floor(-camX/(TILE*zoom))-1),maxX=Math.min(E.W-1,Math.ceil((w-camX)/(TILE*zoom))+1);
   const minY=Math.max(0,Math.floor(-camY/(TILE*zoom))-1),maxY=Math.min(E.H-1,Math.ceil((h-camY)/(TILE*zoom))+1);
@@ -845,7 +845,7 @@ function drawMini(){
   miniRevision=revision;
  }
  mctx.clearRect(0,0,E.W,E.H);mctx.drawImage(minimapCached,0,0);
- for(const a of activeThreats){mctx.strokeStyle='#ff5e70';mctx.lineWidth=2.5;mctx.beginPath();mctx.arc(a.x,a.y,5,0,2*Math.PI);mctx.stroke();}
+ for(const a of state.armies){mctx.fillStyle=color(a.owner);for(const i of a.frontCells||[]){if(i>=0&&i<E.W*E.H&&state.owners[i]!==a.owner)mctx.fillRect(i%E.W,Math.floor(i/E.W),1,1);}}
 
  mctx.lineWidth=.65;mctx.strokeStyle='#ffffff';const scale=zoom*TILE;
  mctx.strokeRect(-camX/scale,-camY/scale,canvas.clientWidth/scale,canvas.clientHeight/scale);

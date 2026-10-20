@@ -4,7 +4,7 @@ const draw=source.slice(source.indexOf('function drawMini(){'),source.indexOf("w
 const calls=[];
 const context={imageSmoothingEnabled:false,drawImage(...args){calls.push(args)},clearRect(){},strokeRect(){}};
 const world={width:960,height:624};
-const sandbox={state:{owners:[1],territoryRevision:1},worldLayer:world,E:{W:160,H:104},miniRevision:-1,minimapCached:null,document:{createElement(){return {getContext(){return context}}}},mctx:context,activeThreats:[],zoom:2,TILE:6,camX:0,camY:0,canvas:{clientWidth:390,clientHeight:600}};
+const sandbox={state:{owners:[1],armies:[],territoryRevision:1},worldLayer:world,E:{W:160,H:104},miniRevision:-1,minimapCached:null,document:{createElement(){return {getContext(){return context}}}},mctx:context,activeThreats:[],zoom:2,TILE:6,camX:0,camY:0,canvas:{clientWidth:390,clientHeight:600}};
 vm.runInNewContext(draw+'drawMini();',sandbox);
 assert.deepStrictEqual(calls[0],[world,0,0,160,104],'entire enlarged world must scale into minimap');
 assert.equal(sandbox.minimapCached.width,160);assert.equal(sandbox.minimapCached.height,104);
