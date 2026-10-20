@@ -254,7 +254,7 @@ function upsertPaintedPlan(s,id,request,rawTargets,percent,editId=null,excludeTa
  return {ok:true,merged:merged.size>0,planId:plan.id,waiting:!s.armies.some(a=>a.planId===plan.id)};
 }
 function createPaintedPlan(s,id,a,percent){
- return upsertPaintedPlan(s,id,a.zone,a.targets??[0],percent,null,a.excludeTargets);
+ return upsertPaintedPlan(s,id,a.zone,a.targets??[s.owners[a.zone[0]]],percent,null,a.excludeTargets);
 }
 function changePaintedPlan(s,id,a){
  const plan=(s.attackPlans||[]).find(p=>p.id===a.id&&p.owner===id);
