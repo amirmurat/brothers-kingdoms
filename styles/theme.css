@@ -1315,3 +1315,42 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
  #game#game#game #planGuide{width:min(345px,80%)!important;left:auto!important;right:5px!important;bottom:5px!important;padding:5px 7px!important;gap:3px!important;max-height:75%!important}
  #game#game#game #planGuide .plan-guide-actions button{height:35px!important;min-height:35px!important;max-height:35px!important}
 }
+
+
+/* v62 — Build & Research use the same professional sidebar icon controls as Paint.
+   Bottom action bar is no longer part of the playing map. */
+#game#game#game #planToolSwitch{gap:8px!important}
+#game#game#game #planToolSwitch .plan-side-action{margin:0!important}
+#game#game#game #planToolSwitch .plan-side-action .ui-icon{
+ width:26px!important;height:26px!important;min-width:26px!important;min-height:26px!important;
+ fill:currentColor!important;color:inherit!important;flex:none!important;
+}
+#game#game#game #planToolSwitch #developButton{margin-top:7px!important}
+#game#game#game #planToolSwitch #developButton.chosen,
+#game#game#game #planToolSwitch #scienceButton.chosen{
+ background:#174d63f0!important;color:#e6faff!important;border-color:#76dbff!important;
+ box-shadow:0 0 0 1px #78e7ff44,0 5px 16px #0008!important;
+}
+#game#game#game .map-view:has(.quick-build:not(.hidden)) #planToolSwitch,
+#game#game#game .map-view:has(.placing-build:not(.hidden)) #planToolSwitch{display:flex!important}
+#game#game#game #planControls.erase-only #planTroopsControl{display:none!important}
+#game#game#game #planEraseHint{
+ position:absolute!important;z-index:52!important;left:50%!important;
+ transform:translateX(-50%)!important;bottom:calc(10px + env(safe-area-inset-bottom))!important;
+ max-width:calc(100% - 22px)!important;width:max-content!important;
+ padding:8px 11px!important;border-radius:10px!important;box-sizing:border-box!important;
+ background:#202832e9!important;border:1px solid #976d55!important;color:#ffe7cc!important;
+ box-shadow:0 4px 15px #0008!important;font-size:11px!important;font-weight:650!important;
+ line-height:1.3!important;text-align:center!important;pointer-events:none!important;
+}
+#game#game#game #planEraseHint.hidden{display:none!important}
+@media(max-width:360px){
+ #game#game#game #planToolSwitch{gap:6px!important}
+ #game#game#game #planToolSwitch #developButton{margin-top:5px!important}
+ #game#game#game #planEraseHint{font-size:10px!important}
+}
+@media(max-height:480px) and (orientation:landscape){
+ #game#game#game #planToolSwitch{gap:3px!important}
+ #game#game#game #planToolSwitch #developButton{margin-top:3px!important}
+ #game#game#game #planToolSwitch .plan-side-action .ui-icon{width:22px!important;height:22px!important;min-width:22px!important;min-height:22px!important}
+}
