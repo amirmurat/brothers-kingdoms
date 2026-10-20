@@ -9,7 +9,7 @@
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
 <link rel="stylesheet" href="styles/legacy.css?v=49-visible-camp"/>
-<link rel="stylesheet" href="styles/theme.css?v=64-unlimited-plans"/>
+<link rel="stylesheet" href="styles/theme.css?v=65-nations"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -65,7 +65,7 @@
 <div aria-live="polite" class="game-toast hidden" id="gameToast" role="status"></div>
 </div>
 <div class="map-toolbar">
-<div class="map-location"><span class="location-dot"></span><strong id="myKingdom" title="Kingdom name">Kingdom</strong><span aria-live="polite" id="mapStatus">Tap the brush to plan an offensive</span></div><button class="war-chip hidden" id="warChip" type="button" aria-controls="warPanel" aria-expanded="false"><span class="war-signal"></span><span id="warChipLabel">AT WAR</span></button>
+<div class="map-location"><span class="location-dot"></span><strong id="myKingdom" title="Kingdom name">Kingdom</strong><span aria-live="polite" id="mapStatus">Tap the brush to plan an offensive</span></div><button class="war-chip" id="warChip" type="button" aria-controls="warPanel" aria-expanded="false" aria-label="Nations and diplomacy"><svg class="ui-icon nation-flag" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/controls.svg#flag-banner"></use></svg><span id="warChipLabel">NATIONS</span><span id="nationWarCount" class="nation-war-count hidden"></span></button>
 
 </div>
 <div class="map-view" id="mapView">
@@ -102,10 +102,6 @@
 <div class="plan-guide hidden" id="planGuide" role="region" aria-label="Attack plan controls">
  <div class="paint-heading"><strong id="planHeading">ATTACK PLAN</strong><span id="planPaintCount">0 cells</span></div>
  <p id="planGuideHint" role="status">One finger paints · Two fingers move</p>
- <div class="plan-targets hidden" id="planTargets" role="group" aria-label="Attack permissions">
-  <div class="plan-targets-heading">ATTACK PERMISSIONS <span id="planTargetsHint">Choose opponents</span></div>
-  <div class="plan-targets-list" id="planTargetOptions"></div>
- </div>
  <div class="plan-guide-actions">
   <button type="button" id="planGuideExit">Exit</button>
   <button type="button" id="planPaintClear" disabled>Clear</button>
@@ -127,7 +123,7 @@
  <div class="plan-cancel-card"><span class="plan-overline">ACTIVE OFFENSIVE</span><h3 id="planCancelTitle">Cancel this attack?</h3><p id="planCancelDescription">The advance will stop. Surviving troops return with the withdrawal cost.</p>
  <div class="plan-cancel-actions"><button type="button" id="planCancelNo">Keep fighting</button><button type="button" id="planCancelYes">Cancel attack</button></div></div>
 </div>
-<div class="war-panel hidden" id="warPanel" role="region" aria-label="Wars and peace offers"><div class="war-panel-title"><strong>WAR & PEACE</strong><button type="button" id="warPanelClose" aria-label="Close diplomacy"><svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/controls.svg#x"></use></svg></button></div><div id="warPanelList"></div></div>
+<div class="war-panel hidden" id="warPanel" role="region" aria-label="Nations and diplomacy"><div class="war-panel-title"><strong>NATIONS</strong><button type="button" id="warPanelClose" aria-label="Close diplomacy"><svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/controls.svg#x"></use></svg></button></div><p class="nation-panel-help">Choose who to attack. Peace and alliances require agreement.</p><div id="warPanelList"></div></div>
 <div class="map-tooltip hidden" id="mapTooltip"></div><div aria-live="polite" class="map-status-mobile hidden" id="mapStatusMobile"></div><ul aria-label="Available map objects" class="sr-only" id="accessibleObjects"></ul>
 <div class="minimap-wrap" id="minimapWrap"><button aria-expanded="true" aria-label="Hide minimap" id="minimapToggle"><svg class="ui-icon minimap-symbol" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#map-trifold"></use></svg><span class="minimap-label">World</span> <span class="minimap-chevron">−</span></button><canvas aria-label="Minimap, press Enter to recenter" height="104" id="minimap" role="button" tabindex="0" width="160"></canvas></div>
 <div aria-live="polite" class="target-preview hidden" id="targetPreview"><div class="target-info"><strong id="targetTitle">Target</strong><span id="targetDetail">Choose territory</span><span id="targetForecast">—</span></div><div aria-label="Army size" class="target-quick-percents" id="targetQuickPercents" role="group"><button data-target-percent="15">15%</button><button class="active" data-target-percent="30">30%</button><button data-target-percent="50">50%</button><button data-target-percent="75">75%</button><button data-target-percent="95">95%</button></div><div class="target-actions"><button class="secondary" id="cancelTarget">Cancel</button><button class="primary" id="confirmTarget">Send troops</button></div><button class="target-diplomacy hidden" id="targetDiplomacy" type="button">Offer alliance</button><button class="target-peace hidden" id="targetPeace" type="button">Propose peace</button></div><div class="quick-build hidden" id="quickBuild" role="region" aria-label="Quick construction">
@@ -178,7 +174,7 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="engine.js?v=64-unlimited-plans"></script>
+<script src="engine.js?v=65-nations"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=64-unlimited-plans"></script>
+<script src="game.js?v=65-nations"></script>
 </body></html>
