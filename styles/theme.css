@@ -397,3 +397,26 @@ body :is(button,input,select,summary){font-family:var(--ui-font)!important}
  #waiting .room-token strong{font-size:26px!important;text-align:center!important}
  #waiting .room-token #copyCode{width:100%!important}
 }
+
+/* Light surfaces own their text colors; legacy dark-theme colors must not leak in. */
+#game :is(#sidebar,#economyPanel,#armiesPanel,#quickLeadersPanel,#contextCard,#targetPreview,#quickBuild,#resultSheet,.tutorial section){color:#283f33!important}
+#game :is(#sidebar,#economyPanel,#armiesPanel,#quickLeadersPanel,#contextCard,#targetPreview,#quickBuild,#resultSheet,.tutorial section) :is(p,span,small,strong,h1,h2,h3,label,li){color:#354b3c!important;text-shadow:none!important}
+#game :is(#sidebar,#economyPanel,#armiesPanel,#quickLeadersPanel,#contextCard,#targetPreview,#quickBuild,#resultSheet,.tutorial section) button{
+ color:#2c4636!important;background:#eee7d5!important;background-image:none!important;border-color:#b6bba7!important;opacity:1!important;text-shadow:none!important;
+}
+#game :is(#sidebar,#economyPanel,#armiesPanel,#quickLeadersPanel,#contextCard,#targetPreview,#quickBuild,#resultSheet,.tutorial section) button :is(span,small,strong){color:inherit!important}
+#game :is(#sidebar,#economyPanel,#armiesPanel,#quickLeadersPanel,#contextCard,#targetPreview,#quickBuild,#resultSheet,.tutorial section) :is(button.primary,button.active,button.dip-accept,button[data-research]:not(:disabled),button[data-context-upgrade]:not(:disabled)){
+ background:#365f49!important;color:#fffdf3!important;border-color:#365f49!important;
+}
+#game :is(#sidebar,#economyPanel,#armiesPanel,#quickLeadersPanel,#contextCard,#targetPreview,#quickBuild,#resultSheet,.tutorial section) button:disabled{
+ background:#e5e4da!important;color:#566052!important;border-color:#b7bdad!important;opacity:1!important;box-shadow:none!important;cursor:not-allowed!important;
+}
+#game #sidebar .build-detail:disabled{background:#eeede4!important}
+#game #sidebar :is(.info-stat span,.tech-cost,.tech-availability,.build-meta,.build-short){color:#58624f!important}
+#game :is(#sidebar,#economyPanel,#armiesPanel,#contextCard) :is(.is-negative,.resource-negative,.dip-danger){color:#943b32!important}
+#game #sidebar .tabbar button{background:transparent!important}
+#game #sidebar .tabbar button.active{background:#365f49!important;color:#fffdf3!important}
+#game #quickBuild .quick-build-item{background:#fffcf2!important}
+#game #quickBuild .quick-build-item.chosen{background:#d5e8ca!important;border-color:#44714c!important}
+#waiting :is(.room-token-label,.room-members-title,.player-row,.room-settings,.room-rules,.room-foot){color:#47583f!important}
+#waiting :is(.room-settings,.room-rules,.player-row) :is(span,small,strong,p,label){color:#47583f!important}
