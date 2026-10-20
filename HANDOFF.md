@@ -1,5 +1,5 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
-_Обновлено: 20 октября 2026 года, рабочая preview-версия v62. Историческая v25 в разделе 0 не является текущей._
+_Обновлено: 20 октября 2026 года, рабочая preview-версия v63. Историческая v25 в разделе 0 не является текущей._
 
 
 ## СРОЧНО: АКТУАЛЬНОЕ СОСТОЯНИЕ v62 (20.10.2026)
@@ -307,3 +307,9 @@ _Обновлено: 20 октября 2026 года, рабочая preview-в�
 - `index.html`: moved the existing `#developButton` (Build) and `#scienceButton` (Research) into the same right-side `#planToolSwitch` with Paint/Eraser; removed the broad bottom action bar; added compact `#planEraseHint`, named `#planTroopsControl` for erase-only hiding; asset version `v62-unified-icons-eraser`.
 - `game.js`: `beginGlobalEraser()` creates a standalone pointer mode with brush-size control only; `brushAt` accumulates indices from saved plans during a stroke, `finishPaintPointer` sends one `erasePlanCells` action on release; `pointercancel` and pinch/multi-touch cannot delete cells. Paint retains local erase-before-save semantics. Research/Build icons preserve their existing actions, aria state and close incompatible paint mode.
 - `engine.js`: owner-validated `erasePlanCells` command accepts bounded integer cell indices, trims any matching own plan, recalls waves and re-evaluates fronts; erasing all cells ends only that plan, cannot alter other owners' plans or map ownership. Regression coverage `tests/saved-plan-eraser.cjs` added. No new costs and no merge into main.
+
+### v63 — Planning, HUD, recovery (20.10.2026)
+- `styles/theme.css`: mobile alerts and Wars are aligned on a reserved first row. The incoming attack shortcut is compact and located below; no overlap. `game.js`: short actionable HUD text.
+- `game.js`: Start Offensive accepts any nonempty land zone (including own territory); selected country chips update automatically while explicit exclusions and alliances remain protected. Painting over existing plans shows one united canvas outline immediately. Recovery fronts appear in Offensives with a Locate action; no misleading 12-plan limit in the counter.
+- `engine.js`: sanitize invalid/sea cells instead of rejecting a drawn area; preserve merged regions beyond 3500 cells and queue unlimited plans (12 simultaneous waves remains). A plan can wait for troops or new borders. Explicit `targets` and `excludeTargets` remain authoritative. `recoveryPlans` track wartime territory taken from any kingdom; the defender uses army waves to retake those cells until peace. A signed treaty cancels these operations. Older saves without recoveryPlans remain compatible.
+- `tests/adaptive-offensives.cjs` verifies automatic recapture, peace cancellation and auto-sanitized zones. All four regression suites and unified Canvas outline check passed. Real iPhone Safari and PeerJS multiplayer not verified. Branch `design/visual-review-v26`; `main` untouched. Permanent preview: https://raw.githack.com/amirmurat/brothers-kingdoms/design/visual-review-v26/index.html
