@@ -445,3 +445,6 @@ _Актуальный реестр, извлечённый из `index.html` н�
 ## v55 — кисть зоны атаки (20.10.2026)
 - `#planGuide`: `#planGuideHint`, `#planPaintCount`, `#planPaintClear`, `#planReviewButton`, `#planGuideExit`. Режим `attackPlanner.mode='paint'`, кисть радиуса 1 клетка, несколько мазков; PointerMove интерполируется. Review attack открывает `#planReview`, Edit area возвращает закрашенную зону. `#planLaunch` отправляет host-authoritative `send(zoneCells)`.
 - Проверки: один enemy/neutral owner, 2..3500 клеток, общая граница, связность. Свои/союзные/морские клетки не включаются. War & Peace прежний; Safari и online не проверены.
+
+## v56 — direct attack painting (20.10.2026)
+- `#planGuide`: теперь `#planBrushSize` (radius 1..6), `#planBrushValue`, `#planTroopsPercent` (5..95%), `#planTroopsValue`; `#planGuideExit`, `#planPaintClear`, `#planReviewButton` (визуальная подпись Start offensive) стоят в одном ряду. Обработчик `reviewPaintedZone` непосредственно вызывает `command(type=send,zone=checked.cells)`; UI этап review не вызывается. Название обработчика и скрытый `#planReview` устарели и могут быть удалены при отдельной проверенной чистке. Обычный тап по нейтралу без атакующего окна; чужие люди открывают дипломатию, стрелка Canvas не рисуется для обычной foreign цели; hold-to-attack отключён.
