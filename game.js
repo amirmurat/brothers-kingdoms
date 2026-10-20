@@ -445,8 +445,8 @@ function setPreview(t){
  offerButton.textContent=allied?(t.confirmBreak?'Confirm end alliance':'End alliance'):received?'Accept alliance offer':sentOffer?'Offer sent':enemy?.bot?'Bots do not accept alliances':'Offer alliance';
  box.dataset.diplomacy=allied?'allied':received?'received':sentOffer?'sent':enemy?.bot?'bot':'offer';
  const building=E.buildingAt(state,t.x,t.y);
- $('targetTitle').textContent=t.type==='redirect'?'Redirect offensive':allied?'Ally: '+enemy.name:enemy?'Territory: '+enemy.name:'Conquer neutral land';
- $('targetDetail').textContent=t.type==='redirect'?`${number(sent)} troops · reserve ${number(p.troops-sent)} · ${terrainNames[E.tile(state,t.x,t.y)]}`:`${terrainNames[E.tile(state,t.x,t.y)]}${building?' · '+(E.KINDS[building.kind]?.name||'Capital'):''} · No troops sent yet`;
+ $('targetTitle').textContent=t.type==='redirect'?'Redirect offensive':allied?'Ally: '+enemy.name:enemy?'Diplomacy · '+enemy.name:'No foreign kingdom';
+ $('targetDetail').textContent=t.type==='redirect'?`${number(sent)} troops · reserve ${number(p.troops-sent)} · ${terrainNames[E.tile(state,t.x,t.y)]}`:`${terrainNames[E.tile(state,t.x,t.y)]}${building?' · '+(E.KINDS[building.kind]?.name||'Capital'):''} · Alliances and peace`;
  const defense=enemy?Math.round(E.tileDefense(state,owner,t.x,t.y)):0;const averageDefense=enemy&&front.cells.length?Math.round(front.cells.reduce((sum,i)=>sum+E.tileDefense(state,owner,i%E.W,Math.floor(i/E.W)),0)/front.cells.length):0;
  $('targetForecast').textContent=allied?'Allied territory cannot be attacked. End the alliance first.':
    t.type==='redirect'?'Confirm to redirect your army.':
@@ -456,9 +456,9 @@ function setPreview(t){
  $('confirmTarget').textContent=t.type==='redirect'?'Change target':'Paint attack zone';
  $('confirmTarget').disabled=allied;
  if(t.type==='redirect'&&!allied&&p.troops-sent<Math.max(75,Math.min(300,p.troopCap*.12)))$('targetForecast').textContent+=' Warning: your reserve will be low after this order.';
- box.dataset.order=t.type;
+ box.dataset.order=t.type;$('cancelTarget').textContent=t.type==='redirect'?'Cancel':'Close';
  const projectedY=(t.y+.5)*TILE*zoom+camY,available=canvas.clientHeight-Math.min(270,Math.max(155,canvas.clientHeight*.37));
- if(projectedY>available){camY-=projectedY-available+18;clampCamera();}
+ if(t.type==='redirect'&&projectedY>available){camY-=projectedY-available+18;clampCamera();}
  document.querySelectorAll('[data-target-percent]').forEach(b=>{const on=Number(b.dataset.targetPercent)===percent;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});
  queueDraw();
 }
