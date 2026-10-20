@@ -28,6 +28,7 @@ jobs:
           node tests/cloudflare-server.cjs
           node tests/cloudflare-client.cjs
           node tests/ui-windows.cjs
-      - run: npm install --no-save playwright
+      - run: npm install --no-save playwright ws
       - run: npx playwright install --with-deps chromium webkit
       - run: node tests/mobile-layout.cjs
+      - run: node tests/network-lobby.cjs

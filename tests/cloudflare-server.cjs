@@ -10,13 +10,16 @@ async function checkRoom(E,source,assert,btoa){
  const clone=x=>JSON.parse(JSON.stringify(x));
  const storage={async get(k){if(Array.isArray(k))return new Map(k.map(i=>[i,data.get(i)]));return data.get(k);},async put(k,v){data.set(k,clone(v));},async transaction(fn){return fn(this);},async setAlarm(){},async deleteAll(){data.clear();}};
  const ctx={storage,blockConcurrencyWhile(fn){this.ready=fn();},getWebSockets(){return sockets.filter(s=>!s.closed);},waitUntil(p){pending.push(p);}};
- const room=new KingdomRoom(ctx,{});await ctx.ready;room.s=E.lobby(831);room.code='A1B2C3';await room.save();
+ const room=new KingdomRoom(ctx,{});await ctx.ready;await room.fetch(new Request('https://test/internal/create?code=A1B2C3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'A',token:'session-a-123456789'})}));
  function socket(){const w={attachment:{id:null},sent:[],closed:false,deserializeAttachment(){return this.attachment;},serializeAttachment(a){this.attachment=a;},send(s){this.sent.push(JSON.parse(s));},close(){this.closed=true;}};sockets.push(w);return w;}
  const a=socket(),b=socket(),c=socket();
  const msg=(w,m)=>room.webSocketMessage(w,JSON.stringify(m));
- await msg(a,{t:'join',name:'A',token:'session-a-123456789'});
  await msg(b,{t:'join',name:'B',token:'session-b-123456789'});
+ assert.equal(room.admin,1,'creator remains owner even if guest socket joins first');
+ await msg(a,{t:'join',name:'A',token:'session-a-123456789'});
  assert.equal(room.s.players.length,2);assert.equal(room.admin,1);
+ await room.disconnect(a);assert.equal(room.admin,1,'temporary lobby disconnect cannot transfer owner');
+ await msg(a,{t:'join',name:'A',token:'session-a-123456789'});assert.equal(room.admin,1);
  let chosen;for(let y=5;y<E.H-5&&!chosen;y++)for(let x=5;x<E.W-5;x++)if(!E.spawnError(room.s,1,x,y)){chosen={x,y};break;}
  await msg(a,{t:'spawn',point:chosen});assert.deepEqual(E.person(room.s,1).spawnPoint,chosen);
  b.attachment.last=0;await msg(b,{t:'spawn',point:chosen});assert(!E.person(room.s,2).spawnPoint,'server rejects another player occupying chosen point');

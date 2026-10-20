@@ -14,7 +14,8 @@ export default {
    if (request.headers.get('Origin') !== url.origin) return json({error:'Invalid origin'},403);
    const code=crypto.randomUUID().replace(/-/g,'').slice(0,6).toUpperCase();
    const stub=env.ROOMS.get(env.ROOMS.idFromName(code));
-   return stub.fetch(new Request(url.origin+'/internal/create?code='+code,{method:'POST'}));
+   let creator={};try{creator=await request.json();}catch(_){}
+   return stub.fetch(new Request(url.origin+'/internal/create?code='+code,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(creator)}));
   }
   const match=url.pathname.match(/^\/api\/rooms\/([A-F0-9]{6})\/socket$/);
   if (match) {
@@ -27,17 +28,19 @@ export default {
 };
 export class KingdomRoom {
  constructor(ctx, env) {
-  this.ctx=ctx;this.env=env;this.s=null;this.tokens={};this.admin=null;this.code='';this.timer=null;this.step=0;
+  this.ctx=ctx;this.env=env;this.s=null;this.tokens={};this.admin=null;this.creatorId=null;this.code='';this.timer=null;this.step=0;
   ctx.blockConcurrencyWhile(async()=>{
    const count=await ctx.storage.get('chunks');
    if(count){const keys=Array.from({length:count},(_,i)=>'state:'+i);const parts=await ctx.storage.get(keys);Object.assign(this,JSON.parse(keys.map(k=>parts.get(k)).join('')));}
+   this.creatorId??=this.s?.players[0]?.id??null;
+   if(this.s?.phase==='lobby'&&this.creatorId)this.admin=this.creatorId;
    for(const ws of ctx.getWebSockets())if(ws.deserializeAttachment()?.id)this.run();
   });
  }
  sockets(){return this.ctx.getWebSockets().filter(ws=>ws.deserializeAttachment()?.id);}
  safe(ws,data){try{ws.send(JSON.stringify(data));}catch(_){}}
  async save(){
-  const data=JSON.stringify({s:this.s,tokens:this.tokens,admin:this.admin,code:this.code});
+  const data=JSON.stringify({s:this.s,tokens:this.tokens,admin:this.admin,creatorId:this.creatorId,code:this.code});
   const parts=[];for(let i=0;i<data.length;i+=50000)parts.push(data.slice(i,i+50000));
   await this.ctx.storage.transaction(async tx=>{await tx.put('chunks',parts.length);for(let i=0;i<parts.length;i++)await tx.put('state:'+i,parts[i]);});
  }
@@ -62,6 +65,11 @@ export class KingdomRoom {
   if(url.pathname==='/internal/create'){
    if(this.s)return json({error:'Room already exists'},409);
    this.s=E.lobby(Date.now());this.tokens={};this.admin=null;this.code=url.searchParams.get('code');
+   let creator={};try{creator=await request.json();}catch(_){}
+   if(typeof creator.token==='string'&&creator.token.length>=12&&creator.token.length<=160){
+    const id=E.addPlayer(this.s,creator.name);this.tokens[creator.token]=id;this.creatorId=id;this.admin=id;
+    E.person(this.s,id).connected=false;
+   }
    await this.save();await this.ctx.storage.setAlarm(Date.now()+86400000);
    return json({code:this.code,created:true});
   }
@@ -92,7 +100,10 @@ export class KingdomRoom {
    for(const other of this.sockets())if(other!==ws&&other.deserializeAttachment()?.id===id){
     other.serializeAttachment({id:null});other.close(1000,'Rejoined elsewhere');
    }
-   if(!this.admin||!this.sockets().some(w=>w.deserializeAttachment()?.id===this.admin))this.admin=id;ws.serializeAttachment({id,last:0,connected:Date.now()});
+   this.creatorId??=id;
+   if(this.s.phase==='lobby')this.admin=this.creatorId;
+   else if(!this.admin||!this.sockets().some(w=>w.deserializeAttachment()?.id===this.admin))this.admin=id;
+   ws.serializeAttachment({id,last:0,connected:Date.now()});
    p.connected=true;p.ready=true;
    await this.save();
    this.safe(ws,{t:'welcome',id,state:this.snapshot()});this.broadcast();this.run();return;
@@ -102,7 +113,7 @@ export class KingdomRoom {
   if(m.t==='ping'){this.safe(ws,{t:'pong'});return;}
   if(m.t==='resync'){this.safe(ws,{t:'state',state:this.snapshot()});return;}
   const now=Date.now();
-  if(now-(a.last||0)<60){this.safe(ws,{t:'ack',id:m.id,ok:false,error:'Please wait before the next command.'});return;}
+  if(m.t==='action'&&now-(a.last||0)<60){this.safe(ws,{t:'ack',id:m.id,ok:false,error:'Please wait before the next command.'});return;}
   ws.serializeAttachment({...a,last:now});
   let result={ok:true};
   if(m.t==='action'){
@@ -117,7 +128,7 @@ export class KingdomRoom {
    result=E.setSpawn(this.s,a.id,m.point);
   }else if(m.t==='ready'&&this.s.phase==='lobby'){p.ready=!!m.value;
   }else if(m.t==='rematch'&&a.id===this.admin&&this.s.phase==='ended'){
-   const old=this.s;this.s=E.lobby(Date.now());this.s.settings=old.settings;
+   const old=this.s;this.s=E.lobby(Date.now());this.s.settings=old.settings;this.admin=this.creatorId;
    for(const human of old.players.filter(p=>!p.bot)){
     const id=E.addPlayer(this.s,human.name);
     Object.assign(E.person(this.s,id),{id:human.id,color:human.color,ready:true,connected:human.connected});
@@ -132,7 +143,7 @@ export class KingdomRoom {
   if(a?.id&&!connected.has(a.id)){
    const p=E.person(this.s,a.id);if(p)p.connected=false;
    // Transfer room controls; the simulation always stays on the server.
-   if(this.admin===a.id&&connected.size)this.admin=[...connected][0];
+   if(this.s.phase!=='lobby'&&this.admin===a.id&&connected.size)this.admin=[...connected][0];
   }
   if(!connected.size&&this.timer){clearInterval(this.timer);this.timer=null;}
   if(this.s){await this.save();this.broadcast();}

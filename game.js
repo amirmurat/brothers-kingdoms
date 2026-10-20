@@ -588,22 +588,25 @@ function contextual(item){
  }else html=`<strong>Army · ${esc(other?.name||'')}</strong><span>${number(item.strength)} troops · ${item.tx},${item.ty}</span>${own?`${!Array.isArray(item.zoneCells)?`<button data-context-redirect="${esc(item.id)}">Change target</button>`:''}<button data-context-return="${esc(item.id)}">Retreat</button>`:''}`;
  if(content.__last!==html){content.innerHTML=html;content.__last=html;}if(box.classList.contains('hidden'))showAux('contextCard');
 }
-let serverSocket=null,serverActive=false,serverSession=0,serverHeartbeat=null;
+let serverSocket=null,serverActive=false,serverSession=0,serverHeartbeat=null,serverJoinToken=null;
 function serverEnabled(){return window.BK_SERVER===true;}
 function serverSend(m){if(serverSocket?.readyState===1){serverSocket.send(JSON.stringify(m));return true;}return false;}
 async function createServerRoom(){
  const session=++serverSession;serverActive=true;demo=false;host=false;setBusy(true);setNetwork('CONNECTING');
  try{
-  const response=await fetch('/api/rooms',{method:'POST'});
+  const token=crypto.randomUUID();
+  const response=await fetch('/api/rooms',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name(),token})});
   if(!response.ok)throw Error('Server unavailable. Try again.');
   const room=await response.json();if(session!==serverSession)return;
-  code=room.code;openServerSocket(session);
+  code=room.code;serverJoinToken=token;
+  try{localStorage.setItem('bk-token-'+code,token);}catch(_){}
+  openServerSocket(session);
  }catch(e){if(session===serverSession){serverActive=false;setBusy(false);error(e.message);}}
 }
 function joinServerRoom(){
  const entered=$('roomCode').value.toUpperCase().replace(/[^A-Z0-9]/g,'');
  if(!/^[A-F0-9]{6}$/.test(entered))return error('Enter a six-character server room code.');
- code=entered;serverActive=true;demo=false;host=false;setBusy(true);openServerSocket(++serverSession);
+ code=entered;serverJoinToken=null;serverActive=true;demo=false;host=false;setBusy(true);openServerSocket(++serverSession);
 }
 function openServerSocket(session=serverSession){
  if(!serverActive||session!==serverSession)return;
@@ -612,7 +615,7 @@ function openServerSocket(session=serverSession){
  const url=new URL('/api/rooms/'+code+'/socket',location.origin);url.protocol=location.protocol==='https:'?'wss:':'ws:';
  const ws=new WebSocket(url);serverSocket=ws;setNetwork('CONNECTING');
  connectTimer=setTimeout(()=>{if(serverSocket===ws)ws.close();},15000);
- ws.onopen=()=>{if(serverSocket!==ws)return;serverSend({t:'join',token:getToken(),name:name()});};
+ ws.onopen=()=>{if(serverSocket!==ws)return;serverSend({t:'join',token:serverJoinToken||getToken(),name:name()});};
  ws.onmessage=event=>{
   if(serverSocket!==ws||session!==serverSession)return;
   let m;try{m=JSON.parse(event.data);}catch(_){return;}
@@ -625,7 +628,7 @@ function openServerSocket(session=serverSession){
   }else if(m.t==='ack'){
    pendingOrders.delete(m.id);toast(m.ok?'Order completed':m.error||'Order rejected',m.ok?'success':'error');
    if(m.ok&&m.action==='build')refreshQuickBuild();
-  }else if(m.t==='error'){clearTimeout(connectTimer);setBusy(false);if(!state){error(m.message);serverActive=false;ws.close();}else toast(m.message,'error');}
+  }else if(m.t==='error'){clearTimeout(connectTimer);setBusy(false);if(!state){error(m.message);serverActive=false;ws.close();}else{toast(m.message,'error');if(state.phase==='lobby'){$('spawnHint').textContent=m.message;$('spawnHint').dataset.kind='error';}}}
  };
  ws.onclose=()=>{
   if(serverSocket!==ws||session!==serverSession||!serverActive)return;
@@ -637,7 +640,7 @@ function openServerSocket(session=serverSession){
  serverHeartbeat=setInterval(()=>{if(serverSocket===ws)serverSend({t:'ping'});},15000);
 }
 function leaveServer(){
- serverActive=false;++serverSession;clearInterval(serverHeartbeat);serverHeartbeat=null;
+ serverActive=false;serverJoinToken=null;++serverSession;clearInterval(serverHeartbeat);serverHeartbeat=null;
  const ws=serverSocket;serverSocket=null;try{ws?.close(1000,'Left room');}catch(_){}
 }
 
@@ -725,11 +728,13 @@ function chooseSpawn(point){
  else if(host){const result=E.setSpawn(state,myId,point);if(!result.ok)return;broadcast();}
  else if(upstream?.open)upstream.send({t:'spawn',point});
  else{$('spawnHint').textContent='Wait for the room connection.';return;}
- spawnCursor=point;renderSpawnMap();
+ spawnCursor=point;
+ if(serverActive||!host){$('spawnHint').textContent='Saving starting position…';$('spawnHint').dataset.kind='info';}
+ else renderSpawnMap();
 }
 $('spawnMap').onpointerdown=e=>{spawnPointer={x:e.clientX,y:e.clientY};};
 $('spawnMap').onpointercancel=()=>{spawnPointer=null;};
-$('spawnMap').onclick=e=>{
+$('spawnMap').onpointerup=e=>{
  if(!spawnPointer||Math.hypot(e.clientX-spawnPointer.x,e.clientY-spawnPointer.y)>12)return;
  spawnPointer=null;const r=$('spawnMap').getBoundingClientRect();
  chooseSpawn({x:Math.floor((e.clientX-r.left)/r.width*E.W),y:Math.floor((e.clientY-r.top)/r.height*E.H)});
@@ -747,7 +752,7 @@ $('spawnAuto').onclick=()=>chooseSpawn(null);
 function render(){if(!state)return;
  if(state.phase==='lobby'){
   $('victory').classList.add('hidden');show('waiting');$('showCode').textContent=code;$('roomHeadingLabel').textContent=host?'ROOM READY':'IN ROOM';$('roomMembersCount').textContent=state.players.filter(p=>!p.bot).length+' players';
-  patchHtml('waitingPlayers',state.players.map(p=>`<div class="player-row"><i class="player-dot" style="background:${p.color}"></i><strong>${esc(p.name)}</strong><span class="muted">${p.id===myId?'You':p.id===1?'Host':''} · ${p.connected===false?'Offline':p.ready?'In room':'Connecting'}</span></div>`).join(''));
+  patchHtml('waitingPlayers',state.players.map(p=>`<div class="player-row"><i class="player-dot" style="background:${p.color}"></i><strong>${esc(p.name)}</strong><span class="muted">${[p.id===myId?'You':'',p.id===(serverActive?state.serverAdmin:1)?'Host':''].filter(Boolean).join(' · ')} · ${p.connected===false?'Offline':p.ready?'In room':'Connecting'}</span></div>`).join(''));
   $('startButton').classList.toggle('hidden',!host);$('readyButton').classList.add('hidden');$('readyButton').setAttribute('aria-pressed',String(readyLocal));$('readyButton').textContent=readyLocal?'Ready ✓':'I am ready';$('botCount').disabled=!host;
   $('startButton').disabled=!state.players.filter(p=>!p.bot).every(p=>p.ready||p.connected===false);$('botCount').value=state.settings?.bots??0;
   $('roomRules').textContent=serverActive?'Conquer 100% of the land. No time limit. The server runs the match; all players offline pauses it.':'Conquer 100% of the land. No time limit. The host must keep their tab open.';
