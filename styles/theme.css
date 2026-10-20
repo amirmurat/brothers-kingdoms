@@ -1623,3 +1623,17 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
 #game#game#game #gameFeedback:has(#hudAlert.danger:not(.hidden)) #gameToast{display:none!important}
 #game#game#game #gameFeedback{display:block!important}
 #game#game#game #gameFeedback:has(#hudAlert.hidden):has(#gameToast.hidden){display:none!important}
+
+/* Room map: same generated mainland as the match, with shared reserved capitals. */
+#waiting#waiting#waiting .spawn-picker{margin:16px 0!important;padding:12px!important;border:1px solid #354555!important;border-radius:12px!important;min-width:0!important;background:#101923!important}
+#waiting#waiting#waiting .spawn-picker-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important}
+#waiting#waiting#waiting .spawn-picker-head strong{font-size:14px!important;color:#eef5ff!important}
+#waiting#waiting#waiting #spawnAuto{width:auto!important;min-height:44px!important;margin:0!important;padding:7px 10px!important;border-radius:9px!important;font-size:12px!important;background:#223044!important;color:#d8edff!important}
+#waiting#waiting#waiting #spawnHint{min-height:32px!important;margin:8px 0!important;font-size:11px!important;line-height:1.45!important;color:#b5c7d9!important}
+#waiting#waiting#waiting #spawnHint[data-kind="error"]{color:#ff9dae!important}
+#waiting#waiting#waiting #spawnMap{display:block!important;width:100%!important;height:auto!important;aspect-ratio:160/104!important;border:1px solid #536b80!important;border-radius:8px!important;box-sizing:border-box!important;touch-action:pan-y!important;cursor:crosshair}
+#waiting#waiting#waiting #spawnMap:focus-visible{outline:2px solid #39d5ff!important;outline-offset:3px!important}
+#waiting#waiting#waiting .spawn-legend{display:flex!important;flex-direction:column!important;gap:6px!important;margin-top:10px!important}
+#waiting#waiting#waiting .spawn-player{display:flex!important;align-items:center!important;gap:7px!important;min-width:0!important;font-size:11px!important;line-height:1.4!important;color:#c4d1e0!important}
+#waiting#waiting#waiting .spawn-player i{width:9px!important;height:9px!important;flex:0 0 9px!important;border-radius:3px!important}
+#waiting#waiting#waiting .spawn-player span{min-width:0!important;overflow-wrap:anywhere!important}

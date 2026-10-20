@@ -14,6 +14,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Engine and server regressions
+        run: |
+          node tests/spawn-points.cjs
+          node tests/building-prices.cjs
+          node tests/adaptive-offensives.cjs
+          node tests/offensive-plans.cjs
+          node tests/plan-frontier-merge.cjs
+          node tests/recovery-frontier.cjs
+          node tests/saved-plan-eraser.cjs
+          node tests/unlimited-plans.cjs
+          node tests/nations.cjs
+          node tests/cloudflare-server.cjs
+          node tests/cloudflare-client.cjs
+          node tests/ui-windows.cjs
       - run: npm install --no-save playwright
       - run: npx playwright install --with-deps chromium webkit
       - run: node tests/mobile-layout.cjs

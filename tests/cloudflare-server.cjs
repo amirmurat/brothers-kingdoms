@@ -17,8 +17,12 @@ async function checkRoom(E,source,assert,btoa){
  await msg(a,{t:'join',name:'A',token:'session-a-123456789'});
  await msg(b,{t:'join',name:'B',token:'session-b-123456789'});
  assert.equal(room.s.players.length,2);assert.equal(room.admin,1);
+ let chosen;for(let y=5;y<E.H-5&&!chosen;y++)for(let x=5;x<E.W-5;x++)if(!E.spawnError(room.s,1,x,y)){chosen={x,y};break;}
+ await msg(a,{t:'spawn',point:chosen});assert.deepEqual(E.person(room.s,1).spawnPoint,chosen);
+ b.attachment.last=0;await msg(b,{t:'spawn',point:chosen});assert(!E.person(room.s,2).spawnPoint,'server rejects another player occupying chosen point');
+ a.attachment.last=0;b.attachment.last=0;
  await msg(b,{t:'start'});assert.equal(room.s.phase,'lobby');
- await msg(a,{t:'start'});assert.equal(room.s.phase,'playing');
+ await msg(a,{t:'start'});assert.equal(room.s.phase,'playing');assert.deepEqual(E.person(room.s,1).capital,chosen);
  assert.equal(timers.size,1);assert(a.sent.some(m=>m.state?.packed),'compressed snapshots');
  const before=room.s.tick;for(let i=0;i<4;i++)for(const tick of timers.values())tick();
  assert.equal(room.s.tick,before+1);

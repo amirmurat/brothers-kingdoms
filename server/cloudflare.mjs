@@ -114,7 +114,7 @@ export class KingdomRoom {
   }else if(m.t==='settings'&&a.id===this.admin&&this.s.phase==='lobby'){
    this.s.settings.bots=Math.max(0,Math.min(8,Math.floor(Number(m.bots)||0)));
   }else if(m.t==='spawn'&&this.s.phase==='lobby'){
-   p.spawnPreference=['auto','northwest','northeast','southwest','southeast'].includes(m.choice)?m.choice:'auto';
+   result=E.setSpawn(this.s,a.id,m.point);
   }else if(m.t==='ready'&&this.s.phase==='lobby'){p.ready=!!m.value;
   }else if(m.t==='rematch'&&a.id===this.admin&&this.s.phase==='ended'){
    const old=this.s;this.s=E.lobby(Date.now());this.s.settings=old.settings;

@@ -9,7 +9,7 @@
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
 <link rel="stylesheet" href="styles/legacy.css?v=49-visible-camp"/>
-<link rel="stylesheet" href="styles/theme.css?v=68-build-chip"/>
+<link rel="stylesheet" href="styles/theme.css?v=69-spawn-map"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -36,7 +36,13 @@
 <div class="room-roster-heading"><strong>Players</strong><span id="roomMembersCount">1 player</span></div><div class="waiting-players" id="waitingPlayers"></div>
 <details class="room-settings" id="roomSettings"><summary>Match settings <span id="roomSettingsSummary">0 bots · no timer</span></summary>
 <label class="input-label" for="botCount">Number of bots</label>
-<select id="botCount"><option selected="" value="0">No bots</option><option value="3">3 · Easy</option><option value="7">7 · Normal</option><option value="10">10 · Intense</option></select><label class="input-label" for="spawnChoice">My starting position</label><select id="spawnChoice"><option value="auto">Automatic</option><option value="northwest">Northwest</option><option value="northeast">Northeast</option><option value="southwest">Southwest</option><option value="southeast">Southeast</option></select></details>
+<select id="botCount"><option selected="" value="0">No bots</option><option value="3">3 · Easy</option><option value="7">7 · Normal</option><option value="10">10 · Intense</option></select></details>
+<section class="spawn-picker" aria-label="Starting position">
+<div class="spawn-picker-head"><strong>Starting position</strong><button type="button" id="spawnAuto">Automatic</button></div>
+<p id="spawnHint" role="status">Tap land to place your capital, or leave Automatic.</p>
+<canvas id="spawnMap" width="640" height="416" tabindex="0" role="application" aria-label="Starting position map. Tap land, or use arrow keys and Enter."></canvas>
+<div id="spawnLegend" class="spawn-legend"></div>
+</section>
 <button aria-pressed="false" class="secondary large hidden" id="readyButton">Ready</button><details class="room-rules"><summary>Match rules</summary><p id="roomRules">Conquer 100% of the land. No time limit. If the host leaves, the room closes.</p></details>
 <button class="primary large" id="startButton">Start match <span aria-hidden="true">→</span></button>
 <p class="room-foot" id="waitingHint">Waiting for players…</p><button class="leave-room" id="leaveRoom"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#arrow-right"></use></svg> Main menu</button>
@@ -174,8 +180,8 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="server-config.js?v=68-build-chip"></script>
-<script src="engine.js?v=68-build-chip"></script>
+<script src="server-config.js?v=69-spawn-map"></script>
+<script src="engine.js?v=69-spawn-map"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=68-build-chip"></script>
+<script src="game.js?v=69-spawn-map"></script>
 </body></html>

@@ -665,7 +665,7 @@ function joinConnection(conn){const sessionPeer=peer;conn.on('data',m=>{if(peer!
   if(m.token)tokenStore.set(m.token,id);
   for(const [c,v] of connections)if(v===id&&c!==conn){connections.delete(c);previousOwners.delete(c);previousRevs.delete(c);try{c.close();}catch(_){ }}
   state.players.find(p=>p.id===id).connected=true;state.players.find(p=>p.id===id).ready=true;connections.set(conn,id);conn.send({t:'welcome',id,state:pack(state)});previousOwners.delete(conn);previousRevs.delete(conn);broadcast(false);
- }else if(m.t==='resync'){conn.send({t:'state',state:pack(state,true)});previousOwners.set(conn,state.owners.slice());previousRevs.set(conn,state.territoryRevision);}else if(m.t==='spawn'){const id=connections.get(conn);const p=E.person(state,id);if(p&&state.phase==='lobby'){p.spawnPreference=['northwest','northeast','southwest','southeast','auto'].includes(m.choice)?m.choice:'auto';broadcast();}}else if(m.t==='ready'){const id=connections.get(conn);const p=E.person(state,id);if(p&&state.phase==='lobby'){p.ready=!!m.value;broadcast();}}
+ }else if(m.t==='resync'){conn.send({t:'state',state:pack(state,true)});previousOwners.set(conn,state.owners.slice());previousRevs.set(conn,state.territoryRevision);}else if(m.t==='spawn'){const id=connections.get(conn);const p=E.person(state,id);if(p&&state.phase==='lobby'){const result=E.setSpawn(state,id,m.point===null?null:m.point);if(result.ok)broadcast();else conn.send({t:'error',message:result.error});}}else if(m.t==='ready'){const id=connections.get(conn);const p=E.person(state,id);if(p&&state.phase==='lobby'){p.ready=!!m.value;broadcast();}}
  else if(m.t==='settings'){/* only the room host may edit settings */}
  else if(m.t==='action'){
   const id=connections.get(conn);if(!id)return;const now=Date.now();if(now-(lastSendTime.get(conn)||0)<75)return;
@@ -691,15 +691,68 @@ function command(a){if(!state||state.phase!=='playing')return false;
  if(upstream?.open){if(Date.now()-lastStateAt>4500){setNetwork('OFFLINE');toast('Data is outdated. Wait for reconnection before issuing an order.');return false;}const id=++seq;pendingOrders.set(id,Date.now());upstream.send({t:'action',id,action:a});return true;}toast('Room connection lost.');return false;}
 function showTutorial(){if(!showTutorialOnce)return;try{localStorage.setItem('bk-v9-tutorial','yes');}catch(_){}showTutorialOnce=false;}
 
+let spawnCursor=null,spawnPreviewSeed=null,spawnPreviewLayer=null,spawnPointer=null;
+function renderSpawnMap(){
+ if(!state||state.phase!=='lobby')return;
+ const map=$('spawnMap'),c=map.getContext('2d'),scale=4;
+ if(spawnPreviewSeed!==state.seed||!spawnPreviewLayer){
+  spawnPreviewSeed=state.seed;spawnPreviewLayer=document.createElement('canvas');
+  spawnPreviewLayer.width=E.W*scale;spawnPreviewLayer.height=E.H*scale;
+  const layer=spawnPreviewLayer.getContext('2d'),terrain=E.previewTerrain(state);
+  const colors=['#101b28','#526275','#3c6261','#697383','#678176','#8b7c60','#303e52'];
+  for(let i=0;i<terrain.length;i++){layer.fillStyle=colors[terrain[i]];layer.fillRect((i%E.W)*scale,Math.floor(i/E.W)*scale,scale,scale);}
+ }
+ c.clearRect(0,0,map.width,map.height);c.drawImage(spawnPreviewLayer,0,0);
+ for(const p of state.players){
+  if(!p.spawnPoint)continue;const {x,y}=p.spawnPoint;
+  c.beginPath();c.arc((x+.5)*scale,(y+.5)*scale,14*scale,0,Math.PI*2);
+  c.fillStyle=p.id===myId?'rgba(57,213,255,.12)':'rgba(255,93,128,.12)';c.fill();
+  c.beginPath();c.arc((x+.5)*scale,(y+.5)*scale,4*scale,0,Math.PI*2);
+  c.fillStyle=p.color;c.fill();c.strokeStyle='#0b111a';c.lineWidth=3;c.stroke();
+  c.fillStyle='#0b111a';c.font='bold 16px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(String(p.id),(x+.5)*scale,(y+.5)*scale);
+ }
+ if(spawnCursor){c.strokeStyle='#fff';c.lineWidth=2;c.strokeRect(spawnCursor.x*scale-5,spawnCursor.y*scale-5,14,14);}
+ const own=mine()?.spawnPoint;
+ $('spawnHint').textContent=own?'Your capital: '+own.x+', '+own.y+' · tap to move it.':'Tap land to place your capital, or leave Automatic.';
+ $('spawnHint').dataset.kind='info';$('spawnAuto').disabled=!own;
+ $('spawnLegend').innerHTML=state.players.filter(p=>!p.bot).map(p=>'<span class="spawn-player"><i style="background:'+esc(p.color)+'"></i><span>'+esc(p.name)+(p.id===myId?' (you)':'')+' · '+(p.spawnPoint?'chosen':'automatic')+'</span></span>').join('');
+}
+function chooseSpawn(point){
+ if(!state||state.phase!=='lobby')return;
+ const fail=point?E.spawnError(state,myId,point.x,point.y):null;
+ if(fail){$('spawnHint').textContent=fail;$('spawnHint').dataset.kind='error';return;}
+ if(serverActive){if(!serverSend({t:'spawn',point})){$('spawnHint').textContent='Wait for the room connection.';return;}}
+ else if(host){const result=E.setSpawn(state,myId,point);if(!result.ok)return;broadcast();}
+ else if(upstream?.open)upstream.send({t:'spawn',point});
+ else{$('spawnHint').textContent='Wait for the room connection.';return;}
+ spawnCursor=point;renderSpawnMap();
+}
+$('spawnMap').onpointerdown=e=>{spawnPointer={x:e.clientX,y:e.clientY};};
+$('spawnMap').onpointercancel=()=>{spawnPointer=null;};
+$('spawnMap').onclick=e=>{
+ if(!spawnPointer||Math.hypot(e.clientX-spawnPointer.x,e.clientY-spawnPointer.y)>12)return;
+ spawnPointer=null;const r=$('spawnMap').getBoundingClientRect();
+ chooseSpawn({x:Math.floor((e.clientX-r.left)/r.width*E.W),y:Math.floor((e.clientY-r.top)/r.height*E.H)});
+};
+$('spawnMap').onkeydown=e=>{
+ if(!state||state.phase!=='lobby')return;
+ if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
+  e.preventDefault();const cursor=spawnCursor||mine()?.spawnPoint||{x:Math.floor(E.W/2),y:Math.floor(E.H/2)};
+  spawnCursor={x:Math.max(0,Math.min(E.W-1,cursor.x+(e.key==='ArrowLeft'?-1:e.key==='ArrowRight'?1:0))),y:Math.max(0,Math.min(E.H-1,cursor.y+(e.key==='ArrowUp'?-1:e.key==='ArrowDown'?1:0)))};
+  renderSpawnMap();
+ }else if(e.key==='Enter'||e.key===' '){e.preventDefault();if(spawnCursor)chooseSpawn(spawnCursor);}
+};
+$('spawnAuto').onclick=()=>chooseSpawn(null);
+
 function render(){if(!state)return;
  if(state.phase==='lobby'){
   $('victory').classList.add('hidden');show('waiting');$('showCode').textContent=code;$('roomHeadingLabel').textContent=host?'ROOM READY':'IN ROOM';$('roomMembersCount').textContent=state.players.filter(p=>!p.bot).length+' players';
   patchHtml('waitingPlayers',state.players.map(p=>`<div class="player-row"><i class="player-dot" style="background:${p.color}"></i><strong>${esc(p.name)}</strong><span class="muted">${p.id===myId?'You':p.id===1?'Host':''} · ${p.connected===false?'Offline':p.ready?'In room':'Connecting'}</span></div>`).join(''));
-  $('startButton').classList.toggle('hidden',!host);$('readyButton').classList.add('hidden');$('readyButton').setAttribute('aria-pressed',String(readyLocal));$('readyButton').textContent=readyLocal?'Ready ✓':'I am ready';$('botCount').disabled=!host;$('spawnChoice').disabled=false;
+  $('startButton').classList.toggle('hidden',!host);$('readyButton').classList.add('hidden');$('readyButton').setAttribute('aria-pressed',String(readyLocal));$('readyButton').textContent=readyLocal?'Ready ✓':'I am ready';$('botCount').disabled=!host;
   $('startButton').disabled=!state.players.filter(p=>!p.bot).every(p=>p.ready||p.connected===false);$('botCount').value=state.settings?.bots??0;
   $('roomRules').textContent=serverActive?'Conquer 100% of the land. No time limit. The server runs the match; all players offline pauses it.':'Conquer 100% of the land. No time limit. The host must keep their tab open.';
   $('waitingHint').textContent=serverActive?(host?'You can start the match. The server runs the game.':'Waiting for the room leader. You are ready.'):host?'You are the host. Leaving closes the room.':'Waiting for host to start. You are ready.'; $('roomSettingsSummary').textContent=(state.settings?.bots??0)+' bots';
-  phaseShown='lobby';return;
+  renderSpawnMap();phaseShown='lobby';return;
  }
  if(phaseShown!=='playing'&&phaseShown!=='ended'){
   lastHudLand=null;lastHudTick=-1;lastHudOwners=null;lastHudArmies=new Map();hudNotice=null;activeThreats=[];announcedThreats.clear();lastThreatSignature="";
@@ -1398,7 +1451,7 @@ $('nickname').addEventListener('change',()=>name());
 $('soloBots').addEventListener('change',()=>{try{localStorage.setItem('bk-solo-bots',$('soloBots').value);}catch(_){}});
 $('readyButton').onclick=()=>{readyLocal=!readyLocal;$('readyButton').setAttribute('aria-pressed',String(readyLocal));upstream?.send({t:'ready',value:readyLocal});};
 for(const id of ['botCount'])$(id).onchange=()=>{if(host&&state?.phase==='lobby'){if(serverActive){serverSend({t:'settings',bots:Number($('botCount').value)});return;}state.settings={bots:Number($('botCount').value)};broadcast();}};
-$('spawnChoice').onchange=()=>{if(serverActive){serverSend({t:'spawn',choice:$('spawnChoice').value});return;}if(state?.phase!=='lobby')return;if(host){mine().spawnPreference=$('spawnChoice').value;broadcast();}else upstream?.send({t:'spawn',choice:$('spawnChoice').value});};
+
 $('resultExit').onclick=requestExit;$('spectateMatch').onclick=()=>{defeatDismissed=true;phaseShown='playing';$('victory').classList.add('hidden');};
 $('restart').onclick=()=>{
  if(serverActive){if(host&&state?.phase==='ended')serverSend({t:'rematch'});return;}

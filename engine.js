@@ -86,7 +86,7 @@ function gainTile(s,x,y,id){if(!inside(x,y)||tile(s,x,y)===0)return false;const 
  }
  return true;
 }
-function claim(s,x,y,id,r){for(let yy=y-r;yy<=y+r;yy++)for(let xx=x-r;xx<=x+r;xx++)if(inside(xx,yy)&&Math.hypot(xx-x,yy-y)<=r+0.25){s.tiles[idx(xx,yy)] ||=1;gainTile(s,xx,yy,id);}}
+function claim(s,x,y,id,r){for(let yy=y-r;yy<=y+r;yy++)for(let xx=x-r;xx<=x+r;xx++)if(inside(xx,yy)&&tile(s,xx,yy)&&Math.hypot(xx-x,yy-y)<=r+0.25){gainTile(s,xx,yy,id);}}
 
 function sealTerritories(s){
  const changes=[];
@@ -108,15 +108,52 @@ function sealTerritories(s){
 function sites(s,n){const anchors=[[.16,.23],[.82,.76],[.82,.22],[.17,.78],[.48,.17],[.5,.83],[.27,.48],[.75,.5],[.34,.12],[.65,.9],[.91,.48],[.08,.52],[.47,.49],[.55,.48]];
  return anchors.slice(0,n).map(([fx,fy])=>({x:Math.round(fx*(W-1)),y:Math.round(fy*(H-1))}));
 }
+const spawnTerrainCache=new Map();
+function previewTerrain(s){
+ if(!spawnTerrainCache.has(s.seed)){
+  if(spawnTerrainCache.size>=8)spawnTerrainCache.delete(spawnTerrainCache.keys().next().value);
+  spawnTerrainCache.set(s.seed,singleContinent(generate(s.seed)));
+ }
+ return spawnTerrainCache.get(s.seed).slice();
+}
+function spawnError(s,id,x,y){
+ if(s.phase!=='lobby'||!person(s,id))return 'Starting positions can only change in the room.';
+ if(!inside(x,y)||x<5||y<5||x>=W-5||y>=H-5)return 'Choose a point away from the map edge.';
+ const terrain=previewTerrain(s);
+ if(!terrain[idx(x,y)]||terrain[idx(x,y)]===6)return 'Choose land outside mountain peaks.';
+ for(const p of s.players){
+  if(p.id===id||!p.spawnPoint)continue;
+  if((p.spawnPoint.x-x)**2+(p.spawnPoint.y-y)**2<14*14)return 'Choose a point farther from another capital.';
+ }
+ return null;
+}
+function setSpawn(s,id,point){
+ if(s.phase!=='lobby'||!person(s,id))return {ok:false,error:'Starting positions can only change in the room.'};
+ const p=person(s,id);
+ if(point===null){p.spawnPoint=null;p.spawnPreference='auto';return {ok:true};}
+ if(!point||typeof point!=='object')return {ok:false,error:'Choose a point on the map.'};
+ const error=spawnError(s,id,point.x,point.y);if(error)return {ok:false,error};
+ p.spawnPoint={x:point.x,y:point.y};p.spawnPreference='auto';return {ok:true};
+}
 function start(s,bots=0){if(s.phase!=='lobby'||!s.players.length)return {ok:false,error:'No players.'};
- s.tiles=singleContinent(generate(s.seed));s.owners=new Array(W*H).fill(0);s.armies=[];s.attackPlans=[];s.recoveryPlans=[];s.buildings=[];s.territoryRevision=0;
+ for(const p of s.players)if(p.spawnPoint){const fail=spawnError(s,p.id,p.spawnPoint.x,p.spawnPoint.y);if(fail)return {ok:false,error:p.name+': '+fail};}
+ s.tiles=previewTerrain(s);s.owners=new Array(W*H).fill(0);s.armies=[];s.attackPlans=[];s.recoveryPlans=[];s.buildings=[];s.territoryRevision=0;
  const botsCount=clamp(Math.floor(bots),0,COLORS.length-s.players.length);for(let i=0;i<botsCount;i++)addPlayer(s,['Crimson Peaks','Northern Crown','Iron Pact','Free Cities','Amber Horde','Golden Plains','Blue Guard','Stone Throne','Greenlands','Cloud Folk'][i]||'Empire '+(i+1),true);
  let positions=sites(s,s.players.length);
  const targets={northwest:{x:Math.round(W*.16),y:Math.round(H*.23)},northeast:{x:Math.round(W*.82),y:Math.round(H*.22)},southwest:{x:Math.round(W*.17),y:Math.round(H*.78)},southeast:{x:Math.round(W*.82),y:Math.round(H*.76)}};
- const taken=new Set();const placement=[];
- for(const p of s.players){const wish=targets[p.spawnPreference];let best=-1,score=Infinity;
-  if(wish){for(let i=0;i<positions.length;i++)if(!taken.has(i)){const d=Math.abs(positions[i].x-wish.x)+Math.abs(positions[i].y-wish.y);if(d<score){score=d;best=i;}}}
-  if(best<0)best=positions.findIndex((_,i)=>!taken.has(i));taken.add(best);placement.push(safeSpawn(s,positions[best],placement));}
+ const taken=new Set(),placement=[],used=s.players.filter(p=>p.spawnPoint).map(p=>({...p.spawnPoint}));
+ // Reserve manual capitals before placing any automatic players or bots.
+ for(const p of s.players){
+  const wish=p.spawnPoint||targets[p.spawnPreference];let best=-1,score=Infinity;
+  if(wish)for(let i=0;i<positions.length;i++)if(!taken.has(i)){
+   const d=Math.abs(positions[i].x-wish.x)+Math.abs(positions[i].y-wish.y);
+   if(d<score){score=d;best=i;}
+  }
+  if(best<0)best=positions.findIndex((_,i)=>!taken.has(i));
+  taken.add(best);
+  if(p.spawnPoint)placement.push({...p.spawnPoint});
+  else{const pos=safeSpawn(s,positions[best],used);used.push(pos);placement.push(pos);}
+ }
  placement.forEach((pos,i)=>{const p=s.players[i];claim(s,pos.x,pos.y,p.id,4);p.capital={x:pos.x,y:pos.y};building(s,p.id,'capital',pos.x,pos.y);
  const farmX=pos.x+2,farmY=pos.y+1;if(owner(s,farmX,farmY)===p.id)building(s,p.id,'farm',farmX,farmY);
  });
@@ -772,5 +809,5 @@ function tick(s){if(s.phase!=='playing')return;s.tick++;
  checkWin(s);
 }
 
-return{BUILD:'v68',W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v69',W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });
