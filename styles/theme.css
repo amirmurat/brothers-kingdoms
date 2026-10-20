@@ -697,3 +697,23 @@ html,body{background:#090c11!important;color:#eef2f8!important}
 #game#game#game #gameFeedback{position:absolute!important;top:8px!important;left:12px!important;right:12px!important;width:auto!important;height:36px!important;min-height:36px!important;max-height:36px!important;box-sizing:border-box!important;display:flex!important;z-index:35!important;border:1px solid #465265!important;border-radius:9px!important;pointer-events:none!important}
 #game#game#game #gameFeedback #hudAlert{pointer-events:auto!important}
 #game#game#game #gameFeedback:has(#hudAlert.hidden):has(#gameToast.hidden){display:none!important}
+
+/* v33: one entry per task; country diplomacy stays with its target. */
+#game#game#game :is(#battleDock,#sessionPause,#armiesToggle,#zoomIn,#zoomOut,#zoomText),#game#game#game [data-tab="diplomacy"]{display:none!important}
+#game#game#game .tabbar{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+#game#game#game #gameActionBar{position:absolute!important;left:12px!important;right:12px!important;bottom:calc(12px + env(safe-area-inset-bottom))!important;display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;width:auto!important;pointer-events:auto!important}
+#game#game#game #gameActionBar button{position:static!important;width:100%!important;min-width:0!important;height:56px!important;min-height:56px!important;max-height:56px!important;margin:0!important;padding:8px!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;border-radius:12px!important;font-size:16px!important;line-height:1.2!important;box-sizing:border-box!important}
+#game#game#game #scienceButton{background:#171d27!important;color:#eef2f8!important;border:1px solid #465265!important;box-shadow:none!important}
+#game#game#game #scienceButton>span:first-child{font-size:28px!important;line-height:1!important}
+#game#game#game #mapTools{padding:0!important;border:0!important;margin:10px 0!important}
+#game#game#game #mapTools .map-toolbar-actions{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;padding:0!important}
+#game#game#game #mapTools .map-toolbar-actions button{display:flex!important;flex-direction:column!important;width:100%!important;min-width:0!important;max-width:none!important;height:76px!important;min-height:76px!important;max-height:76px!important;gap:6px!important;padding:8px 4px!important;margin:0!important;border:1px solid #465265!important;border-radius:10px!important;box-sizing:border-box!important;justify-content:center!important;align-items:center!important}
+#game#game#game #mapTools .tool-label{font-size:12px!important;line-height:15px!important;text-align:center!important;white-space:normal!important}
+#game#game#game #mapTools .ui-icon{width:24px!important;height:24px!important;flex:0 0 24px!important;margin:0!important}
+#game#game#game #mapTools :is(#armiesToggle,#pauseGame,#zoomIn,#zoomOut,#zoomText){display:none!important}
+#game#game#game.is-targeting #gameActionBar,#game#game#game .map-view.build-palette-open #gameActionBar,#game#game#game .map-view:has(.placing-build:not(.hidden)) #gameActionBar{display:none!important}
+/* A compound control owns one surface; its inner label/action is not another card. */
+#game#game#game #gameFeedback :is(#hudAlert,#gameToast){border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;margin:0!important;padding:0 4px!important;min-width:0!important;width:100%!important;box-sizing:border-box!important}
+#lobby#lobby#lobby .start-choice .choice-symbol{border:0!important;background:transparent!important;box-shadow:none!important}
+#lobby#lobby#lobby .start-settings>summary,#waiting#waiting#waiting :is(.room-settings,.room-rules)>summary{border:0!important;background:transparent!important;box-shadow:none!important;border-radius:0!important}
+#waiting#waiting#waiting .room-invite{border:0!important;background:transparent!important;padding:0!important;box-shadow:none!important}

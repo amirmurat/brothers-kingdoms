@@ -8,8 +8,8 @@
 <meta content="Brothers Kingdoms — стратегия за территорию в реальном времени. Играй с братьями или против ботов." name="description"/>
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
-<link rel="stylesheet" href="styles/legacy.css?v=32-map"/>
-<link rel="stylesheet" href="styles/theme.css?v=32-map"/>
+<link rel="stylesheet" href="styles/legacy.css?v=33-actions"/>
+<link rel="stylesheet" href="styles/theme.css?v=33-actions"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -89,6 +89,7 @@
 <div id="placingBuild" class="placing-build hidden" role="status"><img id="placingBuildIcon" alt=""/><span id="placingBuildText">Выбери клетку</span><button type="button" id="changeBuild" aria-label="Выбрать другое здание">Сменить</button><button type="button" id="stopBuild" aria-label="Отменить строительство">×</button></div>
 <div aria-label="Основные действия" class="game-action-bar" id="gameActionBar" role="group">
 
+<button id="scienceButton" class="action-science" aria-label="Открыть науку"><span aria-hidden="true">✧</span><span>Наука</span></button>
 <button aria-label="Открыть строительство" class="action-build" id="developButton"><svg class="ui-icon build-symbol" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#hammer"></use></svg><span>Строить</span></button>
 </div>
 <div class="map-battle-controls collapsed" id="battleDock"><button aria-expanded="false" aria-label="Настроить размер отправляемой армии" class="dock-toggle" id="dockToggle"><svg class="ui-icon dock-symbol" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#sword"></use></svg> <span class="dock-name">Войска</span> <span id="dockSummary">30%</span> <span aria-hidden="true" class="dock-chevron">⌄</span></button>
@@ -119,17 +120,17 @@
 </main>
 <div id="sessionPanel" class="session-panel hidden" role="dialog" aria-modal="true" aria-label="Меню матча">
 <div class="aux-head"><strong>Матч</strong><button id="closeSession" aria-label="Вернуться к игре">×</button></div>
-<button id="openDevelopment">Развитие и союзы</button>
+<button id="openDevelopment">Обзор королевства</button>
 <button id="sessionPause">Пауза</button>
 <button id="sessionReconnect" class="hidden">Восстановить соединение</button>
-<details id="mapTools"><summary>Карта, походы и помощь</summary><div class="map-toolbar-actions"><button aria-label="Открыть список походов" class="action-armies" id="armiesToggle" title="Мои походы"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#flag-banner"></use></svg><span id="frontCountBadge">0</span><span class="tool-label">Походы</span></button>
+<div id="mapTools" aria-label="Карта и помощь"><div class="map-toolbar-actions"><button aria-label="Открыть список походов" class="action-armies" id="armiesToggle" title="Мои походы"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#flag-banner"></use></svg><span id="frontCountBadge">0</span><span class="tool-label">Походы</span></button>
 <button class="develop-button" id="pauseGame" title="Пауза в одиночной игре">Пауза</button><button aria-label="Правила игры" class="square-button" id="helpButton"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#question"></use></svg><span class="tool-label">Помощь</span></button>
 <button aria-label="Уменьшить" class="square-button" id="zoomOut" title="Уменьшить"><span class="zoom-glyph" aria-hidden="true">−</span><span class="tool-label">Меньше</span></button>
 <span class="zoom-label" id="zoomText">100%</span>
 <button aria-label="Увеличить" class="square-button" id="zoomIn" title="Увеличить"><span class="zoom-glyph" aria-hidden="true">+</span><span class="tool-label">Больше</span></button>
 <button aria-label="Вся карта" class="square-button" id="viewAll" title="Вся карта"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#map-trifold"></use></svg><span class="tool-label">Вся карта</span></button>
 <button aria-label="Моя столица" class="square-button" id="centerMap" title="Моя столица"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#crown"></use></svg><span class="tool-label">Столица</span></button>
-</div></details>
+</div></div>
 <button id="exitMatch">Выйти из матча</button>
 <p id="sessionHint"></p></div>
 <div id="exitPanel" class="session-panel hidden" role="dialog" aria-modal="true" aria-labelledby="exitTitle"><h2 id="exitTitle">Выйти из матча?</h2><p id="exitExplanation"></p><div class="exit-actions"><button id="cancelExit">Остаться</button><button id="confirmExit">Выйти</button></div></div>
@@ -149,7 +150,7 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="engine.js?v=32-map"></script>
+<script src="engine.js?v=33-actions"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=32-map"></script>
+<script src="game.js?v=33-actions"></script>
 </body></html>

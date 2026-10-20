@@ -261,14 +261,14 @@ function setPreview(t){
  const allied=!!enemy&&p.allies.includes(owner),received=!!enemy&&enemy.offers.includes(myId),sentOffer=!!enemy&&p.offers.includes(owner);
  const diplomatic=t.type==='send'&&!!enemy,offerButton=$('targetDiplomacy');
  offerButton.classList.toggle('hidden',!diplomatic);
- offerButton.disabled=!diplomatic||allied||sentOffer||!!enemy?.bot;
- offerButton.textContent=allied?'Союз заключён':received?'Принять предложение союза':sentOffer?'Предложение отправлено':enemy?.bot?'Бот не принимает союзы':'Предложить союз';
+ offerButton.disabled=!diplomatic||(!allied&&(sentOffer||!!enemy?.bot));
+ offerButton.textContent=allied?(t.confirmBreak?'Подтвердить разрыв союза':'Разорвать союз'):received?'Принять предложение союза':sentOffer?'Предложение отправлено':enemy?.bot?'Бот не принимает союзы':'Предложить союз';
  box.dataset.diplomacy=allied?'allied':received?'received':sentOffer?'sent':enemy?.bot?'bot':'offer';
  const building=E.buildingAt(state,t.x,t.y);
  $('targetTitle').textContent=t.type==='redirect'?'Сменить направление':allied?'Союзник: '+enemy.name:enemy?'Территория: '+enemy.name:'Захват нейтральной земли';
  $('targetDetail').textContent=`${number(sent)} войск · в резерве ${number(p.troops-sent)} · ${terrainNames[E.tile(state,t.x,t.y)]}${building?' · '+(E.KINDS[building.kind]?.name||'Столица'):''}`;
  const defense=enemy?Math.round(E.tileDefense(state,owner,t.x,t.y)):0;const averageDefense=enemy&&front.cells.length?Math.round(front.cells.reduce((sum,i)=>sum+E.tileDefense(state,owner,i%E.W,Math.floor(i/E.W)),0)/front.cells.length):0;
- $('targetForecast').textContent=allied?'Это территория союзника. Атака запрещена, пока действует союз. Разорвать союз можно в разделе «Союзы».':
+ $('targetForecast').textContent=allied?'Это территория союзника. Атака запрещена, пока действует союз. Разорвать союз можно кнопкой ниже.':
    t.type==='redirect'?'После подтверждения армия сменит направление.':
    sea?'Море непроходимо. Выбери сушу.':
    !front.cells.length?'Нет общей границы для наступления. Дипломатия доступна и без общей границы.':
@@ -531,10 +531,12 @@ $('cancelTarget').onclick=()=>{setPreview(null);redirectArmy=null;lastTap=0;};$(
 $('targetDiplomacy').onclick=()=>{
  if(!target||target.type!=='send')return;
  const owner=E.owner(state,target.x,target.y),other=E.person(state,owner),me=mine();
- if(!other||!me||other.id===myId||other.bot||me.allies.includes(owner)||me.offers.includes(owner))return;
+ if(!other||!me||other.id===myId||(!me.allies.includes(owner)&&(other.bot||me.offers.includes(owner))))return;
+ const breaking=me.allies.includes(owner);
+ if(breaking&&!target.confirmBreak){target.confirmBreak=true;setPreview(target);return;}
  const accepting=other.offers.includes(myId);
  if(command({type:'diplomacy',target:owner})){
-  toast(accepting?'Запрос на принятие союза отправлен':'Предложение союза отправлено');
+  toast(breaking?'Союз разорван':accepting?'Запрос на принятие союза отправлен':'Предложение союза отправлено');
   if(state?.phase==='playing'&&target)setPreview(target);
  }
 };
@@ -557,7 +559,7 @@ $('armiesToggle').onclick=()=>{showAux('armiesPanel');renderArmies();};
 $('closeArmies').onclick=hideAux;
 $('armiesList').onclick=e=>{const r=e.target.closest('[data-recall-army]'),f=e.target.closest('[data-focus-army]');if(r){if(command({type:'return',id:r.dataset.recallArmy}))renderArmies();}if(f){const a=state?.armies.find(v=>v.id===f.dataset.focusArmy);if(a){camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();hideAux();queueDraw();}}};
 $('resourceSummary').onclick=()=>showAux('economyPanel');$('resourceSummary').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showAux('economyPanel');}};$('closeEconomy').onclick=hideAux;$('pauseMobile').onclick=()=>$('pauseGame').click();$('quickLeaders').onclick=()=>{$('economyPanel').classList.add('hidden');showAux('quickLeadersPanel');};$('closeQuickLeaders').onclick=hideAux;$('nextFront').onclick=()=>{const armies=state?.armies.filter(a=>a.owner===myId)||[];if(!armies.length)return toast('Нет действующих армий');const a=armies[frontIndex++%armies.length];camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();selected={kind:'army',id:a.id};updateSelection();hideAux();queueDraw();};
-$('helpButton').onclick=()=>{$('tutorial').classList.remove('hidden');$('closeTutorial').focus();};$('helpMenu').onclick=()=>{closePanel();$('helpButton').click();};$('closeTutorial').onclick=()=>{$('tutorial').classList.add('hidden');showTutorialOnce=false;try{localStorage.setItem('bk-v9-tutorial','yes');}catch(_){}$('mapCanvas').focus();};
+$('helpButton').onclick=()=>{hideAux();$('tutorial').classList.remove('hidden');$('closeTutorial').focus();};$('helpMenu').onclick=()=>{closePanel();$('helpButton').click();};$('closeTutorial').onclick=()=>{$('tutorial').classList.add('hidden');showTutorialOnce=false;try{localStorage.setItem('bk-v9-tutorial','yes');}catch(_){}$('mapCanvas').focus();};
 $('pauseGame').onclick=()=>{if(!demo)return toast('Пауза только для одиночной игры.');pauseSolo=!pauseSolo;$('pauseGame').textContent=pauseSolo?'Продолжить':'Пауза';saveSolo();};
 $('myKingdom').onclick=()=>toast(mine()?.name||'Королевство');
 function resize(){const rect=canvas.getBoundingClientRect();if(rect.width<1)return;const dpr=Math.min(window.innerWidth<900?1:1.5,devicePixelRatio||1);const w=Math.round(rect.width*dpr),h=Math.round(rect.height*dpr);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;queueDraw();}}
@@ -671,7 +673,7 @@ canvas.addEventListener('pointermove',onPointerMove);
 canvas.addEventListener('pointerup',onPointerUp);
 canvas.addEventListener('pointercancel',e=>{clearTimeout(longPressTimer);pressed.delete(e.pointerId);pointerStart=null;gesture=null;dragAttack=null;});
 canvas.addEventListener('wheel',e=>{e.preventDefault();const p=pixelAt(e.clientX,e.clientY);zoomAt(e.deltaY<0?1.13:.885,p.x,p.y);},{passive:false});canvas.addEventListener('contextmenu',e=>e.preventDefault());
-$('zoomIn').onclick=()=>zoomAt(1.24,canvas.clientWidth/2,canvas.clientHeight/2);$('zoomOut').onclick=()=>zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);$('viewAll').onclick=()=>{zoom=Math.min((canvas.clientWidth-16)/(E.W*TILE),(canvas.clientHeight-16)/(E.H*TILE));camX=(canvas.clientWidth-E.W*TILE*zoom)/2;camY=(canvas.clientHeight-E.H*TILE*zoom)/2;$('zoomText').textContent=Math.round(zoom*100)+'%';queueDraw();};$('centerMap').onclick=()=>{zoom=window.innerWidth<650?2.2:1.8;$('zoomText').textContent=Math.round(zoom*100)+'%';centerOnCapital();};
+$('zoomIn').onclick=()=>zoomAt(1.24,canvas.clientWidth/2,canvas.clientHeight/2);$('zoomOut').onclick=()=>zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);$('viewAll').onclick=()=>{hideAux();zoom=Math.min((canvas.clientWidth-16)/(E.W*TILE),(canvas.clientHeight-16)/(E.H*TILE));camX=(canvas.clientWidth-E.W*TILE*zoom)/2;camY=(canvas.clientHeight-E.H*TILE*zoom)/2;$('zoomText').textContent=Math.round(zoom*100)+'%';queueDraw();};$('centerMap').onclick=()=>{hideAux();zoom=window.innerWidth<650?2.2:1.8;$('zoomText').textContent=Math.round(zoom*100)+'%';centerOnCapital();};
 mini.addEventListener('pointerdown',e=>{const r=mini.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*E.W,y=(e.clientY-r.top)/r.height*E.H;camX=canvas.clientWidth/2-x*TILE*zoom;camY=canvas.clientHeight/2-y*TILE*zoom;clampCamera();queueDraw();});mini.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('viewAll').click();}});
 // Low-resolution territory bitmap: one pixel per world tile. The GPU enlarges it.
 // It is updated only when a territory changes, NOT once per animation frame.
@@ -887,7 +889,9 @@ $('hostButton').onclick=createRoom;$('joinButton').onclick=joinRoom;$('demoButto
 $('leaveRoom').onclick=()=>{if(host)for(const c of connections.keys())try{c.send({t:'room-closed'});}catch(_){}goHome();};
 $('startButton').onclick=startGame;$('copyLink').onclick=inviteFriends;$('copyCode').onclick=()=>copyText(code);
 $('hudFronts').onclick=()=>$('armiesToggle').click();$('hudFronts').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('armiesToggle').click();}};
-$('closeSession').onclick=hideAux;$('openDevelopment').onclick=()=>{hideAux();openPanel();};
+function openSection(tab){openPanel();currentTab=tab;document.querySelectorAll('[data-tab]').forEach(b=>{const on=b.dataset.tab===tab;b.classList.toggle('active',on);b.setAttribute('aria-selected',String(on));});document.querySelectorAll('.tab-content').forEach(t=>t.classList.toggle('hidden',t.id!=='tab-'+tab));updateUI();}
+$('scienceButton').onclick=()=>openSection('tech');
+$('closeSession').onclick=hideAux;$('openDevelopment').onclick=()=>openSection('info');
 $('sessionPause').onclick=()=>{menuPausedSolo=false;pauseSolo=false;hideAux();};
 $('sessionReconnect').onclick=()=>{reconnectTries=0;retryUpstream();toast('Пробуем восстановить соединение');};
 $('exitMatch').onclick=requestExit;$('exitFromOverview').onclick=requestExit;$('cancelExit').onclick=openSession;
