@@ -1017,7 +1017,7 @@ function renderArmies(){
   const estimate=E.estimatePlanFront(state,p);
   rows.push({key:'plan-'+p.id,
    title:label+' · '+number(left)+' cells left',
-   status:active?'Wave '+number(p.waves)+' · '+number(active.strength)+' troops · '+estimate.cells+' frontier cells':
+   status:active?(active.marching?'Marching to front · ':'Wave ')+number(p.waves)+' · '+number(active.strength)+' troops · '+estimate.cells+' frontier cells':
     estimate.cells&&estimate.committed<Math.max(35,estimate.required)?'Front needs '+number(Math.max(35,estimate.required))+' troops · allocated '+number(estimate.committed):
     !capturable?'Choose opponents in Nations':'Waiting for route / troops',
    detail:'Shared army · '+p.percent+'% commitment · more fronts divide troops',
@@ -1027,17 +1027,21 @@ function renderArmies(){
   const active=state.armies.find(a=>a.planId===p.id&&a.strength>0);
   const pending=p.zoneCells.filter(i=>state.tiles[i]&&state.owners[i]===p.targetOwner).length;if(!pending)continue;
   rows.push({key:'recovery-'+p.id,title:'Recovery · '+(E.person(state,p.targetOwner)?.name||'Enemy')+' · '+number(pending)+' cells',
-   status:active?'Counterattack underway · '+number(active.strength)+' troops':'Preparing troops for recapture',
+   status:active?(active.marching?'Marching to recovery · ':'Counterattack underway · ')+number(active.strength)+' troops':'Preparing troops for recapture',
    detail:'Automatic during war · stops after peace',
    buttons:'<button data-focus-plan="'+esc(p.id)+'" aria-label="Locate recovery front">Locate</button>'});
  }
  for(const a of state.armies.filter(a=>a.owner===myId&&!plannedIDs.has(a.planId))){
   const initial=a.initialStrength||a.strength,spent=Math.max(0,initial-a.strength);
   rows.push({key:'army-'+a.id,title:number(a.strength)+' troops · of '+number(initial),
-   status:(E.person(state,a.targetOwner)?.name||'Neutral land')+' · '+(a.stuck>0?'Front meets resistance':'Advancing'),
+   status:(E.person(state,a.targetOwner)?.name||'Neutral land')+' · '+(a.marching?'Marching to front':a.stuck>0?'Front meets resistance':'Advancing'),
    detail:'Captured '+number(a.captured||0)+' cells · Losses '+number(spent),
    buttons:'<button data-focus-army="'+esc(a.id)+'" aria-label="Locate army">Locate</button><button data-recall-army="'+esc(a.id)+'" aria-label="Recall army">Recall</button>'});
  }
+ const guards=mine()?.garrisons||[],returning=guards.filter(g=>g.returning).reduce((n,g)=>n+g.strength,0);
+ if(guards.length)rows.unshift({key:'home-army',title:'Home army · '+number(mine().troops)+' troops',
+  status:guards.some(g=>g.role==='Guard')?'Guarding war fronts · reserve held behind the line':'Garrisoned near barracks and cities',
+  detail:number(guards.length)+' squads · '+number(returning)+' returning · nearby troops provide defense',buttons:''});
  const container=$('armiesList'),structure=rows.map(row=>row.key).join('|');
  if(container.dataset.structure!==structure){
   container.innerHTML=rows.length?rows.map(row=>'<div class="army-line" data-front-row="'+esc(row.key)+'"><div><strong data-front-title></strong><small data-front-status></small><small class="army-stats" data-front-detail></small></div>'+row.buttons+'</div>').join(''):
@@ -1347,9 +1351,21 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
    ctx.fillStyle='#f1f5fa';ctx.fillText(label,x,ly);
  }
  drawAttackPlanning();
+ // Compact spatial squads; no independent DOM overlays over match windows.
+ const drawSquad=(g,id,marching=false)=>{
+  if(g.strength<1)return;const x=(g.x+.5)*TILE,y=(g.y+.5)*TILE;
+  if(x*zoom+camX<0||x*zoom+camX>w||y*zoom+camY<0||y*zoom+camY>h)return;
+  ctx.fillStyle='#101218';ctx.strokeStyle=color(id);ctx.lineWidth=1.4/zoom;
+  ctx.beginPath();ctx.arc(x,y,4/zoom,0,Math.PI*2);ctx.fill();ctx.stroke();
+  if(marching){ctx.beginPath();ctx.moveTo(x-2/zoom,y);ctx.lineTo(x+2/zoom,y);ctx.stroke();}
+  if(id===myId&&zoom>=1.3){ctx.font='700 '+(9/zoom)+'px system-ui';ctx.textAlign='center';ctx.fillStyle='#f1f5fa';ctx.fillText(number(g.strength),x,y-7/zoom);}
+ };
+ for(const p of state.players)if(p.id===myId&&!p.eliminated)for(const g of p.garrisons||[])drawSquad(g,p.id,g.returning||g.x!==g.tx||g.y!==g.ty);
+ for(const a of state.armies)for(const c of a.columns||[])drawSquad(c,a.owner,true);
  // Front cells come from the authoritative conquest wave, including online snapshots.
  for(const a of state.armies){
   if(a.strength<=0)continue;
+  if(a.marching)continue;
   const cells=Array.isArray(a.frontCells)?a.frontCells:E.previewFront(state,a.owner,a.tx,a.ty).cells;
   ctx.fillStyle=hexAlpha(color(a.owner),.85);ctx.strokeStyle='#eef2f8';ctx.lineWidth=1/zoom;
   for(const i of cells){

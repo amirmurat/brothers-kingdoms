@@ -8,7 +8,7 @@ function setup(){
  s.tiles.fill(1);s.owners.fill(0);s.armies=[];s.attackPlans=[];s.buildings=[];s.wars=[];
  s.landTotal=E.W*E.H;
  const p=E.person(s,id);p.land=0;p.troops=1600;p.troopCap=10000;
- p.capital={x:52,y:42};
+ p.capital={x:52,y:42};p.garrisons=[{id:'gfixture',x:54,y:42,strength:1600}];
  for(const i of tiles(span(50,54),span(40,45))){s.owners[i]=id;p.land++;}
  return {s,id,foe,p};
 }
@@ -23,6 +23,7 @@ function testFullFront(){
  assert(info.required>0);
  wave.strength=info.required-.1;
  const initial=t.p.land;
+ for(let k=0;k<20&&wave.columns?.some(c=>c.route?.length);k++)E.combatStep(t.s);
  E.combatStep(t.s);
  assert.equal(t.p.land,initial,'Not one tile may be taken by an underfunded wave');
  assert.equal(t.s.armies.length,0);
@@ -35,6 +36,8 @@ function testFullFront(){
  assert.equal(plan.waves,2,'Next wave must wait until the entire layer is funded');
  const count=E.estimatePlanFront(t.s,plan).cells,land=t.p.land;
  assert.equal(count,6);
+ const next=t.s.armies.find(a=>a.planId===plan.id);
+ for(let k=0;k<20&&next?.columns?.some(c=>c.route?.length);k++)E.combatStep(t.s);
  E.combatStep(t.s);
  assert.equal(t.p.land-land,count,'All six cells must expand on same tick');
 }

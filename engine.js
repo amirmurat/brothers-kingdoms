@@ -158,7 +158,7 @@ function start(s,bots=0){if(s.phase!=='lobby'||!s.players.length)return {ok:fals
  const farmX=pos.x+2,farmY=pos.y+1;if(owner(s,farmX,farmY)===p.id)building(s,p.id,'farm',farmX,farmY);
  });
  for(let i=0;i<2;i++)sealTerritories(s);
- s.landTotal=s.tiles.filter(Boolean).length;s.duration=null;s.rules={victory:100,timeLimit:false,naval:false,continent:true};s.phase='playing';log(s,'Match started. Conquer 100% of the land. There is no time limit.');return {ok:true};
+ s.landTotal=s.tiles.filter(Boolean).length;s.duration=null;s.rules={victory:100,timeLimit:false,naval:false,continent:true};s.phase='playing';for(const p of s.players)syncGarrisons(s,p);log(s,'Match started. Conquer 100% of the land. There is no time limit.');return {ok:true};
 }
 
 // Price is based on current owned structures of this type, not their levels.
@@ -352,6 +352,7 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
   if(!initialFront(s,id,tx,ty,targetOwner,zoneCells?new Set(zoneCells):null).length){
    return {ok:false,error:targetOwner?'Reach the enemy border first.':'No shared border with available neutral land.'};
   }
+  const columns=mobilize(s,p,strength,src);if(!columns)return {ok:false,error:'Troops are returning or have no friendly route.'};
   if(targetOwner){s.wars??=[];const key=warKey(id,targetOwner);if(!s.wars.includes(key)){s.wars.push(key);s.peaceOffers=(s.peaceOffers||[]).filter(o=>warKey(o.from,o.to)!==key);log(s,p.name+' declared war on '+person(s,targetOwner)?.name);}}
   let planId=null;
   if(!p.bot&&zoneCells){
@@ -359,8 +360,7 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
    const plan={id:'p'+(++s.nonce),owner:id,targetOwner,zoneCells,percent,initialStrength:strength,waves:1,nextWaveTick:s.tick+4};
    s.attackPlans.push(plan);planId=plan.id;
   }
-  p.troops-=strength;
-  s.armies.push({id:'a'+(++s.nonce),owner:id,x:src.x,y:src.y,ox:src.x,oy:src.y,tx,ty,targetOwner,planId,zoneCells,frontCells:initialFront(s,id,tx,ty,targetOwner,zoneCells?new Set(zoneCells):null),strength,initialStrength:strength,captured:0,turns:0,stuck:0});
+  s.armies.push({id:'a'+(++s.nonce),owner:id,x:columns[0].x,y:columns[0].y,ox:columns[0].x,oy:columns[0].y,tx,ty,targetOwner,planId,zoneCells,columns,marching:columns.some(c=>c.route.length),frontCells:initialFront(s,id,tx,ty,targetOwner,zoneCells?new Set(zoneCells):null),strength,initialStrength:strength,captured:0,turns:0,stuck:0});
   return {ok:true};
  }
  if(a.type==='redirect'){
@@ -481,8 +481,152 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
  }
  return {ok:false,error:'Unknown command.'};
 }
+// Spatial home army. p.troops remains the authoritative sum for old saves and
+// the HUD; squads represent those same soldiers, never an additional resource.
+function homeSites(s,id){
+ const bases=s.buildings.filter(b=>b.owner===id&&owner(s,b.x,b.y)===id&&['barracks','capital','city'].includes(b.kind));
+ if(bases.length)return bases.sort((a,b)=>(a.kind==='barracks'?0:1)-(b.kind==='barracks'?0:1)||a.y-b.y||a.x-b.x);
+ const i=s.owners.findIndex(v=>v===id);return i<0?[]:[{x:i%W,y:(i/W)|0,kind:'camp'}];
+}
+function reserveSquad(s,p,x,y,strength,returning=false){
+ p.garrisons??=[];
+ const same=p.garrisons.find(g=>g.x===x&&g.y===y&&!!g.returning===returning);
+ if(same){same.strength+=strength;return same;}
+ const g={id:'g'+(++s.nonce),x,y,strength,returning};p.garrisons.push(g);return g;
+}
+function syncGarrisons(s,p){
+ p.garrisons??=[];p.garrisons=p.garrisons.filter(g=>g.strength>1e-7&&inside(g.x,g.y));
+ const sum=p.garrisons.reduce((n,g)=>n+g.strength,0),delta=p.troops-sum;
+ if(delta>1e-7){const base=homeSites(s,p.id)[0];if(base)reserveSquad(s,p,base.x,base.y,delta);}
+ else if(delta< -1e-7){const factor=Math.max(0,p.troops)/Math.max(1e-7,sum);for(const g of p.garrisons)g.strength*=factor;}
+}
+function loseReserve(s,p,amount,x,y){
+ syncGarrisons(s,p);let left=Math.min(p.troops,amount);
+ const squads=p.garrisons.filter(g=>near(g,{x,y})<7).sort((a,b)=>near(a,{x,y})-near(b,{x,y}));
+ for(const g of squads){const n=Math.min(left,g.strength);g.strength-=n;p.troops-=n;left-=n;if(left<=1e-7)break;}
+ p.troops=Math.max(0,p.troops);
+}
+function adjacentCells(i){
+ const x=i%W,y=(i/W)|0;
+ return [x>0?i-1:-1,x<W-1?i+1:-1,y>0?i-W:-1,y<H-1?i+W:-1].filter(j=>j>=0);
+}
+// Reverse breadth-first field: routes stay on owned land and never cross water,
+// neutral land, allies or an enemy enclave. No path means wait, not teleport.
+function marchField(s,id,destination){
+ const field=new Int32Array(W*H).fill(-1),queue=[];
+ if(s.owners[destination]!==id||!s.tiles[destination])return field;
+ field[destination]=destination;queue.push(destination);
+ for(let k=0;k<queue.length;k++)for(const j of adjacentCells(queue[k])){
+  if(field[j]<0&&s.tiles[j]&&s.owners[j]===id){field[j]=queue[k];queue.push(j);}
+ }
+ return field;
+}
+function fieldRoute(field,start,destination){
+ if(field[start]<0)return null;
+ const route=[];let i=start;
+ while(i!==destination&&route.length<W*H){i=field[i];route.push(i);}
+ return route;
+}
+function defensePosts(s,p){
+ const bases=homeSites(s,p.id),posts=[];
+ // Keep a real home reserve even during war. Safe neighbours are not threats.
+ if(bases[0])posts.push({x:bases[0].x,y:bases[0].y,weight:3,role:'Reserve'});
+ const candidates=[];
+ for(const b of borders(s,p.id)){
+  const i=idx(b.x,b.y),enemies=adjacentCells(i).map(j=>s.owners[j]).filter(id=>id&&id!==p.id&&!p.allies.includes(id)&&(s.wars||[]).includes(warKey(p.id,id)));
+  if(!enemies.length)continue;
+  let weight=2;
+  for(const a of s.armies)if(enemies.includes(a.owner)&&near(b,{x:a.tx,y:a.ty})<=12)weight+=Math.min(5,a.strength/150);
+  if(s.buildings.some(base=>base.owner===p.id&&['city','capital'].includes(base.kind)&&near(base,b)<=8))weight+=2;
+  if(s.buildings.some(base=>base.owner===p.id&&base.kind==='fort'&&near(base,b)<=4))weight+=1;
+  candidates.push({...b,weight,role:'Guard'});
+ }
+ if(candidates.length&&bases.length){
+  const distance=b=>Math.min(...candidates.map(t=>near(b,t)));
+  const safe=[...bases].sort((a,b)=>distance(b)-distance(a)||a.y-b.y||a.x-b.x)[0];
+  posts[0]={x:safe.x,y:safe.y,weight:3,role:'Reserve'};
+ }
+ candidates.sort((a,b)=>b.weight-a.weight||a.y-b.y||a.x-b.x);
+ for(const c of candidates){if(posts.filter(p=>p.role==='Guard').length>=5)break;
+  if(posts.some(p=>p.role==='Guard'&&near(p,c)<10))continue;
+  posts.push(c);
+ }
+ if(!candidates.length)for(const b of bases.slice(1,4))posts.push({x:b.x,y:b.y,weight:b.kind==='barracks'?3:2,role:'Garrison'});
+ return posts;
+}
+function spatialArmyStep(s){
+ for(const p of s.players){
+  if(!alive(p))continue;syncGarrisons(s,p);
+  // A captured position retreats one adjacent friendly tile; encircled squads
+  // are lost. This cannot jump across hostile territory to another province.
+  for(const g of p.garrisons)if(s.owners[idx(g.x,g.y)]!==p.id){
+   const exit=adjacentCells(idx(g.x,g.y)).find(i=>s.tiles[i]&&s.owners[i]===p.id);
+   if(exit===undefined){p.troops=Math.max(0,p.troops-g.strength);g.strength=0;}
+   else{g.x=exit%W;g.y=(exit/W)|0;delete g.route;}
+  }
+  p.garrisons=p.garrisons.filter(g=>g.strength>1e-7);
+  const posts=defensePosts(s,p),weight=posts.reduce((n,t)=>n+t.weight,0);if(!posts.length)continue;
+  // Bounded groups, not hundreds of individual pathfinders. Split in place.
+  const chunk=Math.max(35,p.troops/8);
+  for(const g of [...p.garrisons])while(!g.returning&&g.strength>chunk*1.5&&p.garrisons.length<12){
+   g.strength-=chunk;p.garrisons.push({id:'g'+(++s.nonce),x:g.x,y:g.y,strength:chunk,returning:false});
+  }
+  const assigned=new Array(posts.length).fill(0),fields=new Map();
+  const fieldFor=t=>{const i=idx(t.x,t.y);if(!fields.has(i))fields.set(i,marchField(s,p.id,i));return fields.get(i);};
+  const bases=homeSites(s,p.id);
+  for(const g of [...p.garrisons].sort((a,b)=>b.strength-a.strength||a.id.localeCompare(b.id))){
+   let target=null;
+   if(g.returning){
+    const reachable=fieldFor(g);
+    target=bases.filter(b=>reachable[idx(b.x,b.y)]>=0).sort((a,b)=>near(g,a)-near(g,b))[0];
+   }else{
+    const choices=posts.map((t,i)=>({t,i,score:assigned[i]/Math.max(1,p.troops*t.weight/weight)+near(g,t)*.002})).sort((a,b)=>a.score-b.score||a.i-b.i);
+    const choice=choices.find(c=>fieldFor(c.t)[idx(g.x,g.y)]>=0);
+    if(choice){target=choice.t;assigned[choice.i]+=g.strength;}
+   }
+   if(!target){g.role=g.returning?'Returning · blocked':'Isolated';continue;}
+   g.role=g.returning?'Returning':target.role;g.tx=target.x;g.ty=target.y;
+   const next=fieldFor(target)[idx(g.x,g.y)];
+   if(next>=0){g.x=next%W;g.y=(next/W)|0;}
+   if(g.returning&&g.x===target.x&&g.y===target.y){g.returning=false;g.role='Garrison';}
+  }
+  // Keep squad identities stable. Merging and re-splitting every tick would
+  // continually reassign destinations and make troops oscillate in place.
+  p.garrisons=p.garrisons.filter(g=>g.strength>1e-7);
+ }
+}
+function mobilize(s,p,strength,src){
+ syncGarrisons(s,p);const destination=idx(src.x,src.y),field=marchField(s,p.id,destination);
+ const eligible=p.garrisons.filter(g=>!g.returning&&field[idx(g.x,g.y)]>=0).map(g=>({g,route:fieldRoute(field,idx(g.x,g.y),destination)})).sort((a,b)=>a.route.length-b.route.length||a.g.id.localeCompare(b.g.id));
+ if(eligible.reduce((n,c)=>n+c.g.strength,0)+1e-7<strength)return null;
+ const columns=[];let left=strength;
+ for(const {g,route} of eligible){const n=Math.min(left,g.strength);if(n<=0)break;
+  columns.push({x:g.x,y:g.y,strength:n,route});g.strength-=n;left-=n;
+ }
+ p.troops=Math.max(0,p.troops-strength);return columns;
+}
+function marchWave(s,a,p){
+ if(!a.columns?.length)return false;
+ const destination=nearestBorderLand(s,a.owner,a.tx,a.ty);if(!destination){finishWave(s,a,p);return true;}
+ const dest=idx(destination.x,destination.y);let field=null,moving=false;
+ for(const c of a.columns){
+  const current=idx(c.x,c.y);
+  if(current===dest){c.route=[];continue;}
+  if(!c.route?.length||c.route[c.route.length-1]!==dest||s.owners[c.route[0]]!==a.owner){
+   field??=marchField(s,a.owner,dest);c.route=fieldRoute(field,current,dest);
+  }
+  if(!c.route){finishWave(s,a,p);return true;}
+  const next=c.route.shift();c.x=next%W;c.y=(next/W)|0;moving=true;
+ }
+ const lead=a.columns[0];a.x=lead.x;a.y=lead.y;
+ if(moving){a.marching=true;return true;}
+ a.columns=null;a.marching=false;return false;
+}
+
 function tileDefense(s,id,x,y){let n=3;const defender=person(s,id);if(!defender)return n;
- n+=defender.troops/Math.max(60,defender.land)*2.6;
+ // Defence comes from soldiers actually nearby, including moving reserves.
+ const local=(defender.garrisons||[]).reduce((n,g)=>n+g.strength*Math.max(0,1-near(g,{x,y})/7),0);
+ n+=local/25;
  n+=defender.tech.war*1.9;
  for(const b of s.buildings){if(b.owner!==id)continue;const d=Math.abs(b.x-x)+Math.abs(b.y-y);
   if(b.kind==='capital'&&d<=3)n+=(d===0?90:11)*Math.sqrt(b.level);
@@ -496,7 +640,7 @@ function capture(s,a,x,y){const old=owner(s,x,y),p=person(s,a.owner);if(old===a.
  let cost=old?tileDefense(s,old,x,y)/(.95+.19*p.tech.war):tile(s,x,y)===6?8:tile(s,x,y)===3?4:2.8;
  cost*=1-.08*p.tech.logistics;
  if(a.strength<cost)return false;a.strength-=cost;
- if(old){const def=person(s,old);def.troops=Math.max(0,def.troops-Math.max(0.8,cost*.43));}
+ if(old){const def=person(s,old);loseReserve(s,def,Math.max(0.8,cost*.43),x,y);}
  gainTile(s,x,y,p.id);a.captured=(a.captured||0)+1;
  const b=buildingAt(s,x,y);
  if(b&&b.owner!==p.id){if(b.kind==='capital'){takeCapital(s,p.id,b.owner);b.kind='city';}b.owner=p.id;b.level=Math.max(1,b.level-1);}
@@ -601,7 +745,10 @@ function planAllocation(s,plan){
  const weight=plans.reduce((n,p)=>n+p.percent,0);
  const budget=force.total*Math.max(...plans.map(p=>p.percent))/100;
  const assigned=s.armies.reduce((n,a)=>n+(a.planId===plan.id?Math.max(0,a.strength):0),0);
- return Math.max(0,Math.floor(Math.min(force.reserve,budget-force.deployed,budget*plan.percent/weight-assigned)));
+ const squads=person(s,plan.owner)?.garrisons||[],stationed=squads.reduce((n,g)=>n+g.strength,0);
+ const returning=squads.filter(g=>g.returning).reduce((n,g)=>n+g.strength,0);
+ const available=force.reserve*(stationed?1-returning/stationed:1);
+ return Math.max(0,Math.floor(Math.min(available,budget-force.deployed,budget*plan.percent/weight-assigned)));
 }
 function estimatePlanFront(s,plan){
  const cells=planFrontier(s,plan);
@@ -640,7 +787,7 @@ function advancePlannedWave(s,a,plan){
   const x=item.i%W,y=(item.i/W)|0;
   if(item.former){
    const defender=person(s,item.former);
-   if(defender)defender.troops=Math.max(0,defender.troops-Math.max(.8,item.cost*.43));
+   if(defender)loseReserve(s,defender,Math.max(.8,item.cost*.43),x,y);
   }
   gainTile(s,x,y,p.id);a.captured=(a.captured||0)+1;
   const b=buildingAt(s,x,y);
@@ -661,9 +808,9 @@ function sendNextPlannedWave(s,plan){
  if(strength<minimum)return false;
  const first=front[(front.length/2)|0],tx=first%W,ty=(first/W)|0;
  const src=nearestBorderLand(s,plan.owner,tx,ty);if(!src)return false;
- p.troops-=strength;
- s.armies.push({id:'a'+(++s.nonce),owner:plan.owner,x:src.x,y:src.y,ox:src.x,oy:src.y,tx,ty,
-  targetOwner:s.owners[first],planId:plan.id,zoneCells:plan.zoneCells,frontCells:front,
+ const columns=mobilize(s,p,strength,src);if(!columns)return false;
+ s.armies.push({id:'a'+(++s.nonce),owner:plan.owner,x:columns[0].x,y:columns[0].y,ox:columns[0].x,oy:columns[0].y,tx,ty,
+  targetOwner:s.owners[first],planId:plan.id,zoneCells:plan.zoneCells,frontCells:front,columns,marching:columns.some(c=>c.route.length),
   strength,initialStrength:strength,captured:0,turns:0,stuck:0});
  plan.waves++;plan.nextWaveTick=s.tick+4;
  log(s,'Full-front reinforcements launched for '+p.name+' offensive.');
@@ -702,7 +849,13 @@ function advanceOffensivePlans(s){
  }
 }
 function finishWave(s,a,p){
- if(p&&!p.eliminated&&a.strength>0)p.troops=Math.min(p.troopCap,p.troops+Math.floor(a.strength*.96));
+ if(p&&!p.eliminated&&a.strength>0){
+  syncGarrisons(s,p);const refund=Math.floor(a.strength*.96);
+  const columns=a.columns?.length?a.columns:[{x:a.x,y:a.y,strength:a.strength}];
+  const total=columns.reduce((n,c)=>n+c.strength,0);
+  for(const c of columns)reserveSquad(s,p,c.x,c.y,refund*c.strength/Math.max(1e-7,total),true);
+  p.troops+=refund;
+ }
  a.strength=0;a.frontCells=[];attackFronts.delete(a);
  const plan=getOffensivePlan(s,a.planId);
  if(plan)plan.nextWaveTick=Math.max(plan.nextWaveTick||0,s.tick+4);
@@ -730,6 +883,7 @@ function balancedLayer(cells,s,step){
 }
 function advance(s,a){
  const p=person(s,a.owner);if(!alive(p)){a.strength=0;a.frontCells=[];attackFronts.delete(a);return;}
+ if(marchWave(s,a,p))return;
  const f=waveFront(s,a);
  const plan=getOffensivePlan(s,a.planId);
  if(plan){advancePlannedWave(s,a,plan);return;}
@@ -811,19 +965,21 @@ function checkWin(s){
  if(winner){s.phase='ended';s.winner=winner.id;log(s,winner.name+' controls 100% of the land and wins!');}
 }
 function combatStep(s){if(s.phase!=='playing')return;
+ for(const p of s.players)if(alive(p))syncGarrisons(s,p);
  for(const a of [...s.armies])if(a.strength>0)advance(s,a);
  s.armies=s.armies.filter(a=>a.strength>=8);
 }
 function tick(s){if(s.phase!=='playing')return;s.tick++;
  adoptLegacyOffensives(s);
  for(const p of s.players){if(!alive(p))continue;income(s,p);}
+ spatialArmyStep(s);
  combatStep(s);
- for(const p of s.players){if(!p.eliminated&&p.land<=0){p.eliminated=true;p.troops=0;s.armies=s.armies.filter(a=>a.owner!==p.id);log(s,p.name+' lost all territory.');}}
+ for(const p of s.players){if(!p.eliminated&&p.land<=0){p.eliminated=true;p.troops=0;p.garrisons=[];s.armies=s.armies.filter(a=>a.owner!==p.id);log(s,p.name+' lost all territory.');}}
  advanceOffensivePlans(s);
  for(const p of s.players)if(p.bot&&alive(p))bot(s,p.id);
  // Capturing land always costs troops; do not award free cells at every tick.
  checkWin(s);
 }
 
-return{BUILD:'v71',militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v72',spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });

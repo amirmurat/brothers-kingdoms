@@ -73,6 +73,7 @@ server.on('upgrade',(req,socket,head)=>{
    assert.deepEqual(await a.evaluate(()=>window.__net.get().state.players.find(p=>p.name==='Creator').spawnPoint),chosen,name+' spawn survives reconnect');
    await a.click('#startButton');await a.waitForSelector('#game:not(.hidden)');await b.waitForSelector('#game:not(.hidden)');
    assert.deepEqual(await a.evaluate(()=>window.__net.get().state.players.find(p=>p.name==='Creator').capital),chosen,name+' chosen point becomes actual capital');
+   for(const page of [a,b])assert(await page.evaluate(()=>window.__net.get().state.players.every(p=>Array.isArray(p.garrisons)&&Math.abs(p.garrisons.reduce((n,g)=>n+g.strength,0)-p.troops)<.001)),name+' both clients receive consistent spatial army');
    console.log('PASS '+name+' two-client lobby: owner, reconnect, touch spawn, shared state, rejoin and actual capital');
    await owner.close();await guest.close();
   }finally{await browser.close();}

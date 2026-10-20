@@ -533,3 +533,9 @@ _Актуальный реестр, извлечённый из `index.html` н�
 
 ### v71 military commitment
 `engine.militaryStrength` counts reserve + active waves for recruitment capacity. `planAllocation` shares total commitment among reachable manual/recovery fronts; active waves consume their share. `estimatePlanFront.committed` is the actually available allocation. Full-front manual expansion remains atomic. Offensives rows explain allocated vs required strength; reserve tooltip separates deployed troops from home defense. No new UI controls.
+
+### v72 spatial army
+- `p.garrisons`: physical reserve squads (`id,x,y,strength,role,tx,ty,returning`). Sum equals existing `p.troops`; recruits appear at owned bases. Old saves migrate once.
+- `spatialArmyStep`: peace base garrisons; war sectors weighted by incoming attacks/important positions plus safe rear reserve; friendly-land routing, no teleports, retreat/encirclement handling. `tileDefense` uses nearby squads.
+- Wave `columns`: mobilized troops march to frontier before existing atomic full-front combat; recall returns survivors at actual positions. Returning reserve is unavailable to `planAllocation`/mobilization until home arrival. Both bots and players use this.
+- Existing canvas draws compact squads/columns. Existing `#armiesPanel` (My army) gains home-army summary and march states. Help updated; no new DOM layers or controls.

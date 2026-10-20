@@ -47,6 +47,11 @@ const server=http.createServer((req,res)=>{
    await page.evaluate(()=>window.__layout.warnHud('Capital threatened','danger'));
    assert.equal(await page.locator('#hudAlert').isVisible(),true,label+' danger takes priority');
    assert.equal(await page.locator('#gameToast').isVisible(),false,label+' toast hidden behind danger');
+   await page.evaluate(()=>window.__layout.showAux('armiesPanel'));
+   assert(await page.locator('[data-front-row="home-army"]').isVisible(),label+' home squads are visible in army overview');
+   const armyBox=await page.locator('#armiesPanel').boundingBox();
+   assert(armyBox.x>=0&&armyBox.x+armyBox.width<=viewport.width+1,label+' army overview fits the screen');
+   await page.evaluate(()=>window.__layout.hideAux());
    await page.evaluate(()=>window.__layout.openPanel());
    assert.equal(await page.locator('#planToolSwitch').isVisible(),false,label+' tools do not cover Research');
    await page.evaluate(()=>window.__layout.showAux('sessionPanel'));

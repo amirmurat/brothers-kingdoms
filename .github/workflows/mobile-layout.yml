@@ -16,6 +16,7 @@ jobs:
           node-version: '22'
       - name: Engine and server regressions
         run: |
+          node tests/spatial-army.cjs
           node tests/shared-army.cjs
           node tests/spawn-points.cjs
           node tests/building-prices.cjs

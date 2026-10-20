@@ -10,6 +10,8 @@ function game(){
  }
  E.person(s,a).troops=2200;E.person(s,b).troops=2200;
  E.person(s,a).troopCap=5000;E.person(s,b).troopCap=5000;
+ E.person(s,a).garrisons=[{id:'ga',x:x-1,y,strength:2200}];
+ E.person(s,b).garrisons=[{id:'gb',x:x+1,y,strength:2200}];
  return {s,a,b,x,y,i};
 }
 function lose(t){
