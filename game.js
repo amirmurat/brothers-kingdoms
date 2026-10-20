@@ -10,24 +10,24 @@ const uiIcon=name=>{
  return `<svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/${set}.svg#${id}"></use></svg>`;
 };
 const view=$('mapView'),canvas=$('mapCanvas'),ctx=canvas.getContext('2d',{alpha:false}),mini=$('minimap'),mctx=mini.getContext('2d');
-const terrainNames=['Море','Равнина','Лес','Холмы','Плодородная земля','Рудное месторождение','Горы'];
+const terrainNames=['Sea','Plains','Forest','Hills','Fertile Land','Ore Deposit','Mountains'];
 /* Same geometry in catalogue, placement indicator and map. Color identifies ownership. */
 const BUILDING_PATHS={"farm":"M32 5 A27 27 0 1 1 31.99 5 Z M32 20 A12 12 0 1 0 32.01 20 Z","lumber":"M32 3 L57 32 H45 L61 54 H39 V62 H25 V54 H3 L19 32 H7 Z","quarry":"M32 3 L61 32 L32 61 L3 32 Z M32 19 L19 32 L32 45 L45 32 Z","mine":"M23 4 H41 V23 H60 V41 H41 V60 H23 V41 H4 V23 H23 Z","barracks":"M4 8 H25 L43 32 L25 56 H4 L22 32 Z M32 8 H43 L61 32 L43 56 H32 L50 32 Z","fort":"M5 5 H59 V59 H5 Z M19 19 V45 H45 V19 Z","city":"M4 27 H18 V59 H4 Z M25 5 H39 V59 H25 Z M46 18 H60 V59 H46 Z","capital":"M32 2 L41 22 L62 25 L46 40 L51 62 L32 50 L13 62 L18 40 L2 25 L23 22 Z"};
 const buildingPaths=Object.fromEntries(Object.entries(BUILDING_PATHS).map(([id,d])=>[id,new Path2D(d)]));
 const buildingArt=kind=>`<img class="building-art" src="assets/shapes/${kind}.svg" alt="" aria-hidden="true"/>`;
 const buildingInfo={
- farm:{short:'Обеспечивает армию едой.',detail:'+8 еды/с за каждый уровень',place:'Своя земля, кроме горных вершин',resource:'food',perLevel:8},
- lumber:{short:'Добывает древесину для развития.',detail:'+7 древесины/с за уровень',place:'Только лес',resource:'wood',perLevel:7},
- quarry:{short:'Добывает камень для зданий.',detail:'+7 камня/с за уровень',place:'Холмы или горы',resource:'stone',perLevel:7},
- mine:{short:'Добывает золото для исследований.',detail:'+7 золота/с за уровень',place:'Руда, холмы или горы',resource:'gold',perLevel:7},
- barracks:{short:'Позволяют содержать больше войск.',detail:'+430 к лимиту армии · +5 к набору/с за уровень',place:'Своя земля, кроме горных вершин',cap:430,rate:5},
- fort:{short:'Защищает окружающие клетки.',detail:'Радиус 4 клетки · защита до +18,5 за уровень у крепости',place:'Своя земля, в том числе горы'},
- city:{short:'Приносит еду, золото и новых солдат.',detail:'+5 еды/с · +5 золота/с · +260 лимит · +3 набор/с за уровень',place:'Своя земля, кроме горных вершин',cap:260,rate:3}
+ farm:{short:'Feeds your army.',detail:'+8 food/s per level',place:'Your land, excluding mountain summits',resource:'food',perLevel:8},
+ lumber:{short:'Produces wood for development.',detail:'+7 wood/s per level',place:'Forests only',resource:'wood',perLevel:7},
+ quarry:{short:'Produces stone for buildings.',detail:'+7 stone/s per level',place:'Hills or mountains',resource:'stone',perLevel:7},
+ mine:{short:'Produces gold for research.',detail:'+7 gold/s per level',place:'Ore, hills, or mountains',resource:'gold',perLevel:7},
+ barracks:{short:'Increases army capacity.',detail:'+430 troop capacity · +5 recruitment/s per level',place:'Your land, excluding mountain summits',cap:430,rate:5},
+ fort:{short:'Defends nearby tiles.',detail:'Radius 4 tiles · up to +18.5 defense per level',place:'Your land, including mountains'},
+ city:{short:'Produces food, gold, and troops.',detail:'+5 food/s · +5 gold/s · +260 capacity · +3 recruitment/s per level',place:'Your land, excluding mountain summits',cap:260,rate:3}
 };
-const nameResource={food:'Еда',wood:'Дерево',stone:'Камень',gold:'Золото'};
+const nameResource={food:'Food',wood:'Wood',stone:'Stone',gold:'Gold'};
 const briefCost=c=>Object.entries(c||{}).map(([k,v])=>`<span class="cost-unit">${uiIcon(k)}${number(v)}</span>`).join(' ');
-function buildingBenefit(id,p,level=1){const b=buildingInfo[id];if(!b)return '';if(b.resource)return `+${Math.round(b.perLevel*level*(1+.25*(p?.tech?.economy||0)))}/с ${({food:'еды',wood:'древесины',stone:'камня',gold:'золота'})[b.resource]}`;if(id==='city')return `+${Math.round(5*level*(1+.25*(p?.tech?.economy||0)))}/с еды и золота · +${260*level} лимит · +${3*level} набор/с`;if(id==='barracks')return `+${430*level} лимит · +${5*level} набор/с`;if(id==='fort')return `до +${(18.5*level).toFixed(1)} защиты в радиусе 4`;return b.detail;}
-function techBenefit(id,level){if(id==='economy')return `Множитель дохода ×${(1+level*.25).toFixed(2)}`;if(id==='war')return `Атака эффективнее · защита +${(1.9*level).toFixed(1)} · набор +${2*level} войск/с`;if(id==='logistics')return `Затраты войск при захвате −${8*level}%`;return '';}
+function buildingBenefit(id,p,level=1){const b=buildingInfo[id];if(!b)return '';if(b.resource)return `+${Math.round(b.perLevel*level*(1+.25*(p?.tech?.economy||0)))}/s ${({food:'food',wood:'wood',stone:'stone',gold:'gold'})[b.resource]}`;if(id==='city')return `+${Math.round(5*level*(1+.25*(p?.tech?.economy||0)))}/s food and gold · +${260*level} capacity · +${3*level} recruitment/s`;if(id==='barracks')return `+${430*level} capacity · +${5*level} recruitment/s`;if(id==='fort')return `up to +${(18.5*level).toFixed(1)} defense within radius 4`;return b.detail;}
+function techBenefit(id,level){if(id==='economy')return `Income multiplier ×${(1+level*.25).toFixed(2)}`;if(id==='war')return `Stronger attacks · defense +${(1.9*level).toFixed(1)} · recruitment +${2*level} troops/s`;if(id==='logistics')return `Conquest troop losses −${8*level}%`;return '';}
 function resourceRates(p){
  const c=E.counts(state,p.id),land=p.land||0,m=1+(p.tech.economy||0)*.25;
  const gross=p.income||{
@@ -44,12 +44,12 @@ function resourceRates(p){
 }
 function resourceStrip(p){const {gross,recruited,foodNet}=resourceRates(p);return `<div class="resource-ledger">`+Object.keys(nameResource).map(k=>{
  const net=k==='food'?foodNet:Math.floor(gross[k]||0);
- return `<div class="ledger-item" data-ledger="${k}">${uiIcon(k)}<div class="ledger-values"><span class="ledger-name">${nameResource[k]}</span><strong>${number(p.res[k])}</strong><small class="${net<0?'is-negative':''}">${net>=0?'+':'−'}${number(Math.abs(net))}/с</small></div></div>`;
+ return `<div class="ledger-item" data-ledger="${k}">${uiIcon(k)}<div class="ledger-values"><span class="ledger-name">${nameResource[k]}</span><strong>${number(p.res[k])}</strong><small class="${net<0?'is-negative':''}">${net>=0?'+':'−'}${number(Math.abs(net))}/s</small></div></div>`;
  }).join('')+`</div>`;}
 
-const costText=c=>Object.entries(c||{}).map(([k,v])=>({wood:'Древесина',stone:'Камень',gold:'Золото',food:'Еда'}[k]||k)+' '+v).join(' · ');
-const number=n=>Math.floor(n||0).toLocaleString('ru-RU');
-const hudNumber=n=>{const value=Math.floor(Number(n)||0);return Math.abs(value)<10000?number(value):(Math.trunc(value/100)/10).toLocaleString('ru-RU')+'к';};
+const costText=c=>Object.entries(c||{}).map(([k,v])=>({wood:'Wood',stone:'Stone',gold:'Gold',food:'Food'}[k]||k)+' '+v).join(' · ');
+const number=n=>Math.floor(n||0).toLocaleString('en-US');
+const hudNumber=n=>{const value=Math.floor(Number(n)||0);return Math.abs(value)<10000?number(value):(Math.trunc(value/100)/10).toLocaleString('en-US')+'k';};
 let dragAttack=null,longPressTimer=null,dragHint=null;
 let defeatDismissed=false,menuPausedSolo=false;
 let state=null,myId=null,host=false,demo=false,peer=null,upstream=null,code='',connections=new Map(),lastSendTime=new Map(),phaseShown='',timer=0;
@@ -61,7 +61,7 @@ const TILE=14;const mine=()=>state?.players.find(p=>p.id===myId);const color=id=
 function toast(msg,kind){
  const inGame=!$('game').classList.contains('hidden');
  const t=inGame?$('gameToast'):$('toast');
- const severity=kind||(/не хватает|отклонён|ошибк|нет связи|невозмож|не удало|недоступ|разрыв|устарел/i.test(String(msg))?'error':/готова|выполнен|побед|началось|исследован/i.test(String(msg))?'success':'info');
+ const severity=kind||(/missing|rejected|error|no connection|cannot|failed|unavailable|disconnected|outdated/i.test(String(msg))?'error':/ready|completed|victor|started|researched/i.test(String(msg))?'success':'info');
  t.dataset.kind=severity;t.textContent=msg;$('gameError').textContent=severity==='error'?msg:'';
  $('toast').classList.add('hidden');
  t.classList.remove('hidden');
@@ -94,7 +94,7 @@ function showAux(id){
  el.classList.remove('hidden');el.querySelector('button:not([disabled]):not(.hidden)')?.focus();$('auxBackdrop')?.classList.remove('hidden');document.body.classList.add('aux-open');
 }
 
-function name(){const val=$('nickname').value.trim().slice(0,18)||'Королевство';try{localStorage.setItem('bk-name',val);}catch(_){ }return val;}
+function name(){const val=$('nickname').value.trim().slice(0,18)||'Kingdom';try{localStorage.setItem('bk-name',val);}catch(_){ }return val;}
 function randomCode(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',v=new Uint8Array(6);crypto.getRandomValues(v);return Array.from(v,b=>chars[b%chars.length]).join('');}
 function urlRoom(){return location.origin+location.pathname+'#'+code;}
 function compress(arr){let chunks=[];for(let i=0;i<arr.length;i+=8192)chunks.push(String.fromCharCode(...arr.slice(i,i+8192)));return btoa(chunks.join(''));}
@@ -103,11 +103,11 @@ function rlePack(arr){const b=[];for(let i=0;i<arr.length;){const id=arr[i];let 
 function rleUnpack(data){const a=expand(data),out=[];for(let i=0;i<a.length;i+=3){const id=a[i],n=a[i+1]+256*a[i+2];for(let j=0;j<n;j++)out.push(id);}return out;}
 function pack(s,includeTerrain=true){if(!s||!s.owners?.length)return s;return {...s,tiles:includeTerrain?compress(s.tiles):null,owners:rlePack(s.owners),ownerRle:true,packed:true};}
 function unpack(s){if(s?.ownerDelta){const owners=state?.owners?.slice();if(!owners?.length)throw Error('Missing state for delta');for(let i=0;i<s.owners.length;i+=2)owners[s.owners[i]]=s.owners[i+1];s.owners=owners;s.tiles=state.tiles;delete s.ownerDelta;}if(s?.packed){s.tiles=s.tiles?expand(s.tiles):(state?.tiles||[]);s.owners=s.ownerRle?rleUnpack(s.owners):expand(s.owners);delete s.ownerRle;delete s.packed;}return s;}
-function getPeer(){if(window.Peer)return true;error('Не загрузилась библиотека PeerJS. Проверь интернет.');return false;}
-function setBusy(v){for(const id of ['hostButton','joinButton','demoButton','resumeButton'])$(id).disabled=v;$('joinButton').textContent=v?'Подключение…':'Войти';$('cancelConnect').classList.toggle('hidden',!v);}
+function getPeer(){if(window.Peer)return true;error('PeerJS failed to load. Check your connection.');return false;}
+function setBusy(v){for(const id of ['hostButton','joinButton','demoButton','resumeButton'])$(id).disabled=v;$('joinButton').textContent=v?'Connecting…':'Join';$('cancelConnect').classList.toggle('hidden',!v);}
 function setNetwork(text){
  $('networkStatus').textContent=text;
- $('feedbackStatus').textContent=text==='ОДИНОЧНО'?'ОДИНОЧНАЯ ИГРА':'СЕТЬ · '+text;
+ $('feedbackStatus').textContent=text==='SOLO'?'SOLO MATCH':'NETWORK · '+text;
  if(state?.phase==='playing'&&!$('game').classList.contains('hidden'))refreshHudAlert(mine());
 }
 function warnHud(text,kind='notice',action=null,seconds=6){hudNotice={text,kind,action,until:Date.now()+seconds*1000};refreshHudAlert(mine());}
@@ -139,23 +139,23 @@ function updateIncomingAttack(p){
  $('threatRail').classList.toggle('hidden',!threats.length);
  $('threatExpand').classList.toggle('hidden',threats.length<2);
  if(!threats.length){lastThreatSignature='';announcedThreats.clear();setThreatList(false);return;}
- const attackers=[...new Set(threats.map(a=>a.owner))].map(id=>E.person(state,id)?.name||'Противник');
+ const attackers=[...new Set(threats.map(a=>a.owner))].map(id=>E.person(state,id)?.name||'Enemy');
  const force=threats.reduce((sum,a)=>sum+Math.max(0,a.strength),0);
  const signature=threats.map(a=>a.id).sort().join(',');
- $('incomingTitle').textContent=threats.length===1?'НА ВАС НАПАЛИ':`АТАКИ · ${threats.length} ФРОНТА`;
- $('incomingDetail').textContent=`${attackers.join(', ')} · ${number(force)} войск противника`;
+ $('incomingTitle').textContent=threats.length===1?'UNDER ATTACK':`ATTACKS · ${threats.length} FRONTS`;
+ $('incomingDetail').textContent=`${attackers.join(', ')} · ${number(force)} enemy troops`;
  $('threatCount').textContent=threats.length;
- $('incomingAttack').setAttribute('aria-label',threats.length>1?'Перейти к следующей из '+threats.length+' угроз':'Перейти к месту нападения');
+ $('incomingAttack').setAttribute('aria-label',threats.length>1?'Go to next of '+threats.length+' threats':'Go to attack location');
  patchHtml('threatItems',threats.map((a,i)=>{
   const attacker=E.person(state,a.owner),distance=threatDistance(a,p);
-  return `<button type="button" data-focus-threat="${esc(a.id)}" class="threat-item"><i style="background:${attacker?.color||'#b94d40'}"></i><span><strong>${esc(attacker?.name||'Противник')}</strong><small>${number(a.strength)} войск · ${distance<999?'≈'+distance+' кл. от столицы':'на границе'}</small></span><b>${i+1} ↗</b></button>`;
+  return `<button type="button" data-focus-threat="${esc(a.id)}" class="threat-item"><i style="background:${attacker?.color||'#b94d40'}"></i><span><strong>${esc(attacker?.name||'Enemy')}</strong><small>${number(a.strength)} troops · ${distance<999?'≈'+distance+' tiles from capital':'at border'}</small></span><b>${i+1} ↗</b></button>`;
  }).join(''));
  if(threats.length<2)setThreatList(false);
  if(signature!==lastThreatSignature){
   const fresh=threats.filter(a=>!announcedThreats.has(a.id));
   if(fresh.length){
-   const name=E.person(state,fresh[0].owner)?.name||'Противник';
-   $('incomingAnnouncement').textContent=`Внимание! ${name} атакует вашу территорию. Нажмите на предупреждение, чтобы перейти к месту сражения.`;
+   const name=E.person(state,fresh[0].owner)?.name||'Enemy';
+   $('incomingAnnouncement').textContent=`Warning! ${name} is attacking your territory. Tap the alert to jump to the battle.`;
   }
   attackFocusIndex=0;
   announcedThreats=new Set(threats.map(a=>a.id));
@@ -180,7 +180,7 @@ function refreshHudAlert(p){
  const box=$('hudAlert');if(!box||!p||state?.phase!=='playing'){box?.classList.add('hidden');return;}
  let text='',kind='',action=null;
  const net=$('networkStatus')?.textContent||'';
- if(!host&&/ПЕРЕПОДКЛЮЧ|НЕТ СВЯЗИ|ЗАДЕРЖ|СИНХРОНИЗ|СЕРВИС|ПОДКЛЮЧ/.test(net)){text=`Соединение нестабильно · обновление ${Math.max(0,Math.floor((Date.now()-lastStateAt)/1000))} с назад. Приказы недоступны.`;kind='danger';}
+ if(!host&&/RECONNECT|OFFLINE|DELAY|SYNC|SERVICE|CONNECT/.test(net)){text=`Connection unstable · last update ${Math.max(0,Math.floor((Date.now()-lastStateAt)/1000))}s ago. Orders unavailable.`;kind='danger';}
  if(!text&&p.capital&&!activeThreats.length){
   const cap=p.capital;
   const attackers=state.armies.some(a=>a.owner!==myId&&!p.allies.includes(a.owner)&&Math.hypot(a.x-cap.x,a.y-cap.y)<9);
@@ -192,18 +192,18 @@ function refreshHudAlert(p){
    const id=E.owner(state,x,y);
    if(id!==0&&id!==myId&&!p.allies.includes(id)){hostileBorder=true;break;}
   }
-  if(attackers||hostileBorder){text='Угроза столице — проверь оборону';kind='danger';action='capital';}
+  if(attackers||hostileBorder){text='Capital under threat — check defenses';kind='danger';action='capital';}
  }
  if(!text&&hudNotice&&Date.now()<hudNotice.until){text=hudNotice.text;kind=hudNotice.kind;action=hudNotice.action;}
- if(!text&&p.troopIncome===0&&p.troops<p.troopCap&&p.res.food<1){text='Нет еды — набор войск остановлен';kind='notice';action='economy';}
+ if(!text&&p.troopIncome===0&&p.troops<p.troopCap&&p.res.food<1){text='No food — recruitment stopped';kind='notice';action='economy';}
  if(!text){
   const weak=state.armies.find(a=>a.owner===myId&&a.initialStrength>0&&a.strength/a.initialStrength<.15);
-  if(weak){text='Один из походов почти потерял войска';kind='notice';action='armies';}
+  if(weak){text='An offensive is nearly depleted';kind='notice';action='armies';}
  }
  if(!text){box.classList.add('hidden');hudAlertAction=null;return;}
  box.classList.remove('hidden');box.classList.toggle('danger',kind==='danger');
  $('hudAlertIcon').textContent=kind==='danger'?'!':'i';$('hudAlertText').textContent=text;
- hudAlertAction=action;box.title=action?'Нажми, чтобы перейти к событию':text;
+ hudAlertAction=action;box.title=action?'Tap to view this event':text;
 }
 $('hudAlert').onclick=()=>{
  if(hudAlertAction==='capital'){centerOnCapital();queueDraw();}
@@ -218,15 +218,15 @@ function updateHudSignals(p){
  const pendingIncome=p.troopIncome===undefined,counts=E.counts(state,myId),estimatedCap=Math.floor(900+p.land*2.4+counts.barracks*430+counts.city*260),cap=pendingIncome?estimatedCap:p.troopCap;
  const projected=Math.max(0,Math.min(cap-p.troops,Math.round(4+p.land/100+p.troops*.018+counts.barracks*5+counts.city*3+p.tech.war*2)));
  const growth=pendingIncome?Math.min(projected,Math.floor((p.res.food||0)/.20)):Math.floor(p.troopIncome||0),full=p.troops>=cap-.5,lowFood=Number(p.res.food||0)<1;
- let reason='';if(growth===0){reason=full?'ЛИМИТ':lowFood?'НЕТ ЕДЫ':'НАБОР 0';}
- if(pendingIncome){$('troopGrowth').textContent='≈+'+number(growth)+'/с';$('troopCap').textContent='/ '+number(cap);}
+ let reason='';if(growth===0){reason=full?'FULL':lowFood?'NO FOOD':'NO RECRUITS';}
+ if(pendingIncome){$('troopGrowth').textContent='≈+'+number(growth)+'/s';$('troopCap').textContent='/ '+number(cap);}
  const cause=$('troopReason');cause.textContent=reason;cause.classList.toggle('hidden',!reason);
- $('hudTroops').title=`Резерв: ${number(p.troops)} из ${number(cap)}. ${reason||`Набор: +${number(growth)} в секунду`}`;
+ $('hudTroops').title=`Reserve: ${number(p.troops)} of ${number(cap)}. ${reason||`Recruitment: +${number(growth)} per second`}`;
  const share=p.land/Math.max(1,state.landTotal)*100;
- $('landCount').textContent=share.toFixed(1).replace('.',',')+'%';
- $('landShare').textContent='цель 100%';
+ $('landCount').textContent=share.toFixed(1)+'%';
+ $('landShare').textContent='goal 100%';
  $('landProgress').style.width=Math.max(0,Math.min(100,share)).toFixed(1)+'%';
- $('landCount').title=`Земля: ${number(p.land)} из ${number(state.landTotal)} клеток. До 100%: ${Math.max(0,100-share).toFixed(1)} п.п.`;
+ $('landCount').title=`Land: ${number(p.land)} of ${number(state.landTotal)} cells. To 100%: ${Math.max(0,100-share).toFixed(1)} pp`;
  $('frontCount').textContent=state.armies.filter(a=>a.owner===myId&&a.strength>0).length+'/12';
  document.querySelector('.clock-stat')?.classList.remove('is-urgent');
  if(lastHudPlayer!==myId||state.tick<lastHudTick){lastHudPlayer=myId;lastHudLand=null;lastHudOwners=null;lastHudArmies=new Map();hudNotice=null;activeThreats=[];announcedThreats.clear();lastThreatSignature="";}
@@ -234,11 +234,11 @@ function updateHudSignals(p){
  if(lastHudLand!==null&&p.land<lastHudLand){
   let lost=null;
   if(lastHudOwners){for(let i=0;i<state.owners.length;i++)if(lastHudOwners[i]&&state.owners[i]!==myId){lost={x:i%E.W,y:Math.floor(i/E.W)};break;}}
-  warnHud(`Потеряно ${number(lastHudLand-p.land)} клеток территории`, 'danger',lost,7);
+  warnHud(`Lost ${number(lastHudLand-p.land)} territory cells`, 'danger',lost,7);
  }
  if(lastHudLand!==null&&lastHudArmies.size){for(const [id,a] of lastHudArmies)if(!currentArmies.has(id)){
   const taken=Number(a.captured||0);
-  warnHud(`Поход завершён${taken?' · захвачено '+number(taken)+' клеток':''}`, 'notice','armies',5);break;
+  warnHud(`Offensive ended${taken?' · conquered '+number(taken)+' cells':''}`, 'notice','armies',5);break;
  }}
  if(lastHudLand===null||state.territoryRevision!==updateHudSignals.lastRevision){
   lastHudOwners=Uint8Array.from(state.owners,v=>v===myId?1:0);updateHudSignals.lastRevision=state.territoryRevision;
@@ -249,11 +249,11 @@ function updateHudSignals(p){
 
 function getToken(){try{let t=sessionStorage.getItem('bk-token-'+code);if(!t){t=crypto.randomUUID();sessionStorage.setItem('bk-token-'+code,t);}return t;}catch(_){return code+'-'+name();}}
 function saveSolo(){if(!demo||!state||state.phase!=='playing'||mine()?.eliminated)return false;try{localStorage.setItem('bk-v14-save',JSON.stringify(state));return true;}catch(_){return false;}}
-async function copyText(t){try{if(!navigator.clipboard?.writeText)throw Error('clipboard');await navigator.clipboard.writeText(t);toast('Скопировано');}catch(_){window.prompt('Скопируй приглашение или код:',t);}}
+async function copyText(t){try{if(!navigator.clipboard?.writeText)throw Error('clipboard');await navigator.clipboard.writeText(t);toast('Copied');}catch(_){window.prompt('Copy the invite or code:',t);}}
 function canPay(p,c){return Object.entries(c||{}).every(([k,v])=>(p.res[k]||0)>=v);}
-function deficit(p,c){return Object.entries(c||{}).filter(([k,v])=>(p.res[k]||0)<v).map(([k,v])=>({wood:'Древесина',stone:'Камень',gold:'Золото',food:'Еда'}[k]+': −'+(v-(p.res[k]||0)))).join(', ');}
+function deficit(p,c){return Object.entries(c||{}).filter(([k,v])=>(p.res[k]||0)<v).map(([k,v])=>({wood:'Wood',stone:'Stone',gold:'Gold',food:'Food'}[k]+': −'+(v-(p.res[k]||0)))).join(', ');}
 function patchHtml(id,html){const el=$(id);if(el&&el.__last!==html){el.innerHTML=html;el.__last=html;}}
-function inspectCell(x,y){if(!state||!E.inside(x,y))return;const id=E.owner(state,x,y),p=E.person(state,id),line=terrainNames[E.tile(state,x,y)]+' · '+(p?.name||'Свободная земля')+' · '+x+','+y;$('mapStatus').textContent=line;$('mapStatusMobile').textContent=line;$('mapStatusMobile').classList.remove('hidden');}
+function inspectCell(x,y){if(!state||!E.inside(x,y))return;const id=E.owner(state,x,y),p=E.person(state,id),line=terrainNames[E.tile(state,x,y)]+' · '+(p?.name||'Unclaimed land')+' · '+x+','+y;$('mapStatus').textContent=line;$('mapStatusMobile').textContent=line;$('mapStatusMobile').classList.remove('hidden');}
 function setPreview(t){
  target=t;const box=$('targetPreview');box.classList.toggle('hidden',!t);$('game').classList.toggle('is-targeting',!!t);
  if(!t){queueDraw();return;}
@@ -263,21 +263,21 @@ function setPreview(t){
  const diplomatic=t.type==='send'&&!!enemy,offerButton=$('targetDiplomacy');
  offerButton.classList.toggle('hidden',!diplomatic);
  offerButton.disabled=!diplomatic||(!allied&&(sentOffer||!!enemy?.bot));
- offerButton.textContent=allied?(t.confirmBreak?'Подтвердить разрыв союза':'Разорвать союз'):received?'Принять предложение союза':sentOffer?'Предложение отправлено':enemy?.bot?'Бот не принимает союзы':'Предложить союз';
+ offerButton.textContent=allied?(t.confirmBreak?'Confirm end alliance':'End alliance'):received?'Accept alliance offer':sentOffer?'Offer sent':enemy?.bot?'Bots do not accept alliances':'Offer alliance';
  box.dataset.diplomacy=allied?'allied':received?'received':sentOffer?'sent':enemy?.bot?'bot':'offer';
  const building=E.buildingAt(state,t.x,t.y);
- $('targetTitle').textContent=t.type==='redirect'?'Сменить направление':allied?'Союзник: '+enemy.name:enemy?'Территория: '+enemy.name:'Захват нейтральной земли';
- $('targetDetail').textContent=`${number(sent)} войск · в резерве ${number(p.troops-sent)} · ${terrainNames[E.tile(state,t.x,t.y)]}${building?' · '+(E.KINDS[building.kind]?.name||'Столица'):''}`;
+ $('targetTitle').textContent=t.type==='redirect'?'Redirect offensive':allied?'Ally: '+enemy.name:enemy?'Territory: '+enemy.name:'Conquer neutral land';
+ $('targetDetail').textContent=`${number(sent)} troops · reserve ${number(p.troops-sent)} · ${terrainNames[E.tile(state,t.x,t.y)]}${building?' · '+(E.KINDS[building.kind]?.name||'Capital'):''}`;
  const defense=enemy?Math.round(E.tileDefense(state,owner,t.x,t.y)):0;const averageDefense=enemy&&front.cells.length?Math.round(front.cells.reduce((sum,i)=>sum+E.tileDefense(state,owner,i%E.W,Math.floor(i/E.W)),0)/front.cells.length):0;
- $('targetForecast').textContent=allied?'Это территория союзника. Атака запрещена, пока действует союз. Разорвать союз можно кнопкой ниже.':
-   t.type==='redirect'?'После подтверждения армия сменит направление.':
-   sea?'Море непроходимо. Выбери сушу.':
-   !front.cells.length?'Нет общей границы для наступления. Дипломатия доступна и без общей границы.':
-   owner?`Участок: ${front.cells.length} клеток · защита фронта в среднем ${averageDefense} (цель ${defense}) · резерв врага: ${number(enemy?.troops||0)}. Прогноз приблизительный.`:
-   `Начало захвата: выделенный участок границы (${front.cells.length} клеток), затем фронт расширится.`;
- $('confirmTarget').textContent=t.type==='redirect'?'Изменить цель':owner?'Атаковать':'Начать захват';
+ $('targetForecast').textContent=allied?'This territory belongs to an ally. You cannot attack until the alliance ends.':
+   t.type==='redirect'?'Confirm to redirect your army.':
+   sea?'Sea is impassable. Choose land.':
+   !front.cells.length?'No shared border for an offensive. Diplomacy is still available.':
+   owner?`Front: ${front.cells.length} cells · average defense ${averageDefense} (target ${defense}) · enemy reserve: ${number(enemy?.troops||0)}. Approximate forecast.`:
+   `Conquest begins at the highlighted border section (${front.cells.length} cells), then expands.`;
+ $('confirmTarget').textContent=t.type==='redirect'?'Change target':owner?'Attack':'Conquer';
  $('confirmTarget').disabled=allied||!(t.type==='redirect'||(sent>=35&&(front.cells.length>0&&!sea)));
- if(t.type!=='redirect'&&!allied&&p.troops-sent<Math.max(75,Math.min(300,p.troopCap*.12)))$('targetForecast').textContent+=' Внимание: после приказа останется мало войск для обороны.';
+ if(t.type!=='redirect'&&!allied&&p.troops-sent<Math.max(75,Math.min(300,p.troopCap*.12)))$('targetForecast').textContent+=' Warning: your reserve will be low after this order.';
  box.dataset.order=t.type;
  const projectedY=(t.y+.5)*TILE*zoom+camY,available=canvas.clientHeight-Math.min(270,Math.max(155,canvas.clientHeight*.37));
  if(projectedY>available){camY-=projectedY-available+18;clampCamera();}
@@ -289,37 +289,37 @@ function contextual(item){
  const me=mine(),own=item.owner===myId,other=E.person(state,item.owner);let html='';
  if(item.kind&&item.kind!=='army'){
   const details=buildingInfo[item.kind],cost=E.costUpgrade(item),maxed=item.level>=4;
-  const effect=details?buildingBenefit(item.kind,me,item.level):'Столица: оборона увеличивается с каждым уровнем';
-  const next=details?buildingBenefit(item.kind,me,item.level+1):'Защита столицы увеличится';
-  html=`<div class="context-heading"><strong>${esc(E.KINDS[item.kind]?.name||'Столица')} · ур. ${item.level}</strong><small>${esc(other?.name||'')}</small></div>
-   <div class="context-effect"><small>Сейчас</small><span>${esc(effect)}</span></div>
-   ${maxed?'':`<div class="context-effect context-effect-next"><small>После улучшения</small><span>${esc(next)}</span></div>`}
-   ${own&&!maxed?`<div class="context-upgrade-price"><small>Цена улучшения</small><div>${briefCost(cost)}</div></div><button data-context-upgrade="${esc(item.id)}" ${!canPay(me,cost)?'disabled':''}>Улучшить</button>${!canPay(me,cost)?`<small class="context-shortage">Не хватает: ${deficit(me,cost)}</small>`:''}`:own?'<small>Максимальный уровень</small>':''}`;
+  const effect=details?buildingBenefit(item.kind,me,item.level):'Capital defense improves at each level';
+  const next=details?buildingBenefit(item.kind,me,item.level+1):'Capital defense will increase';
+  html=`<div class="context-heading"><strong>${esc(E.KINDS[item.kind]?.name||'Capital')} · lvl. ${item.level}</strong><small>${esc(other?.name||'')}</small></div>
+   <div class="context-effect"><small>Current</small><span>${esc(effect)}</span></div>
+   ${maxed?'':`<div class="context-effect context-effect-next"><small>After upgrade</small><span>${esc(next)}</span></div>`}
+   ${own&&!maxed?`<div class="context-upgrade-price"><small>Upgrade cost</small><div>${briefCost(cost)}</div></div><button data-context-upgrade="${esc(item.id)}" ${!canPay(me,cost)?'disabled':''}>Upgrade</button>${!canPay(me,cost)?`<small class="context-shortage">Missing: ${deficit(me,cost)}</small>`:''}`:own?'<small>Maximum level</small>':''}`;
 
- }else html=`<strong>Армия · ${esc(other?.name||'')}</strong><span>${number(item.strength)} солдат · ${item.tx},${item.ty}</span>${own?`<button data-context-redirect="${esc(item.id)}">Сменить цель</button><button data-context-return="${esc(item.id)}">Отступить</button>`:''}`;
+ }else html=`<strong>Army · ${esc(other?.name||'')}</strong><span>${number(item.strength)} troops · ${item.tx},${item.ty}</span>${own?`<button data-context-redirect="${esc(item.id)}">Change target</button><button data-context-return="${esc(item.id)}">Retreat</button>`:''}`;
  if(content.__last!==html){content.innerHTML=html;content.__last=html;}if(box.classList.contains('hidden'))showAux('contextCard');
 }
-function createRoom(){if(!getPeer())return;setBusy(true);code=randomCode();host=true;demo=false;readyLocal=true;peer=new Peer('bk-'+code);const sessionPeer=peer;setNetwork('ПОДКЛЮЧЕНИЕ');
- connectTimer=setTimeout(()=>{if(!state){setBusy(false);error('Не удалось создать комнату. Повтори попытку.');try{peer.destroy();}catch(_){}}},12000);
- peer.on('open',()=>{if(peer!==sessionPeer)return;clearTimeout(connectTimer);setBusy(false);state=E.lobby(Date.now());myId=E.addPlayer(state,name());state.players[0].ready=true;state.settings={bots:Number($('botCount').value)};setNetwork('ВЕДУЩИЙ');try{history.replaceState(null,'','#'+code);}catch(_){}phaseShown='';render();});
- peer.on('connection',c=>{if(peer===sessionPeer)joinConnection(c);});peer.on('error',e=>{if(peer!==sessionPeer)return;clearTimeout(connectTimer);setBusy(false);error('Комната: '+(e.message||e.type||'ошибка'));});
- peer.on('disconnected',()=>{if(peer===sessionPeer)setNetwork('СЕРВИС НЕДОСТУПЕН');});
+function createRoom(){if(!getPeer())return;setBusy(true);code=randomCode();host=true;demo=false;readyLocal=true;peer=new Peer('bk-'+code);const sessionPeer=peer;setNetwork('CONNECTING');
+ connectTimer=setTimeout(()=>{if(!state){setBusy(false);error('Could not create room. Try again.');try{peer.destroy();}catch(_){}}},12000);
+ peer.on('open',()=>{if(peer!==sessionPeer)return;clearTimeout(connectTimer);setBusy(false);state=E.lobby(Date.now());myId=E.addPlayer(state,name());state.players[0].ready=true;state.settings={bots:Number($('botCount').value)};setNetwork('HOST');try{history.replaceState(null,'','#'+code);}catch(_){}phaseShown='';render();});
+ peer.on('connection',c=>{if(peer===sessionPeer)joinConnection(c);});peer.on('error',e=>{if(peer!==sessionPeer)return;clearTimeout(connectTimer);setBusy(false);error('Room: '+(e.message||e.type||'error'));});
+ peer.on('disconnected',()=>{if(peer===sessionPeer)setNetwork('SERVICE UNAVAILABLE');});
 }
-function joinRoom(){if(!getPeer())return;code=$('roomCode').value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,9);if(!/^[A-Z0-9]{6}$/.test(code))return error('Нужен код из 6 символов.');$('lobbyError').textContent='';setBusy(true);host=false;demo=false;peer=new Peer();const sessionPeer=peer;setNetwork('ПОДКЛЮЧЕНИЕ');
- connectTimer=setTimeout(()=>{if(!state){setBusy(false);error('Комната не отвечает. Проверь код.');try{peer.destroy();}catch(_){}}},14000);
- peer.on('open',()=>{if(peer===sessionPeer)connectUpstream();});peer.on('error',e=>{if(peer!==sessionPeer)return;clearTimeout(connectTimer);setBusy(false);error('Подключение: '+(e.message||e.type||'ошибка'));});
+function joinRoom(){if(!getPeer())return;code=$('roomCode').value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,9);if(!/^[A-Z0-9]{6}$/.test(code))return error('Enter a six-character room code.');$('lobbyError').textContent='';setBusy(true);host=false;demo=false;peer=new Peer();const sessionPeer=peer;setNetwork('CONNECTING');
+ connectTimer=setTimeout(()=>{if(!state){setBusy(false);error('Room not responding. Check the code.');try{peer.destroy();}catch(_){}}},14000);
+ peer.on('open',()=>{if(peer===sessionPeer)connectUpstream();});peer.on('error',e=>{if(peer!==sessionPeer)return;clearTimeout(connectTimer);setBusy(false);error('Connection: '+(e.message||e.type||'error'));});
 }
 function connectUpstream(){if(!peer||peer.destroyed)return;upstream=peer.connect('bk-'+code,{reliable:true});const activeConnection=upstream;
  upstream.on('open',()=>{if(upstream!==activeConnection)return;upstream.send({t:'join',name:name(),token:getToken()});});
- upstream.on('data',m=>{if(upstream!==activeConnection)return;if(!m||typeof m!=='object')return;if(m.t==='room-closed'){goHome();error('Ведущий закрыл комнату. Можно создать новую или войти по коду.');return;}if(m.t==='welcome'){clearTimeout(connectTimer);setBusy(false);reconnectTries=0;myId=m.id;state=unpack(m.state);lastStateAt=Date.now();phaseShown=state.phase==='playing'?'':phaseShown;setNetwork('В СЕТИ');render();}else if(m.t==='state'){if(m.state?.ownerDelta&&m.state.ownerBaseRev!==state?.territoryRevision){upstream.send({t:'resync'});setNetwork('СИНХРОНИЗАЦИЯ');return;}const before=state?.armies||[];oldArmyPositions=new Map(before.map(a=>[a.id,{x:a.x,y:a.y}]));movementStart=performance.now();state=unpack(m.state);lastStateAt=Date.now();setNetwork('В СЕТИ');render();}else if(m.t==='ack'){pendingOrders.delete(m.id);toast(m.ok?'Приказ выполнен':m.error||'Приказ отклонён');if(m.ok&&m.action==='build'){toast('Построено · можно поставить ещё');refreshQuickBuild();}}else if(m.t==='error'){clearTimeout(connectTimer);setBusy(false);if(!state)error(m.message);else toast(m.message);}});
- upstream.on('close',()=>{if(upstream!==activeConnection)return;setNetwork('ПЕРЕПОДКЛЮЧЕНИЕ');retryUpstream();});upstream.on('error',()=>{if(upstream!==activeConnection)return;setNetwork('НЕТ СВЯЗИ');});
+ upstream.on('data',m=>{if(upstream!==activeConnection)return;if(!m||typeof m!=='object')return;if(m.t==='room-closed'){goHome();error('Host closed the room. Create or join another.');return;}if(m.t==='welcome'){clearTimeout(connectTimer);setBusy(false);reconnectTries=0;myId=m.id;state=unpack(m.state);lastStateAt=Date.now();phaseShown=state.phase==='playing'?'':phaseShown;setNetwork('ONLINE');render();}else if(m.t==='state'){if(m.state?.ownerDelta&&m.state.ownerBaseRev!==state?.territoryRevision){upstream.send({t:'resync'});setNetwork('SYNCING');return;}const before=state?.armies||[];oldArmyPositions=new Map(before.map(a=>[a.id,{x:a.x,y:a.y}]));movementStart=performance.now();state=unpack(m.state);lastStateAt=Date.now();setNetwork('ONLINE');render();}else if(m.t==='ack'){pendingOrders.delete(m.id);toast(m.ok?'Order completed':m.error||'Order rejected');if(m.ok&&m.action==='build'){toast('Built · you can place another');refreshQuickBuild();}}else if(m.t==='error'){clearTimeout(connectTimer);setBusy(false);if(!state)error(m.message);else toast(m.message);}});
+ upstream.on('close',()=>{if(upstream!==activeConnection)return;setNetwork('RECONNECTING');retryUpstream();});upstream.on('error',()=>{if(upstream!==activeConnection)return;setNetwork('OFFLINE');});
 }
-function retryUpstream(){if(host||demo||!peer||peer.destroyed)return;clearTimeout(reconnectTimer);if(++reconnectTries>8){setNetwork('НЕТ СВЯЗИ');toast('Ведущий не отвечает. Его вкладка должна оставаться открытой.');return;}reconnectTimer=setTimeout(connectUpstream,Math.min(12000,1000*reconnectTries));}
+function retryUpstream(){if(host||demo||!peer||peer.destroyed)return;clearTimeout(reconnectTimer);if(++reconnectTries>8){setNetwork('OFFLINE');toast('Host not responding. The host must keep their tab open.');return;}reconnectTimer=setTimeout(connectUpstream,Math.min(12000,1000*reconnectTries));}
 function joinConnection(conn){const sessionPeer=peer;conn.on('data',m=>{if(peer!==sessionPeer)return;if(!m||typeof m!=='object')return;
  if(m.t==='join'){
   if(connections.has(conn))return;
   let id=tokenStore.get(m.token);const old=state.players.find(p=>p.id===id);
-  if(!old||old.bot){if(state.phase!=='lobby'){conn.send({t:'error',message:'Игра уже идёт. Войти можно только с прежнего устройства.'});return;}id=E.addPlayer(state,m.name);if(!id){conn.send({t:'error',message:'Комната заполнена.'});return;}}
+  if(!old||old.bot){if(state.phase!=='lobby'){conn.send({t:'error',message:'Match already started. Rejoin from your previous device.'});return;}id=E.addPlayer(state,m.name);if(!id){conn.send({t:'error',message:'Room is full.'});return;}}
   if(m.token)tokenStore.set(m.token,id);
   for(const [c,v] of connections)if(v===id&&c!==conn){connections.delete(c);previousOwners.delete(c);previousRevs.delete(c);try{c.close();}catch(_){ }}
   state.players.find(p=>p.id===id).connected=true;state.players.find(p=>p.id===id).ready=true;connections.set(conn,id);conn.send({t:'welcome',id,state:pack(state)});previousOwners.delete(conn);previousRevs.delete(conn);broadcast(false);
@@ -340,21 +340,21 @@ function createDemo(resume=false){
  const previous=resume?savedSolo():null;state=previous||E.lobby(Date.now());
  myId=state.players[0]?.id||E.addPlayer(state,name());
  if(state.phase==='lobby'){state.settings={bots:Number($('soloBots').value)};E.start(state,Number($('soloBots').value));}
- phaseShown='';setNetwork('ОДИНОЧНО');render();if(!resume)showTutorial();
+ phaseShown='';setNetwork('SOLO');render();if(!resume)showTutorial();
 }
-function startGame(){if(!host)return;const waiting=state.players.filter(p=>!p.bot&&p.connected!==false&&!p.ready);if(waiting.length)return toast('Ожидаем готовность: '+waiting.map(p=>p.name).join(', '));state.settings={bots:Number($('botCount').value)};const res=E.start(state,state.settings.bots);if(!res.ok)return toast(res.error);broadcast(true);showTutorial();}
+function startGame(){if(!host)return;const waiting=state.players.filter(p=>!p.bot&&p.connected!==false&&!p.ready);if(waiting.length)return toast('Waiting for: '+waiting.map(p=>p.name).join(', '));state.settings={bots:Number($('botCount').value)};const res=E.start(state,state.settings.bots);if(!res.ok)return toast(res.error);broadcast(true);showTutorial();}
 function command(a){if(!state||state.phase!=='playing')return false;
- if(host){const r=E.action(state,myId,a);if(!r.ok){toast(r.error);return false;}broadcast();if(a.type==='build'){toast('Построено · можно поставить ещё');refreshQuickBuild();}else if(a.type==='send'){toast('Наступление началось');}return true;}
- if(upstream?.open){if(Date.now()-lastStateAt>4500){setNetwork('НЕТ СВЯЗИ');toast('Данные устарели. Подожди восстановления соединения перед приказом.');return false;}const id=++seq;pendingOrders.set(id,Date.now());upstream.send({t:'action',id,action:a});return true;}toast('Нет связи с комнатой.');return false;}
+ if(host){const r=E.action(state,myId,a);if(!r.ok){toast(r.error);return false;}broadcast();if(a.type==='build'){toast('Built · you can place another');refreshQuickBuild();}else if(a.type==='send'){toast('Offensive started');}return true;}
+ if(upstream?.open){if(Date.now()-lastStateAt>4500){setNetwork('OFFLINE');toast('Data is outdated. Wait for reconnection before issuing an order.');return false;}const id=++seq;pendingOrders.set(id,Date.now());upstream.send({t:'action',id,action:a});return true;}toast('Room connection lost.');return false;}
 function showTutorial(){if(!showTutorialOnce)return;try{localStorage.setItem('bk-v9-tutorial','yes');}catch(_){}showTutorialOnce=false;}
 
 function render(){if(!state)return;
  if(state.phase==='lobby'){
-  $('victory').classList.add('hidden');show('waiting');$('showCode').textContent=code;$('roomHeadingLabel').textContent=host?'КОМНАТА ГОТОВА':'ТЫ В КОМНАТЕ';$('roomMembersCount').textContent=state.players.filter(p=>!p.bot).length+' участн.';
-  patchHtml('waitingPlayers',state.players.map(p=>`<div class="player-row"><i class="player-dot" style="background:${p.color}"></i><strong>${esc(p.name)}</strong><span class="muted">${p.id===myId?'Ты':p.id===1?'Ведущий':''} · ${p.connected===false?'Не в сети':p.ready?'В комнате':'Подключение'}</span></div>`).join(''));
-  $('startButton').classList.toggle('hidden',!host);$('readyButton').classList.add('hidden');$('readyButton').setAttribute('aria-pressed',String(readyLocal));$('readyButton').textContent=readyLocal?'Готов ✓':'Я готов';$('botCount').disabled=!host;$('spawnChoice').disabled=false;
+  $('victory').classList.add('hidden');show('waiting');$('showCode').textContent=code;$('roomHeadingLabel').textContent=host?'ROOM READY':'IN ROOM';$('roomMembersCount').textContent=state.players.filter(p=>!p.bot).length+' players';
+  patchHtml('waitingPlayers',state.players.map(p=>`<div class="player-row"><i class="player-dot" style="background:${p.color}"></i><strong>${esc(p.name)}</strong><span class="muted">${p.id===myId?'You':p.id===1?'Host':''} · ${p.connected===false?'Offline':p.ready?'In room':'Connecting'}</span></div>`).join(''));
+  $('startButton').classList.toggle('hidden',!host);$('readyButton').classList.add('hidden');$('readyButton').setAttribute('aria-pressed',String(readyLocal));$('readyButton').textContent=readyLocal?'Ready ✓':'I am ready';$('botCount').disabled=!host;$('spawnChoice').disabled=false;
   $('startButton').disabled=!state.players.filter(p=>!p.bot).every(p=>p.ready||p.connected===false);$('botCount').value=state.settings?.bots??0;
-  $('waitingHint').textContent=host?'Ты ведущий. Выход закроет комнату.':'Ожидаем запуска ведущим. Дополнительное подтверждение готовности не нужно.'; $('roomSettingsSummary').textContent=(state.settings?.bots??0)+' ботов';
+  $('waitingHint').textContent=host?'You are the host. Leaving closes the room.':'Waiting for host to start. You are ready.'; $('roomSettingsSummary').textContent=(state.settings?.bots??0)+' bots';
   phaseShown='lobby';return;
  }
  if(phaseShown!=='playing'&&phaseShown!=='ended'){
@@ -365,24 +365,24 @@ function render(){if(!state)return;
  if((state.phase==='ended'||mine()?.eliminated&&!defeatDismissed)&&phaseShown!=='ended'){
   phaseShown='ended';const w=state.players.find(p=>p.id===state.winner),me=mine();
   const outcome=me?.eliminated?'loss':!w?'draw':w.id===myId?'win':'loss';
-  const reason=state.phase==='ended'?'Победитель контролирует все 100% суши.':'Ты потерял все земли. Можно наблюдать за матчем или выйти.';
+  const reason=state.phase==='ended'?'The winner controls all land (100%).':'You lost all your land. You can spectate or leave.';
   if(demo){try{localStorage.removeItem('bk-v14-save');}catch(_){}}
   $('spectateMatch').classList.toggle('hidden',state.phase==='ended');
-  const duration=Math.floor(state.tick/60)+' мин '+String(state.tick%60).padStart(2,'0')+' сек';
-  $('victoryName').textContent=outcome==='win'?'Победа!':outcome==='loss'?'Поражение':'Ничья';
-  $('victoryEyebrow').textContent=outcome==='win'?'ТВОЁ КОРОЛЕВСТВО':outcome==='loss'?'МАТЧ ЗАВЕРШЁН':'МАТЧ ЗАВЕРШЁН';
+  const duration=Math.floor(state.tick/60)+'m '+String(state.tick%60).padStart(2,'0')+'s';
+  $('victoryName').textContent=outcome==='win'?'Victory!':outcome==='loss'?'Defeat':'Draw';
+  $('victoryEyebrow').textContent=outcome==='win'?'YOUR KINGDOM':outcome==='loss'?'MATCH ENDED':'MATCH ENDED';
   $('resultEmblem').textContent=outcome==='win'?'★':outcome==='loss'?'⚔':'◈';
   $('resultSheet').dataset.outcome=outcome;
-  $('victoryDesc').textContent=outcome==='win'?'Твоё королевство победило.':outcome==='loss'?`Победитель: ${w?.name||'соперник'}.`:'Победитель не определён.';
+  $('victoryDesc').textContent=outcome==='win'?'Your kingdom has won.':outcome==='loss'?`Winner: ${w?.name||'opponent'}.`:'No winner determined.';
   $('victoryReason').textContent=reason;
   const landPct=((me?.land||0)/Math.max(1,state.landTotal)*100).toFixed(1)+'%';
-  const stats=[['ТЕРРИТОРИЯ',landPct],['ЗАХВАЧЕНО СТОЛИЦ',number(me?.kills)],['ПОСТРОЕК',number(state.buildings.filter(b=>b.owner===myId).length)],['ДЛИТЕЛЬНОСТЬ',duration]];
+  const stats=[['TERRITORY',landPct],['CAPITALS TAKEN',number(me?.kills)],['BUILDINGS',number(state.buildings.filter(b=>b.owner===myId).length)],['DURATION',duration]];
   $('victoryStats').innerHTML=stats.map(([label,value])=>`<div class="result-stat"><small>${label}</small><b>${value}</b></div>`).join('');
-  $('restart').disabled=!demo&&(!host||state.phase!=='ended');$('restart').textContent=demo?'Новая партия':state.phase!=='ended'?'Матч ещё идёт':host?'Вернуться в комнату':'Ждём ведущего…';
+  $('restart').disabled=!demo&&(!host||state.phase!=='ended');$('restart').textContent=demo?'New match':state.phase!=='ended'?'Match in progress':host?'Return to room':'Waiting for host…';
   $('victory').classList.remove('hidden');
  }
 }
-function setRate(node,value){const rate=Math.round(Number(value)||0);node.dataset.trend=rate>0?'positive':rate<0?'negative':'neutral';node.textContent=(rate>0?'+':rate<0?'−':'')+number(Math.abs(rate))+'/с';}
+function setRate(node,value){const rate=Math.round(Number(value)||0);node.dataset.trend=rate>0?'positive':rate<0?'negative':'neutral';node.textContent=(rate>0?'+':rate<0?'−':'')+number(Math.abs(rate))+'/s';}
 function updateUI(){const p=mine();if(!p)return;
  // Before the first economy tick, derive the same production formula as the engine,
  // rather than showing a misleading +0/s for every resource.
@@ -395,14 +395,14 @@ function updateUI(){const p=mine();if(!p)return;
   setRate(rateNode,rate);
   rateNode.classList.toggle('resource-negative',rate<0);
   item.classList.toggle('resource-low',r==='food'&&amount<Math.max(12,Math.abs(rate)*5));
-  item.setAttribute('title',`${nameResource[r]}: ${number(amount)}. ${r==='food'?'Примерный чистый прирост после набора войск':'Производство'}: ${rate>=0?'+':'−'}${number(Math.abs(rate))} в секунду`);
+  item.setAttribute('title',`${nameResource[r]}: ${number(amount)}. ${r==='food'?'Estimated net growth after recruitment':'Production'}: ${rate>=0?'+':'−'}${number(Math.abs(rate))} per second`);
  }
 
  updateIncomingAttack(p);
- $('troopCount').textContent=hudNumber(p.troops);$('troopCount').title=number(p.troops);$('troopCap').textContent='/ '+hudNumber(p.troopCap);$('troopCap').title=number(p.troopCap);setRate($('troopGrowth'),p.troopIncome||0);updateHudSignals(p);$('myKingdom').textContent=p.name+(p.eliminated?' · РАЗГРОМ':'');$('myKingdom').title=p.name;$('myKingdom').style.color=p.color;
- const sent=Math.floor(p.troops*percent/100);$('sendingTroops').textContent=number(sent);$('remainingTroops').textContent=number(p.troops-sent);$('activeArmies').textContent=state.armies.filter(a=>a.owner===myId).length+'/12';$('dockSummary').textContent=percent+'%';if(target)setPreview(target);const frontNum=state.armies.filter(a=>a.owner===myId).length;$('frontCountBadge').textContent=String(frontNum);$('frontCountBadge').classList.toggle('hidden',frontNum===0);$('armiesToggle').setAttribute('aria-label',`Мои походы: ${frontNum}`);$('armiesToggle').classList.toggle('has-fronts',state.armies.some(a=>a.owner===myId));renderArmies();
+ $('troopCount').textContent=hudNumber(p.troops);$('troopCount').title=number(p.troops);$('troopCap').textContent='/ '+hudNumber(p.troopCap);$('troopCap').title=number(p.troopCap);setRate($('troopGrowth'),p.troopIncome||0);updateHudSignals(p);$('myKingdom').textContent=p.name+(p.eliminated?' · ELIMINATED':'');$('myKingdom').title=p.name;$('myKingdom').style.color=p.color;
+ const sent=Math.floor(p.troops*percent/100);$('sendingTroops').textContent=number(sent);$('remainingTroops').textContent=number(p.troops-sent);$('activeArmies').textContent=state.armies.filter(a=>a.owner===myId).length+'/12';$('dockSummary').textContent=percent+'%';if(target)setPreview(target);const frontNum=state.armies.filter(a=>a.owner===myId).length;$('frontCountBadge').textContent=String(frontNum);$('frontCountBadge').classList.toggle('hidden',frontNum===0);$('armiesToggle').setAttribute('aria-label',`My offensives: ${frontNum}`);$('armiesToggle').classList.toggle('has-fronts',state.armies.some(a=>a.owner===myId));renderArmies();
  const top=[...state.players].filter(p=>p.land>0).sort((a,b)=>b.land-a.land);
- patchHtml('quickLeadersList',top.slice(0,6).map(v=>'<div class="quick-row"><span style="background:'+v.color+'"></span><b>'+esc(v.name)+'</b><small>'+number(v.land)+' клеток</small></div>').join(''));
+ patchHtml('quickLeadersList',top.slice(0,6).map(v=>'<div class="quick-row"><span style="background:'+v.color+'"></span><b>'+esc(v.name)+'</b><small>'+number(v.land)+' cells</small></div>').join(''));
  patchHtml('leaderboard',top.slice(0,9).map((v,i)=>`<div class="leader-row"><span>${i+1}.</span><i class="player-dot" style="background:${v.color}"></i><span class="leader-name" title="${esc(v.name)}">${esc(v.name)}${v.bot?' · Bot':''}</span><div class="bar"><i style="width:${Math.max(3,v.land/Math.max(1,top[0].land)*100)}%;background:${v.color}"></i></div><div>${number(v.land)}</div></div>`).join(''));
  if(currentTab==='build'){
   patchHtml('buildResourceSummary',resourceStrip(p));
@@ -411,13 +411,13 @@ function updateUI(){const p=mine();if(!p)return;
   patchHtml('techResourceSummary',resourceStrip(p));
   updateTechCards(p);
  }else if(currentTab==='diplomacy'){
-  patchHtml('diplomacyPanel',state.players.filter(v=>v.id!==myId&&!v.eliminated).map(v=>`<div class="dip-item"><div class="dip-heading"><i class="dip-color" style="background:${v.color}"></i><strong>${esc(v.name)}</strong></div><p>${number(v.land)} клеток · ${p.allies.includes(v.id)?'Союзник':p.offers.includes(v.id)?'Предложение отправлено':v.offers.includes(myId)?'Предлагает союз':'Нейтральный'}</p><div class="dip-actions"><button class="${p.allies.includes(v.id)?'dip-danger':'dip-accept'}" data-ally="${v.id}">${p.allies.includes(v.id)?'Разорвать союз':v.offers.includes(myId)?'Принять союз':'Предложить союз'}</button>${p.allies.includes(v.id)?`<button data-donate="${v.id}">Подарить 100 золота</button>`:''}</div></div>`).join(''));
+  patchHtml('diplomacyPanel',state.players.filter(v=>v.id!==myId&&!v.eliminated).map(v=>`<div class="dip-item"><div class="dip-heading"><i class="dip-color" style="background:${v.color}"></i><strong>${esc(v.name)}</strong></div><p>${number(v.land)} cells · ${p.allies.includes(v.id)?'Ally':p.offers.includes(v.id)?'Offer sent':v.offers.includes(myId)?'Offers alliance':'Neutral'}</p><div class="dip-actions"><button class="${p.allies.includes(v.id)?'dip-danger':'dip-accept'}" data-ally="${v.id}">${p.allies.includes(v.id)?'End alliance':v.offers.includes(myId)?'Accept alliance':'Offer alliance'}</button>${p.allies.includes(v.id)?`<button data-donate="${v.id}">Gift 100 gold</button>`:''}</div></div>`).join(''));
  }else{
-  patchHtml('infoPanel',`<div class="info-stat"><span>Территория</span><strong>${number(p.land)} / ${number(state.landTotal)} · ${(p.land/Math.max(1,state.landTotal)*100).toFixed(1)}%</strong></div><div class="info-stat"><span>До победы (100%)</span><strong>${Math.max(0,(100-p.land/Math.max(1,state.landTotal)*100)).toFixed(1)}%</strong></div><div class="info-stat"><span>Армии</span><strong>${state.armies.filter(a=>a.owner===myId).length}/12</strong></div><div class="info-stat"><span>Здания</span><strong>${state.buildings.filter(b=>b.owner===myId).length}</strong></div>`);patchHtml('events',state.log.map(msg=>`<div>${esc(msg)}</div>`).join(''));
+  patchHtml('infoPanel',`<div class="info-stat"><span>Territory</span><strong>${number(p.land)} / ${number(state.landTotal)} · ${(p.land/Math.max(1,state.landTotal)*100).toFixed(1)}%</strong></div><div class="info-stat"><span>To victory (100%)</span><strong>${Math.max(0,(100-p.land/Math.max(1,state.landTotal)*100)).toFixed(1)}%</strong></div><div class="info-stat"><span>Armies</span><strong>${state.armies.filter(a=>a.owner===myId).length}/12</strong></div><div class="info-stat"><span>Buildings</span><strong>${state.buildings.filter(b=>b.owner===myId).length}</strong></div>`);patchHtml('events',state.log.map(msg=>`<div>${esc(msg)}</div>`).join(''));
  }
- patchHtml('economyDetails',resourceStrip(p)+`<div class="economy-army"><strong>Армия: ${number(p.troops)} / ${number(p.troopCap)}</strong><small>Набор: +${number(p.troopIncome||0)}/с ${p.troops>=p.troopCap?'· лимит':'· зависит от еды и зданий'}</small><small>Расход еды на набор: ≈${((p.troopIncome||0)*.2).toFixed(1)}/с</small></div>`);
- patchHtml('accessibleObjects',state.buildings.filter(b=>b.owner===myId).slice(0,30).map(b=>'<li>'+esc(E.KINDS[b.kind]?.name||'Столица')+' '+b.x+','+b.y+'</li>').join('')+state.armies.filter(a=>a.owner===myId).map(a=>'<li>Армия '+number(a.strength)+' солдат, '+a.x+','+a.y+'</li>').join(''));
- if(state.log?.[0]&&state.tick>3&&state.log[0]!==lastAnnounced){const message=state.log[0];lastAnnounced=message;if(!/изучил|исследовал/i.test(message)&&/захватил столицу|разгром|победил|союз/.test(message.toLowerCase()))toast(message);}
+ patchHtml('economyDetails',resourceStrip(p)+`<div class="economy-army"><strong>Army: ${number(p.troops)} / ${number(p.troopCap)}</strong><small>Recruitment: +${number(p.troopIncome||0)}/s ${p.troops>=p.troopCap?'· full':'· depends on food and buildings'}</small><small>Recruitment food consumption: ≈${((p.troopIncome||0)*.2).toFixed(1)}/s</small></div>`);
+ patchHtml('accessibleObjects',state.buildings.filter(b=>b.owner===myId).slice(0,30).map(b=>'<li>'+esc(E.KINDS[b.kind]?.name||'Capital')+' '+b.x+','+b.y+'</li>').join('')+state.armies.filter(a=>a.owner===myId).map(a=>'<li>Army '+number(a.strength)+' troops, '+a.x+','+a.y+'</li>').join(''));
+ if(state.log?.[0]&&state.tick>3&&state.log[0]!==lastAnnounced){const message=state.log[0];lastAnnounced=message;if(!/researched|completed/i.test(message)&&/captured the capital|eliminated|won|alliance/.test(message.toLowerCase()))toast(message);}
  updateSelection();refreshQuickBuild();
 }
 
@@ -430,10 +430,10 @@ function updateTechCards(p){
   panel.innerHTML=entries.map(([id,t])=>{
    const level=p.tech[id]||0,cost=E.costTech(id,level);
    return `<div class="tech-item tech-detail" data-tech-card="${esc(id)}">
-     <div class="tech-heading">${uiIcon(id)}<strong>${esc(t.name)}</strong><span title="Уровень исследования">${level}/3</span></div>
+     <div class="tech-heading">${uiIcon(id)}<strong>${esc(t.name)}</strong><span title="Research level">${level}/3</span></div>
      <p>${esc(techBenefit(id,level))}</p>
-     <div class="tech-next">${level<3?'→ '+esc(techBenefit(id,level+1)):'Максимальный уровень'}</div>
-     <div class="tech-footer"><div class="tech-price"><small class="tech-cost">${level<3?briefCost(cost):''}</small><div class="tech-availability" data-tech-status="${esc(id)}"></div></div><button type="button" data-research="${esc(id)}">${level<3?'Исследовать':'Готово'}</button></div>
+     <div class="tech-next">${level<3?'→ '+esc(techBenefit(id,level+1)):'Maximum level'}</div>
+     <div class="tech-footer"><div class="tech-price"><small class="tech-cost">${level<3?briefCost(cost):''}</small><div class="tech-availability" data-tech-status="${esc(id)}"></div></div><button type="button" data-research="${esc(id)}">${level<3?'Research':'Done'}</button></div>
    </div>`;
   }).join('');
   panel.dataset.structure=key;
@@ -444,7 +444,7 @@ function updateTechCards(p){
   const button=panel.querySelector('[data-research="'+id+'"]'),status=panel.querySelector('[data-tech-status="'+id+'"]');
   if(!button||!status)continue;
   button.disabled=!affordable;
-  const message=level>=3?'Максимальный уровень':p.eliminated?'Королевство разгромлено':affordable?'':'Не хватает: '+Object.entries(cost).filter(([r,n])=>(p.res[r]||0)<n).map(([r,n])=>nameResource[r]+' '+(n-(p.res[r]||0))).join(' · ');
+  const message=level>=3?'Maximum level':p.eliminated?'Kingdom eliminated':affordable?'':'Missing: '+Object.entries(cost).filter(([r,n])=>(p.res[r]||0)<n).map(([r,n])=>nameResource[r]+' '+(n-(p.res[r]||0))).join(' · ');
   if(status.textContent!==message)status.textContent=message;
   status.title=message;
   status.classList.toggle('can-research',affordable);
@@ -459,7 +459,7 @@ function updateBuildCards(p){
    return `<button type="button" data-build="${esc(id)}" class="build-btn build-detail">
      <span class="build-icon">${buildingArt(id)}</span><span class="build-copy"><strong>${esc(k.name)}</strong><small>${esc(info.short)}</small></span>
      <span class="build-gain">${esc(buildingBenefit(id,p,1))}</span>
-     <span class="build-meta">${esc(info.place)} · Построено: ${quantity}${count?' (уровней: '+count+')':''}</span>
+     <span class="build-meta">${esc(info.place)} · Built: ${quantity}${count?' (levels: '+count+')':''}</span>
      <span class="build-price">${briefCost(k.cost)}</span>
      <span class="build-short" data-build-status="${esc(id)}"></span>
     </button>`;
@@ -472,12 +472,12 @@ function updateBuildCards(p){
   const ok=canPay(p,k.cost);
   button.disabled=!ok||!!p.eliminated;
   button.classList.toggle('active',buildMode===id);
-  const message=ok?'':'Не хватает: '+deficit(p,k.cost);
+  const message=ok?'':'Missing: '+deficit(p,k.cost);
   if(status.textContent!==message)status.textContent=message;
   status.title=message;
  }
 }
-function updateSelection(){const item=selected?.kind==='army'?state.armies.find(a=>a.id===selected.id):selected?.kind==='building'?state.buildings.find(b=>b.id===selected.id):null;contextual(item);const box=$('selectedPanel');if(!item){box.textContent='Коснись объекта на карте. Для атаки выбери цель и подтверди приказ.';return;}box.textContent=(item.kind?E.KINDS[item.kind]?.name||'Столица':'Армия')+' · '+(E.person(state,item.owner)?.name||'')+' · '+(item.strength?number(item.strength)+' войск':'уровень '+item.level);}
+function updateSelection(){const item=selected?.kind==='army'?state.armies.find(a=>a.id===selected.id):selected?.kind==='building'?state.buildings.find(b=>b.id===selected.id):null;contextual(item);const box=$('selectedPanel');if(!item){box.textContent='Tap an object on the map. To attack, select a target and confirm.';return;}box.textContent=(item.kind?E.KINDS[item.kind]?.name||'Capital':'Army')+' · '+(E.person(state,item.owner)?.name||'')+' · '+(item.strength?number(item.strength)+' troops':'level '+item.level);}
 // Fast-build selection: choosing a building does not spend resources.
 // Placement is performed with a separate map tap after the player sees legal cells.
 function refreshQuickBuild(){
@@ -488,10 +488,10 @@ function refreshQuickBuild(){
   return `<button type="button" class="quick-build-item ${buildMode===id?'chosen':''} ${!affordable?'unaffordable':''}" data-fast-build="${id}" aria-pressed="${buildMode===id}" title="${esc(item.name)} — ${esc(buildingInfo[id]?.short||'')}">${buildingArt(id)}<span class="building-name">${esc(item.name)}</span><small class="building-cost">${costs}</small>${$('quickBuild').classList.contains('with-descriptions')?`<small class="quick-description">${esc(buildingInfo[id]?.short||'')} ${esc(buildingBenefit(id,p,1))}</small>`:''}</button>`;
  }).join('');
  if(container.dataset.html!==html){const scroll=container.scrollLeft;container.innerHTML=html;container.dataset.html=html;container.scrollLeft=scroll;}
- const description=buildMode?`${E.KINDS[buildMode]?.name}: зелёный — можно, красный — нельзя. ${buildMode==='fort'?'Жёлтый ромб — радиус защиты.':''}`:'Выбери здание, затем клетку на своей земле.';
+ const description=buildMode?`${E.KINDS[buildMode]?.name}: green — valid, red — invalid. ${buildMode==='fort'?'Yellow diamond — defense radius.':''}`:'Choose a building, then a tile on your land.';
  $('quickBuildHelp').textContent=description;
  $('placingBuild').classList.toggle('hidden',!buildMode||quickBuildOpen);
- if(buildMode){$('placingBuildText').textContent=E.KINDS[buildMode].name+' · выбери клетку';$('placingBuildIcon').src='assets/shapes/'+buildMode+'.svg';}
+ if(buildMode){$('placingBuildText').textContent=E.KINDS[buildMode].name+' · choose a tile';$('placingBuildIcon').src='assets/shapes/'+buildMode+'.svg';}
 }
 function toggleQuickBuild(force){
  quickBuildOpen=typeof force==='boolean'?force:!quickBuildOpen;
@@ -504,8 +504,8 @@ function closePanelIfOpen(){if(panelOpen)closePanel();}
 function setBuildingMode(kind){
  buildMode=kind||null;selected=null;setPreview(null);moveCursor=null;
  $('cancelMode').classList.toggle('hidden',!buildMode);
- $('modeLabel').textContent=buildMode?'Построить: '+E.KINDS[buildMode].name:'Наступление';
- $('actionHint').textContent=buildMode?'Зелёная клетка — разрешено, красная — запрещено.':'Коснись цели или проведи от своей земли.';
+ $('modeLabel').textContent=buildMode?'Build: '+E.KINDS[buildMode].name:'Offensive';
+ $('actionHint').textContent=buildMode?'Green tile — allowed, red tile — blocked.':'Tap a target or drag from your land.';
  if(buildMode)toggleQuickBuild(false);
  refreshQuickBuild();updateUI();queueDraw();
 }
@@ -517,8 +517,8 @@ $('stopBuild').onclick=cancelMode;
 
 $('buildingsPanel').addEventListener('click',e=>{const b=e.target.closest('[data-build]');if(!b)return;setBuildingMode(buildMode===b.dataset.build?null:b.dataset.build);if(buildMode&&window.innerWidth<851)closePanel();});
 $('techPanel').addEventListener('click',e=>{const b=e.target.closest('[data-research]');if(b)command({type:'research',key:b.dataset.research});});
-$('diplomacyPanel').addEventListener('click',e=>{const b=e.target.closest('[data-ally]'),d=e.target.closest('[data-donate]');if(b){const partner=Number(b.dataset.ally),allied=mine()?.allies.includes(partner);if(!allied||window.confirm('Разорвать союз? После этого вы снова сможете нападать друг на друга.'))command({type:'diplomacy',target:partner});}if(d)command({type:'donate',target:Number(d.dataset.donate),amount:100,resource:'gold'});});
-$('contextCard').addEventListener('click',e=>{const u=e.target.closest('[data-context-upgrade]'),r=e.target.closest('[data-context-return]'),d=e.target.closest('[data-context-redirect]');if(u)command({type:'upgrade',id:u.dataset.contextUpgrade});if(r){command({type:'return',id:r.dataset.contextReturn});contextual(null);}if(d){redirectArmy=d.dataset.contextRedirect;toast('Теперь выбери новую цель на карте.');contextual(null);}});
+$('diplomacyPanel').addEventListener('click',e=>{const b=e.target.closest('[data-ally]'),d=e.target.closest('[data-donate]');if(b){const partner=Number(b.dataset.ally),allied=mine()?.allies.includes(partner);if(!allied||window.confirm('End alliance? You will be able to attack each other again.'))command({type:'diplomacy',target:partner});}if(d)command({type:'donate',target:Number(d.dataset.donate),amount:100,resource:'gold'});});
+$('contextCard').addEventListener('click',e=>{const u=e.target.closest('[data-context-upgrade]'),r=e.target.closest('[data-context-return]'),d=e.target.closest('[data-context-redirect]');if(u)command({type:'upgrade',id:u.dataset.contextUpgrade});if(r){command({type:'return',id:r.dataset.contextReturn});contextual(null);}if(d){redirectArmy=d.dataset.contextRedirect;toast('Now choose a new target on the map.');contextual(null);}});
 $('closeContext').onclick=()=>{selected=null;contextual(null);hideAux()};
 $('selectedPanel').addEventListener('click',e=>{const b=e.target.closest('[data-upgrade]'),r=e.target.closest('[data-retreat]');if(b)command({type:'upgrade',id:b.dataset.upgrade});if(r)command({type:'return',id:r.dataset.retreat});});
 for(const b of document.querySelectorAll('[data-tab]'))b.onclick=()=>{currentTab=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(t=>{t.classList.toggle('active',t===b);t.setAttribute('aria-selected',String(t===b));});document.querySelectorAll('.tab-content').forEach(t=>t.classList.toggle('hidden',t.id!=='tab-'+currentTab));updateUI();};
@@ -538,7 +538,7 @@ $('targetDiplomacy').onclick=()=>{
  if(breaking&&!target.confirmBreak){target.confirmBreak=true;setPreview(target);return;}
  const accepting=other.offers.includes(myId);
  if(command({type:'diplomacy',target:owner})){
-  toast(breaking?'Союз разорван':accepting?'Запрос на принятие союза отправлен':'Предложение союза отправлено');
+  toast(breaking?'Alliance ended':accepting?'Alliance acceptance sent':'Alliance offer sent');
   if(state?.phase==='playing'&&target)setPreview(target);
  }
 };
@@ -546,7 +546,7 @@ $('dockToggle').onclick=()=>{const dock=$('battleDock');const collapsed=dock.cla
 function setMinimapExpanded(expanded){
  $('minimapWrap').classList.toggle('minimized',!expanded);
  $('minimapToggle').setAttribute('aria-expanded',String(!!expanded));
- $('minimapToggle').setAttribute('aria-label',expanded?'Скрыть миникарту':'Открыть миникарту');
+ $('minimapToggle').setAttribute('aria-label',expanded?'Hide minimap':'Show minimap');
  $('minimapToggle').querySelector('.minimap-chevron').textContent=expanded?'−':'+';
  $('minimap').tabIndex=expanded?0:-1;
 }
@@ -554,16 +554,16 @@ $('minimapToggle').onclick=()=>setMinimapExpanded($('minimapWrap').classList.con
 function renderArmies(){if(!state||!myId)return;const mineArmies=state.armies.filter(a=>a.owner===myId);
  patchHtml('armiesList',mineArmies.length?mineArmies.map(a=>{
   const initial=a.initialStrength||a.strength,spent=Math.max(0,initial-a.strength),percentSpent=Math.floor(spent/Math.max(1,initial)*100);
-  return `<div class="army-line"><div><strong>${number(a.strength)} войск <small>из ${number(initial)}</small></strong><small>${esc(E.person(state,a.targetOwner)?.name||'Нейтральные земли')} · ${a.naval?'Морской переход':a.stuck>0?'Фронт встретил сопротивление':'Наступает'}</small><small class="army-stats${percentSpent>=80?' army-critical':''}">Захвачено ${number(a.captured||0)} клеток · Потери ${number(spent)}</small></div><button data-focus-army="${esc(a.id)}" aria-label="Перейти к армии">Найти</button><button data-recall-army="${esc(a.id)}" aria-label="Отозвать армию">Отозвать</button></div>`;
- }).join(''):'<div class="empty-armies"><strong>Пока нет походов</strong><p>Выбери нейтральную или вражескую границу, чтобы отправить армию.</p></div>');
+  return `<div class="army-line"><div><strong>${number(a.strength)} troops <small>of ${number(initial)}</small></strong><small>${esc(E.person(state,a.targetOwner)?.name||'Neutral land')} · ${a.naval?'Sea crossing':a.stuck>0?'Front meets resistance':'Advancing'}</small><small class="army-stats${percentSpent>=80?' army-critical':''}">Captured ${number(a.captured||0)} cells · Losses ${number(spent)}</small></div><button data-focus-army="${esc(a.id)}" aria-label="Go to army">Locate</button><button data-recall-army="${esc(a.id)}" aria-label="Recall army">Recall</button></div>`;
+ }).join(''):'<div class="empty-armies"><strong>No offensives yet</strong><p>Select a neutral or enemy border to send troops.</p></div>');
 }
 $('armiesToggle').onclick=()=>{showAux('armiesPanel');renderArmies();};
 $('closeArmies').onclick=hideAux;
 $('armiesList').onclick=e=>{const r=e.target.closest('[data-recall-army]'),f=e.target.closest('[data-focus-army]');if(r){if(command({type:'return',id:r.dataset.recallArmy}))renderArmies();}if(f){const a=state?.armies.find(v=>v.id===f.dataset.focusArmy);if(a){camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();hideAux();queueDraw();}}};
-$('resourceSummary').onclick=()=>showAux('economyPanel');$('resourceSummary').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showAux('economyPanel');}};$('closeEconomy').onclick=hideAux;$('pauseMobile').onclick=()=>$('pauseGame').click();$('quickLeaders').onclick=()=>{$('economyPanel').classList.add('hidden');showAux('quickLeadersPanel');};$('closeQuickLeaders').onclick=hideAux;$('nextFront').onclick=()=>{const armies=state?.armies.filter(a=>a.owner===myId)||[];if(!armies.length)return toast('Нет действующих армий');const a=armies[frontIndex++%armies.length];camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();selected={kind:'army',id:a.id};updateSelection();hideAux();queueDraw();};
+$('resourceSummary').onclick=()=>showAux('economyPanel');$('resourceSummary').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showAux('economyPanel');}};$('closeEconomy').onclick=hideAux;$('pauseMobile').onclick=()=>$('pauseGame').click();$('quickLeaders').onclick=()=>{$('economyPanel').classList.add('hidden');showAux('quickLeadersPanel');};$('closeQuickLeaders').onclick=hideAux;$('nextFront').onclick=()=>{const armies=state?.armies.filter(a=>a.owner===myId)||[];if(!armies.length)return toast('No active armies');const a=armies[frontIndex++%armies.length];camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();selected={kind:'army',id:a.id};updateSelection();hideAux();queueDraw();};
 $('helpButton').onclick=()=>{hideAux();$('tutorial').classList.remove('hidden');$('closeTutorial').focus();};$('helpMenu').onclick=()=>{closePanel();$('helpButton').click();};$('closeTutorial').onclick=()=>{$('tutorial').classList.add('hidden');showTutorialOnce=false;try{localStorage.setItem('bk-v9-tutorial','yes');}catch(_){}$('mapCanvas').focus();};
-$('pauseGame').onclick=()=>{if(!demo)return toast('Пауза только для одиночной игры.');pauseSolo=!pauseSolo;$('pauseGame').textContent=pauseSolo?'Продолжить':'Пауза';saveSolo();};
-$('myKingdom').onclick=()=>toast(mine()?.name||'Королевство');
+$('pauseGame').onclick=()=>{if(!demo)return toast('Pause is only available in solo mode.');pauseSolo=!pauseSolo;$('pauseGame').textContent=pauseSolo?'Resume':'Pause';saveSolo();};
+$('myKingdom').onclick=()=>toast(mine()?.name||'Kingdom');
 function resize(){const rect=canvas.getBoundingClientRect();if(rect.width<1)return;const dpr=Math.min(window.innerWidth<900?1:1.5,devicePixelRatio||1);const w=Math.round(rect.width*dpr),h=Math.round(rect.height*dpr);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;queueDraw();}}
 function centerOnCapital(){const p=mine();if(!p?.capital)return;const c=p.capital;const r=canvas.getBoundingClientRect();camX=r.width/2-(c.x+.5)*TILE*zoom;camY=r.height/2-(c.y+.5)*TILE*zoom;clampCamera();queueDraw();}
 function clampCamera(){
@@ -587,7 +587,7 @@ function selectMap(clientX,clientY){
  if(!E.inside(p.x,p.y))return;
  inspectCell(p.x,p.y);$('mapHint').classList.add('hidden');
  if(buildMode){
-  moveCursor=p;if(E.owner(state,p.x,p.y)!==myId)return toast('Нужна своя территория','error');
+  moveCursor=p;if(E.owner(state,p.x,p.y)!==myId)return toast('Must be your territory','error');
   const fail=E.canBuild(state,myId,buildMode,p.x,p.y);if(fail)return toast(fail,'error');
   command({type:'build',kind:buildMode,x:p.x,y:p.y});queueDraw();return;
  }
@@ -596,7 +596,7 @@ function selectMap(clientX,clientY){
  // Enemy buildings and friendly icons near an enemy border must not block attacks.
  const clickedOwner=E.owner(state,p.x,p.y);
  if(clickedOwner!==myId){
-  if(!E.tile(state,p.x,p.y))return toast('Море не захватывается. Выбери сушу.');
+  if(!E.tile(state,p.x,p.y))return toast('You cannot conquer the sea. Choose land.');
   selected=null;contextual(null);
   if(target?.type==='send'&&target.x===p.x&&target.y===p.y)return;
   setPreview({type:'send',x:p.x,y:p.y,valid:true});return;
@@ -622,7 +622,7 @@ function onPointerDown(e){
     if(pressed.size!==1||!pointerStart||pointerStart.moved)return;
     dragAttack={from:at,to:at};pointerStart=null;
     if(navigator.vibrate)navigator.vibrate(15);
-    $('mapHint').textContent='Веди палец к цели и отпусти';$('mapHint').classList.remove('hidden');queueDraw();
+    $('mapHint').textContent='Drag to the target and release';$('mapHint').classList.remove('hidden');queueDraw();
    },320);
   }
  }else if(pressed.size===2){
@@ -662,7 +662,7 @@ function onPointerUp(e){
   const pos=gridAt(e.clientX,e.clientY);
   if(E.inside(pos.x,pos.y)&&E.owner(state,pos.x,pos.y)!==myId&&E.tile(state,pos.x,pos.y)!==0){
    setPreview({type:'send',x:pos.x,y:pos.y,valid:true});
-  }else toast('Отпусти палец над чужой или нейтральной землёй.');
+  }else toast('Release over enemy or neutral land.');
   pointerStart=null;queueDraw();return;
  }
  if(touch===1){
@@ -670,6 +670,10 @@ function onPointerUp(e){
   if(was&&!was.moved){const now=Date.now(),g=gridAt(e.clientX,e.clientY),friendly=E.inside(g.x,g.y)&&E.owner(state,g.x,g.y)===myId;if(friendly&&!target&&!buildMode&&now-lastTap<280){const p=pixelAt(e.clientX,e.clientY);zoomAt(1.45,p.x,p.y);lastTap=0;}else{selectMap(e.clientX,e.clientY);lastTap=friendly?now:0;}}
  }else{pointerStart=null;gesture=null;}
 }
+// Prevent accidental text selection during tap, long-press, and drag gameplay.
+document.addEventListener('selectstart',e=>{
+ if(!e.target.closest('input,textarea,[contenteditable="true"]'))e.preventDefault();
+});
 canvas.addEventListener('pointerdown',onPointerDown);
 canvas.addEventListener('pointermove',onPointerMove);
 canvas.addEventListener('pointerup',onPointerUp);
@@ -868,22 +872,22 @@ function goHome(){
 }
 function openSession(){
  $('sessionPause').classList.toggle('hidden',!demo);
- $('sessionPause').textContent=pauseSolo?'Продолжить игру':'Пауза';
- $('sessionReconnect').classList.toggle('hidden',host||demo||!state||!/ПЕРЕПОДКЛЮЧ|НЕТ СВЯЗИ|ЗАДЕРЖ|СИНХРОНИЗ/.test($('networkStatus').textContent));
- $('sessionHint').textContent=demo?'Игра на паузе. При выходе прогресс сохранится на этом устройстве.':host?'Ты ведущий. Если выйдешь, матч завершится у всех.':'Можно выйти и вернуться в эту комнату с того же устройства, пока ведущий в игре.';
+ $('sessionPause').textContent=pauseSolo?'Resume game':'Pause';
+ $('sessionReconnect').classList.toggle('hidden',host||demo||!state||!/RECONNECT|OFFLINE|DELAY|SYNC/.test($('networkStatus').textContent));
+ $('sessionHint').textContent=demo?'Game paused. Leaving saves progress on this device.':host?'You are the host. Leaving ends the match for everyone.':'You can leave and rejoin on this device while the host remains online.';
  showAux('sessionPanel');
  if(demo&&!$('sessionPanel').classList.contains('hidden')&&!pauseSolo){pauseSolo=true;menuPausedSolo=true;saveSolo();}
- $('sessionPause').textContent=pauseSolo?'Продолжить игру':'Пауза';
+ $('sessionPause').textContent=pauseSolo?'Resume game':'Pause';
 }
 function requestExit(){
  if(!state||state.phase==='ended'||demo&&mine()?.eliminated)return goHome();
  if(demo&&saveSolo())return goHome();
- $('exitExplanation').textContent=demo?'Не удалось сохранить партию на этом устройстве. Выйти без сохранения?':host?'Ты ведущий. Матч остановится у всех участников. Передачи ведущего пока нет.':'Твоя армия останется в матче. Вернуться можно с того же устройства по коду комнаты, пока ведущий в игре.';
+ $('exitExplanation').textContent=demo?'Failed to save the match on this device. Leave without saving?':host?'You are the host. The match will end for everyone. Host transfer is unavailable.':'Your army will remain in the match. Rejoin on this device using the room code.';
  showAux('exitPanel');
 }
 async function inviteFriends(){
  const url=urlRoom();
- if(navigator.share){try{await navigator.share({title:'Brothers Kingdoms',text:'Присоединяйся к игре',url});return;}catch(e){if(e.name==='AbortError')return;}}
+ if(navigator.share){try{await navigator.share({title:'Brothers Kingdoms',text:'Join my match',url});return;}catch(e){if(e.name==='AbortError')return;}}
  copyText(url);
 }
 $('cancelConnect').onclick=goHome;
@@ -895,7 +899,7 @@ function openSection(tab){openPanel();currentTab=tab;document.querySelectorAll('
 $('scienceButton').onclick=()=>openSection('tech');
 $('closeSession').onclick=hideAux;$('openDevelopment').onclick=()=>openSection('info');
 $('sessionPause').onclick=()=>{menuPausedSolo=false;pauseSolo=false;hideAux();};
-$('sessionReconnect').onclick=()=>{reconnectTries=0;retryUpstream();toast('Пробуем восстановить соединение');};
+$('sessionReconnect').onclick=()=>{reconnectTries=0;retryUpstream();toast('Trying to reconnect');};
 $('exitMatch').onclick=requestExit;$('exitFromOverview').onclick=requestExit;$('cancelExit').onclick=openSession;
 $('confirmExit').onclick=()=>{if(host&&!demo)for(const c of connections.keys())try{c.send({t:'room-closed'});}catch(_){}goHome();};
 $('roomCode').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();joinRoom();}});
@@ -916,9 +920,9 @@ $('restart').onclick=()=>{
 $('downloadSave').onclick=()=>{const blob=new Blob([JSON.stringify({tick:state.tick,winner:state.winner,players:state.players.map(p=>({name:p.name,land:p.land,kills:p.kills}))},null,2)],{type:'application/json'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='brothers-kingdoms-results.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);};
 try{const previous=localStorage.getItem('bk-name');if(previous)$('nickname').value=previous;}catch(_){ }
 try{const bots=localStorage.getItem('bk-solo-bots');if([...$('soloBots').options].some(o=>o.value===bots))$('soloBots').value=bots;}catch(_){}
-const fromHash=location.hash.replace('#','').toUpperCase().replace(/[^A-Z0-9]/g,'');if(fromHash){$('roomCode').value=fromHash;$('lobbyError').textContent='Приглашение в комнату '+fromHash+'. Укажи имя и нажми «Войти».';if($('nickname').value.trim())joinRoom();else $('nickname').focus();}updateResume();
+const fromHash=location.hash.replace('#','').toUpperCase().replace(/[^A-Z0-9]/g,'');if(fromHash){$('roomCode').value=fromHash;$('lobbyError').textContent='Room invite '+fromHash+'. Enter your name and press Join.';if($('nickname').value.trim())joinRoom();else $('nickname').focus();}updateResume();
 document.addEventListener('visibilitychange',()=>{if(document.hidden)saveSolo();});
 setInterval(()=>{if(demo&&state?.phase==='playing'&&!pauseSolo&&state.tick%10===0&&lastSaveTick!==state.tick){lastSaveTick=state.tick;saveSolo();}if(!host||!state||state.phase!=='playing'||pauseSolo)return;E.tick(state);broadcast();},1000);
 setInterval(()=>{if(host&&state?.phase==='playing'&&!pauseSolo&&state.armies.length){E.combatStep(state);broadcast();}},333);
-setInterval(()=>{if(!demo&&!host&&state?.phase==='playing'&&Date.now()-lastStateAt>4500){setNetwork('СВЯЗЬ ЗАДЕРЖИВАЕТСЯ');}for(const [id,at] of pendingOrders)if(Date.now()-at>7000){pendingOrders.delete(id);toast('Приказ не подтверждён. Проверь соединение.');}},2000);
+setInterval(()=>{if(!demo&&!host&&state?.phase==='playing'&&Date.now()-lastStateAt>4500){setNetwork('CONNECTION DELAYED');}for(const [id,at] of pendingOrders)if(Date.now()-at>7000){pendingOrders.delete(id);toast('Order not confirmed. Check connection.');}},2000);
 })();

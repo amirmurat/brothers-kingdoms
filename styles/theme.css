@@ -850,3 +850,8 @@ html,body{background:#090c11!important;color:#eef2f8!important}
 #game#game#game #resourceSummary.resource-hud small[data-trend="positive"]{color:#8ee5a1!important}
 #game#game#game #resourceSummary.resource-hud small[data-trend="negative"]{color:#ff8e9e!important}
 #game#game#game #resourceSummary.resource-hud small[data-trend="neutral"]{color:#bec7d5!important}
+
+/* v41: disable text selection and native long-press actions outside editable fields. */
+html,body,body *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}
+body :is(input,textarea,[contenteditable="true"]){-webkit-user-select:text!important;user-select:text!important;-webkit-touch-callout:default!important}
+#mapCanvas,#minimap,#mapView{-webkit-user-drag:none!important;touch-action:none!important}
