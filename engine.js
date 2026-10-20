@@ -235,7 +235,7 @@ function upsertPaintedPlan(s,id,request,rawTargets,percent,editId=null,excludeTa
  const selectedTargets=parseTargets(s,id,rawTargets);
  const prior=[...merged].filter(pl=>pl!==original).flatMap(pl=>pl.targets??[pl.targetOwner]);
  const excluded=new Set(parseTargets(s,id,excludeTargets));
- const live=[...selected].map(i=>s.owners[i]).filter(t=>t!==id);
+ const live=Array.isArray(rawTargets)?[]:[...selected].map(i=>s.owners[i]).filter(t=>t!==id);
  const targets=[...new Set([...selectedTargets,...prior,...live])]
   .filter(t=>!excluded.has(t)&&(t===0||!p.allies.includes(t)));
  const plan=original||[...merged][0]||{id:'p'+(++s.nonce),owner:id,waves:0,initialStrength:Math.max(35,Math.floor(p.troops*percent/100))};
