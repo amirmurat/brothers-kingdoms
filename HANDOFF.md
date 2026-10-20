@@ -1,5 +1,5 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
-_Обновлено: 20 октября 2026 года, рабочая preview-версия v63. Историческая v25 в разделе 0 не является текущей._
+_Обновлено: 20 октября 2026 года, рабочая preview-версия v64. Историческая v25 в разделе 0 не является текущей._
 
 
 ## СРОЧНО: АКТУАЛЬНОЕ СОСТОЯНИЕ v62 (20.10.2026)
@@ -313,3 +313,8 @@ _Обновлено: 20 октября 2026 года, рабочая preview-в�
 - `game.js`: Start Offensive accepts any nonempty land zone (including own territory); selected country chips update automatically while explicit exclusions and alliances remain protected. Painting over existing plans shows one united canvas outline immediately. Recovery fronts appear in Offensives with a Locate action; no misleading 12-plan limit in the counter.
 - `engine.js`: sanitize invalid/sea cells instead of rejecting a drawn area; preserve merged regions beyond 3500 cells and queue unlimited plans (12 simultaneous waves remains). A plan can wait for troops or new borders. Explicit `targets` and `excludeTargets` remain authoritative. `recoveryPlans` track wartime territory taken from any kingdom; the defender uses army waves to retake those cells until peace. A signed treaty cancels these operations. Older saves without recoveryPlans remain compatible.
 - `tests/adaptive-offensives.cjs` verifies automatic recapture, peace cancellation and auto-sanitized zones. All four regression suites and unified Canvas outline check passed. Real iPhone Safari and PeerJS multiplayer not verified. Branch `design/visual-review-v26`; `main` untouched. Permanent preview: https://raw.githack.com/amirmurat/brothers-kingdoms/design/visual-review-v26/index.html
+
+### v64 — no 3,500 cell barrier and visible runtime version (20.10.2026)
+- User iPhone screenshot displayed stale message `Merged area exceeds 3,500 cells` and `OFFENSIVES 0/12`, both absent from current v63 source; old loaded game/host may continue to run previous JavaScript despite repository update. Force reload the running game and, in multiplayer, host also must reload to pick up current authoritative engine. Branch URL uses raw.githack.com short development cache; page query strings alone are not a guarantee of freshness.
+- `engine.js` removed remaining 3500-cell cap from legacy `validateZone` and global `erasePlanCells` batch (both now bounded only by world size `W*H`). Painted plans already had no hard maximum in v63. Exposes `BKEngine.BUILD='v64'`; `game.js` reports engine build in Match menu, or `outdated — refresh required` for mismatched cached assets.
+- `index.html` bumps all gameplay resource queries to `v64-unlimited-plans`. New `tests/unlimited-plans.cjs` proves a 4,200-cell plus overlapping 4,600-cell zone forms one 7,600-cell plan and erases 4,100 cells in one call. Existing regression tests re-run. Do not modify main; Safari and PeerJS real-device QA pending.
