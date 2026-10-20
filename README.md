@@ -96,3 +96,6 @@ Adaptations: original black backgrounds removed, fills recolored for visibility,
 
 ### v60 — Unified attack plans, eraser, whole-front waves
 - Overlapping painted plans belonging to the same kingdom merge into one. Eraser removes individual selected tiles; an existing plan can be edited without deleting everything. Country opt-in/out permissions remain authoritative. Each wave now captures the whole currently accessible approved border as one atomic step; with insufficient committed troops the plan remains visible while waiting for reserves. Preview branch only; physical iPhone and live multiplayer testing remain pending.
+
+### v61 — Compact mobile offensive editor (preview)
+- The former Attack action is replaced with Paint and Eraser icon buttons permanently available along the map's right edge. Tap either to enter planning; choose the other without losing the region; tap the active tool again to close. Brush size and troop commitment appear as slim vertical sliders on the left only while planning. A small bottom bar retains the necessary Exit, Clear/Reset and Start/Save actions and opponent permissions. Uses original Lucide Paintbrush/Eraser art under ISC license; license included. Simulator UI checks passed, but real iPhone Safari and network play are still unverified.
