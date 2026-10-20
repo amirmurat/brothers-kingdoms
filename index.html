@@ -8,8 +8,8 @@
 <meta content="Brothers Kingdoms — real-time conquest strategy. Play against bots or with friends." name="description"/>
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
-<link rel="stylesheet" href="styles/legacy.css?v=43-match-menu"/>
-<link rel="stylesheet" href="styles/theme.css?v=43-match-menu"/>
+<link rel="stylesheet" href="styles/legacy.css?v=44-leaderboard-research"/>
+<link rel="stylesheet" href="styles/theme.css?v=44-leaderboard-research"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -101,27 +101,10 @@
 </div>
 </div>
 </section>
-<div class="panel-backdrop hidden" id="panelBackdrop"></div><aside aria-label="Kingdom management" aria-modal="false" class="sidebar" id="sidebar" role="dialog">
-<div class="sidebar-heading"><div><small>MANAGEMENT</small><strong>Development</strong></div><button aria-label="Close panel" class="square-button" id="closePanel"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button></div>
-<div aria-label="Development sections" class="tabbar" role="tablist"><button aria-selected="true" class="active" data-tab="tech" role="tab">Research</button><button aria-selected="false" data-tab="diplomacy" role="tab">Alliances</button><button aria-selected="false" data-tab="info" role="tab">Overview</button></div>
-<div class="side-scroll">
-<section class="tab-content hidden" id="tab-build"><div class="section-head"><h2>Buildings</h2><p>Effects and building costs.</p></div><div class="resource-strip" id="buildResourceSummary"></div><div class="build-grid" id="buildingsPanel"></div></section>
-<section class="tab-content" id="tab-tech"><div class="section-head"><h2>Research</h2><p>Bonuses apply to your whole kingdom.</p></div><div class="resource-strip" id="techResourceSummary"></div><div class="tech-list" id="techPanel"></div></section>
-<section class="tab-content hidden" id="tab-diplomacy"><div class="section-head"><h2>Diplomacy</h2><p>Alliances and aid to neighbors.</p></div><div class="diplomacy-list" id="diplomacyPanel"></div></section>
-<section class="tab-content hidden" id="tab-info"><div class="section-head"><h2>Statistics</h2></div><div id="infoPanel"></div><div class="overview-tools" aria-label="Game actions">
-<button class="secondary" id="pauseMobile">Pause / Resume</button>
-<button class="secondary" id="nextFront">Find next offensive</button>
-<button class="secondary" id="quickLeaders">Leaderboard</button>
-<button class="secondary" id="helpMenu">Rules and controls</button><button class="secondary" id="exitFromOverview">Leave match</button></div><h3>Events</h3><div class="events" id="events"></div><details class="instructions"><summary>How to play</summary><p>Conquer all land (100%). No time limit. The map has one connected continent. Send troops to expand your borders. Build farms, mines, forts, barracks, and cities to strengthen your kingdom.</p></details></section>
-<div class="selected-card"><div class="section-label">SELECTED OBJECT</div><div class="selected-body" id="selectedPanel">Tap an army or building to see its actions.</div></div>
-</div>
-<div class="leaderboard"><div class="section-label">LEADERS</div><div id="leaderboard"></div></div>
-</aside>
-</main>
-<div id="sessionPanel" class="session-panel hidden" role="dialog" aria-modal="true" aria-label="Match menu">
+<div class="panel-backdrop hidden" id="panelBackdrop"></div><aside aria-label="Research" aria-modal="false" class="sidebar" id="sidebar" role="dialog"><div class="sidebar-heading"><div><strong>Research</strong></div><button aria-label="Close research" class="square-button" id="closePanel"><svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button></div><div class="side-scroll"><section class="tab-content" id="tab-tech"><div class="section-head"><p>Improve your kingdom with research upgrades.</p></div><div class="tech-list" id="techPanel"></div></section></div></aside><div id="sessionPanel" class="session-panel hidden" role="dialog" aria-modal="true" aria-label="Match menu">
 <div class="aux-head"><strong>Match</strong><button id="closeSession" aria-label="Return to game"><svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button></div>
 <div class="session-action-list">
-<button id="openDevelopment" class="session-action"><svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#chart-bar"></use></svg><span>Overview</span></button>
+<button id="openLeaderboard" class="session-action"><svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#chart-bar"></use></svg><span>Leaderboard</span></button>
 <div id="mapTools" aria-label="Match help"><div class="map-toolbar-actions">
 <button aria-label="Open offensives list" class="action-armies" id="armiesToggle" title="My offensives"><svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#flag-banner"></use></svg><span id="frontCountBadge">0</span><span class="tool-label">Offensives</span></button>
 <button class="develop-button" id="pauseGame" title="Pause solo match">Pause</button>
@@ -136,7 +119,7 @@
 <button id="exitMatch">Leave match</button>
 <p id="sessionHint"></p></div>
 <div id="exitPanel" class="session-panel hidden" role="dialog" aria-modal="true" aria-labelledby="exitTitle"><h2 id="exitTitle">Leave match?</h2><p id="exitExplanation"></p><div class="exit-actions"><button id="cancelExit">Stay</button><button id="confirmExit">Leave</button></div></div>
-<div class="aux-backdrop hidden" id="auxBackdrop" aria-hidden="true"></div><div aria-label="Leaderboard" class="quick-leaders hidden" id="quickLeadersPanel" role="dialog"><strong>World leaders</strong><div id="quickLeadersList"></div><button class="secondary" id="closeQuickLeaders">Close</button></div><div class="context-card hidden" id="contextCard"><button aria-label="Close details" class="context-close" id="closeContext"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button><div id="contextBody"></div></div><div aria-label="Current offensives" class="armies-panel hidden" id="armiesPanel" role="dialog"><div class="armies-panel-head"><strong>My offensives</strong><button aria-label="Close offensives list" class="square-button" id="closeArmies"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button></div><div id="armiesList" aria-live="polite"></div></div><div aria-label="How to play" aria-modal="true" class="tutorial hidden" id="tutorial" role="dialog"><section><h2>How to play</h2><p><b>1.</b> Tap enemy or neutral land to select a target.</p><p><b>2.</b> Choose the troops to send and confirm your attack. On mobile, hold your land and drag to a target.</p><p><b>3.</b> Reserve troops defend your borders. Build farms and cities to strengthen your economy.</p><p>Drag to pan and pinch to zoom. Victory requires 100% territory. No time limit.</p><button class="primary large" id="closeTutorial">Got it</button></section></div><div class="victory-screen hidden" id="victory" role="dialog" aria-modal="true" aria-labelledby="victoryName">
+<div class="aux-backdrop hidden" id="auxBackdrop" aria-hidden="true"></div><div aria-labelledby="leaderboardTitle" aria-modal="true" class="quick-leaders hidden" id="quickLeadersPanel" role="dialog"><strong id="leaderboardTitle">Leaderboard</strong><div id="quickLeadersList"></div><button class="secondary" id="closeQuickLeaders">Close</button></div><div class="context-card hidden" id="contextCard"><button aria-label="Close details" class="context-close" id="closeContext"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button><div id="contextBody"></div></div><div aria-label="Current offensives" class="armies-panel hidden" id="armiesPanel" role="dialog"><div class="armies-panel-head"><strong>My offensives</strong><button aria-label="Close offensives list" class="square-button" id="closeArmies"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button></div><div id="armiesList" aria-live="polite"></div></div><div aria-label="How to play" aria-modal="true" class="tutorial hidden" id="tutorial" role="dialog"><section><h2>How to play</h2><p><b>1.</b> Tap enemy or neutral land to select a target.</p><p><b>2.</b> Choose the troops to send and confirm your attack. On mobile, hold your land and drag to a target.</p><p><b>3.</b> Reserve troops defend your borders. Build farms and cities to strengthen your economy.</p><p>Drag to pan and pinch to zoom. Victory requires 100% territory. No time limit.</p><button class="primary large" id="closeTutorial">Got it</button></section></div><div class="victory-screen hidden" id="victory" role="dialog" aria-modal="true" aria-labelledby="victoryName">
 <section class="result-sheet" id="resultSheet">
   <div class="result-emblem" id="resultEmblem" aria-hidden="true">★</div>
   <div class="card-eyebrow" id="victoryEyebrow">MATCH ENDED</div>
@@ -150,7 +133,7 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="engine.js?v=43-match-menu"></script>
+<script src="engine.js?v=44-leaderboard-research"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=43-match-menu"></script>
+<script src="game.js?v=44-leaderboard-research"></script>
 </body></html>
