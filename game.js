@@ -48,6 +48,7 @@ const costText=c=>Object.entries(c||{}).map(([k,v])=>({wood:'Wood',stone:'Stone'
 const number=n=>Math.floor(n||0).toLocaleString('en-US');
 const hudNumber=n=>{const value=Math.floor(Number(n)||0);return Math.abs(value)<10000?number(value):(Math.trunc(value/100)/10).toLocaleString('en-US')+'k';};
 let dragAttack=null,longPressTimer=null,dragHint=null;
+let attackPlanner=null,planCancelArmy=null;
 let defeatDismissed=false,menuPausedSolo=false;
 let state=null,myId=null,host=false,demo=false,peer=null,upstream=null,code='',connections=new Map(),lastSendTime=new Map(),phaseShown='',timer=0;
 let lastHudPlayer=null,lastHudTick=-1,lastHudLand=null,lastHudOwners=null,lastHudArmies=new Map(),hudNotice=null,hudAlertAction=null;
@@ -251,6 +252,146 @@ function canPay(p,c){return Object.entries(c||{}).every(([k,v])=>(p.res[k]||0)>=
 function deficit(p,c){return Object.entries(c||{}).filter(([k,v])=>(p.res[k]||0)<v).map(([k,v])=>({wood:'Wood',stone:'Stone',gold:'Gold',food:'Food'}[k]+': −'+(v-(p.res[k]||0)))).join(', ');}
 function patchHtml(id,html){const el=$(id);if(el&&el.__last!==html){el.innerHTML=html;el.__last=html;}}
 function inspectCell(x,y){if(!state||!E.inside(x,y))return;const id=E.owner(state,x,y),p=E.person(state,id),line=terrainNames[E.tile(state,x,y)]+' · '+(p?.name||'Unclaimed land')+' · '+x+','+y;$('mapStatus').textContent=line;$('mapStatusMobile').textContent=line;$('mapStatusMobile').classList.remove('hidden');}
+
+// Tactical attack planner: outline a single contiguous enemy or neutral theatre.
+const warPair=(a,b)=>Math.min(a,b)+':'+Math.max(a,b);
+const fighting=id=>(state?.wars||[]).includes(warPair(myId,id));
+function renderWars(){
+ const wars=(state?.wars||[]).filter(k=>k.split(':').map(Number).includes(myId));
+ const chip=$('warChip'),panel=$('warPanel');
+ chip.classList.toggle('hidden',!wars.length);
+ const received=(state?.peaceOffers||[]).some(o=>o.to===myId&&wars.includes(warPair(o.from,o.to)));
+ $('warChipLabel').textContent=received?'PEACE OFFER':wars.length===1?'AT WAR':'WARS · '+wars.length;
+ const html=wars.map(k=>{
+  const id=k.split(':').map(Number).find(v=>v!==myId),p=E.person(state,id);
+  if(!p)return '';
+  const otherOffer=(state.peaceOffers||[]).some(o=>o.from===id&&o.to===myId);
+  const sent=(state.peaceOffers||[]).some(o=>o.from===myId&&o.to===id);
+  return '<div class="war-row"><div class="war-row-name"><span>'+esc(p.name)+'</span><small>'+ (otherOffer?'PEACE OFFER':'AT WAR')+'</small></div>'+
+   '<button type="button" data-plan-peace="'+id+'" '+(sent||p.bot?'disabled':'')+'>'+
+   (p.bot?'Bots do not sign peace':otherOffer?'Accept peace treaty':sent?'Proposal sent':'Propose peace')+'</button></div>';
+ }).join('');
+ patchHtml('warPanelList',html);
+ if(!wars.length){panel.classList.add('hidden');chip.setAttribute('aria-expanded','false');}
+}
+function resetAttackPlanner(){
+ attackPlanner=null;planCancelArmy=null;
+ $('game').classList.remove('plan-drawing','plan-reviewing');
+ $('planGuide').classList.add('hidden');$('planReview').classList.add('hidden');$('planCancelDialog').classList.add('hidden');
+ $('planAttackButton').setAttribute('aria-pressed','false');queueDraw();
+}
+function beginAttackPlanner(){
+ if(!state||state.phase!=='playing'||mine()?.eliminated)return;
+ hideAux();toggleQuickBuild(false);setPreview(null);buildMode=null;redirectArmy=null;selected=null;
+ clearTimeout(longPressTimer);dragAttack=null;pointerStart=null;
+ attackPlanner={mode:'draw',path:[],pointerId:null,zoneCells:null,targetOwner:0};
+ $('game').classList.add('plan-drawing');$('game').classList.remove('plan-reviewing');
+ $('planGuide').classList.remove('hidden');$('planReview').classList.add('hidden');
+ $('planAttackButton').setAttribute('aria-pressed','true');
+ $('planGuideHint').textContent='Start on your land, cross the target, and finish on your land.';
+ $('mapHint').classList.add('hidden');queueDraw();
+}
+function pushPlanPoint(pt){
+ if(!attackPlanner||!E.inside(pt.x,pt.y))return;
+ const path=attackPlanner.path,last=path[path.length-1];
+ if(!last||last.x!==pt.x||last.y!==pt.y){if(path.length<550)path.push({x:pt.x,y:pt.y});}
+}
+function insidePolygon(x,y,points){
+ let hit=false;
+ for(let i=0,j=points.length-1;i<points.length;j=i++){
+  const a=points[i],b=points[j];
+  if(((a.y>y)!==(b.y>y))&&x<(b.x-a.x)*(y-a.y)/(b.y-a.y)+a.x)hit=!hit;
+ }
+ return hit;
+}
+function completePlan(end){
+ const plan=attackPlanner;if(!plan||plan.mode!=='draw')return;
+ plan.pointerId=null;pushPlanPoint(end);
+ if(!E.inside(end.x,end.y)||E.owner(state,end.x,end.y)!==myId){plan.path=[];toast('Finish the outline on your own territory.','error');queueDraw();return;}
+ if(plan.path.length<4){plan.path=[];toast('Draw a wider outline across the target land.','error');queueDraw();return;}
+ const path=plan.path,loX=Math.max(0,Math.min(...path.map(p=>p.x))-1),hiX=Math.min(E.W-1,Math.max(...path.map(p=>p.x))+1),
+  loY=Math.max(0,Math.min(...path.map(p=>p.y))-1),hiY=Math.min(E.H-1,Math.max(...path.map(p=>p.y))+1);
+ const groups=new Map();
+ for(let y=loY;y<=hiY;y++)for(let x=loX;x<=hiX;x++){
+  if(!insidePolygon(x+.5,y+.5,path)||!E.tile(state,x,y))continue;
+  const owner=E.owner(state,x,y);if(owner===myId)continue;
+  if(!groups.has(owner))groups.set(owner,[]);groups.get(owner).push(y*E.W+x);
+ }
+ if(groups.size!==1){plan.path=[];toast(groups.size?'Outline only one kingdom at a time.':'The outline contains no target land.','error');queueDraw();return;}
+ const [targetOwner,cells]=[...groups][0];
+ if(mine()?.allies.includes(targetOwner)){plan.path=[];toast('End the alliance before planning an attack.','error');queueDraw();return;}
+ const all=new Set(cells),border=[],reachable=new Set();
+ for(const i of cells){const x=i%E.W,y=(i/E.W)|0;
+  if([x>0?i-1:-1,x<E.W-1?i+1:-1,y>0?i-E.W:-1,y<E.H-1?i+E.W:-1].some(j=>j>=0&&state.owners[j]===myId)){border.push(i);reachable.add(i);}
+ }
+ if(!border.length){plan.path=[];toast('Your outlined area must touch your border.','error');queueDraw();return;}
+ const queue=border.slice();
+ for(let q=0;q<queue.length;q++){const i=queue[q],x=i%E.W,y=(i/E.W)|0;
+  for(const j of [x>0?i-1:-1,x<E.W-1?i+1:-1,y>0?i-E.W:-1,y<E.H-1?i+E.W:-1]){
+   if(all.has(j)&&!reachable.has(j)){reachable.add(j);queue.push(j);}
+  }
+ }
+ if(reachable.size!==all.size){plan.path=[];toast('Keep the outlined area connected to your border.','error');queueDraw();return;}
+ if(cells.length<2||cells.length>3500){plan.path=[];toast('Choose an area of 2 to 3,500 land cells.','error');queueDraw();return;}
+ plan.mode='review';plan.zoneCells=cells;plan.targetOwner=targetOwner;
+ const mid=border[(border.length/2)|0];plan.x=mid%E.W;plan.y=(mid/E.W)|0;
+ $('game').classList.remove('plan-drawing');$('game').classList.add('plan-reviewing');
+ $('planGuide').classList.add('hidden');$('planReview').classList.remove('hidden');
+ refreshPlanReview();queueDraw();
+}
+function refreshPlanReview(){
+ const plan=attackPlanner;if(plan?.mode!=='review')return;
+ const other=E.person(state,plan.targetOwner),war=!!other&&fighting(plan.targetOwner);
+ const sent=Math.floor((mine()?.troops||0)*percent/100),remaining=(mine()?.troops||0)-sent;
+ $('planTarget').textContent=other?.name||'Unclaimed territory';
+ $('planAreaCount').textContent=number(plan.zoneCells?.length||0)+' cells';
+ const status=$('planStatus');status.textContent=war?'WAR ACTIVE':other?'WAR DECLARATION':'UNCLAIMED';status.classList.toggle('at-war',!!other&&!war);
+ $('planDescription').textContent=other&&!war?'Confirming will declare war on '+other.name+'. Captures will advance only inside the outline.':
+  other?'War is already active. Troops will advance only through the marked zone.':
+  'Your army will gradually claim the marked neutral land. No troops move before confirmation.';
+ $('planForceLabel').textContent=percent+'%';
+ $('planForceDetails').textContent=number(sent)+' committed · '+number(remaining)+' in reserve';
+ const btn=$('planLaunch');btn.textContent=other&&!war?'Declare war & attack':'Start offensive';
+ btn.classList.toggle('declare-war',!!other&&!war);
+ btn.disabled=sent<35||!plan.zoneCells?.length||(state.armies||[]).filter(a=>a.owner===myId).length>=12;
+ for(const b of document.querySelectorAll('[data-plan-percent]'))b.classList.toggle('active',Number(b.dataset.planPercent)===percent);
+}
+function openCancelPlan(army){
+ if(!army||army.owner!==myId)return;planCancelArmy=army.id;
+ $('planCancelDialog').classList.remove('hidden');$('planCancelNo').focus();
+}
+function drawAttackPlanning(){
+ // Called inside the world-space Canvas transform. Use region strokes rather than a filled rectangle.
+ const plans=state.armies.filter(a=>a.owner===myId&&a.strength>0&&Array.isArray(a.zoneCells));
+ if(attackPlanner?.mode==='review'&&attackPlanner.zoneCells)plans.push({zoneCells:attackPlanner.zoneCells,preview:true});
+ const T=TILE;
+ for(const plan of plans){
+  const pending=plan.preview,visible=plan.zoneCells.filter(i=>state.owners[i]!==myId&&state.tiles[i]);
+  if(!visible.length)continue;
+  const cells=new Set(visible);
+  ctx.save();ctx.fillStyle=pending?'rgba(96,220,255,.31)':'rgba(99,204,255,.13)';
+  ctx.strokeStyle=pending?'#98edff':'#66c8ec';ctx.lineWidth=Math.max(1.2,2.1/zoom);
+  if(!pending)ctx.setLineDash([5/zoom,5/zoom]);
+  ctx.beginPath();
+  for(const i of visible){const x=i%E.W,y=(i/E.W)|0;
+   ctx.fillRect(x*T,y*T,T,T);
+   if(!cells.has(i-E.W)){ctx.moveTo(x*T,y*T);ctx.lineTo((x+1)*T,y*T);}
+   if(!cells.has(i+E.W)){ctx.moveTo(x*T,(y+1)*T);ctx.lineTo((x+1)*T,(y+1)*T);}
+   if(x===0||!cells.has(i-1)){ctx.moveTo(x*T,y*T);ctx.lineTo(x*T,(y+1)*T);}
+   if(x===E.W-1||!cells.has(i+1)){ctx.moveTo((x+1)*T,y*T);ctx.lineTo((x+1)*T,(y+1)*T);}
+  }
+  ctx.stroke();ctx.restore();
+ }
+ const path=attackPlanner?.path;
+ if(path?.length){ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#8beaff';ctx.lineWidth=Math.max(2.2,3.1/zoom);ctx.shadowColor='#5ccfff';ctx.shadowBlur=8/zoom;ctx.beginPath();
+  for(let i=0;i<path.length;i++){const x=(path[i].x+.5)*T,y=(path[i].y+.5)*T;if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
+  if(attackPlanner.mode==='review')ctx.closePath();
+  ctx.stroke();ctx.shadowBlur=0;
+  for(const p of [path[0],path[path.length-1]]){ctx.beginPath();ctx.arc((p.x+.5)*T,(p.y+.5)*T,Math.max(3,4/zoom),0,Math.PI*2);ctx.fillStyle='#eefbff';ctx.fill();}
+  ctx.restore();
+ }
+}
+
 function setPreview(t){
  target=t;const box=$('targetPreview');box.classList.toggle('hidden',!t);$('game').classList.toggle('is-targeting',!!t);
  if(!t){queueDraw();return;}
