@@ -293,6 +293,7 @@ function beginAttackPlanner(existing=null){
  $('planGuide').classList.remove('hidden');$('planReview').classList.add('hidden');
  $('planAttackButton').setAttribute('aria-pressed','true');
  $('planReviewButton').textContent=existing?'Save plan':'Start offensive';
+ $('planHeading').textContent=existing?'EDIT OFFENSIVE PLAN':'PAINT ATTACK ZONE';
  $('mapHint').classList.add('hidden');refreshPaintGuide();queueDraw();
 }
 // A brush paints cross-shaped five-tile stamps, keeping exactly one target owner.
@@ -333,7 +334,7 @@ function refreshPaintTargets(plan){
  const touched=new Set([...plan.cells].map(i=>state.owners[i]).filter(id=>id!==myId));
  for(const id of plan.targets)touched.add(id);
  const owners=[...touched].filter(id=>id===0||E.person(state,id)).sort((a,b)=>a-b);
- const signature=owners.map(id=>id+':'+Number(plan.targets.has(id))+':'+Number(!!mine()?.allies.includes(id))).join('|');
+ const signature=owners.map(id=>id+':'+Number(plan.targets.has(id))+':'+Number(!!mine()?.allies.includes(id))+':'+[...plan.cells].filter(i=>state.owners[i]===id).length).join('|');
  if(signature===plan.optionsKey)return;
  plan.optionsKey=signature;
  $('planTargetOptions').innerHTML=owners.map(id=>{
