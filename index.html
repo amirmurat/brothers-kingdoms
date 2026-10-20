@@ -9,7 +9,7 @@
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
 <link rel="stylesheet" href="styles/legacy.css?v=49-visible-camp"/>
-<link rel="stylesheet" href="styles/theme.css?v=58-two-finger-map"/>
+<link rel="stylesheet" href="styles/theme.css?v=59-choice-zones"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -84,6 +84,10 @@
  <p id="planGuideHint" role="status">One finger paints · Two fingers move the map.</p>
  <div class="paint-control"><label for="planBrushSize">BRUSH SIZE <b id="planBrushValue">2 tiles</b></label><input id="planBrushSize" type="range" min="1" max="6" step="1" value="2" aria-label="Brush size"/></div>
  <div class="paint-control"><label for="planTroopsPercent">TROOPS <b id="planTroopsValue">30%</b></label><input id="planTroopsPercent" type="range" min="5" max="95" step="5" value="30" aria-label="Percentage of troops"/></div>
+ <div class="plan-targets" id="planTargets" role="group" aria-label="Territories allowed for conquest">
+  <div class="plan-targets-heading">ATTACK PERMISSIONS <span id="planTargetsHint">Choose who can be attacked</span></div>
+  <div class="plan-targets-list" id="planTargetOptions"></div>
+ </div>
  <div class="plan-guide-actions">
   <button type="button" class="plan-guide-exit" id="planGuideExit">Exit</button>
   <button type="button" id="planPaintClear" disabled>Clear</button>
@@ -161,7 +165,7 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="engine.js?v=58-two-finger-map"></script>
+<script src="engine.js?v=59-choice-zones"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=58-two-finger-map"></script>
+<script src="game.js?v=59-choice-zones"></script>
 </body></html>
