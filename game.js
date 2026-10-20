@@ -792,7 +792,7 @@ $('planCancelYes').onclick=()=>{
  $('planCancelDialog').classList.add('hidden');planCancelArmy=null;
 };
 $('warChip').onclick=()=>{
- if(attackPlanner)resetAttackPlanner();
+ // Nations can be opened during painting without discarding the draft region.
  const panel=$('warPanel'),opening=panel.classList.contains('hidden');
  panel.classList.toggle('hidden',!opening);$('warChip').setAttribute('aria-expanded',String(opening));
 };
