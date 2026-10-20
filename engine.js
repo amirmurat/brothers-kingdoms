@@ -555,11 +555,27 @@ function advancePlannedWave(s,a,plan){
  // Price the whole frontier against one snapshot, then capture all its tiles
  // as one atomic logical turn. Never accept a partially funded layer.
  const receipt=front.map(i=>({i,former:s.owners[i],cost:planTileCost(s,plan,i)}));
- const sum=receipt.reduce((t,c)=>t+c.cost,0);
- const required=Math.max(receipt.some(c=>s.tiles[c.i]===6)?10:0,Math.ceil(sum*1000)/1000);
+ let selected=receipt;
+ let sum=receipt.reduce((t,c)=>t+c.cost,0);
+ let required=Math.max(receipt.some(c=>s.tiles[c.i]===6)?10:0,Math.ceil(sum*1000)/1000);
+ if(plan.autoRecovery&&a.strength+1e-7<required){
+  // Defensive recovery may reclaim affordable portions. The normal offensive
+  // still requires its complete frontier to expand atomically.
+  const byCell=new Map(receipt.map(r=>[r.i,r]));
+  const ordered=balancedLayer(front,s,s.tick).map(i=>byCell.get(i));
+  selected=[];let budget=a.strength;
+  for(const r of ordered){
+   const price=Math.max(s.tiles[r.i]===6?10:0,Math.ceil(r.cost*1000)/1000);
+   if(price>budget+1e-7)continue;
+   selected.push(r);budget-=price;
+  }
+  if(!selected.length){finishWave(s,a,p);return;}
+  sum=selected.reduce((t,c)=>t+c.cost,0);
+  required=sum;
+ }
  if(a.strength+1e-7<required){finishWave(s,a,p);return;}
  a.strength=Math.max(0,a.strength-sum);
- for(const item of receipt){
+ for(const item of selected){
   const x=item.i%W,y=(item.i/W)|0;
   if(item.former){
    const defender=person(s,item.former);
@@ -571,7 +587,7 @@ function advancePlannedWave(s,a,plan){
  }
  const next=planFrontier(s,plan);
  a.frontCells=next;a.turns++;a.stuck=0;
- const center=receipt[(receipt.length/2)|0].i;a.x=center%W;a.y=(center/W)|0;
+ const center=selected[(selected.length/2)|0].i;a.x=center%W;a.y=(center/W)|0;
  if(!next.length||a.strength<3)finishWave(s,a,p);
 }
 function sendNextPlannedWave(s,plan){
@@ -580,7 +596,8 @@ function sendNextPlannedWave(s,plan){
  if(!front.length||s.armies.filter(a=>a.owner===plan.owner).length>=12)return false;
  const estimated=estimatePlanFront(s,plan);
  const strength=Math.floor(p.troops*plan.percent/100);
- if(strength<Math.max(35,estimated.required))return false;
+ const minimum=plan.autoRecovery?Math.max(35,Math.min(estimated.required,50)):Math.max(35,estimated.required);
+ if(strength<minimum)return false;
  const first=front[(front.length/2)|0],tx=first%W,ty=(first/W)|0;
  const src=nearestBorderLand(s,plan.owner,tx,ty);if(!src)return false;
  p.troops-=strength;
