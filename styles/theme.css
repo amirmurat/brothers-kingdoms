@@ -1354,3 +1354,100 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
  #game#game#game #planToolSwitch #developButton{margin-top:3px!important}
  #game#game#game #planToolSwitch .plan-side-action .ui-icon{width:22px!important;height:22px!important;min-width:22px!important;min-height:22px!important}
 }
+
+
+/* v63 — nonoverlapping HUD alerts, war chip and compact threat shortcut.
+   First row is a two-column reserved space; second row is the threat action. */
+#game#game#game .map-shell{position:relative!important}
+#game#game#game #gameFeedback{
+ top:9px!important;left:10px!important;right:145px!important;
+ width:auto!important;min-width:0!important;max-width:none!important;
+ height:39px!important;min-height:39px!important;max-height:39px!important;
+ padding:0 9px!important;overflow:hidden!important;border-radius:11px!important;
+ z-index:42!important;
+}
+#game#game#game #gameFeedback:has(#hudAlert.danger:not(.hidden)){
+ max-width:none!important;
+}
+#game#game#game #gameFeedback #hudAlert,
+#game#game#game #gameFeedback #gameToast{
+ position:relative!important;top:auto!important;right:auto!important;left:auto!important;
+ display:flex!important;align-items:center!important;width:100%!important;min-width:0!important;
+ max-width:100%!important;height:100%!important;min-height:0!important;
+ padding:0!important;overflow:hidden!important;white-space:nowrap!important;
+ font-size:11px!important;line-height:1.2!important;
+}
+#game#game#game #gameFeedback #hudAlert.hidden,
+#game#game#game #gameFeedback #gameToast.hidden{display:none!important}
+#game#game#game #gameFeedback #hudAlert #hudAlertText,
+#game#game#game #gameFeedback #gameToast{
+ flex:1 1 auto!important;display:block!important;min-width:0!important;
+ max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;
+ white-space:nowrap!important;
+}
+#game#game#game #gameFeedback #hudAlert #hudAlertIcon{
+ flex:0 0 16px!important;width:16px!important;min-width:16px!important;
+ padding:0!important;margin-right:5px!important;
+}
+#game#game#game #gameFeedback #hudAlert .hud-alert-arrow{flex:none!important;padding-left:5px!important}
+#game#game#game .map-toolbar{
+ position:absolute!important;left:auto!important;right:10px!important;top:9px!important;
+ width:124px!important;min-width:124px!important;max-width:124px!important;height:39px!important;
+ z-index:43!important;display:flex!important;align-items:center!important;justify-content:flex-end!important;
+ margin:0!important;padding:0!important;pointer-events:none!important;
+}
+#game#game#game .map-toolbar .map-location{display:none!important}
+#game#game#game #warChip{
+ position:relative!important;top:auto!important;right:auto!important;
+ width:124px!important;max-width:124px!important;min-width:124px!important;
+ height:39px!important;min-height:39px!important;max-height:39px!important;
+ justify-content:center!important;padding:5px 7px!important;margin:0!important;
+ background:#1b2431!important;border:1px solid #53657b!important;
+ color:#eaf4fc!important;border-radius:11px!important;font-size:11px!important;
+ letter-spacing:.045em!important;box-sizing:border-box!important;
+ pointer-events:auto!important;white-space:nowrap!important;
+}
+#game#game#game #threatRail{
+ position:absolute!important;top:57px!important;left:10px!important;right:auto!important;
+ width:max-content!important;max-width:calc(100% - 20px)!important;
+ height:40px!important;min-height:40px!important;
+ background:transparent!important;border:0!important;padding:0!important;
+ z-index:38!important;box-shadow:none!important;
+}
+#game#game#game #threatRail.hidden{display:none!important}
+#game#game#game #incomingAttack{
+ position:relative!important;inset:auto!important;top:auto!important;left:auto!important;
+ right:auto!important;bottom:auto!important;
+ width:max-content!important;min-width:0!important;max-width:min(240px,calc(100vw - 22px))!important;
+ height:40px!important;min-height:40px!important;max-height:40px!important;
+ display:flex!important;align-items:center!important;gap:7px!important;
+ padding:5px 10px!important;margin:0!important;
+ background:#311b28!important;border:1px solid #e35478!important;
+ color:#ffdae2!important;border-radius:11px!important;box-shadow:none!important;
+}
+#game#game#game #incomingAttack .incoming-icon{
+ width:21px!important;height:21px!important;min-width:21px!important;min-height:21px!important;
+ flex:0 0 21px!important;font-size:13px!important;line-height:21px!important;
+}
+#game#game#game #incomingAttack .incoming-body{
+ min-width:0!important;flex:1 1 auto!important;max-width:120px!important;
+}
+#game#game#game #incomingAttack .incoming-body strong{
+ font-size:10px!important;white-space:nowrap!important;line-height:13px!important;
+ overflow:hidden!important;text-overflow:ellipsis!important;
+}
+#game#game#game #incomingAttack .incoming-action{font-size:9px!important;line-height:13px!important}
+#game#game#game #threatExpand{height:40px!important;min-height:40px!important;max-height:40px!important}
+#game#game#game #warPanel{top:53px!important;right:10px!important}
+@media(max-width:360px){
+ #game#game#game #gameFeedback{right:118px!important;left:7px!important}
+ #game#game#game .map-toolbar{right:7px!important;width:104px!important;min-width:104px!important;max-width:104px!important}
+ #game#game#game #warChip{width:104px!important;min-width:104px!important;max-width:104px!important;font-size:10px!important}
+ #game#game#game #threatRail{left:7px!important;max-width:calc(100% - 14px)!important}
+ #game#game#game #incomingAttack{max-width:205px!important}
+}
+@media(max-height:480px) and (orientation:landscape){
+ #game#game#game #gameFeedback,#game#game#game .map-toolbar{top:5px!important}
+ #game#game#game #threatRail{top:49px!important}
+ #game#game#game #warPanel{top:48px!important}
+}
