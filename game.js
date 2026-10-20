@@ -337,7 +337,7 @@ function brushAt(pt){
   const cell=y*E.W+x;
   if(plan.mode==='erase'){if(plan.erasable.has(cell))plan.cells.add(cell);continue;}
   if(plan.tool==='erase'){plan.cells.delete(cell);continue;}
-  if(E.owner(state,x,y)===myId||plan.cells.size>=3500)continue;
+  if(E.owner(state,x,y)===myId||plan.cells.size>=E.W*E.H)continue;
   plan.cells.add(cell);
  }
 }
@@ -359,8 +359,7 @@ function paintAtPointer(pt){
 function checkPaintZone(plan){
  if(!plan?.cells?.size)return {error:'Paint land to begin.'};
  const cells=[...plan.cells].sort((a,b)=>a-b);
- if(cells.length<(plan.editId?1:2))return {error:plan.editId?'Keep one cell or cancel from Offensives.':'Paint at least two cells.'};
- if(cells.length>3500)return {error:'Maximum 3,500 cells.'};
+ if(!cells.length)return {error:'Paint at least one land cell.'};
  if(cells.some(i=>!Number.isInteger(i)||i<0||i>=E.W*E.H||!state.tiles[i]))return {error:'Only land can be planned.'};
  return {cells};
 }
@@ -371,6 +370,7 @@ function refreshPaintTargets(plan){
  const joined=overlappingPlans(plan);
  for(const old of joined)for(const target of old.targets??[old.targetOwner])if(!plan.removedTargets.has(target))plan.targets.add(target);
  const touched=new Set([...plan.cells].map(i=>state.owners[i]).filter(id=>id!==myId));
+ for(const id of touched)if(!plan.removedTargets.has(id)&&!mine()?.allies.includes(id))plan.targets.add(id);
  for(const id of plan.targets)touched.add(id);
  const owners=[...touched].filter(id=>id===0||E.person(state,id)).sort((a,b)=>a-b);
  const signature=owners.map(id=>id+':'+Number(plan.targets.has(id))+':'+Number(!!mine()?.allies.includes(id))+':'+[...plan.cells].filter(i=>state.owners[i]===id).length).join('|');
@@ -395,7 +395,7 @@ function refreshPaintGuide(){
  const sent=Math.floor((mine()?.troops||0)*percent/100),overlap=overlappingPlans(plan).length;
  const slotLimit=(state.attackPlans||[]).filter(p=>p.owner===myId).length>=12;
  $('planPaintCount').textContent=number(count)+' cells';$('planPaintClear').disabled=pressed.size>0||(!plan.editId&&!count);
- $('planReviewButton').disabled=!!checked.error||pressed.size>0||(!selected.length&&!plan.editId)||(!plan.editId&&!overlap&&!allowed.length)||(!plan.editId&&!overlap&&slotLimit);
+ $('planReviewButton').disabled=count===0||pressed.size>0;
  $('planBrushValue').textContent=String(plan.brushRadius);
  $('planTroopsValue').textContent=percent+'%';
  $('planTargets').classList.toggle('hidden',count===0);
@@ -418,9 +418,7 @@ function reviewPaintedZone(){
  const plan=attackPlanner;if(plan?.mode!=='paint'||pressed.size>0)return;
  const checked=checkPaintZone(plan);if(checked.error){refreshPaintGuide();toast(checked.error,'error');return;}
  const targets=[...plan.targets].filter(t=>t===0||E.person(state,t)&&!mine()?.allies.includes(t));
- if(!targets.length&&!plan.editId){toast('Choose an opponent or Neutral land.','error');return;}
- const foreign=checked.cells.find(i=>state.owners[i]!==myId);
- if(!plan.editId&&foreign===undefined){toast('Choose foreign territory.','error');return;}
+ const foreign=checked.cells.find(i=>state.owners[i]!==myId)??checked.cells[0];
  const order=plan.editId?
   {type:'updatePlan',id:plan.editId,zone:checked.cells,targets,excludeTargets:[...plan.removedTargets],percent}:
   {type:'send',x:foreign%E.W,y:(foreign/E.W)|0,zone:checked.cells,targets,excludeTargets:[...plan.removedTargets],percent};
@@ -462,40 +460,61 @@ function openCancelPlan(item){
  $('planCancelDialog').classList.remove('hidden');$('planCancelNo').focus();
 }
 function drawAttackPlanning(){
- // Called inside the world-space Canvas transform. Use region strokes rather than a filled rectangle.
- const plans=(state.attackPlans||[]).filter(p=>p.owner===myId).map(p=>({...p,waiting:!state.armies.some(a=>a.planId===p.id)}));
- const legacy=state.armies.filter(a=>a.owner===myId&&a.strength>0&&Array.isArray(a.zoneCells)&&!a.planId);
- plans.push(...legacy);
+ // Union all saved and in-progress zones before tracing boundaries. A newly
+ // painted stroke above an old plan has exactly one contour, never two seams.
+ const visual=new Map(),editId=attackPlanner?.mode==='paint'?attackPlanner.editId:null;
+ const collect=(plan,preview=false,recovery=false)=>{
+  const eligible=new Set(plan.targets??[plan.targetOwner]);
+  for(const i of plan.zoneCells||[]){
+   if(!state.tiles[i]||state.owners[i]===myId&&!preview)continue;
+   let cell=visual.get(i);
+   if(!cell){cell={targets:new Set(),preview:false,recovery:false,waiting:true};visual.set(i,cell);}
+   for(const target of eligible)cell.targets.add(target);
+   cell.preview||=preview;cell.recovery||=recovery;
+   if(!plan.waiting)cell.waiting=false;
+  }
+ };
+ for(const plan of (state.attackPlans||[]).filter(p=>p.owner===myId)){
+  if(editId===plan.id)continue;
+  collect({...plan,waiting:!state.armies.some(a=>a.planId===plan.id)});
+ }
+ for(const plan of (state.recoveryPlans||[]).filter(p=>p.owner===myId))
+  collect({...plan,waiting:!state.armies.some(a=>a.planId===plan.id)},false,true);
+ for(const army of state.armies.filter(a=>a.owner===myId&&a.strength>0&&Array.isArray(a.zoneCells)&&!a.planId))
+  collect(army);
+ if(attackPlanner?.mode==='review'&&attackPlanner.zoneCells)
+  collect({zoneCells:attackPlanner.zoneCells,targets:[attackPlanner.targetOwner]},true);
+ if(attackPlanner?.mode==='paint'&&attackPlanner.cells.size)
+  collect({zoneCells:attackPlanner.cells,targets:[...attackPlanner.targets]},true);
  const left=Math.max(0,Math.floor(-camX/(TILE*zoom))-2),right=Math.min(E.W-1,Math.ceil((canvas.clientWidth-camX)/(TILE*zoom))+2),
   top=Math.max(0,Math.floor(-camY/(TILE*zoom))-2),bottom=Math.min(E.H-1,Math.ceil((canvas.clientHeight-camY)/(TILE*zoom))+2);
- if(attackPlanner?.mode==='review'&&attackPlanner.zoneCells)plans.push({zoneCells:attackPlanner.zoneCells,preview:true});
- if(attackPlanner?.mode==='paint'&&attackPlanner.cells.size)plans.push({zoneCells:[...attackPlanner.cells],targets:[...attackPlanner.targets],preview:true});
- const T=TILE;
- for(const plan of plans){
-  const pending=plan.preview,waiting=plan.waiting,remaining=plan.zoneCells.filter(i=>state.owners[i]!==myId&&state.tiles[i]);
-  const permitted=new Set(plan.targets??[plan.targetOwner]);
-  if(!remaining.length)continue;
-  const cells=new Set(remaining),visible=remaining.filter(i=>{const x=i%E.W,y=(i/E.W)|0;return x>=left&&x<=right&&y>=top&&y<=bottom;});
-  if(!visible.length)continue;
-  ctx.save();ctx.fillStyle=pending?'rgba(96,220,255,.31)':waiting?'rgba(96,220,255,.18)':'rgba(99,204,255,.13)';
-  ctx.strokeStyle=pending?'#98edff':waiting?'#9de6fa':'#66c8ec';ctx.lineWidth=Math.max(1.2,2.1/zoom);
-  if(!pending)ctx.setLineDash(waiting?[3/zoom,6/zoom]:[5/zoom,5/zoom]);
+ const T=TILE,hasPreview=[...visual.values()].some(v=>v.preview);
+ if(visual.size){
+  ctx.save();
+  ctx.strokeStyle=hasPreview?'#a7eeff':'#77cdec';
+  ctx.lineWidth=Math.max(1.15,1.9/zoom);
+  if(!hasPreview)ctx.setLineDash([4/zoom,5/zoom]);
   ctx.beginPath();
-  for(const i of visible){const x=i%E.W,y=(i/E.W)|0;
-   ctx.fillStyle=permitted.has(state.owners[i])?(pending?'rgba(96,220,255,.31)':waiting?'rgba(96,220,255,.18)':'rgba(99,204,255,.13)'):'rgba(137,151,164,.075)';
+  for(const [i,cell] of visual){
+   const x=i%E.W,y=(i/E.W)|0;
+   if(x<left||x>right||y<top||y>bottom)continue;
+   const permitted=cell.targets.has(state.owners[i]);
+   ctx.fillStyle=!permitted?'rgba(134,149,166,.085)':
+    cell.preview?'rgba(94,228,255,.30)':
+    cell.recovery?'rgba(255,174,115,.23)':
+    cell.waiting?'rgba(91,210,245,.18)':'rgba(95,200,255,.15)';
    ctx.fillRect(x*T,y*T,T,T);
-   if(!cells.has(i-E.W)){ctx.moveTo(x*T,y*T);ctx.lineTo((x+1)*T,y*T);}
-   if(!cells.has(i+E.W)){ctx.moveTo(x*T,(y+1)*T);ctx.lineTo((x+1)*T,(y+1)*T);}
-   if(x===0||!cells.has(i-1)){ctx.moveTo(x*T,y*T);ctx.lineTo(x*T,(y+1)*T);}
-   if(x===E.W-1||!cells.has(i+1)){ctx.moveTo((x+1)*T,y*T);ctx.lineTo((x+1)*T,(y+1)*T);}
+   if(!visual.has(i-E.W)){ctx.moveTo(x*T,y*T);ctx.lineTo((x+1)*T,y*T);}
+   if(!visual.has(i+E.W)){ctx.moveTo(x*T,(y+1)*T);ctx.lineTo((x+1)*T,(y+1)*T);}
+   if(x===0||!visual.has(i-1)){ctx.moveTo(x*T,y*T);ctx.lineTo(x*T,(y+1)*T);}
+   if(x===E.W-1||!visual.has(i+1)){ctx.moveTo((x+1)*T,y*T);ctx.lineTo((x+1)*T,(y+1)*T);}
   }
   ctx.stroke();ctx.restore();
  }
  if(attackPlanner?.mode==='erase'&&attackPlanner.cells.size){
   ctx.save();ctx.fillStyle='rgba(255,158,109,.44)';
   for(const i of attackPlanner.cells){const x=i%E.W,y=(i/E.W)|0;
-   if(x>=left&&x<=right&&y>=top&&y<=bottom)ctx.fillRect(x*T,y*T,T,T);
-  }
+   if(x>=left&&x<=right&&y>=top&&y<=bottom)ctx.fillRect(x*T,y*T,T,T);}
   ctx.restore();
  }
  const brush=(attackPlanner?.mode==='paint'||attackPlanner?.mode==='erase')&&attackPlanner.brushPoint;
@@ -506,7 +525,6 @@ function drawAttackPlanning(){
   ctx.fill();ctx.stroke();ctx.restore();
  }
 }
-
 function setPreview(t){
  target=t;const box=$('targetPreview');box.classList.toggle('hidden',!t);$('game').classList.toggle('is-targeting',!!t);
  if(!t){queueDraw();return;}
