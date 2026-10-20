@@ -425,3 +425,7 @@ _Актуальный реестр, извлечённый из `index.html` н�
 
 ### v50 — тонкая обводка казармы (20.10.2026)
 - `draw()` в `game.js`: `barracks` получает белую обводку шириной 12 единиц в SVG-пространстве 512, масштабируемую вместе с Canvas/zoom, без минимального экранного размера. Остальные виды зданий без изменений. `index.html`: `game.js?v=50-thin-camp`.
+
+### v51 — Farm / Reserve icons (20.10.2026)
+- Farm: SVG `assets/shapes/farm.svg` (Delapouite Barn) and `BUILDING_PATHS.farm` both use 512 coordinates; `draw()` draws thin white 12/512 stroke without zoom compensation, same as Barracks.
+- HUD Reserve: `#hudTroops .reserve-label img.reserve-army-icon`, `assets/shapes/reserve.svg` (Lorc Dark Squad), CSS size 16px; no HUD value changes. Asset attribution in README and `#tutorial` Help.
