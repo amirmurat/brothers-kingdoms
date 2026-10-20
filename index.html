@@ -9,7 +9,7 @@
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
 <link rel="stylesheet" href="styles/legacy.css?v=49-visible-camp"/>
-<link rel="stylesheet" href="styles/theme.css?v=56-attack-direct"/>
+<link rel="stylesheet" href="styles/theme.css?v=57-persistent-offensives"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -102,7 +102,7 @@
  <div class="plan-review-actions"><button type="button" id="planDiscard">Edit area</button><button type="button" id="planLaunch">Start offensive</button></div>
 </div>
 <div class="plan-cancel-mask hidden" id="planCancelDialog" role="dialog" aria-modal="true" aria-labelledby="planCancelTitle">
- <div class="plan-cancel-card"><span class="plan-overline">ACTIVE OFFENSIVE</span><h3 id="planCancelTitle">Cancel this attack?</h3><p>The advance will stop. Surviving troops return with the withdrawal cost.</p>
+ <div class="plan-cancel-card"><span class="plan-overline">ACTIVE OFFENSIVE</span><h3 id="planCancelTitle">Cancel this attack?</h3><p id="planCancelDescription">The advance will stop. Surviving troops return with the withdrawal cost.</p>
  <div class="plan-cancel-actions"><button type="button" id="planCancelNo">Keep fighting</button><button type="button" id="planCancelYes">Cancel attack</button></div></div>
 </div>
 <div class="war-panel hidden" id="warPanel" role="region" aria-label="Wars and peace offers"><div class="war-panel-title"><strong>WAR & PEACE</strong><button type="button" id="warPanelClose" aria-label="Close diplomacy"><svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/controls.svg#x"></use></svg></button></div><div id="warPanelList"></div></div>
@@ -161,7 +161,7 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="engine.js?v=56-attack-direct"></script>
+<script src="engine.js?v=57-persistent-offensives"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=56-attack-direct"></script>
+<script src="game.js?v=57-persistent-offensives"></script>
 </body></html>
