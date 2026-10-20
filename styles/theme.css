@@ -969,3 +969,20 @@ body :is(input,textarea,[contenteditable="true"]){-webkit-user-select:text!impor
 #game#game#game #quickLeadersPanel .quick-row b{flex:1!important;min-width:0!important;color:#eef2f8!important;font-size:13px!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
 #game#game#game #quickLeadersPanel .quick-row small{flex-shrink:0!important;color:#b0bac9!important;font-size:11px!important;font-variant-numeric:tabular-nums!important}
 #game#game#game #quickLeadersPanel #closeQuickLeaders{display:block!important;width:100%!important;min-height:44px!important;margin:12px 0 0!important;background:#222b3b!important;border:1px solid #465265!important;border-radius:9px!important;color:#eef2f8!important}
+
+/* v48: licensed Medieval Pavilion icon, shared by Barracks and Reserve. */
+#game#game#game #hudTroops .reserve-label{
+ display:flex!important;flex-direction:row!important;justify-content:center!important;
+ align-items:center!important;gap:4px!important;white-space:nowrap!important;
+ height:14px!important;line-height:14px!important;min-width:0!important;
+}
+#game#game#game #hudTroops .reserve-label .reserve-camp-icon{
+ display:block!important;flex:0 0 13px!important;width:13px!important;height:13px!important;
+ max-width:13px!important;max-height:13px!important;object-fit:contain!important;
+ margin:0!important;padding:0!important;opacity:.87!important;
+}
+#game#game#game #hudTroops .reserve-label>span{color:inherit!important;line-height:14px!important}
+#game#game#game #tutorial .icon-credit{
+ margin:12px 0 6px!important;font-size:10px!important;line-height:1.5!important;color:#b0bac9!important;
+}
+#game#game#game #tutorial .icon-credit a{color:#a7dfff!important;text-decoration:underline!important}

@@ -57,3 +57,7 @@
 - Семь зданий и столица собираются из оригинальных тайлов **Kenney Tiny Town** (CC0, 16×16, 3/4). В карте используется компоновка 3×3 (48×48) с тематическими декоративными элементами: ферма, лесопилка, каменоломня, шахта, казармы, крепость, город, столица.
 - Основание занимает одну игровую клетку, а высокая крыша выходит вверх без обрезания; изображения заметнее на мобильном, при этом игровые координаты и логика не изменены.
 - Источник и лицензия: https://kenney.nl/assets/tiny-town (CC0). Тайлы: `assets/tiny-town/`; отрисовка: `game.js`.
+
+### v48 — Barracks / Reserve camp icon
+- **Medieval Pavilion** by **Delapouite** — [source](https://game-icons.net/1x1/delapouite/medieval-pavilion.html), [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
+- Adaptations: original black background removed, pavilion recolored to `#eef2f8`, and same vector geometry reused for map building marker. Attribution is also visible in the game's Help panel.

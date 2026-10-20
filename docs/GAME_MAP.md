@@ -412,3 +412,8 @@ _Актуальный реестр, извлечённый из `index.html` н�
 ### v47 — explicit content-fit of alert and toast (20.10.2026)
 - Устранён конфликт старого `width:100%!important` у внутренних `#hudAlert/#gameToast`, который мог продолжать растягивать уведомление внутри компактного контейнера v46. Теперь `width:auto; max-width:100%` гарантирует контентную ширину, не затрагивая обработку алертов.
 - Кэш v47-alert-fit, preview branch, iPhone Safari не проверен.
+
+### v48 — Medieval Pavilion №8 для Barracks и Reserve (20.10.2026)
+- По выбору владельца использован настоящий оригинальный SVG Delapouite из официального game-icons/icons, CC BY 3.0. Удалён чёрный фон, палатка перекрашена #eef2f8, автор указан в README и Help.
+- Один локальный файл `assets/shapes/barracks.svg` используется для иконки Barracks в Build, превью постановки и рядом с RESERVE; геометрия карты синхронизирована оригинальным path 512×512 с корректным масштабом. Игровые правила не менялись.
+- Version v48-camp-icon, preview ветка design/visual-review-v26; JS синтаксис и ссылки проверены, визуальный iPhone/Safari ещё не проверен.
