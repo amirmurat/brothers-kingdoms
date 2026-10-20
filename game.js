@@ -2,7 +2,7 @@
 (()=>{
 'use strict';
 const E=window.BKEngine,$=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-// Verified Phosphor MIT icon family for game UI; canvas buildings remain separate assets.
+// Phosphor MIT icons for interface actions; shared geometric paths for buildings.
 const UI_ICON_NAMES={food:'grains',wood:'tree',stone:'mountains',gold:'coins',farm:'grains',lumber:'tree',quarry:'mountains',mine:'coins',barracks:'sword',fort:'shield',city:'buildings',capital:'castle-turret',economy:'coins',war:'sword',logistics:'flag-banner'};
 const uiIcon=name=>{
  const id=UI_ICON_NAMES[name]||name;
@@ -12,7 +12,7 @@ const uiIcon=name=>{
 const view=$('mapView'),canvas=$('mapCanvas'),ctx=canvas.getContext('2d',{alpha:false}),mini=$('minimap'),mctx=mini.getContext('2d');
 const terrainNames=['Море','Равнина','Лес','Холмы','Плодородная земля','Рудное месторождение','Горы'];
 /* Same geometry in catalogue, placement indicator and map. Color identifies ownership. */
-const BUILDING_PATHS={"farm": "M32 7 A25 25 0 1 1 31.99 7 Z", "lumber": "M32 6 L59 55 L5 55 Z", "quarry": "M32 4 L60 32 L32 60 L4 32 Z", "mine": "M32 5 L58 24 L48 56 L16 56 L6 24 Z", "barracks": "M18 6 L46 6 L60 32 L46 58 L18 58 L4 32 Z", "fort": "M8 8 H56 V56 H8 Z M20 20 V44 H44 V20 Z", "city": "M5 27 H18 V57 H5 Z M25 7 H39 V57 H25 Z M46 19 H59 V57 H46 Z", "capital": "M32 3 L40 23 L61 25 L45 39 L50 60 L32 48 L14 60 L19 39 L3 25 L24 23 Z"};
+const BUILDING_PATHS={"farm":"M32 5 A27 27 0 1 1 31.99 5 Z M32 20 A12 12 0 1 0 32.01 20 Z","lumber":"M32 3 L57 32 H45 L61 54 H39 V62 H25 V54 H3 L19 32 H7 Z","quarry":"M32 3 L61 32 L32 61 L3 32 Z M32 19 L19 32 L32 45 L45 32 Z","mine":"M23 4 H41 V23 H60 V41 H41 V60 H23 V41 H4 V23 H23 Z","barracks":"M4 8 H25 L43 32 L25 56 H4 L22 32 Z M32 8 H43 L61 32 L43 56 H32 L50 32 Z","fort":"M5 5 H59 V59 H5 Z M19 19 V45 H45 V19 Z","city":"M4 27 H18 V59 H4 Z M25 5 H39 V59 H25 Z M46 18 H60 V59 H46 Z","capital":"M32 2 L41 22 L62 25 L46 40 L51 62 L32 50 L13 62 L18 40 L2 25 L23 22 Z"};
 const buildingPaths=Object.fromEntries(Object.entries(BUILDING_PATHS).map(([id,d])=>[id,new Path2D(d)]));
 const buildingArt=kind=>`<img class="building-art" src="assets/shapes/${kind}.svg" alt="" aria-hidden="true"/>`;
 const buildingInfo={
@@ -747,14 +747,14 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   }
   ctx.stroke();
  }
- // Logical footprint is exactly one cell; 3/4 roofs rise above it uncropped.
+ // One-cell geometric landmarks; catalogue and map use identical silhouettes.
  ctx.textAlign='center';ctx.textBaseline='middle';
  const capitalLabels=[];
  for(const b of [...state.buildings].sort((a,b)=>a.y-b.y)){
   const x=(b.x+.5)*TILE,y=(b.y+.5)*TILE;
   if(x*zoom+camX<-55||x*zoom+camX>w+55||y*zoom+camY<-55||y*zoom+camY>h+55)continue;
   const ownerColor=color(b.owner);
-  const spriteH=TILE*.82,footY=y+TILE*.41;
+  const spriteH=TILE*.95,footY=y+TILE*.41;
   ctx.save();ctx.translate(x-spriteH/2,y-spriteH/2);ctx.scale(spriteH/64,spriteH/64);
   ctx.fillStyle='#f1f5fa';ctx.fill(buildingPaths[b.kind]||buildingPaths.city,'evenodd');
   ctx.strokeStyle='#080a0e';ctx.lineWidth=3;ctx.stroke(buildingPaths[b.kind]||buildingPaths.city);ctx.restore();
@@ -785,7 +785,8 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   ctx.restore();
  }
  for(const a of state.armies){const old=oldArmyPositions.get(a.id),t=Math.min(1,(performance.now()-movementStart)/260),x=((old?old.x+(a.x-old.x)*t:a.x)+.5)*TILE,y=((old?old.y+(a.y-old.y)*t:a.y)+.5)*TILE;if(x*zoom+camX<-50||x*zoom+camX>w+50||y*zoom+camY<-50||y*zoom+camY>h+50)continue;
-  ctx.fillStyle='#101218';ctx.strokeStyle=(a.owner===myId&&a.initialStrength&&a.strength/a.initialStrength<.2)?'#ff968e':color(a.owner);ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(x,y,8.5,0,2*Math.PI);ctx.fill();ctx.stroke();ctx.fillStyle='#ffffff';ctx.font='700 7px system-ui';ctx.fillText('↗',x,y+.5);
+  const armyRadius=Math.max(6,9/zoom),heading=Math.atan2(a.ty-a.y,a.tx-a.x);
+  ctx.save();ctx.translate(x,y);ctx.rotate(heading);ctx.beginPath();ctx.moveTo(armyRadius,0);ctx.lineTo(-armyRadius*.8,-armyRadius*.75);ctx.lineTo(-armyRadius*.35,0);ctx.lineTo(-armyRadius*.8,armyRadius*.75);ctx.closePath();ctx.fillStyle=(a.owner===myId&&a.initialStrength&&a.strength/a.initialStrength<.2)?'#ff968e':color(a.owner);ctx.strokeStyle='#080a0e';ctx.lineWidth=2/zoom;ctx.fill();ctx.stroke();ctx.restore();
   if(zoom>0.27){ctx.font='700 '+Math.max(8,9/Math.max(.8,zoom))+'px system-ui';const n=number(a.strength);ctx.fillStyle='rgba(255,255,255,.95)';ctx.beginPath();ctx.roundRect(x-20,y+9,40,12,5);ctx.fill();ctx.fillStyle='#0f1720';ctx.fillText(n,x,y+15);}
   if(a.owner===myId&&a.targetOwner){ctx.strokeStyle=hexAlpha(color(a.owner),.55);ctx.setLineDash([2,3]);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo((a.tx+.5)*TILE,(a.ty+.5)*TILE);ctx.stroke();ctx.setLineDash([]);}
  }

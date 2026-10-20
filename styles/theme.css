@@ -720,3 +720,12 @@ html,body{background:#090c11!important;color:#eef2f8!important}
 
 #lobby#lobby#lobby #joinDetails,#lobby#lobby#lobby #joinDetails .join-inputs{border:0!important;background:transparent!important;box-shadow:none!important;border-radius:0!important}
 #lobby#lobby#lobby #joinDetails::before,#lobby#lobby#lobby #joinDetails::after,#lobby#lobby#lobby #joinDetails .join-inputs::before,#lobby#lobby#lobby #joinDetails .join-inputs::after{content:none!important;display:none!important}
+
+/* v35: icons keep one optical scale and never depend on a text font. */
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) .ui-icon{display:inline-block!important;width:24px!important;height:24px!important;flex-shrink:0!important;vertical-align:middle!important;fill:currentColor}
+#lobby#lobby#lobby .choice-symbol .ui-icon{width:28px!important;height:28px!important}
+#lobby#lobby#lobby .start-choice>.choice-arrow{width:20px!important;height:20px!important;margin-left:auto!important}
+#game#game#game #scienceButton .science-symbol,#game#game#game #developButton .ui-icon{width:28px!important;height:28px!important}
+#game#game#game :is(.res-icon,.cost-unit .ui-icon){width:16px!important;height:16px!important}
+:is(#game#game#game,#waiting#waiting#waiting) :is(.square-button,.icon-close,#closeSession,#closeContext,#closeArmies,#closeQuickLeaders)>.ui-icon{width:22px!important;height:22px!important;margin:0!important}
+#game#game#game :is(.building-art,#placingBuildIcon){object-fit:contain!important;image-rendering:auto!important}
