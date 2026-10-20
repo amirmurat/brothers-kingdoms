@@ -59,5 +59,6 @@
 - Источник и лицензия: https://kenney.nl/assets/tiny-town (CC0). Тайлы: `assets/tiny-town/`; отрисовка: `game.js`.
 
 ### v48 — Barracks / Reserve camp icon
-- **Medieval Pavilion** by **Delapouite** — [source](https://game-icons.net/1x1/delapouite/medieval-pavilion.html), [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
+- **Medieval Pavilion** (Barracks) and **Barn** (Farm) by **Delapouite** — [Pavilion](https://game-icons.net/1x1/delapouite/medieval-pavilion.html), [Barn](https://game-icons.net/1x1/delapouite/barn.html), [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Black backgrounds removed, fills changed to #eef2f8; thin white outline added on Canvas map.
+- **Dark Squad** (Reserve) by **Lorc** — [source](https://game-icons.net/1x1/lorc/dark-squad.html), [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Black background removed, fill changed to #eef2f8.
 - Adaptations: original black background removed, pavilion recolored to `#eef2f8`, and same vector geometry reused for map building marker. Attribution is also visible in the game's Help panel.
