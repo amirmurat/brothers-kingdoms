@@ -8,8 +8,8 @@
 <meta content="Brothers Kingdoms — стратегия за территорию в реальном времени. Играй с братьями или против ботов." name="description"/>
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
-<link rel="stylesheet" href="styles/legacy.css?v=28-neon"/>
-<link rel="stylesheet" href="styles/theme.css?v=28-neon"/>
+<link rel="stylesheet" href="styles/legacy.css?v=29-flow"/>
+<link rel="stylesheet" href="styles/theme.css?v=29-flow"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -19,32 +19,27 @@
 <div><strong>BROTHERS KINGDOMS</strong><small>СТРАТЕГИЯ В РЕАЛЬНОМ ВРЕМЕНИ</small></div>
 </header>
 <section aria-label="Начать партию" class="start-actions">
-<h1>Выбери сражение</h1>
-<button class="start-choice start-choice-primary" id="hostButton"><span aria-hidden="true" class="choice-symbol"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#users"></use></svg></span><span><strong>Создать комнату</strong><small>Играть с братьями</small></span><span aria-hidden="true" class="choice-arrow">→</span></button>
-<details class="join-details" id="joinDetails">
-<summary class="start-choice"><span aria-hidden="true" class="choice-symbol"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#arrow-right"></use></svg></span><span><strong>Присоединиться</strong><small>По коду комнаты</small></span><span aria-hidden="true" class="choice-arrow">⌄</span></summary>
-<div class="join-inputs"><input aria-label="Код комнаты" autocomplete="off" id="roomCode" maxlength="9" placeholder="Код комнаты"/><button class="primary" id="joinButton">Войти</button></div>
-</details>
-<button class="start-choice" id="demoButton"><span aria-hidden="true" class="choice-symbol"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#game-controller"></use></svg></span><span><strong>Играть с ботами</strong><small>Одиночный матч</small></span><span aria-hidden="true" class="choice-arrow">→</span></button>
-<button class="start-choice hidden" id="resumeButton"><span aria-hidden="true" class="choice-symbol"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#arrow-u-up-left"></use></svg></span><span><strong>Продолжить партию</strong><small>Последнее сохранение</small></span><span aria-hidden="true" class="choice-arrow">→</span></button>
+<h1>Готов к игре?</h1>
+<label class="home-name" for="nickname">Твоё имя<input autocomplete="nickname" id="nickname" maxlength="18" placeholder="Королевство"/></label>
+<button class="start-choice start-choice-primary" id="demoButton"><span class="choice-symbol" aria-hidden="true">▷</span><span><strong>Играть одному</strong><small>С ботами · начать сразу</small></span><span class="choice-arrow" aria-hidden="true">→</span></button>
+<button class="start-choice" id="hostButton"><span class="choice-symbol" aria-hidden="true">＋</span><span><strong>С друзьями</strong><small>Создать комнату и пригласить</small></span><span class="choice-arrow" aria-hidden="true">→</span></button>
+<button class="start-choice hidden" id="resumeButton"><span class="choice-symbol" aria-hidden="true">↶</span><span><strong>Продолжить</strong><small>Сохранённая одиночная партия</small></span></button>
+<div class="join-direct" id="joinDetails"><label for="roomCode">Есть приглашение?</label><div class="join-inputs"><input aria-label="Код комнаты" autocomplete="off" id="roomCode" maxlength="9" placeholder="Код комнаты"/><button class="primary" id="joinButton">Войти</button></div></div>
+<details class="start-settings" id="playerPreferences"><summary>Настроить одиночную игру</summary><label for="soloBots">Количество соперников</label><select id="soloBots"><option value="2">2 — спокойно</option><option selected value="4">4 — стандартно</option><option value="7">7 — сложно</option><option value="10">10 — хаос</option></select></details>
 </section>
-<details class="start-settings" id="playerPreferences"><summary>Настройки игрока и матча <span aria-hidden="true">⌄</span></summary>
-<label for="nickname">Имя королевства</label><input autocomplete="nickname" id="nickname" maxlength="18" placeholder="Королевство"/>
-<label for="soloBots">Соперники в одиночной игре</label><select id="soloBots"><option value="2">2 — обучение</option><option selected="" value="4">4 — стандарт</option><option value="7">7 — сложно</option><option value="10">10 — хаос</option></select>
-</details>
-<p class="error" id="lobbyError" role="alert"></p>
+<button id="cancelConnect" class="secondary hidden">Отменить подключение</button><p class="error" id="lobbyError" role="alert"></p>
 </main>
 </div>
 <div class="waiting-screen hidden" id="waiting"><section class="entry-card waiting-card">
-<header class="room-heading"><span class="room-state"><span class="room-state-dot"></span><span id="roomHeadingLabel">КОМНАТА ГОТОВА</span></span><h2>Игра с братьями</h2><p class="card-subtitle">Пригласи игроков и начинай матч.</p></header>
-<div class="room-invite"><div class="room-token-label">КОД КОМНАТЫ</div><div class="room-token"><strong id="showCode">------</strong><button class="secondary" id="copyCode" type="button" aria-label="Скопировать код комнаты"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#check-square"></use></svg> <span>Копировать</span></button></div><button class="room-share" id="copyLink" type="button"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#arrow-right"></use></svg> Скопировать приглашение</button></div>
+<header class="room-heading"><span class="room-state"><span class="room-state-dot"></span><span id="roomHeadingLabel">КОМНАТА ГОТОВА</span></span><h2>Комната</h2><p class="card-subtitle">Пригласи друзей. Когда все подключатся — начинай.</p></header>
+<div class="room-invite"><div class="room-token-label">КОД КОМНАТЫ</div><div class="room-token"><strong id="showCode">------</strong><button class="secondary" id="copyCode" type="button" aria-label="Скопировать код комнаты"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#check-square"></use></svg> <span>Копировать</span></button></div><button class="room-share" id="copyLink" type="button"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#arrow-right"></use></svg> Пригласить друзей</button></div>
 <div class="room-roster-heading"><strong>Игроки</strong><span id="roomMembersCount">1 участник</span></div><div class="waiting-players" id="waitingPlayers"></div>
 <details class="room-settings" id="roomSettings"><summary>Параметры матча <span id="roomSettingsSummary">0 ботов · без таймера</span></summary>
 <label class="input-label" for="botCount">Количество ботов</label>
-<select id="botCount"><option selected="" value="0">Без ботов</option><option value="3">3 · спокойно</option><option value="7">7 · стандартно</option><option value="10">10 · напряжённо</option></select><label class="input-label" for="spawnChoice">Место появления</label><select id="spawnChoice"><option value="auto">Автоматически</option><option value="northwest">Северо-запад</option><option value="northeast">Северо-восток</option><option value="southwest">Юго-запад</option><option value="southeast">Юго-восток</option></select></details>
-<button aria-pressed="false" class="secondary large hidden" id="readyButton">Готов</button><details class="room-rules"><summary>Правила партии</summary><p id="roomRules">Победа — 100% суши. Без таймера. Порты и флот не нужны: вся карта соединена по суше. Ведущий должен оставить вкладку открытой.</p></details>
+<select id="botCount"><option selected="" value="0">Без ботов</option><option value="3">3 · спокойно</option><option value="7">7 · стандартно</option><option value="10">10 · напряжённо</option></select><label class="input-label" for="spawnChoice">Мой старт на карте</label><select id="spawnChoice"><option value="auto">Автоматически</option><option value="northwest">Северо-запад</option><option value="northeast">Северо-восток</option><option value="southwest">Юго-запад</option><option value="southeast">Юго-восток</option></select></details>
+<button aria-pressed="false" class="secondary large hidden" id="readyButton">Готов</button><details class="room-rules"><summary>Правила партии</summary><p id="roomRules">Победа — 100% суши. Без таймера. Порты и флот не нужны: вся карта соединена по суше. Если ведущий выйдет, комната закроется.</p></details>
 <button class="primary large" id="startButton">Начать матч <span aria-hidden="true">→</span></button>
-<p class="room-foot" id="waitingHint">Ожидаем игроков…</p><button class="leave-room" id="leaveRoom"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#arrow-right"></use></svg> Покинуть комнату</button>
+<p class="room-foot" id="waitingHint">Ожидаем игроков…</p><button class="leave-room" id="leaveRoom"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#arrow-right"></use></svg> На главную</button>
 </section></div>
 <div class="game-screen hidden" id="game">
 <header class="topbar">
@@ -52,7 +47,7 @@
 <div class="top-stat troop-stat" id="hudTroops" title="Войска в резерве"><span>РЕЗЕРВ</span><b id="troopCount">0</b><small id="troopGrowth">+0/с</small><small class="troop-reason hidden" id="troopReason"></small><small class="stat-aux" id="troopCap">/0</small></div>
 <div class="top-stat land-stat" title="Процент захваченной земли"><span>ЗЕМЛЯ</span><b id="landCount">0%</b><small id="landShare">цель 100%</small><div aria-hidden="true" class="land-progress"><i id="landProgress"></i></div></div>
 <div class="top-stat clock-stat"><span>ФРОНТЫ</span><b id="frontCount">0/12</b><small id="networkStatus">ОНЛАЙН</small></div><button aria-label="Экономика и ресурсы" class="square-button" id="economyToggle" title="Экономика и ресурсы"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#chart-bar"></use></svg></button>
-<button aria-label="Меню развития" class="square-button mobile-menu" id="menuToggle"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#list"></use></svg></button>
+<button aria-label="Меню матча" class="square-button mobile-menu" id="menuToggle"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#list"></use></svg></button>
 </header>
 <div aria-label="Ресурсы королевства" class="top-resources resource-hud" id="resourceSummary" role="group">
 <div data-resource="food"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#grains"></use></svg><span>ЕДА</span><b id="resFood">0</b><small aria-label="Изменение в секунду" id="incFood">+0</small></div>
@@ -70,14 +65,7 @@
 <section class="map-shell">
 <div class="map-toolbar">
 <div class="map-location"><span class="location-dot"></span><strong id="myKingdom" title="Название королевства">Королевство</strong><span aria-live="polite" id="mapStatus">Выбери цель на карте — отправь армию</span></div>
-<div class="map-toolbar-actions"><button aria-label="Открыть список походов" class="action-armies" id="armiesToggle" title="Мои походы"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#flag-banner"></use></svg><span id="frontCountBadge">0</span></button>
-<button class="develop-button" id="pauseGame" title="Пауза в одиночной игре">Пауза</button><button aria-label="Правила игры" class="square-button" id="helpButton"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#question"></use></svg></button>
-<button aria-label="Уменьшить" class="square-button" id="zoomOut" title="Уменьшить"><span class="zoom-glyph" aria-hidden="true">−</span></button>
-<span class="zoom-label" id="zoomText">100%</span>
-<button aria-label="Увеличить" class="square-button" id="zoomIn" title="Увеличить"><span class="zoom-glyph" aria-hidden="true">+</span></button>
-<button aria-label="Вся карта" class="square-button" id="viewAll" title="Вся карта"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#map-trifold"></use></svg></button>
-<button aria-label="Моя столица" class="square-button" id="centerMap" title="Моя столица"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#crown"></use></svg></button>
-</div>
+
 </div>
 <div class="map-view" id="mapView">
 <div class="threat-rail hidden" id="threatRail" role="group" aria-label="Входящие атаки">
@@ -93,7 +81,7 @@
 <div class="map-tooltip hidden" id="mapTooltip"></div><div aria-live="polite" class="map-status-mobile hidden" id="mapStatusMobile"></div><ul aria-label="Доступные объекты карты" class="sr-only" id="accessibleObjects"></ul>
 <div class="minimap-wrap" id="minimapWrap"><button aria-expanded="true" aria-label="Скрыть миникарту" id="minimapToggle"><svg class="ui-icon minimap-symbol" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#map-trifold"></use></svg><span class="minimap-label">Мир</span> <span class="minimap-chevron">−</span></button><canvas aria-label="Миникарта, Enter переместиться к центру мира" height="104" id="minimap" role="button" tabindex="0" width="160"></canvas></div>
 <div aria-live="polite" class="target-preview hidden" id="targetPreview"><div class="target-info"><strong id="targetTitle">Цель</strong><span id="targetDetail">Выбери территорию</span><span id="targetForecast">—</span></div><div aria-label="Размер армии" class="target-quick-percents" id="targetQuickPercents" role="group"><button data-target-percent="15">15%</button><button class="active" data-target-percent="30">30%</button><button data-target-percent="50">50%</button><button data-target-percent="75">75%</button><button data-target-percent="95">95%</button></div><div class="target-actions"><button class="secondary" id="cancelTarget">Отмена</button><button class="primary" id="confirmTarget">Отправить войска</button></div><button class="target-diplomacy hidden" id="targetDiplomacy" type="button">Предложить союз</button></div><div class="quick-build hidden" id="quickBuild" role="region" aria-label="Быстрое строительство">
-  <div class="quick-build-head"><strong>Выбери здание</strong><button type="button" id="quickBuildInfo" aria-label="Подробные описания зданий">Подробнее</button><button type="button" id="quickBuildClose" aria-label="Закрыть быстрый выбор зданий">×</button></div>
+  <div class="quick-build-head"><strong>Выбери здание</strong><button type="button" id="quickBuildInfo" aria-label="Показать описания зданий" aria-expanded="false">Описания</button><button type="button" id="quickBuildClose" aria-label="Закрыть быстрый выбор зданий">×</button></div>
   <div id="quickBuildChoices" class="quick-build-choices" role="group" aria-label="Доступные здания"></div>
   <div class="quick-build-help" id="quickBuildHelp">Выбор здания покажет разрешённые и запрещённые клетки на карте.</div>
 </div>
@@ -102,7 +90,7 @@
 
 <button aria-label="Открыть строительство" class="action-build" id="developButton"><svg class="ui-icon build-symbol" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#hammer"></use></svg><span>Строить</span></button>
 </div>
-<div class="map-battle-controls collapsed" id="battleDock"><button aria-expanded="false" aria-label="Настроить размер отправляемой армии" class="dock-toggle" id="dockToggle"><svg class="ui-icon dock-symbol" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#sword"></use></svg> <span class="dock-name">Атака</span> <span id="dockSummary">30%</span> <span aria-hidden="true" class="dock-chevron">⌄</span></button>
+<div class="map-battle-controls collapsed" id="battleDock"><button aria-expanded="false" aria-label="Настроить размер отправляемой армии" class="dock-toggle" id="dockToggle"><svg class="ui-icon dock-symbol" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#sword"></use></svg> <span class="dock-name">Войска</span> <span id="dockSummary">30%</span> <span aria-hidden="true" class="dock-chevron">⌄</span></button>
 <div class="control-header"><div><small>РАЗМЕР АТАКИ</small><strong id="modeLabel">Наступление</strong></div><div class="percent-pill" id="percentLabel">30%</div></div>
 <input aria-label="Процент отправляемых войск" id="attackPercent" max="95" min="5" step="5" type="range" value="30"/>
 <div class="attack-presets"><button data-percent="15">15%</button><button class="active" data-percent="30">30%</button><button data-percent="50">50%</button><button data-percent="75">75%</button><button data-percent="95">95%</button></div>
@@ -113,21 +101,37 @@
 </section>
 <div class="panel-backdrop hidden" id="panelBackdrop"></div><aside aria-label="Управление государством" aria-modal="false" class="sidebar" id="sidebar" role="dialog">
 <div class="sidebar-heading"><div><small>УПРАВЛЕНИЕ</small><strong>Королевство</strong></div><button aria-label="Закрыть панель" class="square-button" id="closePanel">×</button></div>
-<div aria-label="Разделы развития" class="tabbar" role="tablist"><button aria-selected="true" class="active" data-tab="build" role="tab">Строить</button><button aria-selected="false" data-tab="tech" role="tab">Наука</button><button aria-selected="false" data-tab="diplomacy" role="tab">Союзы</button><button aria-selected="false" data-tab="info" role="tab">Обзор</button></div>
+<div aria-label="Разделы развития" class="tabbar" role="tablist"><button aria-selected="true" class="active" data-tab="tech" role="tab">Наука</button><button aria-selected="false" data-tab="diplomacy" role="tab">Союзы</button><button aria-selected="false" data-tab="info" role="tab">Обзор</button></div>
 <div class="side-scroll">
-<section class="tab-content" id="tab-build"><div class="section-head"><h2>Здания</h2><p>Что они дают и сколько стоит построить.</p></div><div class="resource-strip" id="buildResourceSummary"></div><div class="build-grid" id="buildingsPanel"></div></section>
-<section class="tab-content hidden" id="tab-tech"><div class="section-head"><h2>Исследования</h2><p>Улучшения распространяются на всё государство.</p></div><div class="resource-strip" id="techResourceSummary"></div><div class="tech-list" id="techPanel"></div></section>
+<section class="tab-content hidden" id="tab-build"><div class="section-head"><h2>Здания</h2><p>Что они дают и сколько стоит построить.</p></div><div class="resource-strip" id="buildResourceSummary"></div><div class="build-grid" id="buildingsPanel"></div></section>
+<section class="tab-content" id="tab-tech"><div class="section-head"><h2>Исследования</h2><p>Улучшения распространяются на всё государство.</p></div><div class="resource-strip" id="techResourceSummary"></div><div class="tech-list" id="techPanel"></div></section>
 <section class="tab-content hidden" id="tab-diplomacy"><div class="section-head"><h2>Дипломатия</h2><p>Союзы и помощь соседям.</p></div><div class="diplomacy-list" id="diplomacyPanel"></div></section>
 <section class="tab-content hidden" id="tab-info"><div class="section-head"><h2>Статистика</h2></div><div id="infoPanel"></div><div class="overview-tools" aria-label="Игровые действия">
 <button class="secondary" id="pauseMobile">Пауза / продолжить</button>
 <button class="secondary" id="nextFront">Найти следующий поход</button>
 <button class="secondary" id="quickLeaders">Таблица лидеров</button>
-<button class="secondary" id="helpMenu">Правила и управление</button></div><h3>События</h3><div class="events" id="events"></div><details class="instructions"><summary>Как играть</summary><p>Цель — захватить все 100% суши. Таймера нет. Земля соединена в один материк: отправляй войска к границе, чтобы расширять владения. Порты, корабли и морские исследования не нужны. Строй фермы, шахты, крепости, казармы и города; побеждает последнее государство, освоившее весь материк.</p></details></section>
+<button class="secondary" id="helpMenu">Правила и управление</button><button class="secondary" id="exitFromOverview">Выйти из матча</button></div><h3>События</h3><div class="events" id="events"></div><details class="instructions"><summary>Как играть</summary><p>Цель — захватить все 100% суши. Таймера нет. Земля соединена в один материк: отправляй войска к границе, чтобы расширять владения. Порты, корабли и морские исследования не нужны. Строй фермы, шахты, крепости, казармы и города; побеждает последнее государство, освоившее весь материк.</p></details></section>
 <div class="selected-card"><div class="section-label">ВЫБРАННЫЙ ОБЪЕКТ</div><div class="selected-body" id="selectedPanel">Коснись армии или здания, чтобы открыть действия.</div></div>
 </div>
 <div class="leaderboard"><div class="section-label">ЛИДЕРЫ</div><div id="leaderboard"></div></div>
 </aside>
 </main>
+<div id="sessionPanel" class="session-panel hidden" role="dialog" aria-modal="true" aria-label="Меню матча">
+<div class="aux-head"><strong>Матч</strong><button id="closeSession" aria-label="Вернуться к игре">×</button></div>
+<button id="openDevelopment">Развитие и союзы</button>
+<button id="sessionPause">Пауза</button>
+<button id="sessionReconnect" class="hidden">Восстановить соединение</button>
+<details id="mapTools"><summary>Карта, походы и помощь</summary><div class="map-toolbar-actions"><button aria-label="Открыть список походов" class="action-armies" id="armiesToggle" title="Мои походы"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#flag-banner"></use></svg><span id="frontCountBadge">0</span></button>
+<button class="develop-button" id="pauseGame" title="Пауза в одиночной игре">Пауза</button><button aria-label="Правила игры" class="square-button" id="helpButton"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#question"></use></svg></button>
+<button aria-label="Уменьшить" class="square-button" id="zoomOut" title="Уменьшить"><span class="zoom-glyph" aria-hidden="true">−</span></button>
+<span class="zoom-label" id="zoomText">100%</span>
+<button aria-label="Увеличить" class="square-button" id="zoomIn" title="Увеличить"><span class="zoom-glyph" aria-hidden="true">+</span></button>
+<button aria-label="Вся карта" class="square-button" id="viewAll" title="Вся карта"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#map-trifold"></use></svg></button>
+<button aria-label="Моя столица" class="square-button" id="centerMap" title="Моя столица"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#crown"></use></svg></button>
+</div></details>
+<button id="exitMatch">Выйти из матча</button>
+<p id="sessionHint"></p></div>
+<div id="exitPanel" class="session-panel hidden" role="dialog" aria-modal="true" aria-labelledby="exitTitle"><h2 id="exitTitle">Выйти из матча?</h2><p id="exitExplanation"></p><div class="exit-actions"><button id="cancelExit">Остаться</button><button id="confirmExit">Выйти</button></div></div>
 <div class="aux-backdrop hidden" id="auxBackdrop" aria-hidden="true"></div><div aria-label="Таблица лидеров" class="quick-leaders hidden" id="quickLeadersPanel" role="dialog"><strong>Лидеры мира</strong><div id="quickLeadersList"></div><button class="secondary" id="closeQuickLeaders">Закрыть</button></div><div class="context-card hidden" id="contextCard"><button aria-label="Закрыть карточку" class="context-close" id="closeContext">×</button><div id="contextBody"></div></div><div aria-label="Текущие походы" class="armies-panel hidden" id="armiesPanel" role="dialog"><div class="armies-panel-head"><strong>Мои походы</strong><button aria-label="Закрыть список походов" class="square-button" id="closeArmies">×</button></div><div id="armiesList" aria-live="polite"></div></div><div aria-label="Экономика и доходы" class="economy-panel hidden" id="economyPanel" role="dialog" aria-modal="false" aria-labelledby="economyTitle">
 <div class="aux-head"><div><small>КОРОЛЕВСТВО</small><strong id="economyTitle">Экономика</strong></div><button class="icon-close" id="closeEconomy" aria-label="Закрыть экономику">×</button></div>
 <p class="panel-intro">Запасы, производство и расходы на содержание армии.</p><div id="economyDetails"></div></div><div aria-label="Как играть" aria-modal="true" class="tutorial hidden" id="tutorial" role="dialog"><section><h2>Как играть</h2><p><b>1.</b> Коснись чужой или нейтральной земли, чтобы выбрать цель.</p><p><b>2.</b> Выбери долю войск и нажми «Атаковать»; подтверди приказ кнопкой. На телефоне удержи свою землю и проведи к цели.</p><p><b>3.</b> Накопленные войска защищают границы. Развивай экономику в меню.</p><p>Перетаскивай карту пальцем, приближай двумя пальцами. Победа — только при 100% территории. Временного ограничения нет.</p><button class="primary large" id="closeTutorial">Понятно</button></section></div><div class="victory-screen hidden" id="victory" role="dialog" aria-modal="true" aria-labelledby="victoryName">
@@ -138,13 +142,13 @@
   <p id="victoryDesc"></p>
   <div class="result-reason" id="victoryReason"></div>
   <div id="victoryStats" class="result-stats"></div>
-  <button class="primary large" id="restart">Сыграть снова</button>
+  <button class="secondary hidden" id="spectateMatch">Наблюдать за матчем</button><button class="primary large" id="restart">Сыграть снова</button>
   <button class="result-exit" id="resultExit">В главное меню</button>
   <details class="result-export"><summary>Скачать результаты</summary><button class="secondary" id="downloadSave">Скачать статистику JSON</button></details>
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="engine.js?v=28-neon"></script>
+<script src="engine.js?v=29-flow"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=28-neon"></script>
+<script src="game.js?v=29-flow"></script>
 </body></html>

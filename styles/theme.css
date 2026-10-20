@@ -507,3 +507,39 @@ html,body{background:#090c11!important;color:#eef2f8!important}
 /* Final state details caught during portrait review. */
 :is(#lobby#lobby#lobby,#game#game#game) :is(.start-emblem,.brand-symbol) :is(svg,path){stroke:#eef2f8!important;fill:none!important}
 #waiting#waiting#waiting :is(#startButton,#readyButton):disabled{background:#191e27!important;color:#a0aaba!important;border-color:#353f50!important;opacity:1!important}
+
+/* v29: one decision per surface; home -> room/match -> session menu -> home. */
+#lobby#lobby#lobby .start-screen{width:min(100%,430px)!important;padding:22px 18px!important}
+#lobby#lobby#lobby .start-brand{padding-bottom:16px!important;margin-bottom:16px!important}
+#lobby#lobby#lobby .start-actions{gap:10px!important}
+#lobby#lobby#lobby .home-name{display:flex!important;align-items:center!important;gap:12px!important;font-size:12px!important;color:#b0bac9!important;margin-bottom:6px!important}
+#lobby#lobby#lobby .home-name input{flex:1!important;min-width:0!important;margin:0!important;padding:8px 12px!important}
+#lobby#lobby#lobby .join-direct{padding:8px 0!important}
+#lobby#lobby#lobby .join-direct>label{font-size:12px!important;display:block!important;margin:0 0 6px!important}
+#lobby#lobby#lobby .join-inputs{display:flex!important;gap:8px!important;padding:0!important;border:0!important;background:transparent!important}
+#lobby#lobby#lobby .join-inputs input{min-width:0!important;flex:1!important;width:0!important;margin:0!important;padding:10px!important;text-transform:uppercase!important}
+#lobby#lobby#lobby .join-inputs button{min-width:82px!important;white-space:nowrap!important}
+#lobby#lobby#lobby #playerPreferences{margin:0!important}
+#lobby#lobby#lobby .choice-symbol{font-size:24px!important}
+#game#game#game :is(#sessionPanel,#exitPanel){position:fixed!important;z-index:220!important;left:50%!important;bottom:calc(12px + env(safe-area-inset-bottom))!important;transform:translateX(-50%)!important;width:min(400px,calc(100vw - 24px))!important;max-height:calc(100dvh - 36px)!important;box-sizing:border-box!important;overflow:auto!important;background:#121720!important;border:1px solid #465265!important;border-radius:16px!important;padding:16px!important;color:#eef2f8!important}
+#game#game#game :is(#sessionPanel,#exitPanel)>button{display:block!important;width:100%!important;min-height:48px!important;margin:9px 0!important}
+#game#game#game :is(#sessionPanel,#exitPanel) :is(p,small){color:#b0bac9!important;font-size:12px!important;line-height:1.5!important}
+#game#game#game #exitMatch,#game#game#game #confirmExit{color:#ff8da5!important;border-color:#86455b!important;background:#28151f!important}
+#game#game#game .exit-actions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important}
+#game#game#game .exit-actions button{min-height:48px!important}
+#game#game#game #closeSession{width:44px!important;height:44px!important;font-size:22px!important}
+#game#game#game #sessionPanel .aux-head{display:flex!important;justify-content:space-between!important;align-items:center!important;margin-bottom:12px!important}
+#game#game#game #mapTools{border:1px solid #353f50!important;border-radius:10px!important;margin:8px 0!important}
+#game#game#game #mapTools summary{padding:14px!important;cursor:pointer!important;min-height:20px!important}
+#game#game#game #sessionPanel .map-toolbar-actions{position:static!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important;padding:10px!important}
+#game#game#game #sessionPanel .map-toolbar-actions button{width:100%!important;min-width:0!important;min-height:46px!important;height:auto!important;display:flex!important;align-items:center!important;justify-content:center!important;position:relative!important}
+#game#game#game #sessionPanel #pauseGame{display:none!important}
+#game#game#game #sessionPanel #zoomText{grid-column:1/-1!important;text-align:center!important;color:#b0bac9!important}
+#game#game#game .map-toolbar{display:none!important}
+#game#game#game .tabbar{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+#game#game#game :is(#tab-build,.selected-card,#buildResourceSummary,#techResourceSummary,#feedbackIdle){display:none!important}
+#game#game#game #gameFeedback:has(#hudAlert.hidden):has(#gameToast.hidden){display:none!important}
+#game#game#game #quickBuild.with-descriptions .quick-build-choices{display:grid!important;grid-template-columns:1fr 1fr!important;max-height:42dvh!important;overflow:auto!important}
+#game#game#game #quickBuild.with-descriptions .quick-build-item{width:auto!important;min-width:0!important;min-height:150px!important;padding:10px!important}
+#game#game#game .quick-description{white-space:normal!important;font-size:11px!important;line-height:1.35!important;color:#b0bac9!important}
+#game#game#game #sessionPanel .square-button .ui-icon{color:#eef2f8!important}

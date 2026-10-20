@@ -50,11 +50,12 @@ function resourceStrip(p){const {gross,recruited,foodNet}=resourceRates(p);retur
 const costText=c=>Object.entries(c||{}).map(([k,v])=>({wood:'Древесина',stone:'Камень',gold:'Золото',food:'Еда'}[k]||k)+' '+v).join(' · ');
 const number=n=>Math.floor(n||0).toLocaleString('ru-RU');
 let dragAttack=null,longPressTimer=null,dragHint=null;
+let defeatDismissed=false;
 let state=null,myId=null,host=false,demo=false,peer=null,upstream=null,code='',connections=new Map(),lastSendTime=new Map(),phaseShown='',timer=0;
 let lastHudPlayer=null,lastHudTick=-1,lastHudLand=null,lastHudOwners=null,lastHudArmies=new Map(),hudNotice=null,hudAlertAction=null;
 let activeThreats=[],announcedThreats=new Set(),lastThreatSignature="",attackFocusIndex=0;
 let quickBuildOpen=false,buildPlacementChecks=0;
-let zoom=1.05,camX=0,camY=0,terrainSeed=null,pressed=new Map(),pointerStart=null,gesture=null,selected=null,buildMode=null,currentTab='build',percent=30,tooltipTimer=null,worldLayer=null,paintedRevision=-1,miniRevision=-1,renderQueued=false,panelOpen=false;let toastTimeout=null,target=null,redirectArmy=null,pauseSolo=false,moveCursor=null,lastTap=0,lastStateAt=Date.now(),pendingOrders=new Map(),seq=0,readyLocal=false,reconnectTries=0,reconnectTimer=null,connectTimer=null,tokenStore=new Map(),previousFocus=null,showTutorialOnce=true,lastRoster='',previousOwners=new Map(),previousRevs=new Map(),lastSaveTick=-1,oldArmyPositions=new Map(),movementStart=0,lastAnnounced='',frontIndex=0;
+let zoom=1.05,camX=0,camY=0,terrainSeed=null,pressed=new Map(),pointerStart=null,gesture=null,selected=null,buildMode=null,currentTab='tech',percent=30,tooltipTimer=null,worldLayer=null,paintedRevision=-1,miniRevision=-1,renderQueued=false,panelOpen=false;let toastTimeout=null,target=null,redirectArmy=null,pauseSolo=false,moveCursor=null,lastTap=0,lastStateAt=Date.now(),pendingOrders=new Map(),seq=0,readyLocal=false,reconnectTries=0,reconnectTimer=null,connectTimer=null,tokenStore=new Map(),previousFocus=null,showTutorialOnce=true,lastRoster='',previousOwners=new Map(),previousRevs=new Map(),lastSaveTick=-1,oldArmyPositions=new Map(),movementStart=0,lastAnnounced='',frontIndex=0;
 const TILE=14;const mine=()=>state?.players.find(p=>p.id===myId);const color=id=>state?.players.find(p=>p.id===id)?.color||'#e8f3f3';
 function toast(msg,kind){
  const inGame=!$('game').classList.contains('hidden');
@@ -73,7 +74,7 @@ function show(screen){
 }
 function error(s){$('lobbyError').textContent=s;toast(s);}
 // One auxiliary surface at a time. No panel stacks above another.
-const AUX_IDS=['economyPanel','armiesPanel','quickLeadersPanel','contextCard'];
+const AUX_IDS=['economyPanel','armiesPanel','quickLeadersPanel','contextCard','sessionPanel','exitPanel'];
 function hideAux(){
  const closingContext=!$('contextCard').classList.contains('hidden');
  for(const id of AUX_IDS)$(id)?.classList.add('hidden');
@@ -86,6 +87,7 @@ function showAux(id){
  const wasOpen=!el.classList.contains('hidden');
  hideAux();if(wasOpen)return;
  if(id!=='contextCard')selected=null;
+ toggleQuickBuild(false);setPreview(null);$('battleDock').classList.add('collapsed');
  if(panelOpen)closePanel();
  el.classList.remove('hidden');$('auxBackdrop')?.classList.remove('hidden');document.body.classList.add('aux-open');
 }
@@ -100,7 +102,7 @@ function rleUnpack(data){const a=expand(data),out=[];for(let i=0;i<a.length;i+=3
 function pack(s,includeTerrain=true){if(!s||!s.owners?.length)return s;return {...s,tiles:includeTerrain?compress(s.tiles):null,owners:rlePack(s.owners),ownerRle:true,packed:true};}
 function unpack(s){if(s?.ownerDelta){const owners=state?.owners?.slice();if(!owners?.length)throw Error('Missing state for delta');for(let i=0;i<s.owners.length;i+=2)owners[s.owners[i]]=s.owners[i+1];s.owners=owners;s.tiles=state.tiles;delete s.ownerDelta;}if(s?.packed){s.tiles=s.tiles?expand(s.tiles):(state?.tiles||[]);s.owners=s.ownerRle?rleUnpack(s.owners):expand(s.owners);delete s.ownerRle;delete s.packed;}return s;}
 function getPeer(){if(window.Peer)return true;error('Не загрузилась библиотека PeerJS. Проверь интернет.');return false;}
-function setBusy(v){$('hostButton').disabled=v;$('joinButton').disabled=v;}
+function setBusy(v){for(const id of ['hostButton','joinButton','demoButton','resumeButton'])$(id).disabled=v;$('joinButton').textContent=v?'Подключение…':'Войти';$('cancelConnect').classList.toggle('hidden',!v);}
 function setNetwork(text){
  $('networkStatus').textContent=text;
  $('feedbackStatus').textContent=text==='ОДИНОЧНО'?'ОДИНОЧНАЯ ИГРА':'СЕТЬ · '+text;
@@ -244,8 +246,8 @@ function updateHudSignals(p){
 }
 
 function getToken(){try{let t=sessionStorage.getItem('bk-token-'+code);if(!t){t=crypto.randomUUID();sessionStorage.setItem('bk-token-'+code,t);}return t;}catch(_){return code+'-'+name();}}
-function saveSolo(){if(!demo||!state||state.phase!=='playing')return;try{localStorage.setItem('bk-v14-save',JSON.stringify(state));}catch(_){}}
-function copyText(t){navigator.clipboard?.writeText(t).then(()=>toast('Скопировано')).catch(()=>prompt('Скопируй:',t));}
+function saveSolo(){if(!demo||!state||state.phase!=='playing')return false;try{localStorage.setItem('bk-v14-save',JSON.stringify(state));return true;}catch(_){return false;}}
+async function copyText(t){try{if(!navigator.clipboard?.writeText)throw Error('clipboard');await navigator.clipboard.writeText(t);toast('Скопировано');}catch(_){window.prompt('Скопируй приглашение или код:',t);}}
 function canPay(p,c){return Object.entries(c||{}).every(([k,v])=>(p.res[k]||0)>=v);}
 function deficit(p,c){return Object.entries(c||{}).filter(([k,v])=>(p.res[k]||0)<v).map(([k,v])=>({wood:'Древесина',stone:'Камень',gold:'Золото',food:'Еда'}[k]+': −'+(v-(p.res[k]||0)))).join(', ');}
 function patchHtml(id,html){const el=$(id);if(el&&el.__last!==html){el.innerHTML=html;el.__last=html;}}
@@ -291,41 +293,42 @@ function contextual(item){
  }else html=`<strong>Армия · ${esc(other?.name||'')}</strong><span>${number(item.strength)} солдат · ${item.tx},${item.ty}</span>${own?`<button data-context-redirect="${esc(item.id)}">Сменить цель</button><button data-context-return="${esc(item.id)}">Отступить</button>`:''}`;
  if(content.__last!==html){content.innerHTML=html;content.__last=html;}if(box.classList.contains('hidden'))showAux('contextCard');
 }
-function createRoom(){if(!getPeer())return;setBusy(true);code=randomCode();host=true;demo=false;readyLocal=true;peer=new Peer('bk-'+code);setNetwork('ПОДКЛЮЧЕНИЕ');
+function createRoom(){if(!getPeer())return;setBusy(true);code=randomCode();host=true;demo=false;readyLocal=true;peer=new Peer('bk-'+code);const sessionPeer=peer;setNetwork('ПОДКЛЮЧЕНИЕ');
  connectTimer=setTimeout(()=>{if(!state){setBusy(false);error('Не удалось создать комнату. Повтори попытку.');try{peer.destroy();}catch(_){}}},12000);
- peer.on('open',()=>{clearTimeout(connectTimer);setBusy(false);state=E.lobby(Date.now());myId=E.addPlayer(state,name());state.players[0].ready=true;state.settings={bots:Number($('botCount').value)};setNetwork('ВЕДУЩИЙ');try{history.replaceState(null,'','#'+code);}catch(_){}phaseShown='';render();});
- peer.on('connection',joinConnection);peer.on('error',e=>{setBusy(false);error('Комната: '+(e.message||e.type||'ошибка'));});
- peer.on('disconnected',()=>setNetwork('СЕРВИС НЕДОСТУПЕН'));
+ peer.on('open',()=>{if(peer!==sessionPeer)return;clearTimeout(connectTimer);setBusy(false);state=E.lobby(Date.now());myId=E.addPlayer(state,name());state.players[0].ready=true;state.settings={bots:Number($('botCount').value)};setNetwork('ВЕДУЩИЙ');try{history.replaceState(null,'','#'+code);}catch(_){}phaseShown='';render();});
+ peer.on('connection',c=>{if(peer===sessionPeer)joinConnection(c);});peer.on('error',e=>{if(peer!==sessionPeer)return;clearTimeout(connectTimer);setBusy(false);error('Комната: '+(e.message||e.type||'ошибка'));});
+ peer.on('disconnected',()=>{if(peer===sessionPeer)setNetwork('СЕРВИС НЕДОСТУПЕН');});
 }
-function joinRoom(){if(!getPeer())return;code=$('roomCode').value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,9);if(!code)return error('Введи код комнаты.');setBusy(true);host=false;demo=false;peer=new Peer();setNetwork('ПОДКЛЮЧЕНИЕ');
+function joinRoom(){if(!getPeer())return;code=$('roomCode').value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,9);if(!/^[A-Z0-9]{6}$/.test(code))return error('Нужен код из 6 символов.');$('lobbyError').textContent='';setBusy(true);host=false;demo=false;peer=new Peer();const sessionPeer=peer;setNetwork('ПОДКЛЮЧЕНИЕ');
  connectTimer=setTimeout(()=>{if(!state){setBusy(false);error('Комната не отвечает. Проверь код.');try{peer.destroy();}catch(_){}}},14000);
- peer.on('open',()=>connectUpstream());peer.on('error',e=>{setBusy(false);error('Подключение: '+(e.message||e.type||'ошибка'));});
+ peer.on('open',()=>{if(peer===sessionPeer)connectUpstream();});peer.on('error',e=>{if(peer!==sessionPeer)return;clearTimeout(connectTimer);setBusy(false);error('Подключение: '+(e.message||e.type||'ошибка'));});
 }
-function connectUpstream(){if(!peer||peer.destroyed)return;upstream=peer.connect('bk-'+code,{reliable:true});
- upstream.on('open',()=>{upstream.send({t:'join',name:name(),token:getToken()});});
- upstream.on('data',m=>{if(!m||typeof m!=='object')return;if(m.t==='welcome'){clearTimeout(connectTimer);setBusy(false);reconnectTries=0;myId=m.id;state=unpack(m.state);lastStateAt=Date.now();phaseShown=state.phase==='playing'?'':phaseShown;setNetwork('В СЕТИ');render();}else if(m.t==='state'){if(m.state?.ownerDelta&&m.state.ownerBaseRev!==state?.territoryRevision){upstream.send({t:'resync'});setNetwork('СИНХРОНИЗАЦИЯ');return;}const before=state?.armies||[];oldArmyPositions=new Map(before.map(a=>[a.id,{x:a.x,y:a.y}]));movementStart=performance.now();state=unpack(m.state);lastStateAt=Date.now();setNetwork('В СЕТИ');render();}else if(m.t==='ack'){pendingOrders.delete(m.id);toast(m.ok?'Приказ выполнен':m.error||'Приказ отклонён');if(m.ok&&m.action==='build'){cancelMode();}}else if(m.t==='error'){toast(m.message);}});
- upstream.on('close',()=>{setNetwork('ПЕРЕПОДКЛЮЧЕНИЕ');retryUpstream();});upstream.on('error',()=>{setNetwork('НЕТ СВЯЗИ');});
+function connectUpstream(){if(!peer||peer.destroyed)return;upstream=peer.connect('bk-'+code,{reliable:true});const activeConnection=upstream;
+ upstream.on('open',()=>{if(upstream!==activeConnection)return;upstream.send({t:'join',name:name(),token:getToken()});});
+ upstream.on('data',m=>{if(upstream!==activeConnection)return;if(!m||typeof m!=='object')return;if(m.t==='room-closed'){goHome();error('Ведущий закрыл комнату. Можно создать новую или войти по коду.');return;}if(m.t==='welcome'){clearTimeout(connectTimer);setBusy(false);reconnectTries=0;myId=m.id;state=unpack(m.state);lastStateAt=Date.now();phaseShown=state.phase==='playing'?'':phaseShown;setNetwork('В СЕТИ');render();}else if(m.t==='state'){if(m.state?.ownerDelta&&m.state.ownerBaseRev!==state?.territoryRevision){upstream.send({t:'resync'});setNetwork('СИНХРОНИЗАЦИЯ');return;}const before=state?.armies||[];oldArmyPositions=new Map(before.map(a=>[a.id,{x:a.x,y:a.y}]));movementStart=performance.now();state=unpack(m.state);lastStateAt=Date.now();setNetwork('В СЕТИ');render();}else if(m.t==='ack'){pendingOrders.delete(m.id);toast(m.ok?'Приказ выполнен':m.error||'Приказ отклонён');if(m.ok&&m.action==='build'){toast('Построено · можно поставить ещё');refreshQuickBuild();}}else if(m.t==='error'){clearTimeout(connectTimer);setBusy(false);if(!state)error(m.message);else toast(m.message);}});
+ upstream.on('close',()=>{if(upstream!==activeConnection)return;setNetwork('ПЕРЕПОДКЛЮЧЕНИЕ');retryUpstream();});upstream.on('error',()=>{if(upstream!==activeConnection)return;setNetwork('НЕТ СВЯЗИ');});
 }
 function retryUpstream(){if(host||demo||!peer||peer.destroyed)return;clearTimeout(reconnectTimer);if(++reconnectTries>8){setNetwork('НЕТ СВЯЗИ');toast('Ведущий не отвечает. Его вкладка должна оставаться открытой.');return;}reconnectTimer=setTimeout(connectUpstream,Math.min(12000,1000*reconnectTries));}
-function joinConnection(conn){conn.on('data',m=>{if(!m||typeof m!=='object')return;
+function joinConnection(conn){const sessionPeer=peer;conn.on('data',m=>{if(peer!==sessionPeer)return;if(!m||typeof m!=='object')return;
  if(m.t==='join'){
   if(connections.has(conn))return;
   let id=tokenStore.get(m.token);const old=state.players.find(p=>p.id===id);
   if(!old||old.bot){if(state.phase!=='lobby'){conn.send({t:'error',message:'Игра уже идёт. Войти можно только с прежнего устройства.'});return;}id=E.addPlayer(state,m.name);if(!id){conn.send({t:'error',message:'Комната заполнена.'});return;}}
   if(m.token)tokenStore.set(m.token,id);
   for(const [c,v] of connections)if(v===id&&c!==conn){connections.delete(c);previousOwners.delete(c);previousRevs.delete(c);try{c.close();}catch(_){ }}
-  state.players.find(p=>p.id===id).connected=true;connections.set(conn,id);conn.send({t:'welcome',id,state:pack(state)});previousOwners.delete(conn);previousRevs.delete(conn);broadcast(false);
+  state.players.find(p=>p.id===id).connected=true;state.players.find(p=>p.id===id).ready=true;connections.set(conn,id);conn.send({t:'welcome',id,state:pack(state)});previousOwners.delete(conn);previousRevs.delete(conn);broadcast(false);
  }else if(m.t==='resync'){conn.send({t:'state',state:pack(state,true)});previousOwners.set(conn,state.owners.slice());previousRevs.set(conn,state.territoryRevision);}else if(m.t==='spawn'){const id=connections.get(conn);const p=E.person(state,id);if(p&&state.phase==='lobby'){p.spawnPreference=['northwest','northeast','southwest','southeast','auto'].includes(m.choice)?m.choice:'auto';broadcast();}}else if(m.t==='ready'){const id=connections.get(conn);const p=E.person(state,id);if(p&&state.phase==='lobby'){p.ready=!!m.value;broadcast();}}
  else if(m.t==='settings'){/* only the room host may edit settings */}
  else if(m.t==='action'){
   const id=connections.get(conn);if(!id)return;const now=Date.now();if(now-(lastSendTime.get(conn)||0)<75)return;
   lastSendTime.set(conn,now);const result=E.action(state,id,m.action);conn.send({t:'ack',id:m.id,ok:result.ok,error:result.error,action:m.action?.type});if(result.ok)broadcast();
  }
- });conn.on('close',()=>{const id=connections.get(conn);connections.delete(conn);previousOwners.delete(conn);previousRevs.delete(conn);lastSendTime.delete(conn);if(id){const p=E.person(state,id);if(p){if(state.phase==='lobby'){state.players=state.players.filter(v=>v.id!==id);for(const [token,pid] of tokenStore)if(pid===id)tokenStore.delete(token);}else{p.connected=false;p.ready=false;}}broadcast();}});}
+ });conn.on('close',()=>{if(peer!==sessionPeer||!state)return;const id=connections.get(conn);connections.delete(conn);previousOwners.delete(conn);previousRevs.delete(conn);lastSendTime.delete(conn);if(id){const p=E.person(state,id);if(p){if(state.phase==='lobby'){state.players=state.players.filter(v=>v.id!==id);for(const [token,pid] of tokenStore)if(pid===id)tokenStore.delete(token);}else{p.connected=false;p.ready=false;}}broadcast();}});}
 function broadcast(includeTerrain=false){if(!state)return;const packed=pack(state,includeTerrain);for(const c of connections.keys())if(c.open){try{let delta=null,old=previousOwners.get(c);if(!includeTerrain&&old&&old.length===state.owners.length&&state.phase==='playing'){const changes=[];for(let i=0;i<old.length;i++)if(old[i]!==state.owners[i])changes.push(i,state.owners[i]);if(changes.length<state.owners.length*.32)delta=changes;}const out=delta?{...packed,owners:delta,ownerDelta:true,ownerBaseRev:previousRevs.get(c),packed:false}:packed;c.send({t:'state',state:out});previousOwners.set(c,state.owners.slice());previousRevs.set(c,state.territoryRevision);}catch(_){}}render();}
 function savedSolo(){try{const x=JSON.parse(localStorage.getItem('bk-v14-save')||'null');return x?.phase==='playing'&&x.version===14?x:null;}catch(_){return null;}}
 function updateResume(){const b=$('resumeButton');if(b)b.classList.toggle('hidden',!savedSolo());}
 function createDemo(resume=false){
+ if(state||peer)goHome();lastSaveTick=-1;defeatDismissed=false;
  lastHudLand=null;lastHudTick=-1;lastHudOwners=null;lastHudArmies=new Map();hudNotice=null;activeThreats=[];announcedThreats.clear();lastThreatSignature="";
  worldLayer=null;paintedRevision=-1;host=true;demo=true;pauseSolo=false;code='DEMO';
  const previous=resume?savedSolo():null;state=previous||E.lobby(Date.now());
@@ -342,21 +345,23 @@ function showTutorial(){if(!showTutorialOnce)return;try{localStorage.setItem('bk
 function render(){if(!state)return;
  if(state.phase==='lobby'){
   $('victory').classList.add('hidden');show('waiting');$('showCode').textContent=code;$('roomHeadingLabel').textContent=host?'КОМНАТА ГОТОВА':'ТЫ В КОМНАТЕ';$('roomMembersCount').textContent=state.players.filter(p=>!p.bot).length+' участн.';
-  patchHtml('waitingPlayers',state.players.map(p=>`<div class="player-row"><i class="player-dot" style="background:${p.color}"></i><strong>${esc(p.name)}</strong><span class="muted">${p.id===myId?'Ты':p.id===1?'Ведущий':''} · ${p.connected===false?'Не в сети':p.ready?'Готов':'Ожидание'}</span></div>`).join(''));
-  $('startButton').classList.toggle('hidden',!host);$('readyButton').classList.toggle('hidden',host);$('readyButton').setAttribute('aria-pressed',String(readyLocal));$('readyButton').textContent=readyLocal?'Готов ✓':'Я готов';$('botCount').disabled=!host;$('spawnChoice').disabled=!!mine()?.ready&&!host;
+  patchHtml('waitingPlayers',state.players.map(p=>`<div class="player-row"><i class="player-dot" style="background:${p.color}"></i><strong>${esc(p.name)}</strong><span class="muted">${p.id===myId?'Ты':p.id===1?'Ведущий':''} · ${p.connected===false?'Не в сети':p.ready?'В комнате':'Подключение'}</span></div>`).join(''));
+  $('startButton').classList.toggle('hidden',!host);$('readyButton').classList.add('hidden');$('readyButton').setAttribute('aria-pressed',String(readyLocal));$('readyButton').textContent=readyLocal?'Готов ✓':'Я готов';$('botCount').disabled=!host;$('spawnChoice').disabled=false;
   $('startButton').disabled=!state.players.filter(p=>!p.bot).every(p=>p.ready||p.connected===false);$('botCount').value=state.settings?.bots??0;
-  $('waitingHint').textContent='Игроков: '+state.players.filter(p=>!p.bot).length+' · Ведущий должен держать страницу открытой.'; $('roomSettingsSummary').textContent=(state.settings?.bots??0)+' ботов · без ограничения времени';
+  $('waitingHint').textContent=host?'Ты ведущий. Выход закроет комнату.':'Ожидаем запуска ведущим. Дополнительное подтверждение готовности не нужно.'; $('roomSettingsSummary').textContent=(state.settings?.bots??0)+' ботов';
   phaseShown='lobby';return;
  }
  if(phaseShown!=='playing'&&phaseShown!=='ended'){
   lastHudLand=null;lastHudTick=-1;lastHudOwners=null;lastHudArmies=new Map();hudNotice=null;activeThreats=[];announcedThreats.clear();lastThreatSignature="";
   show('game');phaseShown='playing';zoom=window.innerWidth<600?2.2:1.8;$('zoomText').textContent=Math.round(zoom*100)+'%';setMinimapExpanded(window.innerWidth>=850);resize();centerOnCapital();
- }else if(phaseShown==='ended'&&state.phase==='playing'){phaseShown='playing';}
+ }else if(phaseShown==='ended'&&state.phase==='playing'&&!mine()?.eliminated){phaseShown='playing';}
  updateUI();repaintWorld();queueDraw();
- if(state.phase==='ended'&&phaseShown!=='ended'){
+ if((state.phase==='ended'||mine()?.eliminated&&!defeatDismissed)&&phaseShown!=='ended'){
   phaseShown='ended';const w=state.players.find(p=>p.id===state.winner),me=mine();
-  const outcome=!w?'draw':w.id===myId?'win':'loss';
-  const reason='Победитель контролирует все 100% суши.';
+  const outcome=me?.eliminated?'loss':!w?'draw':w.id===myId?'win':'loss';
+  const reason=state.phase==='ended'?'Победитель контролирует все 100% суши.':'Ты потерял все земли. Можно наблюдать за матчем или выйти.';
+  if(demo){try{localStorage.removeItem('bk-v14-save');}catch(_){}}
+  $('spectateMatch').classList.toggle('hidden',state.phase==='ended');
   const duration=Math.floor(state.tick/60)+' мин '+String(state.tick%60).padStart(2,'0')+' сек';
   $('victoryName').textContent=outcome==='win'?'Победа!':outcome==='loss'?'Поражение':'Ничья';
   $('victoryEyebrow').textContent=outcome==='win'?'ТВОЁ КОРОЛЕВСТВО':outcome==='loss'?'МАТЧ ЗАВЕРШЁН':'МАТЧ ЗАВЕРШЁН';
@@ -367,7 +372,7 @@ function render(){if(!state)return;
   const landPct=((me?.land||0)/Math.max(1,state.landTotal)*100).toFixed(1)+'%';
   const stats=[['ТЕРРИТОРИЯ',landPct],['ЗАХВАЧЕНО СТОЛИЦ',number(me?.kills)],['ПОСТРОЕК',number(state.buildings.filter(b=>b.owner===myId).length)],['ДЛИТЕЛЬНОСТЬ',duration]];
   $('victoryStats').innerHTML=stats.map(([label,value])=>`<div class="result-stat"><small>${label}</small><b>${value}</b></div>`).join('');
-  $('restart').disabled=!host&&!demo;$('restart').textContent=host||demo?'Сыграть снова':'Ждём ведущего…';
+  $('restart').disabled=!demo&&(!host||state.phase!=='ended');$('restart').textContent=demo?'Новая партия':state.phase!=='ended'?'Матч ещё идёт':host?'Вернуться в комнату':'Ждём ведущего…';
   $('victory').classList.remove('hidden');
  }
 }
@@ -475,7 +480,7 @@ function refreshQuickBuild(){
  const html=Object.entries(E.KINDS).map(([id,item])=>{
   const costs=Object.entries(item.cost).map(([r,n])=>`${({food:'Е',wood:'Д',stone:'К',gold:'З'})[r]}${n}`).join(' ');
   const affordable=Object.entries(item.cost).every(([r,n])=>(p.res[r]||0)>=n);
-  return `<button type="button" class="quick-build-item ${buildMode===id?'chosen':''} ${!affordable?'unaffordable':''}" data-fast-build="${id}" aria-pressed="${buildMode===id}" title="${esc(item.name)} — ${esc(buildingInfo[id]?.short||'')} · ${costs}">${buildingArt(id)}<span>${esc(item.name)}</span><small>${costs}</small></button>`;
+  return `<button type="button" class="quick-build-item ${buildMode===id?'chosen':''} ${!affordable?'unaffordable':''}" data-fast-build="${id}" aria-pressed="${buildMode===id}" title="${esc(item.name)} — ${esc(buildingInfo[id]?.short||'')} · ${costs}">${buildingArt(id)}<span>${esc(item.name)}</span><small>${costs}</small>${$('quickBuild').classList.contains('with-descriptions')?`<small class="quick-description">${esc(buildingInfo[id]?.short||'')} ${esc(buildingBenefit(id,p,1))}</small>`:''}</button>`;
  }).join('');
  if(container.dataset.html!==html){const scroll=container.scrollLeft;container.innerHTML=html;container.dataset.html=html;container.scrollLeft=scroll;}
  const description=buildMode?`${E.KINDS[buildMode]?.name}: зелёный — можно, красный — нельзя. ${buildMode==='fort'?'Жёлтый ромб — радиус защиты.':''}`:'Выбери тип здания. Зелёные клетки доступны, красные запрещены.';
@@ -501,7 +506,7 @@ function setBuildingMode(kind){
 }
 $('quickBuildChoices').addEventListener('click',e=>{const b=e.target.closest('[data-fast-build]');if(b)setBuildingMode(b.dataset.fastBuild);});
 $('quickBuildClose').onclick=()=>toggleQuickBuild(false);
-$('quickBuildInfo').onclick=()=>{toggleQuickBuild(false);currentTab='build';openPanel();document.querySelector('[data-tab="build"]')?.click();};
+$('quickBuildInfo').onclick=()=>{const expanded=$('quickBuild').classList.toggle('with-descriptions');$('quickBuildInfo').setAttribute('aria-expanded',String(expanded));refreshQuickBuild();};
 $('changeBuild').onclick=()=>toggleQuickBuild(true);
 $('stopBuild').onclick=cancelMode;
 
@@ -512,9 +517,9 @@ $('contextCard').addEventListener('click',e=>{const u=e.target.closest('[data-co
 $('closeContext').onclick=()=>{selected=null;contextual(null);hideAux()};
 $('selectedPanel').addEventListener('click',e=>{const b=e.target.closest('[data-upgrade]'),r=e.target.closest('[data-retreat]');if(b)command({type:'upgrade',id:b.dataset.upgrade});if(r)command({type:'return',id:r.dataset.retreat});});
 for(const b of document.querySelectorAll('[data-tab]'))b.onclick=()=>{currentTab=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(t=>{t.classList.toggle('active',t===b);t.setAttribute('aria-selected',String(t===b));});document.querySelectorAll('.tab-content').forEach(t=>t.classList.toggle('hidden',t.id!=='tab-'+currentTab));updateUI();};
-function openPanel(){hideAux();previousFocus=document.activeElement;panelOpen=true;$('sidebar').classList.add('open');$('panelBackdrop').classList.remove('hidden');$('sidebar').setAttribute('aria-modal',String(window.innerWidth<851));$('closePanel').focus();}
+function openPanel(){hideAux();toggleQuickBuild(false);setPreview(null);previousFocus=document.activeElement;panelOpen=true;$('sidebar').classList.add('open');$('panelBackdrop').classList.remove('hidden');$('sidebar').setAttribute('aria-modal',String(window.innerWidth<851));$('closePanel').focus();}
 function closePanel(){panelOpen=false;$('sidebar').classList.remove('open');$('panelBackdrop').classList.add('hidden');$('sidebar').setAttribute('aria-modal','false');previousFocus?.focus?.();}
-$('menuToggle').onclick=()=>panelOpen?closePanel():openPanel();$('developButton').onclick=()=>toggleQuickBuild();$('closePanel').onclick=closePanel;$('panelBackdrop').onclick=closePanel;$('auxBackdrop').onclick=hideAux;
+$('menuToggle').onclick=openSession;$('developButton').onclick=()=>toggleQuickBuild();$('closePanel').onclick=closePanel;$('panelBackdrop').onclick=closePanel;$('auxBackdrop').onclick=hideAux;
 $('attackPercent').oninput=e=>{percent=Number(e.target.value);$('percentLabel').textContent=percent+'%';document.querySelectorAll('[data-percent]').forEach(t=>{const on=Number(t.dataset.percent)===percent;t.classList.toggle('active',on);t.setAttribute('aria-pressed',String(on));});if(state)updateUI();};
 document.querySelectorAll('[data-target-percent]').forEach(b=>b.onclick=()=>{$('attackPercent').value=b.dataset.targetPercent;$('attackPercent').oninput({target:$('attackPercent')});});
 for(const b of document.querySelectorAll('[data-percent]')){b.setAttribute('aria-pressed',String(Number(b.dataset.percent)===percent));b.onclick=()=>{$('attackPercent').value=b.dataset.percent;$('attackPercent').oninput({target:$('attackPercent')});};}
@@ -841,14 +846,66 @@ function drawMini(){
 }
 window.addEventListener('resize',()=>{resize();clampCamera();queueDraw();});document.addEventListener('keydown',e=>{if(e.key==='Escape'){setThreatList(false);hideAux();setPreview(null);redirectArmy=null;if(panelOpen)closePanel();else cancelMode();$('tutorial').classList.add('hidden');return;}if(panelOpen&&window.innerWidth<851&&e.key==='Tab'){const items=[...$('sidebar').querySelectorAll('button:not([disabled]), select:not([disabled])')].filter(el=>el.offsetParent!==null);if(items.length){const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}}
  if(!state||state.phase!=='playing'||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;if(e.key==='+'||e.key==='=')zoomAt(1.2,canvas.clientWidth/2,canvas.clientHeight/2);if(e.key==='-')zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);if(document.activeElement===canvas){if(!moveCursor)moveCursor=mine()?.capital?{...mine().capital}:{x:80,y:52};if(e.key.startsWith('Arrow')){e.preventDefault();const d={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[e.key];moveCursor.x=Math.max(0,Math.min(E.W-1,moveCursor.x+d[0]));moveCursor.y=Math.max(0,Math.min(E.H-1,moveCursor.y+d[1]));camX=canvas.clientWidth/2-(moveCursor.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(moveCursor.y+.5)*TILE*zoom;clampCamera();inspectCell(moveCursor.x,moveCursor.y);$('keyboardPosition').textContent=$('mapStatus').textContent;queueDraw();}if(e.key==='Enter'){e.preventDefault();const x=moveCursor.x,y=moveCursor.y;const r=canvas.getBoundingClientRect();selectMap(r.left+camX+(x+.5)*TILE*zoom,r.top+camY+(y+.5)*TILE*zoom);}}});
-$('hostButton').onclick=createRoom;$('joinButton').onclick=joinRoom;$('demoButton').onclick=()=>createDemo(false);$('resumeButton').onclick=()=>createDemo(true);$('leaveRoom').onclick=()=>{try{peer?.destroy();}catch(_){}for(const c of connections.keys()){try{c.close();}catch(_){}}connections.clear();upstream=null;peer=null;host=false;demo=false;state=null;code='';phaseShown='';setBusy(false);history.replaceState(null,'',location.pathname+location.search);show('lobby');};$('startButton').onclick=startGame;$('copyLink').onclick=()=>copyText(urlRoom());$('copyCode').onclick=()=>copyText(code);
+function goHome(){
+ if(demo&&state?.phase==='playing')saveSolo();
+ clearTimeout(connectTimer);clearTimeout(reconnectTimer);clearTimeout(toastTimeout);
+ const closingPeer=peer,closingConnections=[...connections.keys()];
+ state=null;peer=null;upstream=null;host=false;demo=false;code='';myId=null;phaseShown='';
+ connections.clear();previousOwners.clear();previousRevs.clear();lastSendTime.clear();pendingOrders.clear();tokenStore.clear();
+ defeatDismissed=false;selected=null;buildMode=null;target=null;redirectArmy=null;pauseSolo=false;quickBuildOpen=false;hudNotice=null;lastSaveTick=-1;
+ worldLayer=null;pixelLayer=null;paintedRevision=-1;activeThreats=[];
+ setTimeout(()=>{for(const c of closingConnections){try{c.close();}catch(_){}}try{closingPeer?.destroy();}catch(_){}},150);
+ hideAux();closePanel();$('quickBuild').classList.add('hidden');$('placingBuild').classList.add('hidden');$('targetPreview').classList.add('hidden');$('tutorial').classList.add('hidden');$('victory').classList.add('hidden');$('battleDock').classList.add('collapsed');
+ $('lobbyError').textContent='';$('gameToast').classList.add('hidden');setBusy(false);
+ history.replaceState(null,'',location.pathname+location.search);show('lobby');
+}
+function openSession(){
+ $('sessionPause').classList.toggle('hidden',!demo);
+ $('sessionPause').textContent=pauseSolo?'Продолжить игру':'Пауза';
+ $('sessionReconnect').classList.toggle('hidden',host||demo||!state||!/ПЕРЕПОДКЛЮЧ|НЕТ СВЯЗИ|ЗАДЕРЖ|СИНХРОНИЗ/.test($('networkStatus').textContent));
+ $('sessionHint').textContent=demo?'При выходе одиночная партия сохраняется на этом устройстве.':host?'Ты ведущий. Если выйдешь, матч завершится у всех.':'Можно выйти и вернуться в эту комнату с того же устройства, пока ведущий в игре.';
+ showAux('sessionPanel');
+}
+function requestExit(){
+ if(!state||state.phase==='ended')return goHome();
+ if(demo&&saveSolo())return goHome();
+ $('exitExplanation').textContent=demo?'Не удалось сохранить партию на этом устройстве. Выйти без сохранения?':host?'Ты ведущий. Матч остановится у всех участников. Передачи ведущего пока нет.':'Твоя армия останется в матче. Вернуться можно с того же устройства по коду комнаты, пока ведущий в игре.';
+ showAux('exitPanel');
+}
+async function inviteFriends(){
+ const url=urlRoom();
+ if(navigator.share){try{await navigator.share({title:'Brothers Kingdoms',text:'Присоединяйся к игре',url});return;}catch(e){if(e.name==='AbortError')return;}}
+ copyText(url);
+}
+$('cancelConnect').onclick=goHome;
+$('hostButton').onclick=createRoom;$('joinButton').onclick=joinRoom;$('demoButton').onclick=()=>createDemo(false);$('resumeButton').onclick=()=>createDemo(true);
+$('leaveRoom').onclick=()=>{if(host)for(const c of connections.keys())try{c.send({t:'room-closed'});}catch(_){}goHome();};
+$('startButton').onclick=startGame;$('copyLink').onclick=inviteFriends;$('copyCode').onclick=()=>copyText(code);
+$('closeSession').onclick=hideAux;$('openDevelopment').onclick=()=>{hideAux();openPanel();};
+$('sessionPause').onclick=()=>{$('pauseGame').click();$('sessionPause').textContent=pauseSolo?'Продолжить игру':'Пауза';};
+$('sessionReconnect').onclick=()=>{reconnectTries=0;retryUpstream();toast('Пробуем восстановить соединение');};
+$('exitMatch').onclick=requestExit;$('exitFromOverview').onclick=requestExit;$('cancelExit').onclick=openSession;
+$('confirmExit').onclick=()=>{if(host&&!demo)for(const c of connections.keys())try{c.send({t:'room-closed'});}catch(_){}goHome();};
+$('roomCode').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();joinRoom();}});
+$('nickname').addEventListener('change',()=>name());
+$('soloBots').addEventListener('change',()=>{try{localStorage.setItem('bk-solo-bots',$('soloBots').value);}catch(_){}});
 $('readyButton').onclick=()=>{readyLocal=!readyLocal;$('readyButton').setAttribute('aria-pressed',String(readyLocal));upstream?.send({t:'ready',value:readyLocal});};
 for(const id of ['botCount'])$(id).onchange=()=>{if(host&&state?.phase==='lobby'){state.settings={bots:Number($('botCount').value)};broadcast();}};
 $('spawnChoice').onchange=()=>{if(state?.phase!=='lobby')return;if(host){mine().spawnPreference=$('spawnChoice').value;broadcast();}else upstream?.send({t:'spawn',choice:$('spawnChoice').value});};
-$('resultExit').onclick=()=>{if(window.confirm('Вернуться в главное меню? Текущий завершённый матч будет закрыт.'))location.href=location.pathname;};$('restart').onclick=()=>{if(host&&state?.phase==='ended'){const players=state.players.filter(p=>!p.bot).map(p=>({id:p.id,name:p.name,connected:p.connected}));const fresh=E.lobby(Date.now());Object.assign(state,fresh);const newIds=new Map();players.forEach((p,i)=>{const id=E.addPlayer(state,p.name);newIds.set(p.id,id);const v=E.person(state,id);v.connected=p.connected;v.ready=i===0;});for(const [tok,id] of tokenStore)tokenStore.set(tok,newIds.get(id)||id);for(const [conn,id] of connections)connections.set(conn,newIds.get(id)||id);worldLayer=null;pixelLayer=null;paintedRevision=-1;selected=null;setPreview(null);cancelMode();contextual(null);closePanel();$('victory').classList.add('hidden');phaseShown='';broadcast(true);}else if(demo){try{localStorage.removeItem('bk-v9-save');}catch(_){}$('victory').classList.add('hidden');createDemo(false);}else toast('Новый матч запускает ведущий.');};
+$('resultExit').onclick=requestExit;$('spectateMatch').onclick=()=>{defeatDismissed=true;phaseShown='playing';$('victory').classList.add('hidden');};
+$('restart').onclick=()=>{
+ if(demo){$('victory').classList.add('hidden');createDemo(false);return;}
+ if(!host||state?.phase!=='ended')return;
+ const roster=state.players.filter(p=>!p.bot).sort((a,b)=>a.id-b.id).map(p=>({id:p.id,name:p.name,connected:p.connected,color:p.color}));
+ defeatDismissed=false;const bots=state.settings?.bots??0;state=E.lobby(Date.now());state.settings={bots};
+ for(const p of roster){const id=E.addPlayer(state,p.name);Object.assign(E.person(state,id),p,{ready:true});}
+ worldLayer=null;pixelLayer=null;paintedRevision=-1;selected=null;setPreview(null);cancelMode();hideAux();closePanel();$('victory').classList.add('hidden');phaseShown='';broadcast(true);
+};
 $('downloadSave').onclick=()=>{const blob=new Blob([JSON.stringify({tick:state.tick,winner:state.winner,players:state.players.map(p=>({name:p.name,land:p.land,kills:p.kills}))},null,2)],{type:'application/json'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='brothers-kingdoms-results.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);};
 try{const previous=localStorage.getItem('bk-name');if(previous)$('nickname').value=previous;}catch(_){ }
-const fromHash=location.hash.replace('#','').toUpperCase().replace(/[^A-Z0-9]/g,'');if(fromHash){$('roomCode').value=fromHash;$('joinDetails').open=true;$('joinButton').textContent='Войти в комнату '+fromHash;}updateResume();
+try{const bots=localStorage.getItem('bk-solo-bots');if([...$('soloBots').options].some(o=>o.value===bots))$('soloBots').value=bots;}catch(_){}
+const fromHash=location.hash.replace('#','').toUpperCase().replace(/[^A-Z0-9]/g,'');if(fromHash){$('roomCode').value=fromHash;$('lobbyError').textContent='Приглашение в комнату '+fromHash+'. Укажи имя и нажми «Войти».';if($('nickname').value.trim())joinRoom();else $('nickname').focus();}updateResume();
+document.addEventListener('visibilitychange',()=>{if(document.hidden)saveSolo();});
 setInterval(()=>{if(demo&&state?.phase==='playing'&&!pauseSolo&&state.tick%10===0&&lastSaveTick!==state.tick){lastSaveTick=state.tick;saveSolo();}if(!host||!state||state.phase!=='playing'||pauseSolo)return;E.tick(state);broadcast();},1000);
 setInterval(()=>{if(host&&state?.phase==='playing'&&!pauseSolo&&state.armies.length){E.combatStep(state);broadcast();}},333);
 setInterval(()=>{if(!demo&&!host&&state?.phase==='playing'&&Date.now()-lastStateAt>4500){setNetwork('СВЯЗЬ ЗАДЕРЖИВАЕТСЯ');}for(const [id,at] of pendingOrders)if(Date.now()-at>7000){pendingOrders.delete(id);toast('Приказ не подтверждён. Проверь соединение.');}},2000);
