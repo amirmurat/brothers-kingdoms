@@ -838,7 +838,7 @@ function drawMini(){
  const revision=state.territoryRevision??state.tick;
  if(miniRevision!==revision){
   if(!minimapCached){minimapCached=document.createElement('canvas');minimapCached.width=E.W;minimapCached.height=E.H;}
-  const mc=minimapCached.getContext('2d',{alpha:false});mc.imageSmoothingEnabled=true;mc.drawImage(worldLayer,0,0);
+  const mc=minimapCached.getContext('2d',{alpha:false});mc.imageSmoothingEnabled=true;mc.drawImage(worldLayer,0,0,E.W,E.H);
   miniRevision=revision;
  }
  mctx.clearRect(0,0,E.W,E.H);mctx.drawImage(minimapCached,0,0);

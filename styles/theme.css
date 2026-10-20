@@ -691,3 +691,9 @@ html,body{background:#090c11!important;color:#eef2f8!important}
  #game#game#game .topbar .top-stat>span{height:10px!important;line-height:10px!important;font-size:9px!important}
  #game#game#game #minimapWrap.minimized{bottom:calc(76px + env(safe-area-inset-bottom))!important}
 }
+
+/* v32: feedback never participates in map layout or changes input coordinates. */
+#game#game#game .map-shell{position:relative!important}
+#game#game#game #gameFeedback{position:absolute!important;top:8px!important;left:12px!important;right:12px!important;width:auto!important;height:36px!important;min-height:36px!important;max-height:36px!important;box-sizing:border-box!important;display:flex!important;z-index:35!important;border:1px solid #465265!important;border-radius:9px!important;pointer-events:none!important}
+#game#game#game #gameFeedback #hudAlert{pointer-events:auto!important}
+#game#game#game #gameFeedback:has(#hudAlert.hidden):has(#gameToast.hidden){display:none!important}

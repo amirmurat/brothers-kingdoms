@@ -8,8 +8,8 @@
 <meta content="Brothers Kingdoms — стратегия за территорию в реальном времени. Играй с братьями или против ботов." name="description"/>
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
-<link rel="stylesheet" href="styles/legacy.css?v=31-align"/>
-<link rel="stylesheet" href="styles/theme.css?v=31-align"/>
+<link rel="stylesheet" href="styles/legacy.css?v=32-map"/>
+<link rel="stylesheet" href="styles/theme.css?v=32-map"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -55,14 +55,15 @@
 <div data-resource="stone"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#mountains"></use></svg><span>КАМЕНЬ</span><b id="resStone">0</b><small aria-label="Изменение в секунду" id="incStone">+0</small></div>
 <div data-resource="gold"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#coins"></use></svg><span>ЗОЛОТО</span><b id="resGold">0</b><small aria-label="Изменение в секунду" id="incGold">+0</small></div>
 </div>
+
+<div aria-live="assertive" class="sr-only" id="incomingAnnouncement" role="alert"></div>
+<main class="game-layout">
+<section class="map-shell">
 <div class="game-feedback" id="gameFeedback" aria-label="Сообщения матча и состояние соединения">
 <div class="feedback-idle" id="feedbackIdle"><span class="feedback-dot" aria-hidden="true"></span><span id="feedbackStatus">МАТЧ АКТИВЕН</span></div>
 <button aria-live="polite" class="hud-alert hidden" id="hudAlert" type="button"><span aria-hidden="true" id="hudAlertIcon">!</span><span id="hudAlertText"></span><span aria-hidden="true">›</span></button>
 <div aria-live="polite" class="game-toast hidden" id="gameToast" role="status"></div>
 </div>
-<div aria-live="assertive" class="sr-only" id="incomingAnnouncement" role="alert"></div>
-<main class="game-layout">
-<section class="map-shell">
 <div class="map-toolbar">
 <div class="map-location"><span class="location-dot"></span><strong id="myKingdom" title="Название королевства">Королевство</strong><span aria-live="polite" id="mapStatus">Выбери цель на карте — отправь армию</span></div>
 
@@ -148,7 +149,7 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="engine.js?v=31-align"></script>
+<script src="engine.js?v=32-map"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=31-align"></script>
+<script src="game.js?v=32-map"></script>
 </body></html>
