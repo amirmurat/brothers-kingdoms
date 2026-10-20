@@ -424,12 +424,11 @@ function updateTechCards(p){
   panel.innerHTML=entries.map(([id,t])=>{
    const level=p.tech[id]||0,cost=E.costTech(id,level);
    return `<div class="tech-item tech-detail" data-tech-card="${esc(id)}">
-     <div class="tech-heading">${uiIcon(id)}<strong>${esc(t.name)}</strong><span>Уровень ${level}/3</span></div>
+     <div class="tech-heading">${uiIcon(id)}<strong>${esc(t.name)}</strong><span title="Уровень исследования">${level}/3</span></div>
      <p>${esc(techBenefit(id,level))}</p>
-     <div class="tech-next">${level<3?'После исследования: '+esc(techBenefit(id,level+1)):'Максимальный уровень'}</div>
-     <small class="tech-cost">${level<3?'Цена: '+briefCost(cost):'Все исследования завершены'}</small>
+     <div class="tech-next">${level<3?'→ '+esc(techBenefit(id,level+1)):'Максимальный уровень'}</div>
      <div class="tech-availability" data-tech-status="${esc(id)}"></div>
-     <button type="button" data-research="${esc(id)}">${level<3?'Исследовать':'Исследовано'}</button>
+     <div class="tech-footer"><small class="tech-cost">${level<3?briefCost(cost):''}</small><button type="button" data-research="${esc(id)}">${level<3?'Исследовать':'Готово'}</button></div>
    </div>`;
   }).join('');
   panel.dataset.structure=key;
@@ -440,7 +439,7 @@ function updateTechCards(p){
   const button=panel.querySelector('[data-research="'+id+'"]'),status=panel.querySelector('[data-tech-status="'+id+'"]');
   if(!button||!status)continue;
   button.disabled=!affordable;
-  const message=level>=3?'Максимальный уровень':p.eliminated?'Королевство разгромлено':affordable?'Доступно для исследования':'Не хватает: '+deficit(p,cost);
+  const message=level>=3?'Максимальный уровень':p.eliminated?'Королевство разгромлено':affordable?'':'Не хватает: '+deficit(p,cost);
   if(status.textContent!==message)status.textContent=message;
   status.title=message;
   status.classList.toggle('can-research',affordable);
@@ -479,12 +478,12 @@ function updateSelection(){const item=selected?.kind==='army'?state.armies.find(
 function refreshQuickBuild(){
  const p=mine(),container=$('quickBuildChoices');if(!container||!p||!state)return;
  const html=Object.entries(E.KINDS).map(([id,item])=>{
-  const costs=Object.entries(item.cost).map(([r,n])=>`${({food:'Е',wood:'Д',stone:'К',gold:'З'})[r]}${n}`).join(' ');
+  const costs=Object.entries(item.cost).map(([r,n])=>`<span class="cost-unit ${(p.res[r]||0)<n?'cost-missing':''}" title="${nameResource[r]}">${uiIcon(r)}${n}</span>`).join('');
   const affordable=Object.entries(item.cost).every(([r,n])=>(p.res[r]||0)>=n);
-  return `<button type="button" class="quick-build-item ${buildMode===id?'chosen':''} ${!affordable?'unaffordable':''}" data-fast-build="${id}" aria-pressed="${buildMode===id}" title="${esc(item.name)} — ${esc(buildingInfo[id]?.short||'')} · ${costs}">${buildingArt(id)}<span>${esc(item.name)}</span><small>${costs}</small>${$('quickBuild').classList.contains('with-descriptions')?`<small class="quick-description">${esc(buildingInfo[id]?.short||'')} ${esc(buildingBenefit(id,p,1))}</small>`:''}</button>`;
+  return `<button type="button" class="quick-build-item ${buildMode===id?'chosen':''} ${!affordable?'unaffordable':''}" data-fast-build="${id}" aria-pressed="${buildMode===id}" title="${esc(item.name)} — ${esc(buildingInfo[id]?.short||'')}">${buildingArt(id)}<span class="building-name">${esc(item.name)}</span><small class="building-cost">${costs}</small>${$('quickBuild').classList.contains('with-descriptions')?`<small class="quick-description">${esc(buildingInfo[id]?.short||'')} ${esc(buildingBenefit(id,p,1))}</small>`:''}</button>`;
  }).join('');
  if(container.dataset.html!==html){const scroll=container.scrollLeft;container.innerHTML=html;container.dataset.html=html;container.scrollLeft=scroll;}
- const description=buildMode?`${E.KINDS[buildMode]?.name}: зелёный — можно, красный — нельзя. ${buildMode==='fort'?'Жёлтый ромб — радиус защиты.':''}`:'Выбери тип здания. Зелёные клетки доступны, красные запрещены.';
+ const description=buildMode?`${E.KINDS[buildMode]?.name}: зелёный — можно, красный — нельзя. ${buildMode==='fort'?'Жёлтый ромб — радиус защиты.':''}`:'Выбери здание, затем клетку на своей земле.';
  $('quickBuildHelp').textContent=description;
  $('placingBuild').classList.toggle('hidden',!buildMode||quickBuildOpen);
  if(buildMode){$('placingBuildText').textContent=E.KINDS[buildMode].name+' · выбери клетку';$('placingBuildIcon').src='assets/shapes/'+buildMode+'.svg';}
@@ -864,7 +863,7 @@ function openSession(){
  $('sessionPause').classList.toggle('hidden',!demo);
  $('sessionPause').textContent=pauseSolo?'Продолжить игру':'Пауза';
  $('sessionReconnect').classList.toggle('hidden',host||demo||!state||!/ПЕРЕПОДКЛЮЧ|НЕТ СВЯЗИ|ЗАДЕРЖ|СИНХРОНИЗ/.test($('networkStatus').textContent));
- $('sessionHint').textContent=demo?'При выходе одиночная партия сохраняется на этом устройстве.':host?'Ты ведущий. Если выйдешь, матч завершится у всех.':'Можно выйти и вернуться в эту комнату с того же устройства, пока ведущий в игре.';
+ $('sessionHint').textContent=demo?'Игра на паузе. При выходе прогресс сохранится на этом устройстве.':host?'Ты ведущий. Если выйдешь, матч завершится у всех.':'Можно выйти и вернуться в эту комнату с того же устройства, пока ведущий в игре.';
  showAux('sessionPanel');
  if(demo&&!$('sessionPanel').classList.contains('hidden')&&!pauseSolo){pauseSolo=true;menuPausedSolo=true;saveSolo();}
  $('sessionPause').textContent=pauseSolo?'Продолжить игру':'Пауза';
@@ -884,6 +883,7 @@ $('cancelConnect').onclick=goHome;
 $('hostButton').onclick=createRoom;$('joinButton').onclick=joinRoom;$('demoButton').onclick=()=>createDemo(false);$('resumeButton').onclick=()=>createDemo(true);
 $('leaveRoom').onclick=()=>{if(host)for(const c of connections.keys())try{c.send({t:'room-closed'});}catch(_){}goHome();};
 $('startButton').onclick=startGame;$('copyLink').onclick=inviteFriends;$('copyCode').onclick=()=>copyText(code);
+$('hudFronts').onclick=()=>$('armiesToggle').click();$('hudFronts').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('armiesToggle').click();}};
 $('closeSession').onclick=hideAux;$('openDevelopment').onclick=()=>{hideAux();openPanel();};
 $('sessionPause').onclick=()=>{menuPausedSolo=false;pauseSolo=false;hideAux();};
 $('sessionReconnect').onclick=()=>{reconnectTries=0;retryUpstream();toast('Пробуем восстановить соединение');};
