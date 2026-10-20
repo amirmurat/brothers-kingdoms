@@ -7,6 +7,9 @@
 <meta content="#263f43" name="theme-color"/>
 <meta content="Brothers Kingdoms — стратегия за территорию в реальном времени. Играй с братьями или против ботов." name="description"/>
 <title>Brothers Kingdoms · Frontline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
 /* --- style.css --- */
 :root{color-scheme:light;--bg:#f5f7f8;--surface:#fff;--ink:#132b35;--muted:#71828e;--line:#e4e9ee;--accent:#166a60;--accent-soft:#e6f1ef;--blue:#5288cf;--radius:12px}
@@ -1070,6 +1073,191 @@ body:has(#waiting:not(.hidden)) #toast:not(.hidden),body:has(#lobby:not(.hidden)
 .game-screen #targetPreview[data-order="redirect"] .target-diplomacy{display:none!important}
 .game-screen #targetPreview:has(.target-diplomacy:not(.hidden)){max-height:min(78dvh,620px);overflow-y:auto;overscroll-behavior:contain}
 @media(max-height:480px) and (orientation:landscape){.game-screen #targetPreview .target-diplomacy{min-height:36px;margin-top:5px;padding:5px 9px}}
+/* v20 Pixel Fantasy UI — real Kenney CC0 32x32 9-slice sprites.
+   Pixelify Sans (OFL) for compact headings/controls; keep body text legible.
+   Layout positions/sizes, touch targets and all gameplay remain unchanged. */
+:root{
+ --pixel-parchment:url("assets/pixel-ui/frame-parchment.png");
+ --pixel-light:url("assets/pixel-ui/frame-light.png");
+ --pixel-wood:url("assets/pixel-ui/frame-wood.png");
+ --pixel-blue:url("assets/pixel-ui/frame-blue.png");
+ --pixel-dark:url("assets/pixel-ui/frame-dark.png");
+ --pixel-red:url("assets/pixel-ui/frame-red.png");
+ --px-ink:#342f24;--px-deep:#213a35;--px-honey:#eed19b;--px-paper:#f5e6c4;
+}
+.game-screen :is(img.res-icon,.dock-symbol,.action-build img,.action-armies img,.quick-build-item img,.build-icon img),
+.lobby-screen :is(.choice-symbol img),
+.waiting-screen :is(img){image-rendering:pixelated!important}
+.game-screen :is(.topbar,.resource-hud,.game-feedback),
+.game-screen :is(.map-toolbar,.map-battle-controls,.sidebar-heading),
+.game-screen :is(.tabbar,.quick-build-head),
+.lobby-screen :is(.start-brand,.start-actions h1),
+.waiting-screen :is(.room-heading,.room-roster-heading){
+ font-family:"Pixelify Sans",ui-sans-serif,system-ui,sans-serif!important;
+}
+.game-screen :is(button,.tabbar,.section-head h2,.section-label,.top-stat,.ledger-item,.quick-build-head,.target-info strong),
+.lobby-screen :is(button,.start-choice strong,.start-settings summary,.start-brand strong),
+.waiting-screen :is(button,.room-token,.room-state,.room-heading h2,.room-settings summary){
+ font-family:"Pixelify Sans",system-ui,sans-serif!important;
+ letter-spacing:0!important;
+}
+.game-screen .topbar{
+ background:#244239!important;border-bottom:3px solid #9e794a!important;
+ border-radius:0!important;box-shadow:inset 0 -2px #162d29!important;
+}
+.game-screen .topbar .top-stat b{
+ font-family:"Pixelify Sans",system-ui,sans-serif!important;
+ font-weight:700!important;letter-spacing:0!important;
+}
+.game-screen .topbar .top-stat>span{font-size:12px!important;font-weight:700!important}
+.game-screen #resourceSummary.resource-hud{
+ background:#ead6aa!important;
+ border-top:2px solid #fbf0d2!important;
+ border-bottom:3px solid #815f3e!important;
+ border-radius:0!important;box-shadow:none!important;
+}
+.game-screen #resourceSummary.resource-hud>div{
+ background:#f2dfb7!important;
+ border-right:2px solid #ae8958!important;border-radius:0!important;
+}
+.game-screen #resourceSummary.resource-hud>div:nth-child(even){background:#eddaad!important}
+.game-screen #resourceSummary.resource-hud img.res-icon{
+ width:32px!important;height:32px!important;max-width:32px!important;object-fit:contain!important;
+ image-rendering:pixelated!important;filter:drop-shadow(1px 2px 0 #5d49385c);
+}
+.game-screen #resourceSummary.resource-hud :is(span,b,small){
+ font-family:"Pixelify Sans",system-ui,sans-serif!important;letter-spacing:0!important;
+}
+.game-screen #resourceSummary.resource-hud b{font-weight:700!important;font-size:22px!important}
+.game-screen #resourceSummary.resource-hud span{font-size:12px!important;font-weight:700!important}
+.game-screen #resourceSummary.resource-hud small{font-size:12px!important;font-weight:700!important}
+.game-screen .game-feedback{
+ background:#314b3e!important;border-bottom:2px solid #a18754!important;box-shadow:none!important;
+}
+.game-screen :is(.game-feedback .feedback-idle,.game-feedback .game-toast,#hudAlert #hudAlertText){
+ font-family:"Pixelify Sans",system-ui,sans-serif!important;font-size:12px!important;letter-spacing:0!important
+}
+/* A pixel frame is applied to actual functional controls, without overlaying a
+   decorative image that could capture touches. */
+.game-screen .topbar :is(#economyToggle,#menuToggle),
+.game-screen .map-toolbar-actions :is(.square-button,.action-armies){
+ background:#544631!important;color:#f7ecd6!important;
+ border:7px solid transparent!important;
+ border-image:var(--pixel-wood) 8 fill / 7px / 0 stretch!important;
+ border-radius:0!important;box-shadow:1px 3px 0 #1b3025a8!important;
+ image-rendering:pixelated;
+}
+.game-screen .map-toolbar-actions :is(.square-button,.action-armies) svg,
+.game-screen .topbar :is(#economyToggle,#menuToggle) svg{
+ stroke-linecap:square;stroke-linejoin:miter;shape-rendering:crispEdges;
+}
+.game-screen .map-battle-controls.collapsed .dock-toggle{
+ border:7px solid transparent!important;
+ border-image:var(--pixel-wood) 8 fill / 7px / 0 stretch!important;
+ border-radius:0!important;
+ background:#986536!important;color:#fdf0ce!important;
+ box-shadow:2px 4px 0 #382e25c0!important;
+ font-weight:700!important;letter-spacing:0!important;
+}
+.game-screen .game-action-bar .action-build{
+ border:7px solid transparent!important;
+ border-image:var(--pixel-parchment) 8 fill / 7px / 0 stretch!important;
+ border-radius:0!important;background:#e9c78f!important;
+ color:#3d4d2d!important;box-shadow:2px 4px 0 #423a27cc!important;
+ font-weight:700!important;letter-spacing:0!important;
+}
+.game-screen .game-action-bar .action-build img,
+.game-screen .map-battle-controls .dock-symbol{
+ width:39px!important;height:39px!important;object-fit:contain!important;image-rendering:pixelated!important;
+}
+.game-screen :is(.target-preview,.quick-build,.economy-panel,.armies-panel,.quick-leaders,.context-card),
+.game-screen #sidebar{
+ background:#f4e6c8!important;color:var(--px-ink)!important;
+ border:10px solid transparent!important;
+ border-image:var(--pixel-parchment) 8 fill / 10px / 0 stretch!important;
+ border-radius:0!important;box-shadow:4px 6px 0 #241f1aa0!important;
+}
+.game-screen .target-preview :is(strong,span,#targetForecast){color:#453d2e!important}
+.game-screen :is(.target-actions .primary,.target-diplomacy,.target-quick-percents button.active){
+ background:#ead2a1!important;color:#3c442d!important;
+ border:6px solid transparent!important;
+ border-image:var(--pixel-light) 8 fill / 6px / 0 stretch!important;
+ border-radius:0!important;box-shadow:1px 2px 0 #46361cb5!important;
+}
+.game-screen :is(.target-actions .secondary,.target-quick-percents button:not(.active)){
+ background:#a67845!important;color:#f8eed8!important;
+ border:6px solid transparent!important;
+ border-image:var(--pixel-wood) 8 fill / 6px / 0 stretch!important;
+ border-radius:0!important;
+}
+.game-screen :is(.quick-build-item,.build-btn,.tech-item,.dip-item,.selected-card,.leaderboard,.army-line,.resource-ledger){
+ border-radius:0!important;box-shadow:none!important;
+}
+.game-screen .quick-build-item{
+ border:7px solid transparent!important;
+ border-image:var(--pixel-light) 8 fill / 7px / 0 stretch!important;
+ background:#e9cb9d!important;color:#3e3528!important;
+}
+.game-screen .quick-build-item.chosen{
+ border-image:var(--pixel-blue) 8 fill / 7px / 0 stretch!important;
+ background:#a6c8d7!important;
+}
+.game-screen .quick-build-item span,.game-screen .quick-build-item small{font-family:"Pixelify Sans",system-ui,sans-serif!important}
+.game-screen .quick-build-head button,.game-screen .placing-build button,
+.game-screen .tabbar button,.game-screen .sidebar button:not(.build-btn),
+.game-screen :is(.economy-panel,.armies-panel,.context-card,.quick-leaders) button{
+ border-radius:0!important;letter-spacing:0!important
+}
+.game-screen :is(.quick-build-head button,.placing-build button,.tabbar button.active){
+ border:5px solid transparent!important;
+ border-image:var(--pixel-wood) 8 fill / 5px / 0 stretch!important;
+ background:#9f7343!important;color:#fff2d4!important;
+}
+.game-screen #minimapWrap{
+ border:7px solid transparent!important;
+ border-image:var(--pixel-wood) 8 fill / 7px / 0 stretch!important;
+ border-radius:0!important;background:#eadbb4!important;
+}
+.game-screen #minimapToggle{border-radius:0!important}
+.game-screen :is(.build-btn,.tech-item,.dip-item){background:#f5e7c8!important;border:2px solid #b49767!important}
+.game-screen .sidebar-heading{background:#e0cb9e!important;border-bottom:2px solid #a88652!important}
+.game-screen :is(.topbar .land-progress,.sidebar .bar){border-radius:0!important}
+.lobby-screen .start-choice,.waiting-screen .waiting-card{
+ border:9px solid transparent!important;
+ border-image:var(--pixel-parchment) 8 fill / 9px / 0 stretch!important;
+ border-radius:0!important;background:#ebd5ab!important;color:#3c3a2b!important;
+ box-shadow:4px 5px 0 #172820a0!important;
+}
+.lobby-screen .start-choice-primary{
+ border-image:var(--pixel-blue) 8 fill / 9px / 0 stretch!important;
+ background:#91aec2!important;color:#243a40!important;
+}
+.lobby-screen .start-actions h1,.lobby-screen .start-brand strong,
+.waiting-screen .room-heading h2{
+ font-family:"Pixelify Sans",system-ui,sans-serif!important;letter-spacing:0!important;font-weight:700!important;
+}
+.lobby-screen .start-choice strong,.waiting-screen :is(.room-token strong,.room-state){
+ font-family:"Pixelify Sans",system-ui,sans-serif!important;font-weight:700!important;
+}
+.lobby-screen .start-choice :is(strong,small),.lobby-screen .start-choice-primary :is(strong,small){color:#343e31!important}
+.waiting-screen .waiting-card{padding:18px!important}
+@media(max-width:600px){
+ .game-screen #resourceSummary.resource-hud img.res-icon{width:27px!important;height:27px!important}
+ .game-screen #resourceSummary.resource-hud b{font-size:19px!important}
+ .game-screen #resourceSummary.resource-hud span{font-size:10px!important}
+ .game-screen #resourceSummary.resource-hud small{font-size:10px!important}
+ .game-screen .topbar .top-stat>span{font-size:10px!important}
+ .game-screen .topbar .top-stat b{font-size:18px!important}
+ .game-screen .game-action-bar .action-build img,
+ .game-screen .map-battle-controls .dock-symbol{width:34px!important;height:34px!important}
+}
+@media(max-height:480px) and (orientation:landscape){
+ .game-screen .topbar .top-stat>span{font-size:9px!important}
+ .game-screen #resourceSummary.resource-hud img.res-icon{width:23px!important;height:23px!important}
+ .game-screen .game-action-bar .action-build img,
+ .game-screen .map-battle-controls .dock-symbol{width:29px!important;height:29px!important}
+}
+
 </style>
 </head>
 <body>
@@ -1116,10 +1304,10 @@ body:has(#waiting:not(.hidden)) #toast:not(.hidden),body:has(#lobby:not(.hidden)
 <button aria-label="Меню развития" class="square-button mobile-menu" id="menuToggle"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
 </header>
 <div aria-label="Ресурсы королевства" class="top-resources resource-hud" id="resourceSummary" role="group">
-<div data-resource="food"><img alt="" aria-hidden="true" class="res-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9ItCV0LTQsCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJiZyIgeDI9IjAiIHkyPSIxIj48c3RvcCBzdG9wLWNvbG9yPSIjNTE2NzU4Ii8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMzQ0ODNjIi8+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImdvbGQiIHgyPSIwIiB5Mj0iMSI+PHN0b3Agc3RvcC1jb2xvcj0iI2ZmZjRhZCIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2Q0OTAzMyIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxwYXRoIGQ9Ik0zMiA1NVYxMSIgc3Ryb2tlPSIjNTk3ZTM5IiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxwYXRoIGQ9Ik0zMCA0NkMxOCA0NSAxMSAzNyAxMiAyOGMxMS0xIDIwIDUgMTggMThaTTM0IDM4YzEyLTEgMTctOSAxOC0xOS0xMC0xLTE5IDYtMTggMTlaTTMxIDI2QzIwIDI2IDE3IDE1IDE5IDhjOCAxIDEzIDcgMTIgMThaTTMzIDI2YzExLTMgMTMtMTIgMTItMTgtOSAyLTEzIDgtMTIgMThaIiBmaWxsPSIjZjJiYzQzIiBzdHJva2U9IiNhODdjMmYiIHN0cm9rZS13aWR0aD0iMS43Ii8+PHBhdGggZD0ibTE3IDMyIDEwIDlNMzggMzNsOS05TTI0IDE0bDUgOCIgc3Ryb2tlPSIjZmZmMWFkIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg=="/><span>ЕДА</span><b id="resFood">0</b><small aria-label="Изменение в секунду" id="incFood">+0</small></div>
-<div data-resource="wood"><img alt="" aria-hidden="true" class="res-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9ItCU0LXRgNC10LLQviI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJiZyIgeDI9IjAiIHkyPSIxIj48c3RvcCBzdG9wLWNvbG9yPSIjNTE2NzU4Ii8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMzQ0ODNjIi8+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImdvbGQiIHgyPSIwIiB5Mj0iMSI+PHN0b3Agc3RvcC1jb2xvcj0iI2ZmZjRhZCIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2Q0OTAzMyIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxnIHN0cm9rZT0iIzZiM2YyMCIgc3Ryb2tlLXdpZHRoPSIyIj48cGF0aCBkPSJNMTAgMjBoMzNhOSA5IDAgMCAxIDAgMThIMTBaIiBmaWxsPSIjYWI2OTM3Ii8+PGVsbGlwc2UgY3g9IjExIiBjeT0iMjkiIHJ4PSI5IiByeT0iOSIgZmlsbD0iI2U4YWQ2MSIvPjxlbGxpcHNlIGN4PSIxMSIgY3k9IjI5IiByeD0iNCIgcnk9IjQiIGZpbGw9Im5vbmUiLz48cGF0aCBkPSJNMTcgMzZoMzRhOCA4IDAgMCAxIDAgMTZIMTdaIiBmaWxsPSIjOGQ1MzJmIi8+PGVsbGlwc2UgY3g9IjE3IiBjeT0iNDQiIHJ4PSI4IiByeT0iOCIgZmlsbD0iI2RhYTQ2ZSIvPjxlbGxpcHNlIGN4PSIxNyIgY3k9IjQ0IiByeD0iMy41IiByeT0iMy41IiBmaWxsPSJub25lIi8+PC9nPjxwYXRoIGQ9Ik0yMCAyMWgxOE0yNiAzOGgyMCIgc3Ryb2tlPSIjZTZjMzk0IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg=="/><span>ДЕРЕВО</span><b id="resWood">0</b><small aria-label="Изменение в секунду" id="incWood">+0</small></div>
-<div data-resource="stone"><img alt="" aria-hidden="true" class="res-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9ItCa0LDQvNC10L3RjCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJiZyIgeDI9IjAiIHkyPSIxIj48c3RvcCBzdG9wLWNvbG9yPSIjNTE2NzU4Ii8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMzQ0ODNjIi8+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImdvbGQiIHgyPSIwIiB5Mj0iMSI+PHN0b3Agc3RvcC1jb2xvcj0iI2ZmZjRhZCIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2Q0OTAzMyIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxwYXRoIGQ9Im03IDQ2IDktMjQgMjItNyAxNyAyMC03IDE4SDE3WiIgZmlsbD0iIzkxOWRhZCIgc3Ryb2tlPSIjNGQ2MTc1IiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48cGF0aCBkPSJtMTYgMjIgMTcgMTAgNS0xN00zMyAzMmwxNSAyMU0xNyA1M2wxNi0yMSIgc3Ryb2tlPSIjY2JkNmRiIiBzdHJva2Utd2lkdGg9IjIuNSIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Im0zNyAxOCA5IDExLTkgMyIgZmlsbD0iI2UxZTllNyIgb3BhY2l0eT0iLjU4Ii8+PC9zdmc+"/><span>КАМЕНЬ</span><b id="resStone">0</b><small aria-label="Изменение в секунду" id="incStone">+0</small></div>
-<div data-resource="gold"><img alt="" aria-hidden="true" class="res-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9ItCX0L7Qu9C+0YLQviI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJiZyIgeDI9IjAiIHkyPSIxIj48c3RvcCBzdG9wLWNvbG9yPSIjNTE2NzU4Ii8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMzQ0ODNjIi8+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImdvbGQiIHgyPSIwIiB5Mj0iMSI+PHN0b3Agc3RvcC1jb2xvcj0iI2ZmZjRhZCIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2Q0OTAzMyIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxlbGxpcHNlIGN4PSIzMiIgY3k9IjQ4IiByeD0iMjMiIHJ5PSI5IiBmaWxsPSIjYTQ2YjI2IiBzdHJva2U9IiM3MDQ2MWMiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik05IDQxdjhjNCAxMSA0MiAxMyA0NiAwdi04IiBmaWxsPSIjYzM4YzJlIiBzdHJva2U9IiM3MDQ2MWMiIHN0cm9rZS13aWR0aD0iMiIvPjxlbGxpcHNlIGN4PSIzMiIgY3k9IjQwIiByeD0iMjMiIHJ5PSI5IiBmaWxsPSJ1cmwoI2dvbGQpIiBzdHJva2U9IiNhNTZiMWQiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik0xNyAzMHY5YzQgOCAzMCA5IDM0IDB2LTkiIGZpbGw9IiNiODgwMjgiIHN0cm9rZT0iIzgxNTAxOSIgc3Ryb2tlLXdpZHRoPSIyIi8+PGVsbGlwc2UgY3g9IjM0IiBjeT0iMjkiIHJ4PSIxOCIgcnk9IjgiIGZpbGw9IiNmZmRmNmUiIHN0cm9rZT0iI2I3ODMyYSIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBhdGggZD0iTTMxIDI1aDdsMiA0LTkgMy0zLTRaIiBmaWxsPSIjZWZiNDM4Ii8+PC9zdmc+"/><span>ЗОЛОТО</span><b id="resGold">0</b><small aria-label="Изменение в секунду" id="incGold">+0</small></div>
+<div data-resource="food"><img alt="" aria-hidden="true" class="res-icon" src="assets/pixel-ui/resource-food.png"/><span>ЕДА</span><b id="resFood">0</b><small aria-label="Изменение в секунду" id="incFood">+0</small></div>
+<div data-resource="wood"><img alt="" aria-hidden="true" class="res-icon" src="assets/pixel-ui/resource-wood.png"/><span>ДЕРЕВО</span><b id="resWood">0</b><small aria-label="Изменение в секунду" id="incWood">+0</small></div>
+<div data-resource="stone"><img alt="" aria-hidden="true" class="res-icon" src="assets/pixel-ui/resource-stone.png"/><span>КАМЕНЬ</span><b id="resStone">0</b><small aria-label="Изменение в секунду" id="incStone">+0</small></div>
+<div data-resource="gold"><img alt="" aria-hidden="true" class="res-icon" src="assets/pixel-ui/resource-gold.png"/><span>ЗОЛОТО</span><b id="resGold">0</b><small aria-label="Изменение в секунду" id="incGold">+0</small></div>
 </div>
 <div class="game-feedback" id="gameFeedback" aria-label="Сообщения матча и состояние соединения">
 <div class="feedback-idle" id="feedbackIdle"><span class="feedback-dot" aria-hidden="true"></span><span id="feedbackStatus">МАТЧ АКТИВЕН</span></div>
@@ -1161,9 +1349,9 @@ body:has(#waiting:not(.hidden)) #toast:not(.hidden),body:has(#lobby:not(.hidden)
 <div id="placingBuild" class="placing-build hidden" role="status"><img id="placingBuildIcon" alt=""/><span id="placingBuildText">Выбери клетку</span><button type="button" id="changeBuild" aria-label="Выбрать другое здание">Сменить</button><button type="button" id="stopBuild" aria-label="Отменить строительство">×</button></div>
 <div aria-label="Основные действия" class="game-action-bar" id="gameActionBar" role="group">
 
-<button aria-label="Открыть строительство" class="action-build" id="developButton"><img alt="" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9ItCh0YLRgNC+0LjRgtGMIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImJnIiB4Mj0iMCIgeTI9IjEiPjxzdG9wIHN0b3AtY29sb3I9IiM1MTY3NTgiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMzNDQ4M2MiLz48L2xpbmVhckdyYWRpZW50PjxsaW5lYXJHcmFkaWVudCBpZD0iZ29sZCIgeDI9IjAiIHkyPSIxIj48c3RvcCBzdG9wLWNvbG9yPSIjZmZmNGFkIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZDQ5MDMzIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHBhdGggZD0iTTE4IDMwIDQxIDUzIiBzdHJva2U9IiM4NDUzMzIiIHN0cm9rZS13aWR0aD0iMTAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxwYXRoIGQ9Ik0xMiAxNGMxMC05IDI0LTcgMzAgMWwtOCAxMGMtOS03LTE1LTUtMjAgMFoiIGZpbGw9IiNjZmQ1ZDQiIHN0cm9rZT0iIzY3N2Q4MyIgc3Ryb2tlLXdpZHRoPSIzIi8+PHBhdGggZD0ibTM3IDE2IDEwLTcgOSA5LTkgMTAtOS02WiIgZmlsbD0iIzlkYWRhZiIgc3Ryb2tlPSIjNjU3Mzc5IiBzdHJva2Utd2lkdGg9IjMiLz48L3N2Zz4="/><span>Строить</span></button>
+<button aria-label="Открыть строительство" class="action-build" id="developButton"><img alt="" src="assets/pixel-ui/action-build.png"/><span>Строить</span></button>
 </div>
-<div class="map-battle-controls collapsed" id="battleDock"><button aria-expanded="false" aria-label="Настроить размер отправляемой армии" class="dock-toggle" id="dockToggle"><img alt="" class="dock-symbol" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9ItCR0L7QuSI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJiZyIgeDI9IjAiIHkyPSIxIj48c3RvcCBzdG9wLWNvbG9yPSIjNTE2NzU4Ii8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMzQ0ODNjIi8+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImdvbGQiIHgyPSIwIiB5Mj0iMSI+PHN0b3Agc3RvcC1jb2xvcj0iI2ZmZjRhZCIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2Q0OTAzMyIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxwYXRoIGQ9Ik0xMyA5bDEyIDQgMjYgMzItNiA2LTI4LTI3WiIgZmlsbD0iI2RmZTZlNSIgc3Ryb2tlPSIjNDY2NTc0IiBzdHJva2Utd2lkdGg9IjIuNSIvPjxwYXRoIGQ9Im01MiA5LTEyIDQtMjUgMzIgNiA2IDI2LTI3WiIgZmlsbD0iI2Y3ZGQ5MiIgc3Ryb2tlPSIjNzc1YjI5IiBzdHJva2Utd2lkdGg9IjIuNSIvPjxwYXRoIGQ9Im0xMCAyNyAxNi0xNm0xMiA0MCAxNS0xNiIgc3Ryb2tlPSIjN2U1MjI4IiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg=="/> <span class="dock-name">Атака</span> <span id="dockSummary">30%</span> <span aria-hidden="true" class="dock-chevron">⌄</span></button>
+<div class="map-battle-controls collapsed" id="battleDock"><button aria-expanded="false" aria-label="Настроить размер отправляемой армии" class="dock-toggle" id="dockToggle"><img alt="" class="dock-symbol" src="assets/pixel-ui/action-attack.png"/> <span class="dock-name">Атака</span> <span id="dockSummary">30%</span> <span aria-hidden="true" class="dock-chevron">⌄</span></button>
 <div class="control-header"><div><small>РАЗМЕР АТАКИ</small><strong id="modeLabel">Наступление</strong></div><div class="percent-pill" id="percentLabel">30%</div></div>
 <input aria-label="Процент отправляемых войск" id="attackPercent" max="95" min="5" step="5" type="range" value="30"/>
 <div class="attack-presets"><button data-percent="15">15%</button><button class="active" data-percent="30">30%</button><button data-percent="50">50%</button><button data-percent="75">75%</button><button data-percent="95">95%</button></div>
