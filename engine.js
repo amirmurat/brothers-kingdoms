@@ -185,6 +185,7 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
   // automatically expand the whole accessible neutral perimeter (layer by layer).
   // Hostile attacks expand only into the clicked opponent, never across bystanders.
   const targetOwner=owner(s,tx,ty);
+  if(!p.bot&&a.zone==null)return {ok:false,error:'Use Attack to draw an offensive zone.'};
   const zoneResult=validateZone(s,id,targetOwner,a.zone);
   if(zoneResult.error)return {ok:false,error:zoneResult.error};
   const zoneCells=zoneResult.cells;
@@ -199,8 +200,10 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
  }
  if(a.type==='redirect'){
   const army=s.armies.find(v=>v.id===a.id&&v.owner===id);if(!army||!inside(a.x,a.y))return {ok:false,error:'Army not found.'};
+  if(Array.isArray(army.zoneCells))return {ok:false,error:'Cancel and redraw to change an outlined attack.'};
   const tx=Math.floor(a.x),ty=Math.floor(a.y),targetOwner=owner(s,tx,ty);
   if(!tile(s,tx,ty)||targetOwner===id||p.allies.includes(targetOwner))return {ok:false,error:'Choose neutral or enemy land.'};
+  if(targetOwner!==army.targetOwner)return {ok:false,error:'Draw a new attack to target another kingdom.'};
   if(!borderCandidates(s,id,targetOwner).length)return {ok:false,error:'A shared border is required to redirect.'};
   if(targetOwner){s.wars??=[];const key=warKey(id,targetOwner);if(!s.wars.includes(key)){s.wars.push(key);log(s,p.name+' declared war on '+person(s,targetOwner)?.name);}}
   army.tx=tx;army.ty=ty;army.targetOwner=targetOwner;army.zoneCells=null;army.frontCells=initialFront(s,id,tx,ty,targetOwner);army.stuck=0;attackFronts.delete(army);return {ok:true};

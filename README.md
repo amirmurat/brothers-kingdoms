@@ -76,3 +76,8 @@ All assets adapted from [Game-icons.net](https://game-icons.net/) under [CC BY 3
 - [Stone Pile](https://game-icons.net/1x1/delapouite/stone-pile.html) — Delapouite.
 
 Adaptations: original black backgrounds removed, fills recolored for visibility, and buildings outlined with a thin white stroke on Canvas. Palette: Farm orange, Lumber green, Quarry silver-blue, Mine gold, Barracks blue, Fort coral, City purple, Reserve light blue, Stone blue-gray. No artwork generated.
+
+### v54 — Draw-to-plan conquest (preview)
+- New Attack button: drag a loop from owned land across one enemy/neutral region and back to owned land; only a confirmed planned region can be conquered by human players. Confirmation selects 15–95% troops and declares war once for a hostile nation. Ongoing fronts remain inside the outlined cells, can be cancelled by tapping the region, and mutually agreed peace stops current wars.
+- War & Peace chip opens when in conflict; offers and acceptance are available between human countries. Bots may attack using their automated border selection and do not accept peace proposals.
+- Work remains on preview branch `design/visual-review-v26`; iPhone Safari UI and real multiplayer have not been physically tested.

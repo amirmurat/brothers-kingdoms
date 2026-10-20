@@ -436,3 +436,8 @@ _Актуальный реестр, извлечённый из `index.html` н�
 
 ### v53 — HUD height and Reserve icon clipping (20.10.2026)
 - `styles/theme.css`: topbar 86px, resourceSummary 78px; Reserve label 20px and icon 18px. Landscape compact 66px+56px and 14px icon. Four column alignment remains. `index.html`: `styles/theme.css?v=53-hud-height`.
+
+### v54 — attack zone planner / war / peace (20.10.2026)
+- `index.html`: `#planAttackButton` → `#planGuide` (draw state) → `#planReview` (force presets, declare war/start) → `#planCancelDialog` (active zone click); `#warChip` and `#warPanel` for mutual peace proposals; `#targetPeace` in old foreign-territory preview. `styles/theme.css` v54 cards and responsive controls; all visible copy English.
+- `game.js`: `attackPlanner` state, `onPointerDown`/Move/Up draw over canvas, `completePlan` polygon rasterization (one owner, connected to friendly border, starts/ends in friendly territory), `drawAttackPlanning` dashed region and live path overlay. Host/UI `send` transmits `zone` to engine; `renderWars` and `peace` handler. Single tap for enemy only diplomatic preview: direct send disabled. Cancelling active planned area invokes `return` with Yes/No.
+- `engine.js`: `validateZone` host checks 2..3500 cells, ownership and connected border; human `send` requires zone, army tracks `zoneCells`, `initialFront`/`waveFront`/`advance` never cross zone. Bot sends may use old free-front mode. Wars pair keys stored in `state.wars`; `state.peaceOffers` accepted mutually by action `peace`, simultaneous offensives stopped. Redirect cannot bypass selected zone. `pack` spreads state through network; victory conditions unchanged.
