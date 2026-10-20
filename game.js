@@ -255,23 +255,29 @@ function setPreview(t){
  target=t;const box=$('targetPreview');box.classList.toggle('hidden',!t);$('game').classList.toggle('is-targeting',!!t);
  if(!t){queueDraw();return;}
  const owner=E.owner(state,t.x,t.y),enemy=E.person(state,owner),p=mine(),sent=Math.floor(p.troops*percent/100);
- const front=E.previewFront(state,myId,t.x,t.y);
- const sea=E.tile(state,t.x,t.y)===0;
- $('targetTitle').textContent=t.type==='redirect'?'Сменить направление':enemy?'Атака на '+enemy.name:'Захват нейтральной земли';
- $('targetDetail').textContent=`${number(sent)} войск · в резерве ${number(p.troops-sent)} · ${terrainNames[E.tile(state,t.x,t.y)]}`;
+ const front=E.previewFront(state,myId,t.x,t.y),sea=E.tile(state,t.x,t.y)===0;
+ const allied=!!enemy&&p.allies.includes(owner),received=!!enemy&&enemy.offers.includes(myId),sentOffer=!!enemy&&p.offers.includes(owner);
+ const diplomatic=t.type==='send'&&!!enemy,offerButton=$('targetDiplomacy');
+ offerButton.classList.toggle('hidden',!diplomatic);
+ offerButton.disabled=!diplomatic||allied||sentOffer||!!enemy?.bot;
+ offerButton.textContent=allied?'Союз заключён':received?'Принять предложение союза':sentOffer?'Предложение отправлено':enemy?.bot?'Бот не принимает союзы':'Предложить союз';
+ box.dataset.diplomacy=allied?'allied':received?'received':sentOffer?'sent':enemy?.bot?'bot':'offer';
+ const building=E.buildingAt(state,t.x,t.y);
+ $('targetTitle').textContent=t.type==='redirect'?'Сменить направление':allied?'Союзник: '+enemy.name:enemy?'Территория: '+enemy.name:'Захват нейтральной земли';
+ $('targetDetail').textContent=`${number(sent)} войск · в резерве ${number(p.troops-sent)} · ${terrainNames[E.tile(state,t.x,t.y)]}${building?' · '+(E.KINDS[building.kind]?.name||'Столица'):''}`;
  const defense=enemy?Math.round(E.tileDefense(state,owner,t.x,t.y)):0;const averageDefense=enemy&&front.cells.length?Math.round(front.cells.reduce((sum,i)=>sum+E.tileDefense(state,owner,i%E.W,Math.floor(i/E.W)),0)/front.cells.length):0;
- $('targetForecast').textContent=t.type==='redirect'?'После подтверждения армия сменит направление.':
+ $('targetForecast').textContent=allied?'Это территория союзника. Атака запрещена, пока действует союз. Разорвать союз можно в разделе «Союзы».':
+   t.type==='redirect'?'После подтверждения армия сменит направление.':
    sea?'Море непроходимо. Выбери сушу.':
-   !front.cells.length?'Нет общей границы.':
+   !front.cells.length?'Нет общей границы для наступления. Дипломатия доступна и без общей границы.':
    owner?`Участок: ${front.cells.length} клеток · защита фронта в среднем ${averageDefense} (цель ${defense}) · резерв врага: ${number(enemy?.troops||0)}. Прогноз приблизительный.`:
    `Начало захвата: выделенный участок границы (${front.cells.length} клеток), затем фронт расширится.`;
  $('confirmTarget').textContent=t.type==='redirect'?'Изменить цель':owner?'Атаковать':'Начать захват';
- $('confirmTarget').disabled=!(t.type==='redirect'||(sent>=35&&(front.cells.length>0&&!sea)));if(t.type!=='redirect'&&p.troops-sent<Math.max(75,Math.min(300,p.troopCap*.12)))$('targetForecast').textContent+=' Внимание: после приказа останется мало войск для обороны.';
+ $('confirmTarget').disabled=allied||!(t.type==='redirect'||(sent>=35&&(front.cells.length>0&&!sea)));
+ if(t.type!=='redirect'&&!allied&&p.troops-sent<Math.max(75,Math.min(300,p.troopCap*.12)))$('targetForecast').textContent+=' Внимание: после приказа останется мало войск для обороны.';
  box.dataset.order=t.type;
- // Preserve target visibility above the confirmation sheet, including iPhone's safe area.
  const projectedY=(t.y+.5)*TILE*zoom+camY,available=canvas.clientHeight-Math.min(270,Math.max(155,canvas.clientHeight*.37));
  if(projectedY>available){camY-=projectedY-available+18;clampCamera();}
-
  document.querySelectorAll('[data-target-percent]').forEach(b=>{const on=Number(b.dataset.targetPercent)===percent;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});
  queueDraw();
 }
@@ -472,6 +478,16 @@ document.querySelectorAll('[data-target-percent]').forEach(b=>b.onclick=()=>{$('
 for(const b of document.querySelectorAll('[data-percent]')){b.setAttribute('aria-pressed',String(Number(b.dataset.percent)===percent));b.onclick=()=>{$('attackPercent').value=b.dataset.percent;$('attackPercent').oninput({target:$('attackPercent')});};}
 $('cancelMode').onclick=cancelMode;function cancelMode(){setBuildingMode(null);}
 $('cancelTarget').onclick=()=>{setPreview(null);redirectArmy=null;lastTap=0;};$('confirmTarget').onclick=()=>{if(!target)return;const t=target;const ok=command(t.type==='redirect'?{type:'redirect',id:t.id,x:t.x,y:t.y}:{type:'send',x:t.x,y:t.y,percent});if(ok){setPreview(null);redirectArmy=null;}};
+$('targetDiplomacy').onclick=()=>{
+ if(!target||target.type!=='send')return;
+ const owner=E.owner(state,target.x,target.y),other=E.person(state,owner),me=mine();
+ if(!other||!me||other.id===myId||other.bot||me.allies.includes(owner)||me.offers.includes(owner))return;
+ const accepting=other.offers.includes(myId);
+ if(command({type:'diplomacy',target:owner})){
+  toast(accepting?'Запрос на принятие союза отправлен':'Предложение союза отправлено');
+  if(state?.phase==='playing'&&target)setPreview(target);
+ }
+};
 $('dockToggle').onclick=()=>{const dock=$('battleDock');const collapsed=dock.classList.toggle('collapsed');$('dockToggle').setAttribute('aria-expanded',String(!collapsed));};
 $('minimapToggle').onclick=()=>{const v=$('minimapWrap').classList.toggle('minimized');$('minimapToggle').setAttribute('aria-expanded',String(!v));document.querySelector('#minimapToggle span').textContent=v?'+':'−';};
 function renderArmies(){if(!state||!myId)return;const mineArmies=state.armies.filter(a=>a.owner===myId);
@@ -504,15 +520,32 @@ function zoomAt(factor,cx,cy){const old=zoom;zoom=Math.max(.14,Math.min(5,zoom*f
 function pixelAt(clientX,clientY){const r=canvas.getBoundingClientRect();return {x:clientX-r.left,y:clientY-r.top};}
 function gridAt(clientX,clientY){const p=pixelAt(clientX,clientY);return {x:Math.floor((p.x-camX)/(TILE*zoom)),y:Math.floor((p.y-camY)/(TILE*zoom))};}
 function nearestObject(px,py,kind){const arr=kind==='army'?state.armies:state.buildings,worldX=(px-camX)/(TILE*zoom),worldY=(py-camY)/(TILE*zoom);let nearest=null,best=Infinity;for(const v of arr){const d=Math.hypot(v.x+.5-worldX,v.y+.5-worldY)*TILE*zoom;if(d<best&&d<(kind==='army'?23:25)){best=d;nearest=v;}}return nearest;}
-function selectMap(clientX,clientY){if(state?.phase!=='playing'||mine()?.eliminated)return;const pt=pixelAt(clientX,clientY),p=gridAt(clientX,clientY);if(!E.inside(p.x,p.y))return;inspectCell(p.x,p.y);$('mapHint').classList.add('hidden');
- if(buildMode){moveCursor=p;if(E.owner(state,p.x,p.y)!==myId)return toast('Нужна своя территория', 'error');const fail=E.canBuild(state,myId,buildMode,p.x,p.y);if(fail)return toast(fail,'error');command({type:'build',kind:buildMode,x:p.x,y:p.y});queueDraw();return;}
+function selectMap(clientX,clientY){
+ if(state?.phase!=='playing'||mine()?.eliminated)return;
+ const pt=pixelAt(clientX,clientY),p=gridAt(clientX,clientY);
+ if(!E.inside(p.x,p.y))return;
+ inspectCell(p.x,p.y);$('mapHint').classList.add('hidden');
+ if(buildMode){
+  moveCursor=p;if(E.owner(state,p.x,p.y)!==myId)return toast('Нужна своя территория','error');
+  const fail=E.canBuild(state,myId,buildMode,p.x,p.y);if(fail)return toast(fail,'error');
+  command({type:'build',kind:buildMode,x:p.x,y:p.y});queueDraw();return;
+ }
  if(redirectArmy){setPreview({type:'redirect',id:redirectArmy,x:p.x,y:p.y,valid:true});return;}
- const a=nearestObject(pt.x,pt.y,'army');if(a&&a.owner===myId){selected={kind:'army',id:a.id};updateSelection();setPreview(null);return;}
- const b=nearestObject(pt.x,pt.y,'building');if(b){selected={kind:'building',id:b.id};updateSelection();setPreview(null);return;}
- if(E.owner(state,p.x,p.y)===myId){setPreview(null);return;}selected=null;contextual(null);
- if(E.tile(state,p.x,p.y)===0)return toast('Море не захватывается. Выбери сушу.');
- if(target?.type==='send'&&target.x===p.x&&target.y===p.y)return;
- setPreview({type:'send',x:p.x,y:p.y,valid:true});}
+ // In a conquest game, tap ownership wins over enlarged decorative hitboxes.
+ // Enemy buildings and friendly icons near an enemy border must not block attacks.
+ const clickedOwner=E.owner(state,p.x,p.y);
+ if(clickedOwner!==myId){
+  if(!E.tile(state,p.x,p.y))return toast('Море не захватывается. Выбери сушу.');
+  selected=null;contextual(null);
+  if(target?.type==='send'&&target.x===p.x&&target.y===p.y)return;
+  setPreview({type:'send',x:p.x,y:p.y,valid:true});return;
+ }
+ const a=nearestObject(pt.x,pt.y,'army');
+ if(a?.owner===myId){selected={kind:'army',id:a.id};updateSelection();setPreview(null);return;}
+ const b=nearestObject(pt.x,pt.y,'building');
+ if(b?.owner===myId){selected={kind:'building',id:b.id};updateSelection();setPreview(null);return;}
+ setPreview(null);
+}
 function updateMapStatus(x,y){inspectCell(x,y);}
 // Tap a target, or long-press on your own land and drag toward the destination.
 // Moving immediately still pans the map, avoiding an accidental attack gesture.

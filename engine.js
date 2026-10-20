@@ -176,6 +176,7 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Матч 
   if(!inside(tx,ty))return {ok:false,error:'Укажи цель на карте.'};
   if(s.armies.filter(u=>u.owner===id).length>=12)return {ok:false,error:'Не более 12 активных наступлений.'};
   if(owner(s,tx,ty)===id)return {ok:false,error:'Выбери нейтральную или чужую территорию.'};
+  if(p.allies.includes(owner(s,tx,ty)))return {ok:false,error:'Нельзя атаковать союзника. Сначала разорви союз в меню дипломатии.'};
   if(tile(s,tx,ty)===0)return {ok:false,error:'Море не захватывается. Выбери клетку суши.'};
   const strength=Math.floor(p.troops*percent/100);if(strength<35)return {ok:false,error:'Для наступления нужно минимум 35 солдат.'};
   const src=nearestBorderLand(s,id,tx,ty);
