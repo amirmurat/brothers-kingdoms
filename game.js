@@ -714,7 +714,7 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   const spriteH=TILE*.95,footY=y+TILE*.41;
   ctx.save();ctx.translate(x-spriteH/2,y-spriteH/2);const iconUnit=b.kind==='barracks'?512:64;ctx.scale(spriteH/iconUnit,spriteH/iconUnit);
   ctx.fillStyle='#f1f5fa';ctx.fill(buildingPaths[b.kind]||buildingPaths.city,'evenodd');
-  ctx.strokeStyle='#080a0e';ctx.lineWidth=b.kind==='barracks'?24:3;ctx.stroke(buildingPaths[b.kind]||buildingPaths.city);ctx.restore();
+  ctx.strokeStyle=b.kind==='barracks'?'#ffffff':'#080a0e';ctx.lineWidth=b.kind==='barracks'?30:3;ctx.stroke(buildingPaths[b.kind]||buildingPaths.city);ctx.restore();
   if(b.kind==='capital'&&zoom>.39){
    capitalLabels.push({b,x,footY,spriteH,ownerColor});
   }
