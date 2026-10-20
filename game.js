@@ -769,7 +769,9 @@ function renderArmies(){
   const active=state.armies.find(a=>a.planId===p.id&&a.strength>0);
   const left=p.zoneCells.filter(i=>state.tiles[i]&&state.owners[i]!==myId).length;
   const choices=p.targets??[p.targetOwner],label=choices.length?choices.map(id=>esc(E.person(state,id)?.name||'Neutral land')).join(', '):'Choose targets';
-  const status=active?'Wave '+number(p.waves)+' advancing · '+number(active.strength)+' troops':choices.length?'Waiting for route / troops':'Paused · select targets';
+  const capturable=p.zoneCells.some(i=>state.tiles[i]&&state.owners[i]!==myId&&choices.includes(state.owners[i]));
+  const status=active?'Wave '+number(p.waves)+' advancing · '+number(active.strength)+' troops':
+   !choices.length||!capturable?'Waiting for permissions · edit targets':'Waiting for route / troops';
   return `<div class="army-line"><div><strong>${label} <small>· ${number(left)} cells left</small></strong>
    <small>${status}</small><small class="army-stats">Plan persists until captured or cancelled · ${p.percent}% per wave</small></div>
    <button data-edit-plan="${esc(p.id)}" aria-label="Edit offensive region and opponents">Edit</button>
