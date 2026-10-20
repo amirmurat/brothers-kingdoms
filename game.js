@@ -85,7 +85,7 @@ function hideAux(){
 function showAux(id){
  const el=$(id);if(!el)return;
  const wasOpen=!el.classList.contains('hidden');
- hideAux();if(wasOpen)return;
+ if(attackPlanner)resetAttackPlanner();hideAux();if(wasOpen)return;
  if(id!=='contextCard')selected=null;
  toggleQuickBuild(false);setPreview(null);$('battleDock').classList.add('collapsed');
  if(panelOpen)closePanel();
@@ -398,7 +398,10 @@ function setPreview(t){
  const owner=E.owner(state,t.x,t.y),enemy=E.person(state,owner),p=mine(),sent=Math.floor(p.troops*percent/100);
  const front=E.previewFront(state,myId,t.x,t.y),sea=E.tile(state,t.x,t.y)===0;
  const allied=!!enemy&&p.allies.includes(owner),received=!!enemy&&enemy.offers.includes(myId),sentOffer=!!enemy&&p.offers.includes(owner);
- const diplomatic=t.type==='send'&&!!enemy,offerButton=$('targetDiplomacy');
+ const war=!!enemy&&fighting(owner),diplomatic=t.type==='send'&&!!enemy&&!war,offerButton=$('targetDiplomacy');
+ const peace=$('targetPeace'),receivedPeace=(state.peaceOffers||[]).some(o=>o.from===owner&&o.to===myId),sentPeace=(state.peaceOffers||[]).some(o=>o.from===myId&&o.to===owner);
+ peace.classList.toggle('hidden',!war||t.type!=='send');peace.disabled=!war||!!enemy?.bot||sentPeace;
+ peace.textContent=receivedPeace?'Accept peace treaty':sentPeace?'Peace proposal sent':enemy?.bot?'Bots do not sign peace':'Propose peace';
  offerButton.classList.toggle('hidden',!diplomatic);
  offerButton.disabled=!diplomatic||(!allied&&(sentOffer||!!enemy?.bot));
  offerButton.textContent=allied?(t.confirmBreak?'Confirm end alliance':'End alliance'):received?'Accept alliance offer':sentOffer?'Offer sent':enemy?.bot?'Bots do not accept alliances':'Offer alliance';
@@ -413,9 +416,9 @@ function setPreview(t){
    !front.cells.length?'No shared border for an offensive. Diplomacy is still available.':
    owner?`Front: ${front.cells.length} cells · average defense ${averageDefense} (target ${defense}) · enemy reserve: ${number(enemy?.troops||0)}. Approximate forecast.`:
    `Conquest begins at the highlighted border section (${front.cells.length} cells), then expands.`;
- $('confirmTarget').textContent=t.type==='redirect'?'Change target':owner?'Attack':'Conquer';
- $('confirmTarget').disabled=allied||!(t.type==='redirect'||(sent>=35&&(front.cells.length>0&&!sea)));
- if(t.type!=='redirect'&&!allied&&p.troops-sent<Math.max(75,Math.min(300,p.troopCap*.12)))$('targetForecast').textContent+=' Warning: your reserve will be low after this order.';
+ $('confirmTarget').textContent=t.type==='redirect'?'Change target':'Use Attack mode';
+ $('confirmTarget').disabled=t.type!=='redirect'||allied;
+ if(t.type==='redirect'&&!allied&&p.troops-sent<Math.max(75,Math.min(300,p.troopCap*.12)))$('targetForecast').textContent+=' Warning: your reserve will be low after this order.';
  box.dataset.order=t.type;
  const projectedY=(t.y+.5)*TILE*zoom+camY,available=canvas.clientHeight-Math.min(270,Math.max(155,canvas.clientHeight*.37));
  if(projectedY>available){camY-=projectedY-available+18;clampCamera();}
@@ -522,6 +525,7 @@ function render(){if(!state)return;
 }
 function setRate(node,value){const rate=Math.round(Number(value)||0);node.dataset.trend=rate>0?'positive':rate<0?'negative':'neutral';node.textContent=(rate>0?'+':rate<0?'−':'')+number(Math.abs(rate))+'/s';}
 function updateUI(){const p=mine();if(!p)return;
+ renderWars();if(attackPlanner?.mode==='review')refreshPlanReview();
  // Before the first economy tick, derive the same production formula as the engine,
  // rather than showing a misleading +0/s for every resource.
  const {gross,recruited,foodNet}=resourceRates(p);
@@ -601,6 +605,7 @@ function toggleQuickBuild(force){
 }
 function closePanelIfOpen(){if(panelOpen)closePanel();}
 function setBuildingMode(kind){
+ if(kind&&attackPlanner)resetAttackPlanner();
  buildMode=kind||null;selected=null;setPreview(null);moveCursor=null;
  $('cancelMode').classList.toggle('hidden',!buildMode);
  $('modeLabel').textContent=buildMode?'Build: '+E.KINDS[buildMode].name:'Offensive';
@@ -624,11 +629,46 @@ $('attackPercent').oninput=e=>{percent=Number(e.target.value);$('percentLabel').
 document.querySelectorAll('[data-target-percent]').forEach(b=>b.onclick=()=>{$('attackPercent').value=b.dataset.targetPercent;$('attackPercent').oninput({target:$('attackPercent')});});
 for(const b of document.querySelectorAll('[data-percent]')){b.setAttribute('aria-pressed',String(Number(b.dataset.percent)===percent));b.onclick=()=>{$('attackPercent').value=b.dataset.percent;$('attackPercent').oninput({target:$('attackPercent')});};}
 $('cancelMode').onclick=cancelMode;function cancelMode(){setBuildingMode(null);}
-$('cancelTarget').onclick=()=>{setPreview(null);redirectArmy=null;lastTap=0;};$('confirmTarget').onclick=()=>{if(!target)return;const t=target;const ok=command(t.type==='redirect'?{type:'redirect',id:t.id,x:t.x,y:t.y}:{type:'send',x:t.x,y:t.y,percent});if(ok){setPreview(null);redirectArmy=null;}};
+$('cancelTarget').onclick=()=>{setPreview(null);redirectArmy=null;lastTap=0;};$('confirmTarget').onclick=()=>{if(!target||target.type!=="redirect")return;const t=target;const ok=command({type:'redirect',id:t.id,x:t.x,y:t.y});if(ok){setPreview(null);redirectArmy=null;}};
+
+$('planAttackButton').onclick=()=>attackPlanner?resetAttackPlanner():beginAttackPlanner();
+$('planGuideExit').onclick=resetAttackPlanner;
+$('planReviewClose').onclick=resetAttackPlanner;
+$('planDiscard').onclick=resetAttackPlanner;
+document.querySelectorAll('[data-plan-percent]').forEach(btn=>btn.onclick=()=>{
+ percent=Number(btn.dataset.planPercent);$('attackPercent').value=percent;$('percentLabel').textContent=percent+'%';refreshPlanReview();
+});
+$('planLaunch').onclick=()=>{
+ const plan=attackPlanner;if(plan?.mode!=='review')return;
+ const order={type:'send',x:plan.x,y:plan.y,percent,zone:plan.zoneCells.slice()};
+ if(command(order)){resetAttackPlanner();toast(plan.targetOwner?'Offensive ordered. War state updated.':'Offensive ordered.');}
+};
+$('planCancelNo').onclick=()=>{$('planCancelDialog').classList.add('hidden');planCancelArmy=null;};
+$('planCancelYes').onclick=()=>{
+ const id=planCancelArmy;if(id&&command({type:'return',id})){toast('Offensive cancelled');}
+ $('planCancelDialog').classList.add('hidden');planCancelArmy=null;
+};
+$('warChip').onclick=()=>{
+ const panel=$('warPanel'),opening=panel.classList.contains('hidden');
+ panel.classList.toggle('hidden',!opening);$('warChip').setAttribute('aria-expanded',String(opening));
+};
+$('warPanelClose').onclick=()=>{$('warPanel').classList.add('hidden');$('warChip').setAttribute('aria-expanded','false');};
+$('warPanelList').onclick=e=>{
+ const btn=e.target.closest('[data-plan-peace]');if(!btn||btn.disabled)return;
+ const other=Number(btn.dataset.planPeace),accepted=(state.peaceOffers||[]).some(o=>o.from===other&&o.to===myId);
+ if(command({type:'peace',target:other})){toast(accepted?'Peace treaty accepted':'Peace proposal sent');if(accepted){$('warPanel').classList.add('hidden');$('warChip').setAttribute('aria-expanded','false');}}
+};
+$('targetPeace').onclick=()=>{
+ if(!target||target.type!=='send')return;
+ const owner=E.owner(state,target.x,target.y),accepted=(state.peaceOffers||[]).some(o=>o.from===owner&&o.to===myId);
+ if(!owner||!fighting(owner))return;
+ if(command({type:'peace',target:owner})){toast(accepted?'Peace treaty accepted':'Peace proposal sent');setPreview(null);}
+};
+
 $('targetDiplomacy').onclick=()=>{
  if(!target||target.type!=='send')return;
  const owner=E.owner(state,target.x,target.y),other=E.person(state,owner),me=mine();
- if(!other||!me||other.id===myId||(!me.allies.includes(owner)&&(other.bot||me.offers.includes(owner))))return;
+ if(!other||!me||other.id===myId||fighting(owner)||(!me.allies.includes(owner)&&(other.bot||me.offers.includes(owner))))return;
  const breaking=me.allies.includes(owner);
  if(breaking&&!target.confirmBreak){target.confirmBreak=true;setPreview(target);return;}
  const accepting=other.offers.includes(myId);
@@ -679,6 +719,10 @@ function selectMap(clientX,clientY){
  if(state?.phase!=='playing'||mine()?.eliminated)return;
  const pt=pixelAt(clientX,clientY),p=gridAt(clientX,clientY);
  if(!E.inside(p.x,p.y))return;
+ if(attackPlanner)return;
+ const regionIndex=p.y*E.W+p.x;
+ const activePlan=state.armies.find(a=>a.owner===myId&&a.strength>0&&Array.isArray(a.zoneCells)&&a.zoneCells.includes(regionIndex));
+ if(activePlan){openCancelPlan(activePlan);return;}
  inspectCell(p.x,p.y);$('mapHint').classList.add('hidden');
  if(buildMode){
   moveCursor=p;if(E.owner(state,p.x,p.y)!==myId)return toast('Must be your territory','error');
@@ -705,7 +749,15 @@ function updateMapStatus(x,y){inspectCell(x,y);}
 // Tap a target, or long-press on your own land and drag toward the destination.
 // Moving immediately still pans the map, avoiding an accidental attack gesture.
 function onPointerDown(e){
- if(!state)return;canvas.setPointerCapture(e.pointerId);
+ if(!state)return;
+ if(attackPlanner){
+  if(attackPlanner.mode!=='draw'||attackPlanner.pointerId!==null)return;
+  const pt=gridAt(e.clientX,e.clientY);
+  if(!E.inside(pt.x,pt.y)||E.owner(state,pt.x,pt.y)!==myId){toast('Start on your own territory.','error');return;}
+  canvas.setPointerCapture(e.pointerId);attackPlanner.pointerId=e.pointerId;attackPlanner.path=[];pushPlanPoint(pt);
+  $('planGuideHint').textContent='Keep drawing across the target. Release on your land to close.';queueDraw();return;
+ }
+ canvas.setPointerCapture(e.pointerId);
  pressed.set(e.pointerId,{x:e.clientX,y:e.clientY});
  clearTimeout(longPressTimer);dragAttack=null;
  if(pressed.size===1){
@@ -726,6 +778,9 @@ function onPointerDown(e){
  }
 }
 function onPointerMove(e){
+ if(attackPlanner){
+  if(attackPlanner.mode==='draw'&&attackPlanner.pointerId===e.pointerId){pushPlanPoint(gridAt(e.clientX,e.clientY));queueDraw();}return;
+ }
  if(buildMode&&state?.phase==='playing'){
   const cell=gridAt(e.clientX,e.clientY);
   if(E.inside(cell.x,cell.y)&&(moveCursor?.x!==cell.x||moveCursor?.y!==cell.y)){
@@ -749,6 +804,9 @@ function onPointerMove(e){
  }
 }
 function onPointerUp(e){
+ if(attackPlanner){
+  if(attackPlanner.mode==='draw'&&attackPlanner.pointerId===e.pointerId)completePlan(gridAt(e.clientX,e.clientY));return;
+ }
  clearTimeout(longPressTimer);
  const drag=dragAttack,was=pointerStart,touch=pressed.size;
  pressed.delete(e.pointerId);dragAttack=null;
@@ -771,7 +829,7 @@ document.addEventListener('selectstart',e=>{
 canvas.addEventListener('pointerdown',onPointerDown);
 canvas.addEventListener('pointermove',onPointerMove);
 canvas.addEventListener('pointerup',onPointerUp);
-canvas.addEventListener('pointercancel',e=>{clearTimeout(longPressTimer);pressed.delete(e.pointerId);pointerStart=null;gesture=null;dragAttack=null;});
+canvas.addEventListener('pointercancel',e=>{if(attackPlanner?.pointerId===e.pointerId){attackPlanner.path=[];attackPlanner.pointerId=null;queueDraw();}clearTimeout(longPressTimer);pressed.delete(e.pointerId);pointerStart=null;gesture=null;dragAttack=null;});
 canvas.addEventListener('wheel',e=>{e.preventDefault();const p=pixelAt(e.clientX,e.clientY);zoomAt(e.deltaY<0?1.13:.885,p.x,p.y);},{passive:false});canvas.addEventListener('contextmenu',e=>e.preventDefault());
 $('zoomIn').onclick=()=>zoomAt(1.24,canvas.clientWidth/2,canvas.clientHeight/2);$('zoomOut').onclick=()=>zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);function fitWorld(){hideAux();zoom=Math.min((canvas.clientWidth-16)/(E.W*TILE),(canvas.clientHeight-16)/(E.H*TILE));camX=(canvas.clientWidth-E.W*TILE*zoom)/2;camY=(canvas.clientHeight-E.H*TILE*zoom)/2;$('zoomText').textContent=Math.round(zoom*100)+'%';queueDraw();}
 mini.addEventListener('pointerdown',e=>{const r=mini.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*E.W,y=(e.clientY-r.top)/r.height*E.H;camX=canvas.clientWidth/2-x*TILE*zoom;camY=canvas.clientHeight/2-y*TILE*zoom;clampCamera();queueDraw();});mini.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();fitWorld();}});
@@ -877,6 +935,7 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
    ctx.beginPath();ctx.roundRect(x-tw/2,ly-lh/2,tw,lh,8/Math.max(.5,zoom));ctx.fill();ctx.stroke();
    ctx.fillStyle='#f1f5fa';ctx.fillText(label,x,ly);
  }
+ drawAttackPlanning();
  // Front cells come from the authoritative conquest wave, including online snapshots.
  for(const a of state.armies){
   if(a.strength<=0)continue;
@@ -954,6 +1013,7 @@ function drawMini(){
 window.addEventListener('resize',()=>{resize();clampCamera();queueDraw();});document.addEventListener('keydown',e=>{if(e.key==='Escape'){setThreatList(false);hideAux();setPreview(null);redirectArmy=null;if(panelOpen)closePanel();else cancelMode();$('tutorial').classList.add('hidden');return;}if(panelOpen&&window.innerWidth<851&&e.key==='Tab'){const items=[...$('sidebar').querySelectorAll('button:not([disabled]), select:not([disabled])')].filter(el=>el.offsetParent!==null);if(items.length){const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}}
  if(!state||state.phase!=='playing'||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;if(e.key==='+'||e.key==='=')zoomAt(1.2,canvas.clientWidth/2,canvas.clientHeight/2);if(e.key==='-')zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);if(document.activeElement===canvas){if(!moveCursor)moveCursor=mine()?.capital?{...mine().capital}:{x:80,y:52};if(e.key.startsWith('Arrow')){e.preventDefault();const d={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[e.key];moveCursor.x=Math.max(0,Math.min(E.W-1,moveCursor.x+d[0]));moveCursor.y=Math.max(0,Math.min(E.H-1,moveCursor.y+d[1]));camX=canvas.clientWidth/2-(moveCursor.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(moveCursor.y+.5)*TILE*zoom;clampCamera();inspectCell(moveCursor.x,moveCursor.y);$('keyboardPosition').textContent=$('mapStatus').textContent;queueDraw();}if(e.key==='Enter'){e.preventDefault();const x=moveCursor.x,y=moveCursor.y;const r=canvas.getBoundingClientRect();selectMap(r.left+camX+(x+.5)*TILE*zoom,r.top+camY+(y+.5)*TILE*zoom);}}});
 function goHome(){
+ if(attackPlanner)resetAttackPlanner();
  if(demo&&state?.phase==='playing')saveSolo();
  clearTimeout(connectTimer);clearTimeout(reconnectTimer);clearTimeout(toastTimeout);
  const closingPeer=peer,closingConnections=[...connections.keys()];
