@@ -286,7 +286,7 @@ function beginAttackPlanner(existing=null){
  hideAux();toggleQuickBuild(false);setPreview(null);buildMode=null;redirectArmy=null;selected=null;moveCursor=null;
  $('warPanel').classList.add('hidden');$('warChip').setAttribute('aria-expanded','false');
  pointerStart=null;gesture=null;pressed.clear();
- attackPlanner={mode:'paint',cells:new Set(existing?.zoneCells||[]),targets:new Set(existing?.targets??(existing?[existing.targetOwner]:[0])),editId:existing?.id||null,optionsKey:'',pointerId:null,lastPoint:null,brushPoint:null,zoneCells:null,brushRadius:2,tool:'paint',removedTargets:new Set(),originalCells:new Set(existing?.zoneCells||[]),touchLocked:false,strokeStart:null,strokeOrigin:null};
+ attackPlanner={mode:'paint',cells:new Set(existing?.zoneCells||[]),targets:new Set(existing?.targets??(existing?[existing.targetOwner]:[0])),editId:existing?.id||null,optionsKey:'',pointerId:null,lastPoint:null,brushPoint:null,zoneCells:null,brushRadius:2,tool:'paint',removedTargets:new Set(),originalCells:new Set(existing?.zoneCells||[]),originalTargets:new Set(existing?.targets??(existing?[existing.targetOwner]:[0])),originalPercent:existing?.percent??percent,touchLocked:false,strokeStart:null,strokeOrigin:null};
  if(existing){percent=existing.percent;$('attackPercent').value=String(percent);$('percentLabel').textContent=percent+'%';}
  $('planTroopsPercent').value=String(percent);$('planBrushSize').value='2';
  $('game').classList.add('plan-drawing');$('game').classList.remove('plan-reviewing');
@@ -371,10 +371,10 @@ function refreshPaintGuide(){
  const sent=Math.floor((mine()?.troops||0)*percent/100),overlap=overlappingPlans(plan).length;
  const slotLimit=(state.attackPlans||[]).filter(p=>p.owner===myId).length>=12;
  $('planPaintCount').textContent=number(count)+' cells';$('planPaintClear').disabled=pressed.size>0||(!plan.editId&&!count);
- $('planReviewButton').disabled=!!checked.error||pressed.size>0||!selected.length||(!plan.editId&&!overlap&&!allowed.length)||(!plan.editId&&!overlap&&slotLimit);
+ $('planReviewButton').disabled=!!checked.error||pressed.size>0||(!selected.length&&!plan.editId)||(!plan.editId&&!overlap&&!allowed.length)||(!plan.editId&&!overlap&&slotLimit);
  $('planBrushValue').textContent=String(plan.brushRadius)+' tiles';
  $('planTroopsValue').textContent=percent+'% · '+number(sent);
- $('planGuideHint').textContent=checked.error||(!selected.length?'Choose a country or Neutral land':
+ $('planGuideHint').textContent=checked.error||(!selected.length?(plan.editId?'All attacks paused · Save keeps the painted zone':'Choose a country or Neutral land'):
   overlap?'Merges with '+overlap+' existing plan'+(overlap!==1?'s':'')+' on Start':
   blocked.length?number(blocked.length)+' protected cells skipped · '+number(allowed.length)+' permitted':
   plan.editId?'Erase individual cells or select opponents, then save':
@@ -383,7 +383,9 @@ function refreshPaintGuide(){
 }
 function clearPaintedZone(){
  const plan=attackPlanner;if(plan?.mode!=='paint'||pressed.size>0)return;
- if(plan.editId)plan.cells=new Set(plan.originalCells);else plan.cells.clear();
+ if(plan.editId){plan.cells=new Set(plan.originalCells);plan.targets=new Set(plan.originalTargets);plan.removedTargets.clear();percent=plan.originalPercent;
+  $('planTroopsPercent').value=String(percent);$('attackPercent').value=String(percent);$('percentLabel').textContent=percent+'%';}
+ else plan.cells.clear();
  plan.lastPoint=null;plan.brushPoint=null;plan.zoneCells=null;plan.optionsKey='';
  refreshPaintGuide();queueDraw();
 }
@@ -391,7 +393,7 @@ function reviewPaintedZone(){
  const plan=attackPlanner;if(plan?.mode!=='paint'||pressed.size>0)return;
  const checked=checkPaintZone(plan);if(checked.error){refreshPaintGuide();toast(checked.error,'error');return;}
  const targets=[...plan.targets].filter(t=>t===0||E.person(state,t)&&!mine()?.allies.includes(t));
- if(!targets.length){toast('Choose an opponent or Neutral land.','error');return;}
+ if(!targets.length&&!plan.editId){toast('Choose an opponent or Neutral land.','error');return;}
  const foreign=checked.cells.find(i=>state.owners[i]!==myId);
  if(!plan.editId&&foreign===undefined){toast('Choose foreign territory.','error');return;}
  const order=plan.editId?
