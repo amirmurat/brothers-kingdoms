@@ -1,5 +1,5 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
-_Обновлено: 20 октября 2026 года, рабочая preview-версия v65. Историческая v25 в разделе 0 не является текущей._
+_Обновлено: 20 октября 2026 года, рабочая preview-версия v66 (Cloudflare deployment pending). Историческая v25 в разделе 0 не является текущей._
 
 
 ## СРОЧНО: АКТУАЛЬНОЕ СОСТОЯНИЕ v62 (20.10.2026)
@@ -324,3 +324,10 @@ _Обновлено: 20 октября 2026 года, рабочая preview-в�
 - In `engine.js` player `attackTargets` is the authoritative list of selected attack nations. `setNationTarget` validates living opponents and blocks attacks on allies, updates all saved plan targets without deleting their geography, and withdraws waves against removed targets. Older saved plans without `attackTargets` reconstruct settings from stored selected targets. New Paint/UpdatePlan receives permitted nations from the player object and never declares wars itself. Peace clears both sides' attack preferences so a plan cannot restart the war; alliance acceptance also revokes incompatible targets. Neutral land remains available. `game.js` Paint panel no longer includes per-plan nation selection; Nations can open during an unfinished drawing without clearing it.
 - Wartime recovery is independent of Nations Attack. Previous defensive counteroffensives were blocked by the entire-front affordability requirement. `advancePlannedWave` now permits affordable, distributed subsets for `plan.autoRecovery` ONLY, using `balancedLayer` to spread recovery while honoring army costs and ongoing war. `sendNextPlannedWave` starts an automatic defensive wave with an affordable budget; ordinary human-painted offensive plans retain their whole-front-or-wait behavior. New `tests/nations.cjs` and `tests/recovery-frontier.cjs`; five existing regression suites adjusted for centralized targeting. In-memory UI Nations smoke passed; Safari and multiplayer remain physically unverified.
 - Branch `design/visual-review-v26`, never touch main; permanent preview: https://raw.githack.com/amirmurat/brothers-kingdoms/design/visual-review-v26/index.html . v65-nations cache key. Ensure host reloads in multiplayer to pick up authoritative engine.
+
+## v66 — Cloudflare authoritative rooms (20.10.2026)
+- User requires free server; Render excluded by user. Cloudflare account registered; direct Cloudflare connector discovery returned no matching plugin, so Dashboard GitHub linking remains required.
+- Added server/cloudflare.mjs and wrangler.jsonc: SQLite Durable Object per room, authoritative existing engine, WebSocket commands, compressed snapshots, room-control transfer, same-device persistent identity, reconnect and all-disconnected pause. Transactional split snapshots every 10s/commands/disconnect; idle cleanup after 24h.
+- game.js adds opt-in same-origin transport via server-config.js; scripts/build-cloudflare.cjs creates a Cloudflare-only static bundle and enables it. Raw preview remains PeerJS; do not tell user it already uses server. No server URL deployed yet.
+- Engine build v66; gameplay unchanged. Main untouched. Setup instructions docs/CLOUDFLARE_SETUP.md.
+- Seven engine regression suites plus server/client behavior adapters passed in V8. No shell environment available; no Node/real Wrangler/workerd/Safari/physical multiplayer execution. New tests are committed for replay. Cloudflare deploy and free-tier usage still require validation.

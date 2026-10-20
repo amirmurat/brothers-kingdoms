@@ -1,0 +1,9 @@
+{
+  "name": "brothers-kingdoms",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build-cloudflare.cjs",
+    "deploy": "npx wrangler@4 deploy",
+    "test:server": "node tests/cloudflare-server.cjs && node tests/cloudflare-client.cjs"
+  }
+}
