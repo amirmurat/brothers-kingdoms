@@ -81,3 +81,6 @@ Adaptations: original black backgrounds removed, fills recolored for visibility,
 - New Attack button: drag a loop from owned land across one enemy/neutral region and back to owned land; only a confirmed planned region can be conquered by human players. Confirmation selects 15–95% troops and declares war once for a hostile nation. Ongoing fronts remain inside the outlined cells, can be cancelled by tapping the region, and mutually agreed peace stops current wars.
 - War & Peace chip opens when in conflict; offers and acceptance are available between human countries. Bots may attack using their automated border selection and do not accept peace proposals.
 - Work remains on preview branch `design/visual-review-v26`; iPhone Safari UI and real multiplayer have not been physically tested.
+
+### v55 — Paint attack zones (preview)
+- Attack now uses a direct tile brush instead of a closed outline. Multiple strokes build one area; Clear resets it; Review attack checks border contact, connectivity, single target owner and the 2–3,500 cell limit. Edit area preserves painted cells. Existing conquest, war and peace remain host-authoritative. Preview branch only; physical Safari and multiplayer tests pending.

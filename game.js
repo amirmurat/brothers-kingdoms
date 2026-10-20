@@ -284,61 +284,93 @@ function beginAttackPlanner(){
  if(!state||state.phase!=='playing'||mine()?.eliminated)return;
  hideAux();toggleQuickBuild(false);setPreview(null);buildMode=null;redirectArmy=null;selected=null;moveCursor=null;
  $('warPanel').classList.add('hidden');$('warChip').setAttribute('aria-expanded','false');
- clearTimeout(longPressTimer);dragAttack=null;pointerStart=null;
- attackPlanner={mode:'draw',path:[],pointerId:null,zoneCells:null,targetOwner:0};
+ clearTimeout(longPressTimer);dragAttack=null;pointerStart=null;pressed.clear();
+ attackPlanner={mode:'paint',cells:new Set(),targetOwner:null,pointerId:null,lastPoint:null,brushPoint:null,zoneCells:null};
  $('game').classList.add('plan-drawing');$('game').classList.remove('plan-reviewing');
  $('planGuide').classList.remove('hidden');$('planReview').classList.add('hidden');
  $('planAttackButton').setAttribute('aria-pressed','true');
- $('planGuideHint').textContent='Start on your land, cross the target, and finish on your land.';
- $('mapHint').classList.add('hidden');queueDraw();
+ $('mapHint').classList.add('hidden');refreshPaintGuide();queueDraw();
 }
-function pushPlanPoint(pt){
- if(!attackPlanner||!E.inside(pt.x,pt.y))return;
- const path=attackPlanner.path,last=path[path.length-1];
- if(!last||last.x!==pt.x||last.y!==pt.y){if(path.length<550)path.push({x:pt.x,y:pt.y});}
+// A brush paints cross-shaped five-tile stamps, keeping exactly one target owner.
+function brushAt(pt){
+ const plan=attackPlanner;if(plan?.mode!=='paint')return;
+ for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+  if(dx*dx+dy*dy>1)continue;
+  const x=pt.x+dx,y=pt.y+dy;if(!E.inside(x,y)||!E.tile(state,x,y))continue;
+  const owner=E.owner(state,x,y);if(owner===myId||mine()?.allies.includes(owner))continue;
+  if(plan.targetOwner===null)plan.targetOwner=owner;
+  if(owner!==plan.targetOwner||plan.cells.size>=3500)continue;
+  plan.cells.add(y*E.W+x);
+ }
 }
-function insidePolygon(x,y,points){
- let hit=false;
- for(let i=0,j=points.length-1;i<points.length;j=i++){
-  const a=points[i],b=points[j];
-  if(((a.y>y)!==(b.y>y))&&x<(b.x-a.x)*(y-a.y)/(b.y-a.y)+a.x)hit=!hit;
+// Interpolate missing pointer events so quick drags stay continuous.
+function paintLine(from,to){
+ const dx=Math.abs(to.x-from.x),dy=Math.abs(to.y-from.y),sx=from.x<to.x?1:-1,sy=from.y<to.y?1:-1;
+ let x=from.x,y=from.y,err=dx-dy;
+ for(let n=0;n<=E.W+E.H+8;n++){
+  brushAt({x,y});if(x===to.x&&y===to.y)break;
+  const e2=2*err;if(e2>-dy){err-=dy;x+=sx;}if(e2<dx){err+=dx;y+=sy;}
  }
- return hit;
 }
-function completePlan(end){
- const plan=attackPlanner;if(!plan||plan.mode!=='draw')return;
- plan.pointerId=null;pushPlanPoint(end);
- if(!E.inside(end.x,end.y)||E.owner(state,end.x,end.y)!==myId){plan.path=[];toast('Finish the outline on your own territory.','error');queueDraw();return;}
- if(plan.path.length<4){plan.path=[];toast('Draw a wider outline across the target land.','error');queueDraw();return;}
- const path=plan.path,loX=Math.max(0,Math.min(...path.map(p=>p.x))-1),hiX=Math.min(E.W-1,Math.max(...path.map(p=>p.x))+1),
-  loY=Math.max(0,Math.min(...path.map(p=>p.y))-1),hiY=Math.min(E.H-1,Math.max(...path.map(p=>p.y))+1);
- const groups=new Map();
- for(let y=loY;y<=hiY;y++)for(let x=loX;x<=hiX;x++){
-  if(!insidePolygon(x+.5,y+.5,path)||!E.tile(state,x,y))continue;
-  const owner=E.owner(state,x,y);if(owner===myId)continue;
-  if(!groups.has(owner))groups.set(owner,[]);groups.get(owner).push(y*E.W+x);
+function paintAtPointer(pt){
+ const plan=attackPlanner;if(plan?.mode!=='paint')return;
+ plan.brushPoint=pt;
+ if(plan.lastPoint)paintLine(plan.lastPoint,pt);else brushAt(pt);
+ plan.lastPoint=pt;
+}
+function checkPaintZone(plan){
+ if(!plan?.cells?.size)return {error:'Brush over enemy or neutral land to begin.'};
+ const cells=Array.from(plan.cells),owner=plan.targetOwner;
+ if(cells.length<2)return {error:'Paint at least two target cells.'};
+ if(cells.length>3500)return {error:'The plan is limited to 3,500 cells.'};
+ if(mine()?.allies.includes(owner))return {error:'End the alliance before attacking.'};
+ const selected=new Set(cells),border=[];
+ for(const i of cells){
+  if(!state.tiles[i]||state.owners[i]!==owner)return {error:'The territory changed. Clear and paint again.'};
+  const x=i%E.W,y=(i/E.W)|0;
+  if([x>0?i-1:-1,x<E.W-1?i+1:-1,y>0?i-E.W:-1,y<E.H-1?i+E.W:-1].some(j=>j>=0&&state.owners[j]===myId))border.push(i);
  }
- if(groups.size!==1){plan.path=[];toast(groups.size?'Outline only one kingdom at a time.':'The outline contains no target land.','error');queueDraw();return;}
- const [targetOwner,cells]=[...groups][0];
- if(mine()?.allies.includes(targetOwner)){plan.path=[];toast('End the alliance before planning an attack.','error');queueDraw();return;}
- const all=new Set(cells),border=[],reachable=new Set();
- for(const i of cells){const x=i%E.W,y=(i/E.W)|0;
-  if([x>0?i-1:-1,x<E.W-1?i+1:-1,y>0?i-E.W:-1,y<E.H-1?i+E.W:-1].some(j=>j>=0&&state.owners[j]===myId)){border.push(i);reachable.add(i);}
- }
- if(!border.length){plan.path=[];toast('Your outlined area must touch your border.','error');queueDraw();return;}
- const queue=border.slice();
- for(let q=0;q<queue.length;q++){const i=queue[q],x=i%E.W,y=(i/E.W)|0;
+ if(!border.length)return {error:'Paint up to your kingdom border.'};
+ const seen=new Set(border),queue=border.slice();
+ for(let q=0;q<queue.length;q++){
+  const i=queue[q],x=i%E.W,y=(i/E.W)|0;
   for(const j of [x>0?i-1:-1,x<E.W-1?i+1:-1,y>0?i-E.W:-1,y<E.H-1?i+E.W:-1]){
-   if(all.has(j)&&!reachable.has(j)){reachable.add(j);queue.push(j);}
+   if(selected.has(j)&&!seen.has(j)){seen.add(j);queue.push(j);}
   }
  }
- if(reachable.size!==all.size){plan.path=[];toast('Keep the outlined area connected to your border.','error');queueDraw();return;}
- if(cells.length<2||cells.length>3500){plan.path=[];toast('Choose an area of 2 to 3,500 land cells.','error');queueDraw();return;}
- plan.mode='review';plan.zoneCells=cells;plan.targetOwner=targetOwner;
- const mid=border[(border.length/2)|0];plan.x=mid%E.W;plan.y=(mid/E.W)|0;
+ if(seen.size!==cells.length)return {error:'Connect all painted cells to your border.'};
+ return {cells:cells.sort((a,b)=>a-b),border};
+}
+function refreshPaintGuide(){
+ const plan=attackPlanner;if(plan?.mode!=='paint')return;
+ const check=checkPaintZone(plan),count=plan.cells.size;
+ $('planPaintCount').textContent=number(count)+' cells';
+ $('planPaintClear').disabled=count===0;
+ $('planReviewButton').disabled=!!check.error;
+ $('planGuideHint').textContent=check.error||'Zone ready. Add more paint or review the attack.';
+}
+function clearPaintedZone(){
+ const plan=attackPlanner;if(plan?.mode!=='paint')return;
+ plan.cells.clear();plan.targetOwner=null;plan.lastPoint=null;plan.brushPoint=null;plan.zoneCells=null;
+ refreshPaintGuide();queueDraw();
+}
+function reviewPaintedZone(){
+ const plan=attackPlanner;if(plan?.mode!=='paint')return;
+ const check=checkPaintZone(plan);
+ if(check.error){refreshPaintGuide();toast(check.error,'error');return;}
+ plan.mode='review';plan.zoneCells=check.cells;
+ const start=check.border[(check.border.length/2)|0];plan.x=start%E.W;plan.y=(start/E.W)|0;
+ plan.brushPoint=null;plan.lastPoint=null;
  $('game').classList.remove('plan-drawing');$('game').classList.add('plan-reviewing');
  $('planGuide').classList.add('hidden');$('planReview').classList.remove('hidden');
  refreshPlanReview();queueDraw();
+}
+function editPaintedZone(){
+ const plan=attackPlanner;if(plan?.mode!=='review')return;
+ plan.mode='paint';plan.zoneCells=null;plan.pointerId=null;plan.lastPoint=null;
+ $('game').classList.add('plan-drawing');$('game').classList.remove('plan-reviewing');
+ $('planGuide').classList.remove('hidden');$('planReview').classList.add('hidden');
+ refreshPaintGuide();queueDraw();
 }
 function refreshPlanReview(){
  const plan=attackPlanner;if(plan?.mode!=='review')return;
@@ -367,6 +399,7 @@ function drawAttackPlanning(){
  const left=Math.max(0,Math.floor(-camX/(TILE*zoom))-2),right=Math.min(E.W-1,Math.ceil((canvas.clientWidth-camX)/(TILE*zoom))+2),
   top=Math.max(0,Math.floor(-camY/(TILE*zoom))-2),bottom=Math.min(E.H-1,Math.ceil((canvas.clientHeight-camY)/(TILE*zoom))+2);
  if(attackPlanner?.mode==='review'&&attackPlanner.zoneCells)plans.push({zoneCells:attackPlanner.zoneCells,preview:true});
+ if(attackPlanner?.mode==='paint'&&attackPlanner.cells.size)plans.push({zoneCells:[...attackPlanner.cells],preview:true});
  const T=TILE;
  for(const plan of plans){
   const pending=plan.preview,remaining=plan.zoneCells.filter(i=>state.owners[i]!==myId&&state.tiles[i]);
@@ -386,13 +419,11 @@ function drawAttackPlanning(){
   }
   ctx.stroke();ctx.restore();
  }
- const path=attackPlanner?.path;
- if(path?.length){ctx.save();ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#8beaff';ctx.lineWidth=Math.max(2.2,3.1/zoom);ctx.shadowColor='#5ccfff';ctx.shadowBlur=8/zoom;ctx.beginPath();
-  for(let i=0;i<path.length;i++){const x=(path[i].x+.5)*T,y=(path[i].y+.5)*T;if(!i)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
-  if(attackPlanner.mode==='review')ctx.closePath();
-  ctx.stroke();ctx.shadowBlur=0;
-  for(const p of [path[0],path[path.length-1]]){ctx.beginPath();ctx.arc((p.x+.5)*T,(p.y+.5)*T,Math.max(3,4/zoom),0,Math.PI*2);ctx.fillStyle='#eefbff';ctx.fill();}
-  ctx.restore();
+ const brush=attackPlanner?.mode==='paint'&&attackPlanner.brushPoint;
+ if(brush&&E.inside(brush.x,brush.y)){
+  ctx.save();ctx.beginPath();ctx.arc((brush.x+.5)*T,(brush.y+.5)*T,T*1.15,0,Math.PI*2);
+  ctx.fillStyle='rgba(103,223,255,.12)';ctx.strokeStyle='#b1f1ff';ctx.lineWidth=Math.max(1,1.6/zoom);
+  ctx.fill();ctx.stroke();ctx.restore();
  }
 }
 
@@ -417,9 +448,9 @@ function setPreview(t){
  $('targetForecast').textContent=allied?'Allied territory cannot be attacked. End the alliance first.':
    t.type==='redirect'?'Confirm to redirect your army.':
    sea?'Sea is impassable. Choose land.':
-   owner?(war?'War is active. Use Draw attack zone to mark a new advance.':'Draw a zone to plan an offensive. The first confirmed attack declares war.'):
-   'Draw an outline from your land and back to it. The area is a plan until you confirm.';
- $('confirmTarget').textContent=t.type==='redirect'?'Change target':'Draw attack zone';
+   owner?(war?'War is active. Paint a target area to start a new advance.':'Paint a connected attack area. The first confirmed attack declares war.'):
+   'Brush over neutral land connected to your border, then review and confirm.';
+ $('confirmTarget').textContent=t.type==='redirect'?'Change target':'Paint attack zone';
  $('confirmTarget').disabled=allied;
  if(t.type==='redirect'&&!allied&&p.troops-sent<Math.max(75,Math.min(300,p.troopCap*.12)))$('targetForecast').textContent+=' Warning: your reserve will be low after this order.';
  box.dataset.order=t.type;
@@ -528,7 +559,7 @@ function render(){if(!state)return;
 }
 function setRate(node,value){const rate=Math.round(Number(value)||0);node.dataset.trend=rate>0?'positive':rate<0?'negative':'neutral';node.textContent=(rate>0?'+':rate<0?'−':'')+number(Math.abs(rate))+'/s';}
 function updateUI(){const p=mine();if(!p)return;
- renderWars();if(attackPlanner?.mode==='review')refreshPlanReview();
+ renderWars();if(attackPlanner?.mode==='review')refreshPlanReview();else if(attackPlanner?.mode==='paint'&&attackPlanner.pointerId===null)refreshPaintGuide();
  // Before the first economy tick, derive the same production formula as the engine,
  // rather than showing a misleading +0/s for every resource.
  const {gross,recruited,foodNet}=resourceRates(p);
@@ -636,8 +667,10 @@ $('cancelTarget').onclick=()=>{setPreview(null);redirectArmy=null;lastTap=0;};$(
 
 $('planAttackButton').onclick=()=>attackPlanner?resetAttackPlanner():beginAttackPlanner();
 $('planGuideExit').onclick=resetAttackPlanner;
-$('planReviewClose').onclick=resetAttackPlanner;
-$('planDiscard').onclick=resetAttackPlanner;
+$('planReviewClose').onclick=editPaintedZone;
+$('planDiscard').onclick=editPaintedZone;
+$('planPaintClear').onclick=clearPaintedZone;
+$('planReviewButton').onclick=reviewPaintedZone;
 document.querySelectorAll('[data-plan-percent]').forEach(btn=>btn.onclick=()=>{
  percent=Number(btn.dataset.planPercent);$('attackPercent').value=percent;$('percentLabel').textContent=percent+'%';refreshPlanReview();
 });
@@ -755,11 +788,10 @@ function updateMapStatus(x,y){inspectCell(x,y);}
 function onPointerDown(e){
  if(!state)return;
  if(attackPlanner){
-  if(attackPlanner.mode!=='draw'||attackPlanner.pointerId!==null)return;
-  const pt=gridAt(e.clientX,e.clientY);
-  if(!E.inside(pt.x,pt.y)||E.owner(state,pt.x,pt.y)!==myId){toast('Start on your own territory.','error');return;}
-  canvas.setPointerCapture(e.pointerId);attackPlanner.pointerId=e.pointerId;attackPlanner.path=[];pushPlanPoint(pt);
-  $('planGuideHint').textContent='Keep drawing across the target. Release on your land to close.';queueDraw();return;
+  const plan=attackPlanner;if(plan.mode!=='paint'||plan.pointerId!==null)return;
+  const pt=gridAt(e.clientX,e.clientY);if(!E.inside(pt.x,pt.y))return;
+  canvas.setPointerCapture(e.pointerId);plan.pointerId=e.pointerId;plan.lastPoint=null;
+  paintAtPointer(pt);queueDraw();return;
  }
  canvas.setPointerCapture(e.pointerId);
  pressed.set(e.pointerId,{x:e.clientX,y:e.clientY});
@@ -783,7 +815,10 @@ function onPointerDown(e){
 }
 function onPointerMove(e){
  if(attackPlanner){
-  if(attackPlanner.mode==='draw'&&attackPlanner.pointerId===e.pointerId){pushPlanPoint(gridAt(e.clientX,e.clientY));queueDraw();}return;
+  const plan=attackPlanner;if(plan.mode==='paint'&&plan.pointerId===e.pointerId){
+   paintAtPointer(gridAt(e.clientX,e.clientY));queueDraw();
+  }
+  return;
  }
  if(buildMode&&state?.phase==='playing'){
   const cell=gridAt(e.clientX,e.clientY);
@@ -809,7 +844,11 @@ function onPointerMove(e){
 }
 function onPointerUp(e){
  if(attackPlanner){
-  if(attackPlanner.mode==='draw'&&attackPlanner.pointerId===e.pointerId)completePlan(gridAt(e.clientX,e.clientY));return;
+  const plan=attackPlanner;if(plan.mode==='paint'&&plan.pointerId===e.pointerId){
+   paintAtPointer(gridAt(e.clientX,e.clientY));plan.pointerId=null;plan.lastPoint=null;
+   refreshPaintGuide();queueDraw();
+  }
+  return;
  }
  clearTimeout(longPressTimer);
  const drag=dragAttack,was=pointerStart,touch=pressed.size;
@@ -833,7 +872,7 @@ document.addEventListener('selectstart',e=>{
 canvas.addEventListener('pointerdown',onPointerDown);
 canvas.addEventListener('pointermove',onPointerMove);
 canvas.addEventListener('pointerup',onPointerUp);
-canvas.addEventListener('pointercancel',e=>{if(attackPlanner?.pointerId===e.pointerId){attackPlanner.path=[];attackPlanner.pointerId=null;queueDraw();}clearTimeout(longPressTimer);pressed.delete(e.pointerId);pointerStart=null;gesture=null;dragAttack=null;});
+canvas.addEventListener('pointercancel',e=>{if(attackPlanner?.pointerId===e.pointerId){attackPlanner.pointerId=null;attackPlanner.lastPoint=null;refreshPaintGuide();queueDraw();}clearTimeout(longPressTimer);pressed.delete(e.pointerId);pointerStart=null;gesture=null;dragAttack=null;});
 canvas.addEventListener('wheel',e=>{e.preventDefault();const p=pixelAt(e.clientX,e.clientY);zoomAt(e.deltaY<0?1.13:.885,p.x,p.y);},{passive:false});canvas.addEventListener('contextmenu',e=>e.preventDefault());
 $('zoomIn').onclick=()=>zoomAt(1.24,canvas.clientWidth/2,canvas.clientHeight/2);$('zoomOut').onclick=()=>zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);function fitWorld(){hideAux();zoom=Math.min((canvas.clientWidth-16)/(E.W*TILE),(canvas.clientHeight-16)/(E.H*TILE));camX=(canvas.clientWidth-E.W*TILE*zoom)/2;camY=(canvas.clientHeight-E.H*TILE*zoom)/2;$('zoomText').textContent=Math.round(zoom*100)+'%';queueDraw();}
 mini.addEventListener('pointerdown',e=>{const r=mini.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*E.W,y=(e.clientY-r.top)/r.height*E.H;camX=canvas.clientWidth/2-x*TILE*zoom;camY=canvas.clientHeight/2-y*TILE*zoom;clampCamera();queueDraw();});mini.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();fitWorld();}});

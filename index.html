@@ -9,7 +9,7 @@
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
 <link rel="stylesheet" href="styles/legacy.css?v=49-visible-camp"/>
-<link rel="stylesheet" href="styles/theme.css?v=54-attack-planner"/>
+<link rel="stylesheet" href="styles/theme.css?v=55-paint-attack"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -65,7 +65,7 @@
 <div aria-live="polite" class="game-toast hidden" id="gameToast" role="status"></div>
 </div>
 <div class="map-toolbar">
-<div class="map-location"><span class="location-dot"></span><strong id="myKingdom" title="Kingdom name">Kingdom</strong><span aria-live="polite" id="mapStatus">Tap Attack to draw an offensive zone</span></div><button class="war-chip hidden" id="warChip" type="button" aria-controls="warPanel" aria-expanded="false"><span class="war-signal"></span><span id="warChipLabel">AT WAR</span></button>
+<div class="map-location"><span class="location-dot"></span><strong id="myKingdom" title="Kingdom name">Kingdom</strong><span aria-live="polite" id="mapStatus">Tap Attack to paint an offensive zone</span></div><button class="war-chip hidden" id="warChip" type="button" aria-controls="warPanel" aria-expanded="false"><span class="war-signal"></span><span id="warChipLabel">AT WAR</span></button>
 
 </div>
 <div class="map-view" id="mapView">
@@ -78,14 +78,21 @@
 <button type="button" class="threat-expand hidden" id="threatExpand" aria-controls="threatList" aria-expanded="false" aria-label="Incoming attacks list">Fronts <b id="threatCount">0</b></button>
 <div class="threat-list hidden" id="threatList" aria-label="Incoming attacks list"><header><strong>Incoming attacks</strong><button type="button" id="threatClose" aria-label="Close threat list"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button></header><div class="threat-items" id="threatItems"></div></div>
 </div><canvas aria-label="Kingdom map. Arrow keys move the cursor; Enter selects a target." id="mapCanvas" role="application" tabindex="0"></canvas><div aria-live="polite" class="sr-only" id="keyboardPosition"></div>
-<div class="map-hint" id="mapHint">Tap Attack to outline a conquest area</div>
-<div class="plan-guide hidden" id="planGuide" role="status">
- <div class="plan-guide-symbol"><svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/game.svg#sword"></use></svg></div>
- <div class="plan-guide-copy"><strong>DRAW YOUR FRONT</strong><span id="planGuideHint">Start on your land, cross the target, and finish on your land.</span></div>
- <button type="button" class="plan-guide-exit" id="planGuideExit" aria-label="Exit attack planning">Exit</button>
+<div class="map-hint" id="mapHint">Tap Attack to paint a conquest area</div>
+<div class="plan-guide hidden" id="planGuide" role="region" aria-label="Paint attack zone">
+ <div class="plan-guide-top">
+  <div class="plan-guide-symbol"><svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/game.svg#sword"></use></svg></div>
+  <div class="plan-guide-copy"><strong>PAINT ATTACK ZONE</strong><span id="planGuideHint" role="status">Brush over enemy or neutral land and connect to your border.</span></div>
+  <button type="button" class="plan-guide-exit" id="planGuideExit" aria-label="Exit attack painting">Exit</button>
+ </div>
+ <div class="plan-guide-actions">
+  <span class="plan-paint-count" id="planPaintCount">0 cells</span>
+  <button type="button" id="planPaintClear" disabled>Clear</button>
+  <button type="button" id="planReviewButton" disabled>Review attack</button>
+ </div>
 </div>
 <div class="plan-review hidden" id="planReview" role="dialog" aria-label="Confirm offensive">
- <div class="plan-review-top"><span class="plan-overline">OFFENSIVE PLAN <b id="planStatus">READY</b></span><button type="button" id="planReviewClose" aria-label="Discard plan"><svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/controls.svg#x"></use></svg></button></div>
+ <div class="plan-review-top"><span class="plan-overline">OFFENSIVE PLAN <b id="planStatus">READY</b></span><button type="button" id="planReviewClose" aria-label="Edit painted zone"><svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/controls.svg#x"></use></svg></button></div>
  <div class="plan-review-heading"><strong id="planTarget">Unclaimed territory</strong><span id="planAreaCount">0 cells</span></div>
  <p id="planDescription">Your army will advance only inside the highlighted zone.</p>
  <div class="plan-force-label"><span>TROOPS TO COMMIT</span><b id="planForceLabel">30%</b></div>
@@ -93,7 +100,7 @@
   <button type="button" data-plan-percent="15">15%</button><button type="button" data-plan-percent="30" class="active">30%</button><button type="button" data-plan-percent="50">50%</button><button type="button" data-plan-percent="75">75%</button><button type="button" data-plan-percent="95">95%</button>
  </div>
  <div id="planForceDetails" class="plan-force-details">0 troops committed · 0 remain</div>
- <div class="plan-review-actions"><button type="button" id="planDiscard">Discard</button><button type="button" id="planLaunch">Start offensive</button></div>
+ <div class="plan-review-actions"><button type="button" id="planDiscard">Edit area</button><button type="button" id="planLaunch">Start offensive</button></div>
 </div>
 <div class="plan-cancel-mask hidden" id="planCancelDialog" role="dialog" aria-modal="true" aria-labelledby="planCancelTitle">
  <div class="plan-cancel-card"><span class="plan-overline">ACTIVE OFFENSIVE</span><h3 id="planCancelTitle">Cancel this attack?</h3><p>The advance will stop. Surviving troops return with the withdrawal cost.</p>
@@ -111,7 +118,7 @@
 <div aria-label="Main actions" class="game-action-bar" id="gameActionBar" role="group">
 
 <button id="scienceButton" class="action-science" aria-label="Open research"><svg class="ui-icon science-symbol" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#books"></use></svg><span>Research</span></button>
-<button id="planAttackButton" class="action-attack" aria-label="Draw attack zone" aria-pressed="false"><svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/game.svg#sword"></use></svg><span>Attack</span></button>
+<button id="planAttackButton" class="action-attack" aria-label="Paint attack zone" aria-pressed="false"><svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/game.svg#sword"></use></svg><span>Attack</span></button>
 <button aria-label="Open construction" class="action-build" id="developButton"><svg class="ui-icon build-symbol" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#hammer"></use></svg><span>Build</span></button>
 </div>
 <div class="map-battle-controls collapsed" id="battleDock"><button aria-expanded="false" aria-label="Set army size" class="dock-toggle" id="dockToggle"><svg class="ui-icon dock-symbol" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#sword"></use></svg> <span class="dock-name">Troops</span> <span id="dockSummary">30%</span> <span aria-hidden="true" class="dock-chevron">⌄</span></button>
@@ -155,7 +162,7 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="engine.js?v=54-attack-planner"></script>
+<script src="engine.js?v=55-paint-attack"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=54-attack-planner"></script>
+<script src="game.js?v=55-paint-attack"></script>
 </body></html>

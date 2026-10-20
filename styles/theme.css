@@ -1071,3 +1071,26 @@ body :is(input,textarea,[contenteditable="true"]){-webkit-user-select:text!impor
 
 /* v54: one-tile preview is for planning/diplomacy, not troop allocation. */
 #game#game#game #targetPreview[data-order="send"] #targetQuickPercents{display:none!important}
+
+
+/* v55: touch-friendly paint controls below the interactive map. */
+#game#game#game #planGuide{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:9px!important;padding:11px 12px!important}
+#game#game#game .plan-guide-top{display:flex;align-items:center;gap:9px;min-width:0}
+#game#game#game .plan-guide-copy span{display:block;min-height:16px}
+#game#game#game .plan-guide-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(64px,.58fr) minmax(112px,1.15fr);gap:7px;align-items:center}
+#game#game#game .plan-paint-count{color:#9ce5f6;font-size:12px;font-weight:750;font-variant-numeric:tabular-nums;white-space:nowrap}
+#game#game#game .plan-guide-actions button{min-height:43px;box-sizing:border-box;padding:7px 9px;border-radius:9px;font-size:12px;font-weight:780}
+#game#game#game #planPaintClear{border:1px solid #5a6a7b;background:#263343;color:#ecf4fb}
+#game#game#game #planReviewButton{border:1px solid #8aeaff;background:#64d9ff;color:#071a25}
+#game#game#game .plan-guide-actions button:disabled{opacity:.38!important;cursor:not-allowed}
+#game#game#game.plan-drawing #mapCanvas{cursor:crosshair;touch-action:none}
+@media(max-width:360px){
+ #game#game#game #planGuide{left:8px!important;right:8px!important;padding:9px!important}
+ #game#game#game .plan-guide-symbol{flex-basis:30px;width:30px;height:30px}
+ #game#game#game .plan-guide-copy span{font-size:11px;line-height:1.25}
+ #game#game#game .plan-guide-actions{grid-template-columns:minmax(0,1fr) 62px 106px;gap:5px}
+ #game#game#game .plan-guide-actions button{font-size:11px;padding:6px}
+}
+@media(max-height:480px) and (orientation:landscape){
+ #game#game#game #planGuide{left:auto!important;right:8px!important;width:min(350px,85%)!important;bottom:5px!important;padding:8px!important;gap:5px!important}
+}
