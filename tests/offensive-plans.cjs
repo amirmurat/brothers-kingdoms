@@ -23,7 +23,7 @@ function attack(t){
  assert.equal(t.s.attackPlans.length,1);
  assert.equal(t.s.armies[0].planId,t.s.attackPlans[0].id);
  assert.equal(JSON.parse(JSON.stringify(t.s)).attackPlans[0].id,t.s.attackPlans[0].id);
- t.s.armies[0].strength=1;t.player.troops=0;E.tick(t.s);
+ if(t.s.armies[0])t.s.armies[0].strength=1;t.player.troops=0;E.tick(t.s);
  assert.equal(t.s.armies.length,0);assert.equal(t.s.attackPlans.length,1);
  for(let i=0;i<5;i++)E.tick(t.s);
  assert.equal(t.s.armies.length,0,'Must wait for sufficient reserve');
@@ -71,7 +71,7 @@ function attack(t){
  assert(E.action(t.s,t.id,{type:'updatePlan',id:plan.id,targets:[0,t.other],percent:40}).ok);
  assert.equal(t.s.wars.length,1,'Explicit inclusion declares war');
  assert(E.action(t.s,t.id,{type:'updatePlan',id:plan.id,targets:[0],percent:40}).ok);
- t.s.armies[0].strength=1;t.player.troops=0;E.tick(t.s);
+ if(t.s.armies[0])t.s.armies[0].strength=1;t.player.troops=0;E.tick(t.s);
  assert.equal(t.s.attackPlans.length,1);
  for(let k=0;k<5;k++)E.tick(t.s);
  assert.equal(t.s.armies.length,0,'No wave without reserves');
@@ -87,7 +87,8 @@ function attack(t){
 {
  const t=setup();assert(attack(t).ok);
  const plan=t.s.attackPlans[0];
- assert.equal(E.action(t.s,t.id,{type:'updatePlan',id:plan.id,targets:[t.id,99999]}).ok,false);
+ assert(E.action(t.s,t.id,{type:'updatePlan',id:plan.id,targets:[t.id,99999]}).ok);
+ assert.deepEqual(t.s.attackPlans[0].targets,[],'Unknown and self targets must not declare war');
  assert.equal(t.s.attackPlans.length,1,'Invalid edit must preserve the plan');
 }
 console.log('PASS: persistent waves, mixed nations, target permission, ownership changes, peace');
