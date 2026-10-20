@@ -364,9 +364,10 @@ body :is(button,input,select,summary){font-family:var(--ui-font)!important}
 #game .tabbar button{background:transparent!important;border:0!important;box-shadow:none!important;color:#617065!important}
 #game .tabbar button.active{background:#365f49!important;color:white!important}
 @media(max-width:600px){
- #game #resourceSummary.resource-hud>div{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:14px 22px 14px!important;padding:7px 5px!important;gap:0!important;text-align:center!important}
- #game #resourceSummary.resource-hud .res-icon{display:none!important}
- #game #resourceSummary.resource-hud :is(span,b,small){grid-column:1!important;justify-self:center!important}
+ #game #resourceSummary.resource-hud>div{grid-template-columns:20px minmax(0,1fr)!important;grid-template-rows:14px 22px 14px!important;padding:7px 5px!important;gap:0 3px!important;text-align:center!important}
+ #game #resourceSummary.resource-hud .res-icon{display:block!important;width:15px!important;height:15px!important;grid-row:1!important;grid-column:1!important;justify-self:end!important}
+ #game #resourceSummary.resource-hud span{grid-column:2!important;justify-self:start!important;font-size:8px!important}
+ #game #resourceSummary.resource-hud :is(b,small){grid-column:1/-1!important;justify-self:center!important}
  #game #resourceSummary.resource-hud b{font-size:16px!important}
  #game .build-icon{width:50px!important;height:50px!important}
  #game .build-icon .building-art{width:44px!important;height:44px!important}
@@ -379,3 +380,11 @@ body :is(button,input,select,summary){font-family:var(--ui-font)!important}
  #game #resourceSummary.resource-hud b{grid-row:2!important;grid-column:2!important;font-size:15px!important}
  #game #resourceSummary.resource-hud small{grid-row:1/3!important;grid-column:3!important}
 }
+
+#game #quickBuildChoices{scrollbar-width:thin;scrollbar-color:#98aa8d transparent;padding-bottom:6px!important}
+#game #sidebar .tab-content{scrollbar-width:thin;scrollbar-color:#98aa8d transparent}
+#game #buildingsPanel .build-detail{background:#fffcf2!important}
+#game #resourceSummary [data-resource="food"] .res-icon{color:#9b7937!important}
+#game #resourceSummary [data-resource="wood"] .res-icon{color:#46805c!important}
+#game #resourceSummary [data-resource="stone"] .res-icon{color:#73818a!important}
+#game #resourceSummary [data-resource="gold"] .res-icon{color:#aa8331!important}

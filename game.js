@@ -352,7 +352,7 @@ function render(){if(!state)return;
  }
  if(phaseShown!=='playing'&&phaseShown!=='ended'){
   lastHudLand=null;lastHudTick=-1;lastHudOwners=null;lastHudArmies=new Map();hudNotice=null;activeThreats=[];announcedThreats.clear();lastThreatSignature="";
-  show('game');phaseShown='playing';zoom=window.innerWidth<600?1.6:1.4;$('zoomText').textContent=Math.round(zoom*100)+'%';setMinimapExpanded(window.innerWidth>=850);resize();centerOnCapital();
+  show('game');phaseShown='playing';zoom=window.innerWidth<600?2.2:1.8;$('zoomText').textContent=Math.round(zoom*100)+'%';setMinimapExpanded(window.innerWidth>=850);resize();centerOnCapital();
  }else if(phaseShown==='ended'&&state.phase==='playing'){phaseShown='playing';}
  updateUI();repaintWorld();queueDraw();
  if(state.phase==='ended'&&phaseShown!=='ended'){
@@ -665,7 +665,7 @@ canvas.addEventListener('pointermove',onPointerMove);
 canvas.addEventListener('pointerup',onPointerUp);
 canvas.addEventListener('pointercancel',e=>{clearTimeout(longPressTimer);pressed.delete(e.pointerId);pointerStart=null;gesture=null;dragAttack=null;});
 canvas.addEventListener('wheel',e=>{e.preventDefault();const p=pixelAt(e.clientX,e.clientY);zoomAt(e.deltaY<0?1.13:.885,p.x,p.y);},{passive:false});canvas.addEventListener('contextmenu',e=>e.preventDefault());
-$('zoomIn').onclick=()=>zoomAt(1.24,canvas.clientWidth/2,canvas.clientHeight/2);$('zoomOut').onclick=()=>zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);$('viewAll').onclick=()=>{zoom=Math.min((canvas.clientWidth-16)/(E.W*TILE),(canvas.clientHeight-16)/(E.H*TILE));camX=(canvas.clientWidth-E.W*TILE*zoom)/2;camY=(canvas.clientHeight-E.H*TILE*zoom)/2;$('zoomText').textContent=Math.round(zoom*100)+'%';queueDraw();};$('centerMap').onclick=()=>{zoom=window.innerWidth<650?1.6:1.4;$('zoomText').textContent=Math.round(zoom*100)+'%';centerOnCapital();};
+$('zoomIn').onclick=()=>zoomAt(1.24,canvas.clientWidth/2,canvas.clientHeight/2);$('zoomOut').onclick=()=>zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);$('viewAll').onclick=()=>{zoom=Math.min((canvas.clientWidth-16)/(E.W*TILE),(canvas.clientHeight-16)/(E.H*TILE));camX=(canvas.clientWidth-E.W*TILE*zoom)/2;camY=(canvas.clientHeight-E.H*TILE*zoom)/2;$('zoomText').textContent=Math.round(zoom*100)+'%';queueDraw();};$('centerMap').onclick=()=>{zoom=window.innerWidth<650?2.2:1.8;$('zoomText').textContent=Math.round(zoom*100)+'%';centerOnCapital();};
 mini.addEventListener('pointerdown',e=>{const r=mini.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*E.W,y=(e.clientY-r.top)/r.height*E.H;camX=canvas.clientWidth/2-x*TILE*zoom;camY=canvas.clientHeight/2-y*TILE*zoom;clampCamera();queueDraw();});mini.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('viewAll').click();}});
 // Low-resolution territory bitmap: one pixel per world tile. The GPU enlarges it.
 // It is updated only when a territory changes, NOT once per animation frame.
@@ -759,15 +759,15 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
    ctx.imageSmoothingEnabled=smoothing;
   }
   if(b.kind==='capital'&&zoom>.39){
-   capitalLabels.push({b,x,footY,ownerColor});
+   capitalLabels.push({b,x,footY,spriteH,ownerColor});
   }
  }
  // Labels are drawn after all buildings, below their bases, with collision culling.
  const labelBoxes=[];
- for(const {b,x,footY,ownerColor} of capitalLabels){
+ for(const {b,x,footY,spriteH,ownerColor} of capitalLabels){
    const p=E.person(state,b.owner),label=(p?.id||'?')+' · '+(p?.name||'').slice(0,20);
    ctx.font='750 '+Math.max(9,11/zoom)+'px system-ui';
-   const tw=ctx.measureText(label).width+20/zoom,lh=20/zoom,ly=footY+19/zoom;
+   const tw=ctx.measureText(label).width+20/zoom,lh=20/zoom,ly=footY-spriteH-15/zoom;
    const box={x:x-tw/2,y:ly-lh/2,w:tw,h:lh};
    if(labelBoxes.some(r=>box.x<r.x+r.w&&box.x+box.w>r.x&&box.y<r.y+r.h&&box.y+box.h>r.y))continue;
    labelBoxes.push(box);
