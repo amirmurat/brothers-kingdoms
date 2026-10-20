@@ -1247,7 +1247,7 @@ function openSession(){
  $('sessionPause').classList.toggle('hidden',!demo);
  $('sessionPause').textContent=pauseSolo?'Resume game':'Pause';
  $('sessionReconnect').classList.toggle('hidden',host||demo||!state||!/RECONNECT|OFFLINE|DELAY|SYNC/.test($('networkStatus').textContent));
- $('sessionHint').textContent=demo?'Paused. Your progress is saved when you leave.':host?'Host: leaving ends the match for everyone.':'Rejoin later on this device using the room code.';
+ $('sessionHint').textContent=(demo?'Paused. Your progress is saved when you leave.':host?'Host: leaving ends the match for everyone.':'Rejoin later on this device using the room code.')+' · Game '+(E.BUILD||'outdated — refresh required');
  showAux('sessionPanel');
  if(demo&&!$('sessionPanel').classList.contains('hidden')&&!pauseSolo){pauseSolo=true;menuPausedSolo=true;saveSolo();}
  $('sessionPause').textContent=pauseSolo?'Resume game':'Pause';
