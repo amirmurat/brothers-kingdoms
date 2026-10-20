@@ -392,26 +392,35 @@ function refreshPlanReview(){
  btn.disabled=sent<35||!plan.zoneCells?.length||(state.armies||[]).filter(a=>a.owner===myId).length>=12;
  for(const b of document.querySelectorAll('[data-plan-percent]'))b.classList.toggle('active',Number(b.dataset.planPercent)===percent);
 }
-function openCancelPlan(army){
- if(!army||army.owner!==myId)return;planCancelArmy=army.id;
+function openCancelPlan(item){
+ if(!item||item.owner!==myId)return;
+ planCancelArmy=item.id;
+ const planned=(state.attackPlans||[]).some(p=>p.id===item.id);
+ $('planCancelTitle').textContent=planned?'Cancel this offensive plan?':'Recall this offensive?';
+ $('planCancelDescription').textContent=planned
+  ?'The marked area will be removed. Any active troops return with the withdrawal cost; no further waves will be sent.'
+  :'The advance stops. Surviving troops return with the withdrawal cost.';
+ $('planCancelYes').textContent=planned?'Cancel plan':'Recall army';
  $('planCancelDialog').classList.remove('hidden');$('planCancelNo').focus();
 }
 function drawAttackPlanning(){
  // Called inside the world-space Canvas transform. Use region strokes rather than a filled rectangle.
- const plans=state.armies.filter(a=>a.owner===myId&&a.strength>0&&Array.isArray(a.zoneCells));
+ const plans=(state.attackPlans||[]).filter(p=>p.owner===myId).map(p=>({...p,waiting:!state.armies.some(a=>a.planId===p.id)}));
+ const legacy=state.armies.filter(a=>a.owner===myId&&a.strength>0&&Array.isArray(a.zoneCells)&&!a.planId);
+ plans.push(...legacy);
  const left=Math.max(0,Math.floor(-camX/(TILE*zoom))-2),right=Math.min(E.W-1,Math.ceil((canvas.clientWidth-camX)/(TILE*zoom))+2),
   top=Math.max(0,Math.floor(-camY/(TILE*zoom))-2),bottom=Math.min(E.H-1,Math.ceil((canvas.clientHeight-camY)/(TILE*zoom))+2);
  if(attackPlanner?.mode==='review'&&attackPlanner.zoneCells)plans.push({zoneCells:attackPlanner.zoneCells,preview:true});
  if(attackPlanner?.mode==='paint'&&attackPlanner.cells.size)plans.push({zoneCells:[...attackPlanner.cells],preview:true});
  const T=TILE;
  for(const plan of plans){
-  const pending=plan.preview,remaining=plan.zoneCells.filter(i=>state.owners[i]!==myId&&state.tiles[i]);
+  const pending=plan.preview,waiting=plan.waiting,remaining=plan.zoneCells.filter(i=>state.owners[i]!==myId&&state.tiles[i]);
   if(!remaining.length)continue;
   const cells=new Set(remaining),visible=remaining.filter(i=>{const x=i%E.W,y=(i/E.W)|0;return x>=left&&x<=right&&y>=top&&y<=bottom;});
   if(!visible.length)continue;
-  ctx.save();ctx.fillStyle=pending?'rgba(96,220,255,.31)':'rgba(99,204,255,.13)';
-  ctx.strokeStyle=pending?'#98edff':'#66c8ec';ctx.lineWidth=Math.max(1.2,2.1/zoom);
-  if(!pending)ctx.setLineDash([5/zoom,5/zoom]);
+  ctx.save();ctx.fillStyle=pending?'rgba(96,220,255,.31)':waiting?'rgba(96,220,255,.18)':'rgba(99,204,255,.13)';
+  ctx.strokeStyle=pending?'#98edff':waiting?'#9de6fa':'#66c8ec';ctx.lineWidth=Math.max(1.2,2.1/zoom);
+  if(!pending)ctx.setLineDash(waiting?[3/zoom,6/zoom]:[5/zoom,5/zoom]);
   ctx.beginPath();
   for(const i of visible){const x=i%E.W,y=(i/E.W)|0;
    ctx.fillRect(x*T,y*T,T,T);
@@ -579,7 +588,10 @@ function updateUI(){const p=mine();if(!p)return;
 
  updateIncomingAttack(p);
  $('troopCount').textContent=hudNumber(p.troops);$('troopCount').title=number(p.troops);$('troopCap').textContent='/ '+hudNumber(p.troopCap);$('troopCap').title=number(p.troopCap);setRate($('troopGrowth'),p.troopIncome||0);updateHudSignals(p);$('myKingdom').textContent=p.name+(p.eliminated?' · ELIMINATED':'');$('myKingdom').title=p.name;$('myKingdom').style.color=p.color;
- const sent=Math.floor(p.troops*percent/100);$('sendingTroops').textContent=number(sent);$('remainingTroops').textContent=number(p.troops-sent);$('activeArmies').textContent=state.armies.filter(a=>a.owner===myId).length+'/12';$('dockSummary').textContent=percent+'%';if(target)setPreview(target);const frontNum=state.armies.filter(a=>a.owner===myId).length;$('frontCountBadge').textContent=String(frontNum);$('frontCountBadge').classList.toggle('hidden',frontNum===0);$('armiesToggle').setAttribute('aria-label',`My offensives: ${frontNum}`);$('armiesToggle').classList.toggle('has-fronts',state.armies.some(a=>a.owner===myId));renderArmies();
+ const sent=Math.floor(p.troops*percent/100);
+ const myPlans=(state.attackPlans||[]).filter(v=>v.owner===myId),unplanned=state.armies.filter(a=>a.owner===myId&&!myPlans.some(plan=>plan.id===a.planId));
+ const frontNum=myPlans.length+unplanned.length;
+ $('sendingTroops').textContent=number(sent);$('remainingTroops').textContent=number(p.troops-sent);$('activeArmies').textContent=frontNum+'/12';$('dockSummary').textContent=percent+'%';if(target)setPreview(target);$('frontCountBadge').textContent=String(frontNum);$('frontCountBadge').classList.toggle('hidden',frontNum===0);$('armiesToggle').setAttribute('aria-label',`My offensives: ${frontNum}`);$('armiesToggle').classList.toggle('has-fronts',frontNum>0);renderArmies();
  const top=[...state.players].filter(p=>p.land>0).sort((a,b)=>b.land-a.land);
  patchHtml('quickLeadersList',top.length?top.map((v,i)=>`<div class="quick-row${v.id===myId?' is-me':''}"><span class="leader-rank">${i+1}</span><i class="leader-dot" style="background:${v.color}"></i><b>${esc(v.name)}${v.bot?' · Bot':''}</b><small>${(v.land/Math.max(1,state.landTotal)*100).toFixed(1)}% · ${number(v.land)} tiles</small></div>`).join(''):'<p class="leader-empty">No active players</p>');
  updateTechCards(p);
@@ -686,7 +698,8 @@ $('planLaunch').onclick=()=>{
 };
 $('planCancelNo').onclick=()=>{$('planCancelDialog').classList.add('hidden');planCancelArmy=null;};
 $('planCancelYes').onclick=()=>{
- const id=planCancelArmy;if(id&&command({type:'return',id})){toast('Offensive cancelled');}
+ const id=planCancelArmy,planned=(state.attackPlans||[]).some(p=>p.id===id);
+ if(id&&command({type:planned?'cancelPlan':'return',id}))toast(planned?'Offensive plan cancelled':'Offensive recalled');
  $('planCancelDialog').classList.add('hidden');planCancelArmy=null;
 };
 $('warChip').onclick=()=>{
@@ -728,15 +741,44 @@ function setMinimapExpanded(expanded){
  $('minimap').tabIndex=expanded?0:-1;
 }
 $('minimapToggle').onclick=()=>setMinimapExpanded($('minimapWrap').classList.contains('minimized'));
-function renderArmies(){if(!state||!myId)return;const mineArmies=state.armies.filter(a=>a.owner===myId);
- patchHtml('armiesList',mineArmies.length?mineArmies.map(a=>{
-  const initial=a.initialStrength||a.strength,spent=Math.max(0,initial-a.strength),percentSpent=Math.floor(spent/Math.max(1,initial)*100);
-  return `<div class="army-line"><div><strong>${number(a.strength)} troops <small>of ${number(initial)}</small></strong><small>${esc(E.person(state,a.targetOwner)?.name||'Neutral land')} · ${a.naval?'Sea crossing':a.stuck>0?'Front meets resistance':'Advancing'}</small><small class="army-stats${percentSpent>=80?' army-critical':''}">Captured ${number(a.captured||0)} cells · Losses ${number(spent)}</small></div><button data-focus-army="${esc(a.id)}" aria-label="Go to army">Locate</button><button data-recall-army="${esc(a.id)}" aria-label="Recall army">Recall</button></div>`;
- }).join(''):'<div class="empty-armies"><strong>No offensives yet</strong><p>Select a neutral or enemy border to send troops.</p></div>');
+function renderArmies(){
+ if(!state||!myId)return;
+ const plans=(state.attackPlans||[]).filter(p=>p.owner===myId);
+ const plannedIDs=new Set(plans.map(p=>p.id));
+ const rows=plans.map(p=>{
+  const active=state.armies.find(a=>a.planId===p.id&&a.strength>0);
+  const left=p.zoneCells.filter(i=>state.tiles[i]&&state.owners[i]!==myId).length;
+  const label=esc(E.person(state,p.targetOwner)?.name||'Neutral land');
+  const status=active?'Wave '+number(p.waves)+' advancing · '+number(active.strength)+' troops':'Waiting for next wave';
+  return `<div class="army-line"><div><strong>${label} <small>· ${number(left)} cells left</small></strong>
+   <small>${status}</small><small class="army-stats">Plan persists until captured or cancelled · ${p.percent}% per wave</small></div>
+   <button data-focus-plan="${esc(p.id)}" aria-label="Locate planned area">Locate</button>
+   <button data-cancel-plan="${esc(p.id)}" aria-label="Cancel offensive plan">Cancel</button></div>`;
+ });
+ for(const a of state.armies.filter(a=>a.owner===myId&&!plannedIDs.has(a.planId))){
+  const initial=a.initialStrength||a.strength,spent=Math.max(0,initial-a.strength),pct=Math.floor(spent/Math.max(1,initial)*100);
+  rows.push(`<div class="army-line"><div><strong>${number(a.strength)} troops <small>of ${number(initial)}</small></strong>
+  <small>${esc(E.person(state,a.targetOwner)?.name||'Neutral land')} · ${a.stuck>0?'Front meets resistance':'Advancing'}</small>
+  <small class="army-stats${pct>=80?' army-critical':''}">Captured ${number(a.captured||0)} cells · Losses ${number(spent)}</small></div>
+  <button data-focus-army="${esc(a.id)}" aria-label="Locate army">Locate</button>
+  <button data-recall-army="${esc(a.id)}" aria-label="Recall army">Recall</button></div>`);
+ }
+ patchHtml('armiesList',rows.length?rows.join(''):'<div class="empty-armies"><strong>No offensives yet</strong><p>Tap Attack and paint a zone to begin.</p></div>');
 }
 $('armiesToggle').onclick=()=>{showAux('armiesPanel');renderArmies();};
 $('closeArmies').onclick=hideAux;
-$('armiesList').onclick=e=>{const r=e.target.closest('[data-recall-army]'),f=e.target.closest('[data-focus-army]');if(r){if(command({type:'return',id:r.dataset.recallArmy}))renderArmies();}if(f){const a=state?.armies.find(v=>v.id===f.dataset.focusArmy);if(a){camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();hideAux();queueDraw();}}};
+$('armiesList').onclick=e=>{
+ const cancel=e.target.closest('[data-cancel-plan]'),focus=e.target.closest('[data-focus-plan]');
+ const recall=e.target.closest('[data-recall-army]'),armyFocus=e.target.closest('[data-focus-army]');
+ if(cancel){const plan=(state.attackPlans||[]).find(p=>p.id===cancel.dataset.cancelPlan);if(plan){hideAux();openCancelPlan(plan);}return;}
+ if(focus){
+  const plan=(state.attackPlans||[]).find(p=>p.id===focus.dataset.focusPlan);
+  if(plan){const active=state.armies.find(a=>a.planId===plan.id),i=plan.zoneCells.find(i=>state.owners[i]!==myId)??plan.zoneCells[0],x=active?.x??i%E.W,y=active?.y??(i/E.W)|0;camX=canvas.clientWidth/2-(x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(y+.5)*TILE*zoom;clampCamera();hideAux();queueDraw();}
+  return;
+ }
+ if(recall){const a=state.armies.find(a=>a.id===recall.dataset.recallArmy);if(a){hideAux();openCancelPlan(a);}return;}
+ if(armyFocus){const a=state.armies.find(a=>a.id===armyFocus.dataset.focusArmy);if(a){camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();hideAux();queueDraw();}}
+};
 $('helpButton').onclick=()=>{hideAux();$('tutorial').classList.remove('hidden');$('closeTutorial').focus();};$('closeTutorial').onclick=()=>{$('tutorial').classList.add('hidden');showTutorialOnce=false;try{localStorage.setItem('bk-v9-tutorial','yes');}catch(_){}$('mapCanvas').focus();};
 $('pauseGame').onclick=()=>{if(!demo)return toast('Pause is only available in solo mode.');pauseSolo=!pauseSolo;$('pauseGame').textContent=pauseSolo?'Resume':'Pause';saveSolo();};
 $('myKingdom').onclick=()=>toast(mine()?.name||'Kingdom');
@@ -763,7 +805,9 @@ function selectMap(clientX,clientY){
  if(!E.inside(p.x,p.y))return;
  if(attackPlanner)return;
  const regionIndex=p.y*E.W+p.x;
- const activePlan=state.armies.find(a=>a.owner===myId&&a.strength>0&&Array.isArray(a.zoneCells)&&a.zoneCells.includes(regionIndex));
+ const savedPlan=(state.attackPlans||[]).find(p=>p.owner===myId&&p.zoneCells.includes(regionIndex));
+ if(savedPlan){openCancelPlan(savedPlan);return;}
+ const activePlan=state.armies.find(a=>a.owner===myId&&a.strength>0&&Array.isArray(a.zoneCells)&&!a.planId&&a.zoneCells.includes(regionIndex));
  if(activePlan){openCancelPlan(activePlan);return;}
  inspectCell(p.x,p.y);$('mapHint').classList.add('hidden');
  if(buildMode){
