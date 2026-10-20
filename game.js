@@ -290,7 +290,11 @@ function contextual(item){
   const details=buildingInfo[item.kind],cost=E.costUpgrade(item),maxed=item.level>=4;
   const effect=details?buildingBenefit(item.kind,me,item.level):'Столица: оборона увеличивается с каждым уровнем';
   const next=details?buildingBenefit(item.kind,me,item.level+1):'Защита столицы увеличится';
-  html=`<strong>${esc(E.KINDS[item.kind]?.name||'Столица')} · ур. ${item.level}</strong><span>${esc(other?.name||'')}</span><p class="context-benefit">Сейчас: ${esc(effect)}</p>${maxed?'':`<p class="context-next">После улучшения: ${esc(next)}</p>`}${own?`<button data-context-upgrade="${esc(item.id)}" ${maxed||!canPay(me,cost)?'disabled':''}>${maxed?'Максимальный уровень':`Улучшить · ${briefCost(cost)}`}</button>${!maxed&&!canPay(me,cost)?`<small>Не хватает: ${deficit(me,cost)}</small>`:''}`:''}`;
+  html=`<div class="context-heading"><strong>${esc(E.KINDS[item.kind]?.name||'Столица')} · ур. ${item.level}</strong><small>${esc(other?.name||'')}</small></div>
+   <div class="context-effect"><small>Сейчас</small><span>${esc(effect)}</span></div>
+   ${maxed?'':`<div class="context-effect context-effect-next"><small>После улучшения</small><span>${esc(next)}</span></div>`}
+   ${own&&!maxed?`<div class="context-upgrade-price"><small>Цена улучшения</small><div>${briefCost(cost)}</div></div><button data-context-upgrade="${esc(item.id)}" ${!canPay(me,cost)?'disabled':''}>Улучшить</button>${!canPay(me,cost)?`<small class="context-shortage">Не хватает: ${deficit(me,cost)}</small>`:''}`:own?'<small>Максимальный уровень</small>':''}`;
+
  }else html=`<strong>Армия · ${esc(other?.name||'')}</strong><span>${number(item.strength)} солдат · ${item.tx},${item.ty}</span>${own?`<button data-context-redirect="${esc(item.id)}">Сменить цель</button><button data-context-return="${esc(item.id)}">Отступить</button>`:''}`;
  if(content.__last!==html){content.innerHTML=html;content.__last=html;}if(box.classList.contains('hidden'))showAux('contextCard');
 }
@@ -411,7 +415,7 @@ function updateUI(){const p=mine();if(!p)return;
  }
  patchHtml('economyDetails',resourceStrip(p)+`<div class="economy-army"><strong>Армия: ${number(p.troops)} / ${number(p.troopCap)}</strong><small>Набор: +${number(p.troopIncome||0)}/с ${p.troops>=p.troopCap?'· лимит':'· зависит от еды и зданий'}</small><small>Расход еды на набор: ≈${((p.troopIncome||0)*.2).toFixed(1)}/с</small></div>`);
  patchHtml('accessibleObjects',state.buildings.filter(b=>b.owner===myId).slice(0,30).map(b=>'<li>'+esc(E.KINDS[b.kind]?.name||'Столица')+' '+b.x+','+b.y+'</li>').join('')+state.armies.filter(a=>a.owner===myId).map(a=>'<li>Армия '+number(a.strength)+' солдат, '+a.x+','+a.y+'</li>').join(''));
- if(state.log?.[0]&&state.tick>3&&state.log[0]!==lastAnnounced){const message=state.log[0];lastAnnounced=message;if(/захватил столицу|разгром|победил|союз/.test(message.toLowerCase()))toast(message);}
+ if(state.log?.[0]&&state.tick>3&&state.log[0]!==lastAnnounced){const message=state.log[0];lastAnnounced=message;if(!/изучил|исследовал/i.test(message)&&/захватил столицу|разгром|победил|союз/.test(message.toLowerCase()))toast(message);}
  updateSelection();refreshQuickBuild();
 }
 
@@ -552,7 +556,7 @@ function renderArmies(){if(!state||!myId)return;const mineArmies=state.armies.fi
 $('armiesToggle').onclick=()=>{showAux('armiesPanel');renderArmies();};
 $('closeArmies').onclick=hideAux;
 $('armiesList').onclick=e=>{const r=e.target.closest('[data-recall-army]'),f=e.target.closest('[data-focus-army]');if(r){if(command({type:'return',id:r.dataset.recallArmy}))renderArmies();}if(f){const a=state?.armies.find(v=>v.id===f.dataset.focusArmy);if(a){camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();hideAux();queueDraw();}}};
-$('economyToggle').onclick=()=>showAux('economyPanel');$('closeEconomy').onclick=hideAux;$('pauseMobile').onclick=()=>$('pauseGame').click();$('quickLeaders').onclick=()=>{$('economyPanel').classList.add('hidden');showAux('quickLeadersPanel');};$('closeQuickLeaders').onclick=hideAux;$('nextFront').onclick=()=>{const armies=state?.armies.filter(a=>a.owner===myId)||[];if(!armies.length)return toast('Нет действующих армий');const a=armies[frontIndex++%armies.length];camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();selected={kind:'army',id:a.id};updateSelection();hideAux();queueDraw();};
+$('resourceSummary').onclick=()=>showAux('economyPanel');$('resourceSummary').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showAux('economyPanel');}};$('closeEconomy').onclick=hideAux;$('pauseMobile').onclick=()=>$('pauseGame').click();$('quickLeaders').onclick=()=>{$('economyPanel').classList.add('hidden');showAux('quickLeadersPanel');};$('closeQuickLeaders').onclick=hideAux;$('nextFront').onclick=()=>{const armies=state?.armies.filter(a=>a.owner===myId)||[];if(!armies.length)return toast('Нет действующих армий');const a=armies[frontIndex++%armies.length];camX=canvas.clientWidth/2-(a.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(a.y+.5)*TILE*zoom;clampCamera();selected={kind:'army',id:a.id};updateSelection();hideAux();queueDraw();};
 $('helpButton').onclick=()=>{$('tutorial').classList.remove('hidden');$('closeTutorial').focus();};$('helpMenu').onclick=()=>{closePanel();$('helpButton').click();};$('closeTutorial').onclick=()=>{$('tutorial').classList.add('hidden');showTutorialOnce=false;try{localStorage.setItem('bk-v9-tutorial','yes');}catch(_){}$('mapCanvas').focus();};
 $('pauseGame').onclick=()=>{if(!demo)return toast('Пауза только для одиночной игры.');pauseSolo=!pauseSolo;$('pauseGame').textContent=pauseSolo?'Продолжить':'Пауза';saveSolo();};
 $('myKingdom').onclick=()=>toast(mine()?.name||'Королевство');
