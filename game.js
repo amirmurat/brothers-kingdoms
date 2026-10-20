@@ -279,7 +279,7 @@ function resetAttackPlanner(){
  $('game').classList.remove('plan-drawing','plan-reviewing');
  $('planGuide').classList.add('hidden');$('planReview').classList.add('hidden');$('planCancelDialog').classList.add('hidden');
  pressed.clear();gesture=null;pointerStart=null;
- $('planControls').classList.add('hidden');
+ $('planControls').classList.add('hidden');$('planControls').classList.remove('erase-only');$('planEraseHint').classList.add('hidden');
  $('planToolPaint').setAttribute('aria-pressed','false');$('planToolErase').setAttribute('aria-pressed','false');
  $('planToolPaint').classList.remove('chosen');$('planToolErase').classList.remove('chosen');queueDraw();
 }
@@ -293,7 +293,7 @@ function beginAttackPlanner(existing=null){
  $('planTroopsPercent').value=String(percent);$('planBrushSize').value='2';
  $('game').classList.add('plan-drawing');$('game').classList.remove('plan-reviewing');
  $('planGuide').classList.remove('hidden');$('planReview').classList.add('hidden');
- $('planControls').classList.remove('hidden');
+ $('planControls').classList.remove('hidden');$('planControls').classList.remove('erase-only');$('planEraseHint').classList.add('hidden');
  $('planReviewButton').textContent=existing?'Save changes':'Start offensive';
  $('planPaintClear').textContent=existing?'Reset':'Clear';
  setPaintTool('paint');
@@ -301,9 +301,25 @@ function beginAttackPlanner(existing=null){
  $('mapHint').classList.add('hidden');refreshPaintGuide();queueDraw();
 }
 // A brush paints cross-shaped five-tile stamps, keeping exactly one target owner.
+function beginGlobalEraser(){
+ if(!state||state.phase!=='playing'||mine()?.eliminated)return;
+ hideAux();toggleQuickBuild(false);setPreview(null);setBuildingMode(null);
+ pointerStart=null;gesture=null;pressed.clear();
+ attackPlanner={mode:'erase',tool:'erase',cells:new Set(),erasable:new Set(),
+  brushRadius:Number($('planBrushSize').value)||2,pointerId:null,lastPoint:null,brushPoint:null,
+  strokeStart:null,strokeOrigin:null,touchLocked:false};
+ $('game').classList.add('plan-drawing');$('game').classList.remove('plan-reviewing');
+ $('planGuide').classList.add('hidden');$('planReview').classList.add('hidden');
+ $('planControls').classList.remove('hidden');$('planControls').classList.add('erase-only');
+ $('planEraseHint').classList.remove('hidden');
+ $('planBrushValue').textContent=String(attackPlanner.brushRadius);
+ $('mapHint').classList.add('hidden');
+ setPaintTool('erase');queueDraw();
+}
 function togglePaintTool(tool){
- if(!attackPlanner){beginAttackPlanner();setPaintTool(tool);return;}
+ if(!attackPlanner){if(tool==='erase')beginGlobalEraser();else beginAttackPlanner();return;}
  if(attackPlanner.tool===tool){resetAttackPlanner();return;}
+ if(attackPlanner.mode==='erase'){resetAttackPlanner();beginAttackPlanner();return;}
  setPaintTool(tool);
 }
 function setPaintTool(tool){
@@ -313,12 +329,13 @@ function setPaintTool(tool){
  $('planToolPaint').classList.toggle('chosen',tool==='paint');$('planToolErase').classList.toggle('chosen',tool==='erase');queueDraw();
 }
 function brushAt(pt){
- const plan=attackPlanner;if(plan?.mode!=='paint')return;
+ const plan=attackPlanner;if(!plan||!['paint','erase'].includes(plan.mode))return;
  const radius=plan.brushRadius;
  for(let dy=-radius;dy<=radius;dy++)for(let dx=-radius;dx<=radius;dx++){
   if(dx*dx+dy*dy>radius*radius)continue;
   const x=pt.x+dx,y=pt.y+dy;if(!E.inside(x,y)||!E.tile(state,x,y))continue;
   const cell=y*E.W+x;
+  if(plan.mode==='erase'){if(plan.erasable.has(cell))plan.cells.add(cell);continue;}
   if(plan.tool==='erase'){plan.cells.delete(cell);continue;}
   if(E.owner(state,x,y)===myId||plan.cells.size>=3500)continue;
   plan.cells.add(cell);
@@ -334,7 +351,7 @@ function paintLine(from,to){
  }
 }
 function paintAtPointer(pt){
- const plan=attackPlanner;if(plan?.mode!=='paint')return;
+ const plan=attackPlanner;if(!plan||!['paint','erase'].includes(plan.mode))return;
  plan.brushPoint=pt;
  if(plan.lastPoint)paintLine(plan.lastPoint,pt);else brushAt(pt);
  plan.lastPoint=pt;
@@ -474,7 +491,14 @@ function drawAttackPlanning(){
   }
   ctx.stroke();ctx.restore();
  }
- const brush=attackPlanner?.mode==='paint'&&attackPlanner.brushPoint;
+ if(attackPlanner?.mode==='erase'&&attackPlanner.cells.size){
+  ctx.save();ctx.fillStyle='rgba(255,158,109,.44)';
+  for(const i of attackPlanner.cells){const x=i%E.W,y=(i/E.W)|0;
+   if(x>=left&&x<=right&&y>=top&&y<=bottom)ctx.fillRect(x*T,y*T,T,T);
+  }
+  ctx.restore();
+ }
+ const brush=(attackPlanner?.mode==='paint'||attackPlanner?.mode==='erase')&&attackPlanner.brushPoint;
  if(brush&&E.inside(brush.x,brush.y)){
   ctx.save();ctx.beginPath();ctx.arc((brush.x+.5)*T,(brush.y+.5)*T,T*(attackPlanner.brushRadius+.5),0,Math.PI*2);
   ctx.fillStyle=attackPlanner.tool==='erase'?'rgba(255,155,114,.15)':'rgba(103,223,255,.12)';
@@ -690,9 +714,11 @@ function refreshQuickBuild(){
  if(buildMode){$('placingBuildText').textContent=E.KINDS[buildMode].name+' · choose a tile';$('placingBuildIcon').src='assets/shapes/'+buildMode+'.svg';}
 }
 function toggleQuickBuild(force){
+ if(attackPlanner)resetAttackPlanner();
  quickBuildOpen=typeof force==='boolean'?force:!quickBuildOpen;
  $('quickBuild').classList.toggle('hidden',!quickBuildOpen);
  $('mapView').classList.toggle('build-palette-open',quickBuildOpen);
+ $('developButton').classList.toggle('chosen',quickBuildOpen||!!buildMode);$('developButton').setAttribute('aria-pressed',String(quickBuildOpen||!!buildMode));
  if(quickBuildOpen){closePanelIfOpen();setPreview(null);}
  refreshQuickBuild();queueDraw();
 }
@@ -700,6 +726,7 @@ function closePanelIfOpen(){if(panelOpen)closePanel();}
 function setBuildingMode(kind){
  if(kind&&attackPlanner)resetAttackPlanner();
  buildMode=kind||null;selected=null;setPreview(null);moveCursor=null;
+ $('developButton').classList.toggle('chosen',!!buildMode||quickBuildOpen);$('developButton').setAttribute('aria-pressed',String(!!buildMode||quickBuildOpen));
  $('cancelMode').classList.toggle('hidden',!buildMode);
  $('modeLabel').textContent=buildMode?'Build: '+E.KINDS[buildMode].name:'Offensive';
  $('actionHint').textContent=buildMode?'Green tile — allowed, red tile — blocked.':'Tap a target or drag from your land.';
@@ -715,8 +742,8 @@ $('stopBuild').onclick=cancelMode;
 $('techPanel').addEventListener('click',e=>{const b=e.target.closest('[data-research]');if(b)command({type:'research',key:b.dataset.research});});
 $('contextCard').addEventListener('click',e=>{const u=e.target.closest('[data-context-upgrade]'),r=e.target.closest('[data-context-return]'),d=e.target.closest('[data-context-redirect]');if(u)command({type:'upgrade',id:u.dataset.contextUpgrade});if(r){command({type:'return',id:r.dataset.contextReturn});contextual(null);}if(d){redirectArmy=d.dataset.contextRedirect;toast('Now choose a new target on the map.');contextual(null);}});
 $('closeContext').onclick=()=>{selected=null;contextual(null);hideAux()};
-function openPanel(){hideAux();toggleQuickBuild(false);setPreview(null);previousFocus=document.activeElement;panelOpen=true;$('sidebar').classList.add('open');$('panelBackdrop').classList.remove('hidden');$('sidebar').setAttribute('aria-modal',String(window.innerWidth<851));$('closePanel').focus();}
-function closePanel(){panelOpen=false;$('sidebar').classList.remove('open');$('panelBackdrop').classList.add('hidden');$('sidebar').setAttribute('aria-modal','false');previousFocus?.focus?.();}
+function openPanel(){if(attackPlanner)resetAttackPlanner();hideAux();toggleQuickBuild(false);setPreview(null);previousFocus=document.activeElement;panelOpen=true;$('sidebar').classList.add('open');$('panelBackdrop').classList.remove('hidden');$('sidebar').setAttribute('aria-modal',String(window.innerWidth<851));$('closePanel').focus();}
+function closePanel(){panelOpen=false;$('scienceButton').setAttribute('aria-pressed','false');$('scienceButton').classList.remove('chosen');$('sidebar').classList.remove('open');$('panelBackdrop').classList.add('hidden');$('sidebar').setAttribute('aria-modal','false');previousFocus?.focus?.();}
 $('menuToggle').onclick=openSession;$('developButton').onclick=()=>toggleQuickBuild();$('closePanel').onclick=closePanel;$('panelBackdrop').onclick=closePanel;$('auxBackdrop').onclick=hideAux;
 $('attackPercent').oninput=e=>{percent=Number(e.target.value);$('percentLabel').textContent=percent+'%';document.querySelectorAll('[data-percent]').forEach(t=>{const on=Number(t.dataset.percent)===percent;t.classList.toggle('active',on);t.setAttribute('aria-pressed',String(on));});if(state)updateUI();};
 document.querySelectorAll('[data-target-percent]').forEach(b=>b.onclick=()=>{$('attackPercent').value=b.dataset.targetPercent;$('attackPercent').oninput({target:$('attackPercent')});});
@@ -738,7 +765,7 @@ $('planTargetOptions').onclick=e=>{
  if(plan.targets.has(id)){plan.targets.delete(id);plan.removedTargets.add(id);}else{plan.targets.add(id);plan.removedTargets.delete(id);}
  plan.optionsKey='';refreshPaintGuide();queueDraw();
 };
-$('planBrushSize').oninput=e=>{if(!attackPlanner)return;attackPlanner.brushRadius=Number(e.target.value)||2;refreshPaintGuide();queueDraw();};
+$('planBrushSize').oninput=e=>{if(!attackPlanner)return;attackPlanner.brushRadius=Number(e.target.value)||2;$('planBrushValue').textContent=String(attackPlanner.brushRadius);refreshPaintGuide();queueDraw();};
 $('planTroopsPercent').oninput=e=>{percent=Number(e.target.value)||30;$('attackPercent').value=percent;$('percentLabel').textContent=percent+'%';refreshPaintGuide();};
 document.querySelectorAll('[data-plan-percent]').forEach(btn=>btn.onclick=()=>{
  percent=Number(btn.dataset.planPercent);$('attackPercent').value=percent;$('percentLabel').textContent=percent+'%';refreshPlanReview();
@@ -911,9 +938,17 @@ function updatePaintNavigation(){
 }
 function finishPaintPointer(e,cancelled=false){
  const plan=attackPlanner;if(!plan)return;
- if(!cancelled&&pressed.size===1&&pressed.has(e.pointerId)&&!plan.touchLocked&&plan.pointerId===e.pointerId){
+ const wasSingle=pressed.size===1&&pressed.has(e.pointerId)&&!plan.touchLocked&&plan.pointerId===e.pointerId;
+ if(!cancelled&&wasSingle){
   if(!plan.lastPoint&&plan.strokeStart)paintAtPointer(plan.strokeStart);
   else if(plan.lastPoint)paintAtPointer(gridAt(e.clientX,e.clientY));
+ }
+ if(plan.mode==='erase'){
+  if(!cancelled&&wasSingle&&plan.cells.size){
+   const cells=[...plan.cells];
+   if(command({type:'erasePlanCells',cells}))toast('Erased '+number(cells.length)+' marked cells');
+  }
+  plan.cells.clear();
  }
  pressed.delete(e.pointerId);
  plan.pointerId=null;plan.lastPoint=null;plan.strokeStart=null;plan.strokeOrigin=null;plan.brushPoint=null;
@@ -925,14 +960,17 @@ function finishPaintPointer(e,cancelled=false){
 function onPointerDown(e){
  if(!state)return;
  if(attackPlanner){
-  const plan=attackPlanner;if(plan.mode!=='paint')return;
+  const plan=attackPlanner;if(!['paint','erase'].includes(plan.mode))return;
   canvas.setPointerCapture(e.pointerId);
   pressed.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pressed.size>=2){
-   plan.touchLocked=true;plan.pointerId=null;plan.lastPoint=null;
+   plan.touchLocked=true;if(plan.mode==='erase')plan.cells.clear();plan.pointerId=null;plan.lastPoint=null;
    plan.strokeStart=null;plan.strokeOrigin=null;plan.brushPoint=null;
    if(pressed.size===2)beginPaintNavigation();
   }else if(!plan.touchLocked){
+   if(plan.mode==='erase'){
+    plan.cells.clear();plan.erasable=new Set((state.attackPlans||[]).filter(p=>p.owner===myId).flatMap(p=>p.zoneCells));
+   }
    const pt=gridAt(e.clientX,e.clientY);
    plan.pointerId=e.pointerId;plan.lastPoint=null;
    plan.strokeStart=E.inside(pt.x,pt.y)?pt:null;
@@ -1201,7 +1239,7 @@ $('hostButton').onclick=createRoom;$('joinButton').onclick=joinRoom;$('demoButto
 $('leaveRoom').onclick=()=>{if(host)for(const c of connections.keys())try{c.send({t:'room-closed'});}catch(_){}goHome();};
 $('startButton').onclick=startGame;$('copyLink').onclick=inviteFriends;$('copyCode').onclick=()=>copyText(code);
 $('hudFronts').onclick=()=>$('armiesToggle').click();$('hudFronts').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('armiesToggle').click();}};
-function openResearch(){openPanel();updateUI();}
+function openResearch(){openPanel();$('scienceButton').setAttribute('aria-pressed','true');$('scienceButton').classList.add('chosen');updateUI();}
 $('scienceButton').onclick=openResearch;
 $('closeSession').onclick=hideAux;$('openLeaderboard').onclick=()=>showAux('quickLeadersPanel');$('closeQuickLeaders').onclick=hideAux;
 $('sessionPause').onclick=()=>{menuPausedSolo=false;pauseSolo=false;hideAux();};
