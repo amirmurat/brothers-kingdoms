@@ -421,10 +421,11 @@ function drawAttackPlanning(){
  const left=Math.max(0,Math.floor(-camX/(TILE*zoom))-2),right=Math.min(E.W-1,Math.ceil((canvas.clientWidth-camX)/(TILE*zoom))+2),
   top=Math.max(0,Math.floor(-camY/(TILE*zoom))-2),bottom=Math.min(E.H-1,Math.ceil((canvas.clientHeight-camY)/(TILE*zoom))+2);
  if(attackPlanner?.mode==='review'&&attackPlanner.zoneCells)plans.push({zoneCells:attackPlanner.zoneCells,preview:true});
- if(attackPlanner?.mode==='paint'&&attackPlanner.cells.size)plans.push({zoneCells:[...attackPlanner.cells],preview:true});
+ if(attackPlanner?.mode==='paint'&&attackPlanner.cells.size)plans.push({zoneCells:[...attackPlanner.cells],targets:[...attackPlanner.targets],preview:true});
  const T=TILE;
  for(const plan of plans){
   const pending=plan.preview,waiting=plan.waiting,remaining=plan.zoneCells.filter(i=>state.owners[i]!==myId&&state.tiles[i]);
+  const permitted=new Set(plan.targets??[plan.targetOwner]);
   if(!remaining.length)continue;
   const cells=new Set(remaining),visible=remaining.filter(i=>{const x=i%E.W,y=(i/E.W)|0;return x>=left&&x<=right&&y>=top&&y<=bottom;});
   if(!visible.length)continue;
@@ -433,6 +434,7 @@ function drawAttackPlanning(){
   if(!pending)ctx.setLineDash(waiting?[3/zoom,6/zoom]:[5/zoom,5/zoom]);
   ctx.beginPath();
   for(const i of visible){const x=i%E.W,y=(i/E.W)|0;
+   ctx.fillStyle=permitted.has(state.owners[i])?(pending?'rgba(96,220,255,.31)':waiting?'rgba(96,220,255,.18)':'rgba(99,204,255,.13)'):'rgba(137,151,164,.075)';
    ctx.fillRect(x*T,y*T,T,T);
    if(!cells.has(i-E.W)){ctx.moveTo(x*T,y*T);ctx.lineTo((x+1)*T,y*T);}
    if(!cells.has(i+E.W)){ctx.moveTo(x*T,(y+1)*T);ctx.lineTo((x+1)*T,(y+1)*T);}
@@ -696,6 +698,13 @@ $('planReviewClose').onclick=editPaintedZone;
 $('planDiscard').onclick=editPaintedZone;
 $('planPaintClear').onclick=clearPaintedZone;
 $('planReviewButton').onclick=reviewPaintedZone;
+$('planTargetOptions').onclick=e=>{
+ const btn=e.target.closest('[data-plan-country]'),plan=attackPlanner;
+ if(!btn||btn.disabled||!plan)return;
+ const id=Number(btn.dataset.planCountry);
+ if(plan.targets.has(id))plan.targets.delete(id);else plan.targets.add(id);
+ plan.optionsKey='';refreshPaintGuide();queueDraw();
+};
 $('planBrushSize').oninput=e=>{if(!attackPlanner)return;attackPlanner.brushRadius=Number(e.target.value)||2;refreshPaintGuide();queueDraw();};
 $('planTroopsPercent').oninput=e=>{percent=Number(e.target.value)||30;$('attackPercent').value=percent;$('percentLabel').textContent=percent+'%';refreshPaintGuide();};
 document.querySelectorAll('[data-plan-percent]').forEach(btn=>btn.onclick=()=>{
@@ -758,11 +767,11 @@ function renderArmies(){
  const rows=plans.map(p=>{
   const active=state.armies.find(a=>a.planId===p.id&&a.strength>0);
   const left=p.zoneCells.filter(i=>state.tiles[i]&&state.owners[i]!==myId).length;
-  const label=esc(E.person(state,p.targetOwner)?.name||'Neutral land');
-  const status=active?'Wave '+number(p.waves)+' advancing · '+number(active.strength)+' troops':'Waiting for next wave';
+  const choices=p.targets??[p.targetOwner],label=choices.length?choices.map(id=>esc(E.person(state,id)?.name||'Neutral land')).join(', '):'Choose targets';
+  const status=active?'Wave '+number(p.waves)+' advancing · '+number(active.strength)+' troops':choices.length?'Waiting for route / troops':'Paused · select targets';
   return `<div class="army-line"><div><strong>${label} <small>· ${number(left)} cells left</small></strong>
    <small>${status}</small><small class="army-stats">Plan persists until captured or cancelled · ${p.percent}% per wave</small></div>
-   <button data-focus-plan="${esc(p.id)}" aria-label="Locate planned area">Locate</button>
+   <button data-edit-plan="${esc(p.id)}" aria-label="Edit offensive region and opponents">Edit</button>
    <button data-cancel-plan="${esc(p.id)}" aria-label="Cancel offensive plan">Cancel</button></div>`;
  });
  for(const a of state.armies.filter(a=>a.owner===myId&&!plannedIDs.has(a.planId))){
@@ -778,9 +787,10 @@ function renderArmies(){
 $('armiesToggle').onclick=()=>{showAux('armiesPanel');renderArmies();};
 $('closeArmies').onclick=hideAux;
 $('armiesList').onclick=e=>{
- const cancel=e.target.closest('[data-cancel-plan]'),focus=e.target.closest('[data-focus-plan]');
+ const cancel=e.target.closest('[data-cancel-plan]'),edit=e.target.closest('[data-edit-plan]'),focus=e.target.closest('[data-focus-plan]');
  const recall=e.target.closest('[data-recall-army]'),armyFocus=e.target.closest('[data-focus-army]');
  if(cancel){const plan=(state.attackPlans||[]).find(p=>p.id===cancel.dataset.cancelPlan);if(plan){hideAux();openCancelPlan(plan);}return;}
+ if(edit){const plan=(state.attackPlans||[]).find(p=>p.id===edit.dataset.editPlan);if(plan){hideAux();beginAttackPlanner(plan);}return;}
  if(focus){
   const plan=(state.attackPlans||[]).find(p=>p.id===focus.dataset.focusPlan);
   if(plan){const active=state.armies.find(a=>a.planId===plan.id),i=plan.zoneCells.find(i=>state.owners[i]!==myId)??plan.zoneCells[0],x=active?.x??i%E.W,y=active?.y??(i/E.W)|0;camX=canvas.clientWidth/2-(x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(y+.5)*TILE*zoom;clampCamera();hideAux();queueDraw();}
@@ -816,7 +826,7 @@ function selectMap(clientX,clientY){
  if(attackPlanner)return;
  const regionIndex=p.y*E.W+p.x;
  const savedPlan=(state.attackPlans||[]).find(p=>p.owner===myId&&state.owners[regionIndex]!==myId&&p.zoneCells.includes(regionIndex));
- if(savedPlan){openCancelPlan(savedPlan);return;}
+ if(savedPlan){beginAttackPlanner(savedPlan);return;}
  const activePlan=state.armies.find(a=>a.owner===myId&&a.strength>0&&Array.isArray(a.zoneCells)&&!a.planId&&a.zoneCells.includes(regionIndex));
  if(activePlan){openCancelPlan(activePlan);return;}
  inspectCell(p.x,p.y);$('mapHint').classList.add('hidden');
