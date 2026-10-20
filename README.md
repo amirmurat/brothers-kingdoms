@@ -87,3 +87,6 @@ Adaptations: original black backgrounds removed, fills recolored for visibility,
 
 ### v56 — direct brush attack UX (preview)
 - Brush size (1–6 tile radius) and committed troops (5–95%) sliders now share the Paint Attack Zone panel. The Exit, Clear and Start offensive buttons are aligned on one row; Start dispatches the validated painted region directly, with no second review step. Ordinary taps outside your kingdom no longer show the old attack arrow. Host-authoritative zone, war and peace mechanics remain. iPhone Safari and live multiplayer still need testing.
+
+### v57 — Persistent offensive plans (preview)
+- Painted zones remain on the map after a wave stops. The host keeps the original zone and automatically launches the next wave against uncaptured cells once sufficient troops have recovered. Players can cancel the entire plan from its highlighted area or the Offensives list; the plan ends when the region is fully controlled or a peace treaty is accepted. Existing solo saves with active painted waves migrate on the next tick. Rules stay server authoritative. iPhone Safari and real multiplayer are still unverified.
