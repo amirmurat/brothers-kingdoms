@@ -521,7 +521,7 @@ html,body{background:#090c11!important;color:#eef2f8!important}
 #lobby#lobby#lobby .join-inputs button{min-width:82px!important;white-space:nowrap!important}
 #lobby#lobby#lobby #playerPreferences{margin:0!important}
 #lobby#lobby#lobby .choice-symbol{font-size:24px!important}
-#game#game#game :is(#sessionPanel,#exitPanel){position:fixed!important;z-index:220!important;left:50%!important;bottom:calc(12px + env(safe-area-inset-bottom))!important;transform:translateX(-50%)!important;width:min(400px,calc(100vw - 24px))!important;max-height:calc(100dvh - 36px)!important;box-sizing:border-box!important;overflow:auto!important;background:#121720!important;border:1px solid #465265!important;border-radius:16px!important;padding:16px!important;color:#eef2f8!important}
+#game#game#game :is(#sessionPanel,#exitPanel){position:fixed!important;z-index:var(--layer-dialog)!important;left:50%!important;bottom:calc(12px + env(safe-area-inset-bottom))!important;transform:translateX(-50%)!important;width:min(400px,calc(100vw - 24px))!important;max-height:calc(100dvh - 36px)!important;box-sizing:border-box!important;overflow:auto!important;background:#121720!important;border:1px solid #465265!important;border-radius:16px!important;padding:16px!important;color:#eef2f8!important}
 #game#game#game :is(#sessionPanel,#exitPanel)>button{display:block!important;width:100%!important;min-height:48px!important;margin:9px 0!important}
 #game#game#game :is(#sessionPanel,#exitPanel) :is(p,small){color:#b0bac9!important;font-size:12px!important;line-height:1.5!important}
 #game#game#game #exitMatch,#game#game#game #confirmExit{color:#ff8da5!important;border-color:#86455b!important;background:#28151f!important}
@@ -699,7 +699,7 @@ html,body{background:#090c11!important;color:#eef2f8!important}
   width:max-content!important;max-width:min(360px,calc(100% - 24px))!important;
   height:36px!important;min-height:36px!important;max-height:36px!important;
   display:inline-flex!important;align-items:center!important;box-sizing:border-box!important;
-  padding:0 11px!important;z-index:35!important;
+  padding:0 11px!important;z-index:var(--layer-map-status)!important;
   border:0!important;border-radius:9px!important;
   background:#151c27!important;color:#eef2f8!important;
   box-shadow:none!important;pointer-events:none!important;
@@ -1013,14 +1013,14 @@ body :is(input,textarea,[contenteditable="true"]){-webkit-user-select:text!impor
 #game#game#game .map-toolbar{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;min-width:0!important}
 #game#game#game .war-chip{flex:0 0 auto!important;display:flex!important;align-items:center!important;gap:7px!important;background:#3a2028!important;border:1px solid #8f4552!important;color:#ffbac2!important;padding:7px 10px!important;border-radius:9px!important;min-height:34px!important;font-size:10px!important;font-weight:800!important;letter-spacing:.06em!important;white-space:nowrap!important}
 #game#game#game .war-signal{height:7px;width:7px;border-radius:50%;background:#ff6d7b;box-shadow:0 0 7px #ff6d7b70}
-#game#game#game #planGuide{position:absolute!important;z-index:45!important;bottom:calc(14px + env(safe-area-inset-bottom))!important;left:12px!important;right:12px!important;display:flex!important;align-items:center!important;gap:10px!important;padding:12px!important;border-radius:15px!important;border:1px solid #487990!important;background:#111c28f5!important;box-shadow:0 12px 35px #0008!important;pointer-events:auto!important}
+#game#game#game #planGuide{position:absolute!important;z-index:var(--layer-map-plan)!important;bottom:calc(14px + env(safe-area-inset-bottom))!important;left:12px!important;right:12px!important;display:flex!important;align-items:center!important;gap:10px!important;padding:12px!important;border-radius:15px!important;border:1px solid #487990!important;background:#111c28f5!important;box-shadow:0 12px 35px #0008!important;pointer-events:auto!important}
 #game#game#game .plan-guide-symbol{flex:0 0 36px;display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:#17465a;color:#6be0ff}
 #game#game#game .plan-guide-symbol .ui-icon{width:22px;height:22px}
 #game#game#game .plan-guide-copy{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 #game#game#game .plan-guide-copy strong{font-size:11px;letter-spacing:.1em;color:#91e6ff}
 #game#game#game .plan-guide-copy span{color:#e6eef7;font-size:12px;line-height:1.35}
 #game#game#game #planGuideExit{min-height:40px;padding:0 12px;flex:none;border:1px solid #526276;border-radius:9px;color:#dde7f2;background:#202b3a;font-weight:700}
-#game#game#game #planReview{position:absolute!important;z-index:47!important;bottom:calc(12px + env(safe-area-inset-bottom))!important;left:50%!important;transform:translateX(-50%)!important;width:min(440px,calc(100% - 24px))!important;max-height:calc(100% - 24px)!important;overflow-y:auto!important;display:flex!important;flex-direction:column!important;gap:10px!important;padding:18px!important;background:#141b25f7!important;border:1px solid #465569!important;border-radius:19px!important;color:#f1f5fb!important;box-shadow:0 14px 46px #0009!important;box-sizing:border-box!important;pointer-events:auto!important}
+#game#game#game #planReview{position:absolute!important;z-index:var(--layer-map-sheet)!important;bottom:calc(12px + env(safe-area-inset-bottom))!important;left:50%!important;transform:translateX(-50%)!important;width:min(440px,calc(100% - 24px))!important;max-height:calc(100% - 24px)!important;overflow-y:auto!important;display:flex!important;flex-direction:column!important;gap:10px!important;padding:18px!important;background:#141b25f7!important;border:1px solid #465569!important;border-radius:19px!important;color:#f1f5fb!important;box-shadow:0 14px 46px #0009!important;box-sizing:border-box!important;pointer-events:auto!important}
 #game#game#game .plan-review-top,#game#game#game .plan-review-heading,#game#game#game .plan-force-label{display:flex;align-items:center;justify-content:space-between;gap:9px}
 #game#game#game .plan-overline{font-size:10px;letter-spacing:.12em;font-weight:750;color:#96a9bd}
 #game#game#game #planStatus{display:inline-block;margin-left:5px;padding:4px 7px;border-radius:5px;color:#8fe9ff;background:#194454;letter-spacing:.04em}
@@ -1041,12 +1041,12 @@ body :is(input,textarea,[contenteditable="true"]){-webkit-user-select:text!impor
 #game#game#game #planLaunch{background:#58d7ff;color:#061722;border:1px solid #85e6ff}
 #game#game#game #planLaunch.declare-war{background:#ff8493;border-color:#ffabba;color:#261016}
 #game#game#game #planLaunch:disabled{opacity:.42!important;cursor:not-allowed}
-#game#game#game #planCancelDialog{position:absolute!important;inset:0!important;z-index:75!important;display:grid!important;place-items:center!important;background:#04090fba!important;padding:18px!important;pointer-events:auto!important}
+#game#game#game #planCancelDialog{position:absolute!important;inset:0!important;z-index:var(--layer-map-confirm)!important;display:grid!important;place-items:center!important;background:#04090fba!important;padding:18px!important;pointer-events:auto!important}
 #game#game#game .plan-cancel-card{width:min(360px,100%);padding:20px;border:1px solid #637083;border-radius:18px;background:#181f2b;color:#f1f5fb;box-shadow:0 18px 44px #0009}
 #game#game#game .plan-cancel-card h3{margin:9px 0;font-size:22px;line-height:1.2}
 #game#game#game .plan-cancel-card p{margin:0 0 18px;font-size:13px;color:#b3c1d2;line-height:1.55}
 #game#game#game #planCancelYes{color:#ffe7e9;background:#813642;border:1px solid #d76c7b}
-#game#game#game #warPanel{position:absolute!important;top:10px!important;right:12px!important;z-index:60!important;width:min(330px,calc(100% - 24px))!important;max-height:min(65dvh,380px)!important;overflow:auto!important;padding:13px!important;background:#151e2bf9!important;border:1px solid #55647a!important;border-radius:14px!important;box-shadow:0 12px 32px #000b!important}
+#game#game#game #warPanel{position:absolute!important;top:10px!important;right:12px!important;z-index:var(--layer-map-nations)!important;width:min(330px,calc(100% - 24px))!important;max-height:min(65dvh,380px)!important;overflow:auto!important;padding:13px!important;background:#151e2bf9!important;border:1px solid #55647a!important;border-radius:14px!important;box-shadow:0 12px 32px #000b!important}
 #game#game#game .war-panel-title{display:flex;justify-content:space-between;align-items:center;color:#f1f5fa;font-size:12px;letter-spacing:.09em;font-weight:800;padding-bottom:10px}
 #game#game#game .war-row{padding:11px 0;border-top:1px solid #344152;display:flex;flex-direction:column;gap:8px;color:#eef3f9}
 #game#game#game .war-row-name{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;font-weight:700}
@@ -1171,7 +1171,7 @@ body :is(input,textarea,[contenteditable="true"]){-webkit-user-select:text!impor
    Overrides the legacy v54-v60 planning sheet with one responsive source. */
 #game#game#game #gameActionBar{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 #game#game#game #planToolSwitch{
- position:absolute!important;z-index:55!important;top:clamp(88px,38%,236px)!important;right:9px!important;
+ position:absolute!important;z-index:var(--layer-map-tools)!important;top:clamp(88px,38%,236px)!important;right:9px!important;
  display:flex!important;flex-direction:column!important;align-items:center!important;
  width:48px!important;gap:9px!important;pointer-events:auto!important;
 }
@@ -1193,7 +1193,7 @@ body :is(input,textarea,[contenteditable="true"]){-webkit-user-select:text!impor
 #game#game#game #planToolSwitch button:focus-visible{outline:2px solid #abedff!important;outline-offset:3px}
 #game#game#game #planToolSwitch .plan-icon{width:26px!important;height:26px!important;fill:none!important;stroke:currentColor;display:block!important}
 #game#game#game #planControls{
- position:absolute!important;z-index:51!important;top:clamp(80px,26%,170px)!important;left:8px!important;
+ position:absolute!important;z-index:var(--layer-map-controls)!important;top:clamp(80px,26%,170px)!important;left:8px!important;
  display:flex!important;align-items:stretch!important;justify-content:flex-start!important;
  gap:6px!important;max-width:112px!important;pointer-events:auto!important;
 }
@@ -1241,7 +1241,7 @@ body :is(input,textarea,[contenteditable="true"]){-webkit-user-select:text!impor
  border:3px solid #d6f7ff!important;border-radius:50%!important;
 }
 #game#game#game #planGuide{
- position:absolute!important;z-index:52!important;bottom:calc(8px + env(safe-area-inset-bottom))!important;
+ position:absolute!important;z-index:var(--layer-map-plan)!important;bottom:calc(8px + env(safe-area-inset-bottom))!important;
  left:8px!important;right:8px!important;top:auto!important;width:auto!important;max-height:38%!important;
  overflow:visible!important;transform:none!important;padding:8px 9px!important;gap:5px!important;
  display:flex!important;flex-direction:column!important;align-items:stretch!important;
@@ -1331,11 +1331,10 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
  background:#174d63f0!important;color:#e6faff!important;border-color:#76dbff!important;
  box-shadow:0 0 0 1px #78e7ff44,0 5px 16px #0008!important;
 }
-#game#game#game .map-view:has(.quick-build:not(.hidden)) #planToolSwitch,
-#game#game#game .map-view:has(.placing-build:not(.hidden)) #planToolSwitch{display:flex!important}
+/* Tool visibility is defined by the shared window policy below. */
 #game#game#game #planControls.erase-only #planTroopsControl{display:none!important}
 #game#game#game #planEraseHint{
- position:absolute!important;z-index:52!important;left:50%!important;
+ position:absolute!important;z-index:var(--layer-map-plan)!important;left:50%!important;
  transform:translateX(-50%)!important;bottom:calc(10px + env(safe-area-inset-bottom))!important;
  max-width:calc(100% - 22px)!important;width:max-content!important;
  padding:8px 11px!important;border-radius:10px!important;box-sizing:border-box!important;
@@ -1364,7 +1363,7 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
  width:auto!important;min-width:0!important;max-width:none!important;
  height:39px!important;min-height:39px!important;max-height:39px!important;
  padding:0 9px!important;overflow:hidden!important;border-radius:11px!important;
- z-index:42!important;
+ z-index:var(--layer-map-status)!important;
 }
 #game#game#game #gameFeedback:has(#hudAlert.danger:not(.hidden)){
  max-width:none!important;
@@ -1393,7 +1392,7 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
 #game#game#game .map-toolbar{
  position:absolute!important;left:auto!important;right:10px!important;top:9px!important;
  width:124px!important;min-width:124px!important;max-width:124px!important;height:39px!important;
- z-index:43!important;display:flex!important;align-items:center!important;justify-content:flex-end!important;
+ z-index:var(--layer-map-status)!important;display:flex!important;align-items:center!important;justify-content:flex-end!important;
  margin:0!important;padding:0!important;pointer-events:none!important;
 }
 #game#game#game .map-toolbar .map-location{display:none!important}
@@ -1412,7 +1411,7 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
  width:max-content!important;max-width:calc(100% - 20px)!important;
  height:40px!important;min-height:40px!important;
  background:transparent!important;border:0!important;padding:0!important;
- z-index:38!important;box-shadow:none!important;
+ z-index:var(--layer-map-status)!important;box-shadow:none!important;
 }
 #game#game#game #threatRail.hidden{display:none!important}
 #game#game#game #incomingAttack{
@@ -1487,3 +1486,108 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
  #game#game#game #warChip .nation-flag{width:14px!important;height:14px!important;min-width:14px!important}
  #game#game#game .nation-actions button{font-size:10px!important}
 }
+
+/* Shared layout and window policy. All match layers are relative to #game;
+   map elements stay inside one stacking context below every dialog. */
+#game#game#game {
+ --layer-map-status:10;--layer-map-tools:20;--layer-map-controls:24;
+ --layer-map-plan:25;--layer-map-sheet:40;--layer-map-nations:50;--layer-map-confirm:80;
+ --layer-panel-backdrop:80;--layer-panel:90;--layer-dialog-backdrop:100;
+ --layer-dialog:110;--layer-help:120;--layer-result:130;
+ isolation:isolate;
+}
+#game#game#game .map-shell{isolation:isolate;z-index:0}
+#game#game#game #panelBackdrop{z-index:var(--layer-panel-backdrop)!important}
+#game#game#game #sidebar{z-index:var(--layer-panel)!important;box-sizing:border-box!important;max-height:calc(100dvh - 24px)!important}
+#game#game#game #auxBackdrop{z-index:var(--layer-dialog-backdrop)!important}
+#game#game#game :is(#sessionPanel,#exitPanel,#armiesPanel,#quickLeadersPanel,#contextCard){z-index:var(--layer-dialog)!important}
+#game#game#game #tutorial{z-index:var(--layer-help)!important}
+#game#game#game #victory{z-index:var(--layer-result)!important}
+#game#game#game :is(#quickBuild,#targetPreview){z-index:var(--layer-map-sheet)!important}
+#game#game#game #placingBuild{z-index:var(--layer-map-plan)!important}
+#game#game#game #quickBuild{max-height:calc(100% - 16px)!important;overflow-y:auto!important;overscroll-behavior:contain}
+#game#game#game #warPanel{max-height:min(600px,calc(100% - 65px))!important;overscroll-behavior:contain}
+#game#game#game #planToolSwitch{
+ top:50%!important;transform:translateY(-50%)!important;
+ max-height:calc(100% - 116px)!important;overflow-y:auto!important;
+ overflow-x:hidden!important;scrollbar-width:none;overscroll-behavior:contain;
+}
+#game#game#game #planToolSwitch::-webkit-scrollbar{display:none}
+#game#game#game #planToolSwitch button{flex-shrink:0!important}
+#game#game#game #planControls{top:58px!important}
+#game#game#game .plan-vertical-track{height:clamp(72px,calc(100dvh - 440px),146px)!important;min-height:72px!important}
+#game#game#game .plan-vertical-track input[type="range"]{
+ width:clamp(64px,calc(100dvh - 452px),134px)!important;min-width:0!important;
+ left:50%!important;top:50%!important;transform:translate(-50%,-50%) rotate(-90deg)!important;
+}
+#game#game#game.plan-drawing #planToolSwitch{top:calc(50% - 25px)!important;max-height:calc(100% - 190px)!important}
+#game#game#game #planControls{max-height:calc(100% - 170px)!important;overflow-y:auto!important;overscroll-behavior:contain}
+/* An open sheet owns its space. Hidden map controls cannot intercept touches. */
+#game#game#game:has(#sidebar.open,#auxBackdrop:not(.hidden),#tutorial:not(.hidden),#victory:not(.hidden))
+ :is(#planToolSwitch,#planControls,#planGuide,#planEraseHint,#placingBuild,#minimapWrap,#gameFeedback,.map-toolbar,#threatRail),
+#game#game#game:has(#quickBuild:not(.hidden),#warPanel:not(.hidden),#planReview:not(.hidden),#planCancelDialog:not(.hidden))
+ :is(#planToolSwitch,#planControls,#planGuide,#planEraseHint,#placingBuild,#minimapWrap){
+ visibility:hidden!important;pointer-events:none!important;
+}
+#game#game#game:has(#targetPreview:not(.hidden)) #planToolSwitch{visibility:hidden!important;pointer-events:none!important}
+/* Uniform icon buttons; labels and hit areas remain separate from icon geometry. */
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) :is(button,input,select){box-sizing:border-box!important}
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) button svg,
+:is(#lobby#lobby#lobby,#waiting#waiting#waiting,#game#game#game) button img{flex-shrink:0!important;pointer-events:none!important}
+#game#game#game :is(#closePanel,#closeContext,#closeArmies,#closeSession,#warPanelClose,#planReviewClose,#stopBuild,#quickBuildClose,#threatClose){
+ display:inline-flex!important;align-items:center!important;justify-content:center!important;
+ flex:0 0 44px!important;width:44px!important;height:44px!important;
+ min-width:44px!important;min-height:44px!important;max-height:none!important;padding:10px!important;
+}
+#game#game#game #planToolSwitch #scienceButton{width:46px!important;height:46px!important}
+#game#game#game :is(#closeQuickLeaders,#changeBuild,#quickBuildInfo,.nation-actions button,.army-line button,#planGuide .plan-guide-actions button){
+ min-height:44px!important;max-height:none!important;height:auto!important;
+}
+#game#game#game #planGuide .plan-guide-actions button{white-space:normal!important}
+#game#game#game #quickBuild .quick-build-item{
+ height:auto!important;min-height:94px!important;
+ grid-template-rows:minmax(34px,auto) minmax(30px,auto)!important;
+}
+#game#game#game #quickBuild.with-descriptions .quick-build-item{
+ grid-template-rows:minmax(34px,auto) minmax(30px,auto) minmax(38px,auto)!important;
+ height:auto!important;min-height:136px!important;
+}
+#game#game#game #quickBuild .building-name{min-width:0!important;overflow-wrap:anywhere!important}
+#game#game#game #quickBuild .building-owned{display:block!important;margin-top:3px!important;font-size:10px!important;line-height:12px!important;font-weight:500!important;color:#aebed0!important}
+#game#game#game #quickBuild .building-cost{flex-wrap:wrap!important;white-space:normal!important;row-gap:3px!important;align-content:start!important}
+#game#game#game #quickBuild .cost-unit{white-space:nowrap!important}
+#game#game#game #quickBuild .cost-missing{color:#ff9ba9!important}
+#game#game#game #quickBuild .quick-build-help{display:block!important;margin-top:9px!important;font-size:11px!important;line-height:1.4!important;color:#b5c6d7!important}
+#game#game#game #placingBuild{max-width:calc(100% - 16px)!important;box-sizing:border-box!important}
+#game#game#game #placingBuildText{min-width:0!important;overflow-wrap:anywhere!important;white-space:normal!important;line-height:1.35!important}
+#game#game#game :is(#contextBody .context-heading,#contextBody .context-effect,#contextBody .context-upgrade-price>div,#sessionPanel .session-action-list){min-width:0!important}
+#game#game#game #contextBody .context-upgrade-price>div{display:flex!important;flex-wrap:wrap!important;gap:6px!important}
+#game#game#game #contextCard{box-sizing:border-box!important;max-height:calc(100dvh - 24px)!important;overflow-y:auto!important}
+#game#game#game :is(#armiesPanel,#quickLeadersPanel,#tutorial section){box-sizing:border-box!important;max-height:calc(100dvh - 24px)!important;overflow-y:auto!important;overscroll-behavior:contain}
+#game#game#game .nation-name{white-space:normal!important;overflow-wrap:anywhere!important}
+#game#game#game .nation-identity{flex-wrap:wrap!important}
+#game#game#game .nation-status{max-width:100%!important}
+#lobby#lobby#lobby .start-screen,#waiting#waiting#waiting .waiting-card{box-sizing:border-box!important;min-width:0!important}
+#lobby#lobby#lobby .start-choice>span:not(.choice-symbol){min-width:0!important;overflow-wrap:anywhere!important}
+#lobby#lobby#lobby .join-inputs{grid-template-columns:minmax(0,1fr) auto!important;min-width:0!important}
+#lobby#lobby#lobby #roomCode{width:100%!important;min-width:0!important}
+#waiting#waiting#waiting .player-row{display:grid!important;grid-template-columns:12px minmax(0,1fr) minmax(58px,auto)!important;align-items:center!important;gap:8px!important}
+#waiting#waiting#waiting .player-row strong{min-width:0!important;overflow-wrap:anywhere!important}
+#waiting#waiting#waiting .player-row>span{font-size:11px!important;text-align:right!important;overflow-wrap:anywhere!important}
+@media(max-height:480px) and (orientation:landscape){
+ #game#game#game #planToolSwitch{display:grid!important;grid-template-columns:repeat(2,44px)!important;top:56px!important;transform:none!important;width:94px!important;max-height:calc(100% - 62px)!important;gap:6px!important}
+ #game#game#game #planToolSwitch button,#game#game#game #planToolSwitch #scienceButton{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important}
+ #game#game#game #planToolSwitch #developButton{margin-top:0!important}
+ #game#game#game.plan-drawing #planToolSwitch{top:56px!important;max-height:calc(100% - 62px)!important}
+ #game#game#game #planControls{max-height:calc(100% - 62px)!important}
+ #game#game#game #planGuide{left:116px!important;right:110px!important;width:auto!important;max-height:calc(100% - 62px)!important;overflow-y:auto!important}
+ #game#game#game #planControls{top:54px!important}
+ #game#game#game .plan-vertical-track{height:72px!important;min-height:72px!important}
+ #game#game#game .plan-vertical-track input[type="range"]{width:64px!important}
+}
+
+#game#game#game #armiesList{display:flex!important;flex-direction:column!important;gap:8px!important;min-width:0!important}
+#game#game#game .army-line{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;min-width:0!important;padding:12px!important}
+#game#game#game .army-line>div{grid-column:1/-1!important;min-width:0!important}
+#game#game#game .army-line :is(strong,small){display:block!important;min-width:0!important;white-space:normal!important;overflow-wrap:anywhere!important}
+#game#game#game .army-line button{min-width:0!important;width:100%!important}

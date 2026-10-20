@@ -1,5 +1,5 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
-_Обновлено: 20 октября 2026 года, рабочая preview-версия v66 (Cloudflare deployment pending). Историческая v25 в разделе 0 не является текущей._
+_Обновлено: 20 октября 2026 года, рабочая preview-версия v67. Историческая v25 в разделе 0 не является текущей._
 
 
 ## СРОЧНО: АКТУАЛЬНОЕ СОСТОЯНИЕ v62 (20.10.2026)
@@ -331,3 +331,16 @@ _Обновлено: 20 октября 2026 года, рабочая preview-в�
 - game.js adds opt-in same-origin transport via server-config.js; scripts/build-cloudflare.cjs creates a Cloudflare-only static bundle and enables it. Raw preview remains PeerJS; do not tell user it already uses server. No server URL deployed yet.
 - Engine build v66; gameplay unchanged. Main untouched. Setup instructions docs/CLOUDFLARE_SETUP.md.
 - Seven engine regression suites plus server/client behavior adapters passed in V8. No shell environment available; no Node/real Wrangler/workerd/Safari/physical multiplayer execution. New tests are committed for replay. Cloudflare deploy and free-tier usage still require validation.
+
+## v67 — window hierarchy, mobile controls and current-building prices (20.10.2026)
+- Cloudflare v66 deployment was confirmed by the user's build log and GitHub Workers Builds check for 199c53ad (version 08f8070b-eddf-4c61-903c-bb923adafb2f).
+- Live game: https://brothers-kingdoms.murat-amir-olzhasuly.workers.dev . Raw branch preview still uses PeerJS; do not confuse it with the server.
+- UI source sweep covers all three screens and 202 static DOM IDs. All static JS ID references exist; 29 sprite references resolve and 31 static asset references exist. This is source/DOM verification, not a real Safari visual audit.
+- styles/theme.css now owns named layer variables. Map shell is an isolated stacking context below Research, backdrops, auxiliary dialogs, Help and results. Build/Nations/review hide conflicting map tools; modal state blocks map actions. Removed contradictory Build tool display override. Small viewport tools scroll inside bounds; landscape uses a 2×2 tool grid and separate planning space.
+- Close controls use 44px touch areas; building prices wrap instead of clipping; owned count and current placement prices shown. Long player/nation names and army rows wrap; sheets scroll inside viewport.
+- Nations preserves an unfinished draft but clears captured gestures. Window transitions close incompatible windows; Help/home/result cleanup fixes stale panels. Closing an already closed Build palette no longer discards a drawing.
+- Build, Nations, Offensives and incoming-threat buttons retain their DOM nodes while live numbers change, avoiding dropped mid-touch clicks.
+- engine.costBuilding(state,owner,kind): base × (1 + 0.20 × current owned structures of that same type), rounded up per resource. Physical structures count, not levels. Starting/captured structures count; losses lower the next price, never below base. Engine validates/charges this price; UI uses the same function. Upgrade prices retain their level rule. No refunds for prior builds.
+- Border cache now also invalidates on territoryRevision within the same tick.
+- Engine build/cache tags v67. Main untouched; all changes on design/visual-review-v26.
+- Eleven suites passed in available V8 adapters: 7 offensive regressions, Cloudflare client/server, building pricing, UI window behavior. No usable shell/browser environment; Node commands, real CSS layout, physical iPhone Safari and separate-network multiplayer not executed in this pass. Actual Cloudflare deployment check is reported separately after commit.

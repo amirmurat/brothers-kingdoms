@@ -4,6 +4,8 @@
   "scripts": {
     "build": "node scripts/build-cloudflare.cjs",
     "deploy": "npx wrangler@4 deploy",
-    "test:server": "node tests/cloudflare-server.cjs && node tests/cloudflare-client.cjs"
+    "test:server": "node tests/cloudflare-server.cjs && node tests/cloudflare-client.cjs",
+    "test:ui": "node tests/ui-windows.cjs",
+    "test:prices": "node tests/building-prices.cjs"
   }
 }

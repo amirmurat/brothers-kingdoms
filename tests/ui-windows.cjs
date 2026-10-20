@@ -1,0 +1,47 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const E=require(process.cwd()+'/engine.js');
+const html=fs.readFileSync('index.html','utf8'),elements=new Map(),saved=new Map();
+function el(id=''){
+ if(elements.has(id))return elements.get(id);
+ const attrs=[...html.matchAll(/<[^>]+\bid="([^"]+)"[^>]*>/g)].find(m=>m[1]===id)?.[0]||'';
+ const classes=new Set((attrs.match(/\bclass="([^"]*)"/)?.[1]||'').split(' '));
+ const e={id,value:'',textContent:'',innerHTML:'',dataset:{},style:{},tagName:'DIV',disabled:false,options:[],classList:{add(...a){a.forEach(x=>classes.add(x))},remove(...a){a.forEach(x=>classes.delete(x))},contains(x){return classes.has(x)},toggle(x,b){const v=b===undefined?!classes.has(x):b;v?classes.add(x):classes.delete(x);return v}},setAttribute(){},getAttribute(){return null},addEventListener(){},focus(){},querySelector(sel){return el(id+sel)},querySelectorAll(){return []},getBoundingClientRect(){return {width:390,height:650,left:0,top:0}},getContext(){return context},closest(){return el(id+'parent')},contains(){return false}};
+ elements.set(id,e);return e;
+}
+const context=new Proxy({createImageData(w,h){return {data:new Uint8ClampedArray(w*h*4)}},measureText(){return {width:30}}},{get(t,k){return t[k]||(()=>{})}});
+const document={getElementById:el,querySelectorAll(){return []},querySelector(){return null},createElement(){return el('created')},addEventListener(){},activeElement:el('body'),body:el('body'),hidden:false};
+const sandbox={btoa,atob,console,window:{BKEngine:E,innerWidth:390,addEventListener(){}},document,localStorage:{getItem(k){return saved.get(k)||null},setItem(k,v){saved.set(k,v)},removeItem(k){saved.delete(k)}},location:{hash:'',origin:'https://test',pathname:'/index.html',search:''},history:{replaceState(){}},navigator:{},Path2D:class{},requestAnimationFrame(){},setTimeout(){return 1},clearTimeout(){},setInterval(){},performance:{now(){return 0}},devicePixelRatio:1,crypto:require('crypto').webcrypto,Uint8Array,Uint8ClampedArray,Blob};
+el('soloBots').value='2';el('nickname').value='Test';
+
+const source=fs.readFileSync('game.js','utf8').replace(/\}\)\(\);\s*$/, "window.test={createDemo,goHome,showAux,hideAux,openPanel,closePanel,toggleQuickBuild,setBuildingMode,beginAttackPlanner,beginGlobalEraser,renderWars,refreshQuickBuild,updateUI,onPointerDown,mapInputBlocked,get:()=>({state,myId,attackPlanner,pressed,panelOpen,quickBuildOpen})};})();");
+vm.runInNewContext(source,sandbox);const t=sandbox.window.test;
+t.createDemo(false);const s=t.get().state;
+assert.equal(t.mapInputBlocked(),false);
+t.openPanel();assert(t.mapInputBlocked());assert(el('sidebar').classList.contains('open'));
+t.toggleQuickBuild(true);assert(!t.get().panelOpen);assert(t.get().quickBuildOpen);assert(t.mapInputBlocked());
+t.showAux('sessionPanel');assert(!t.get().quickBuildOpen);assert(document.body.classList.contains('aux-open'));
+t.showAux('quickLeadersPanel');assert(el('sessionPanel').classList.contains('hidden'));assert(!el('quickLeadersPanel').classList.contains('hidden'));
+t.hideAux();assert(!t.mapInputBlocked());
+t.beginAttackPlanner();const plan=t.get().attackPlanner;const i=s.tiles.findIndex(Boolean);plan.cells.add(i);plan.pointerId=17;plan.strokeStart={x:3,y:3};t.get().pressed.set(17,{x:3,y:3});
+el('warChip').onclick();assert(!el('warPanel').classList.contains('hidden'));assert(t.mapInputBlocked());
+assert.equal(t.get().attackPlanner,plan,'Nations preserves the drawing');assert(plan.cells.has(i));
+assert.equal(plan.pointerId,null,'Nations safely ends active gesture');assert.equal(t.get().pressed.size,0);
+el('warPanelClose').onclick();assert(!t.mapInputBlocked());
+t.toggleQuickBuild(false);assert.equal(t.get().attackPlanner,plan,'closing build palette cannot delete draft');
+t.showAux('armiesPanel');assert.equal(t.get().attackPlanner,null);assert(el('warPanel').classList.contains('hidden'));
+t.openPanel();assert(el('armiesPanel').classList.contains('hidden'));assert(!document.body.classList.contains('aux-open'));
+el('helpButton').onclick();assert(!t.get().panelOpen);assert(!el('tutorial').classList.contains('hidden'));assert(t.mapInputBlocked());
+el('closeTutorial').onclick();assert(!t.mapInputBlocked());
+t.beginAttackPlanner();el('warChip').onclick();t.goHome();
+assert(el('warPanel').classList.contains('hidden'));assert(!document.body.classList.contains('aux-open'));
+t.createDemo(false);
+const quick=el('quickBuildChoices'),nations=el('warPanelList');let quickWrites=0,nationWrites=0;
+let quickHtml=quick.innerHTML,nationHtml=nations.innerHTML;
+Object.defineProperty(quick,'innerHTML',{get:()=>quickHtml,set:v=>{quickHtml=v;quickWrites++;}});
+Object.defineProperty(nations,'innerHTML',{get:()=>nationHtml,set:v=>{nationHtml=v;nationWrites++;}});
+const current=t.get().state;current.players[1].land+=2;current.players[0].res.wood+=7;
+t.refreshQuickBuild();t.renderWars();assert.equal(quickWrites,0,'resource updates preserve build button DOM');assert.equal(nationWrites,0,'land updates preserve nation button DOM');
+t.goHome();
+const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);
+assert.equal(new Set(ids).size,ids.length,'unique DOM IDs');
+console.log('PASS windows: all sheet transitions, blocked map input, preserved draft, gesture cleanup, home reset and stable button DOM');

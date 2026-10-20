@@ -124,6 +124,13 @@ function start(s,bots=0){if(s.phase!=='lobby'||!s.players.length)return {ok:fals
  s.landTotal=s.tiles.filter(Boolean).length;s.duration=null;s.rules={victory:100,timeLimit:false,naval:false,continent:true};s.phase='playing';log(s,'Match started. Conquer 100% of the land. There is no time limit.');return {ok:true};
 }
 
+// Price is based on current owned structures of this type, not their levels.
+function buildingCount(s,id,kind){return s.buildings.filter(b=>b.owner===id&&b.kind===kind).length;}
+function costBuilding(s,id,kind){
+ const base=KINDS[kind]?.cost;if(!base)return null;
+ const count=buildingCount(s,id,kind);
+ return Object.fromEntries(Object.entries(base).map(([resource,value])=>[resource,Math.ceil(value*(100+20*count)/100)]));
+}
 function costUpgrade(b){return {wood:50*b.level+25,stone:50*b.level+20,gold:35*b.level};}
 function costTech(key,l){const base=TECH[key].base;return Object.fromEntries(Object.entries(base).map(([k,v])=>[k,Math.round(v*(l+1)*1.4)]));}
 function isCoast(s,x,y){return [[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>tile(s,x+dx,y+dy)===0);}
@@ -141,7 +148,7 @@ const borderCache=new WeakMap();
 const attackFronts=new WeakMap();
 function borders(s,id){
  let cache=borderCache.get(s);
- if(!cache||cache.tick!==s.tick){cache={tick:s.tick,lists:new Map()};borderCache.set(s,cache);}
+ if(!cache||cache.tick!==s.tick||cache.revision!==s.territoryRevision){cache={tick:s.tick,revision:s.territoryRevision,lists:new Map()};borderCache.set(s,cache);}
  if(cache.lists.has(id))return cache.lists.get(id);
  const list=[];
  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
@@ -378,7 +385,8 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
  }
  if(a.type==='build'){
   const kind=String(a.kind),x=Math.floor(a.x),y=Math.floor(a.y),fail=canBuild(s,id,kind,x,y);if(fail)return {ok:false,error:fail};
-  if(!available(p,KINDS[kind].cost))return {ok:false,error:'Not enough resources.'};charge(p,KINDS[kind].cost);building(s,id,kind,x,y);return {ok:true};
+  const price=costBuilding(s,id,kind);
+  if(!available(p,price))return {ok:false,error:'Not enough resources.'};charge(p,price);building(s,id,kind,x,y);return {ok:true,cost:price};
  }
  if(a.type==='upgrade'){
   const b=s.buildings.find(v=>v.id===a.id&&v.owner===id);if(!b||b.level>=4)return {ok:false,error:'Maximum level reached.'};const price=costUpgrade(b);
@@ -764,5 +772,5 @@ function tick(s){if(s.phase!=='playing')return;s.tick++;
  checkWin(s);
 }
 
-return{BUILD:'v66',W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v67',W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });

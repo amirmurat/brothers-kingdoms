@@ -1,0 +1,36 @@
+'use strict';
+const assert=require('node:assert/strict'),E=require('../engine.js');
+const s=E.lobby(4701),id=E.addPlayer(s,'Builder'),other=E.addPlayer(s,'Rival');
+assert(E.start(s,0).ok);s.buildings=[];s.tiles.fill(1);s.owners.fill(id);
+const p=E.person(s,id);p.land=s.tiles.length;p.res={food:10000,wood:10000,stone:10000,gold:10000};
+const build=(kind,x,y)=>E.action(s,id,{type:'build',kind,x,y,price:{wood:0},cost:{wood:0}});
+const base=JSON.stringify(E.KINDS);
+assert.deepEqual(E.costBuilding(s,id,'farm'),{wood:45,stone:10});
+let wood=p.res.wood,stone=p.res.stone;
+assert(build('farm',20,20).ok);assert.equal(p.res.wood,wood-45);assert.equal(p.res.stone,stone-10);
+assert.deepEqual(E.costBuilding(s,id,'farm'),{wood:54,stone:12});
+wood=p.res.wood;assert(build('farm',21,20).ok);assert.equal(p.res.wood,wood-54);
+assert.deepEqual(E.costBuilding(s,id,'farm'),{wood:63,stone:14});
+const first=s.buildings[0];assert(E.action(s,id,{type:'upgrade',id:first.id}).ok);
+assert.equal(E.buildingCount(s,id,'farm'),2,'levels do not count as extra buildings');
+assert.equal(E.costBuilding(s,id,'farm').wood,63);
+assert.deepEqual(E.costBuilding(s,id,'lumber'),E.KINDS.lumber.cost,'other types unaffected');
+first.owner=other;assert.equal(E.costBuilding(s,id,'farm').wood,54);
+assert.equal(E.costBuilding(s,other,'farm').wood,54,'captured structures count for their current owner');
+s.buildings=s.buildings.filter(b=>b.kind!=='farm'||b.owner!==id);
+assert.equal(E.costBuilding(s,id,'farm').wood,45,'losing all resets price to base');
+s.buildings.push({...first,id:'owned',owner:id,level:4});
+p.res.wood=45;wood=p.res.wood;stone=p.res.stone;
+const count=s.buildings.length;
+assert.equal(build('farm',22,20).ok,false,'base-only balance cannot pay scaled price');
+assert.equal(s.buildings.length,count);assert.equal(p.res.wood,wood);assert.equal(p.res.stone,stone);
+assert.equal(E.costBuilding(JSON.parse(JSON.stringify(s)),id,'farm').wood,54);
+assert.equal(JSON.stringify(E.KINDS),base,'shared base prices never mutate');
+for(const kind of Object.keys(E.KINDS)){
+ const fresh=E.lobby(1);fresh.buildings=[];
+ const price=E.costBuilding(fresh,id,kind);
+ fresh.buildings.push({owner:id,kind,level:4});
+ const more=E.costBuilding(fresh,id,kind);
+ for(const [resource,value] of Object.entries(price))assert.equal(more[resource],Math.ceil(value*1.2));
+}
+console.log('PASS building prices: same-type count, increases, losses/captures, upgrades, authoritative charge and save reload');

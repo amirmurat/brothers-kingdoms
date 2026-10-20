@@ -1,13 +1,14 @@
-# Cloudflare server — v66
-Status: implemented on design/visual-review-v26; deployment/account link pending. main unchanged.
+# Cloudflare server — v67
+Status: v66 deployed successfully on design/visual-review-v26 (verified user log and GitHub check). v67 UI/pricing follow-up; main unchanged.
+Live URL: https://brothers-kingdoms.murat-amir-olzhasuly.workers.dev .
 
 ## Deploy without sharing credentials
 1. Cloudflare Dashboard → Workers & Pages → Create application → GitHub.
-2. Connect amirmurat/brothers-kingdoms; select production branch design/visual-review-v26, never main.
+2. Connect amirmurat/brothers-kingdoms. After creating the project, use Settings → Builds → Branch control to select design/visual-review-v26, never main. A retry of an old main build keeps that old ref; trigger a new push/build from the selected branch.
 3. Worker name: brothers-kingdoms (must match wrangler.jsonc).
 4. Root directory: repository root. Build command: node scripts/build-cloudflare.cjs. Deploy command: npx wrangler@4 deploy.
 5. Remain on Workers Free. No custom domain, paid database or payment credentials required by this configuration.
-6. Deploy, then open the workers.dev URL. Check /api/health returns build v66.
+6. Deploy, then open the workers.dev URL. Check /api/health returns the current build (v67 after this deployment).
 7. Create a room on that URL, share its link and test using two devices on separate networks.
 
 Wrangler also runs the build automatically; an explicit Dashboard build command is harmless.
@@ -30,6 +31,6 @@ No API token is embedded. GitHub authorization happens inside Cloudflare.
 Seven existing engine regression suites and tests/cloudflare-server.cjs + tests/cloudflare-client.cjs passed in V8 with runtime/storage/socket/DOM test adapters.
 The stale build assertion in unlimited-plans.cjs was updated to v66.
 JS syntax verified. No local shell environment was available: no npm build, Wrangler dry run or real workerd integration was executed.
-Not yet verified: Cloudflare deploy, browser handshake, public free-tier usage, two physical iPhones/Safari on separate networks.
+Cloudflare v66 deploy verified. Not yet verified: browser handshake, public free-tier usage, two physical iPhones/Safari on separate networks.
 Run node tests/cloudflare-server.cjs and node tests/cloudflare-client.cjs in Node, then a real Cloudflare deployment and multi-device check.
 Existing tests/lifecycle.cjs is historical (Russian copy/direct send assumptions), not a passing current-suite claim.
