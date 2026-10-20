@@ -63,7 +63,7 @@ function person(s,id){return s.players.find(p=>p.id===id);}
 const available=(p,c)=>Object.entries(c||{}).every(([k,v])=>(p.res[k]||0)>=v);
 const charge=(p,c)=>Object.entries(c).forEach(([k,v])=>p.res[k]-=v);
 function log(s,msg){s.log.unshift(msg);if(s.log.length>8)s.log.length=8;}
-function lobby(seed=57283){return {version:14,settings:{bots:0},phase:'lobby',seed:Math.floor(seed),tick:0,tiles:[],owners:[],players:[],buildings:[],armies:[],log:['Conquer land, develop your economy, and defend your capital.'],winner:null,mode:'conquest',duration:null,nonce:0,landTotal:0,territoryRevision:0,wars:[],peaceOffers:[]};}
+function lobby(seed=57283){return {version:14,settings:{bots:0},phase:'lobby',seed:Math.floor(seed),tick:0,tiles:[],owners:[],players:[],buildings:[],armies:[],attackPlans:[],log:['Conquer land, develop your economy, and defend your capital.'],winner:null,mode:'conquest',duration:null,nonce:0,landTotal:0,territoryRevision:0,wars:[],peaceOffers:[]};}
 function addPlayer(s,name,isBot=false){if(s.phase!=='lobby'||s.players.filter(p=>!p.bot).length>=MAX&&!isBot||s.players.length>=COLORS.length)return null;
  let id=1;while(s.players.some(p=>p.id===id))id++;let safe=String(name||('Kingdom '+id)).trim().slice(0,18)||('Player '+id);
  s.players.push({id,name:safe,bot:!!isBot,color:COLORS[(id-1)%COLORS.length],res:{food:650,wood:390,stone:310,gold:260},troops:450,troopCap:1700,land:0,ready:!!isBot,connected:true,spawnPreference:'auto',eliminated:false,tech:{economy:0,war:0,logistics:0},offers:[],allies:[],capital:null,kills:0});
@@ -102,7 +102,7 @@ function sites(s,n){const anchors=[[.16,.23],[.82,.76],[.82,.22],[.17,.78],[.48,
  return anchors.slice(0,n).map(([fx,fy])=>({x:Math.round(fx*(W-1)),y:Math.round(fy*(H-1))}));
 }
 function start(s,bots=0){if(s.phase!=='lobby'||!s.players.length)return {ok:false,error:'No players.'};
- s.tiles=singleContinent(generate(s.seed));s.owners=new Array(W*H).fill(0);s.armies=[];s.buildings=[];s.territoryRevision=0;
+ s.tiles=singleContinent(generate(s.seed));s.owners=new Array(W*H).fill(0);s.armies=[];s.attackPlans=[];s.buildings=[];s.territoryRevision=0;
  const botsCount=clamp(Math.floor(bots),0,COLORS.length-s.players.length);for(let i=0;i<botsCount;i++)addPlayer(s,['Crimson Peaks','Northern Crown','Iron Pact','Free Cities','Amber Horde','Golden Plains','Blue Guard','Stone Throne','Greenlands','Cloud Folk'][i]||'Empire '+(i+1),true);
  let positions=sites(s,s.players.length);
  const targets={northwest:{x:Math.round(W*.16),y:Math.round(H*.23)},northeast:{x:Math.round(W*.82),y:Math.round(H*.22)},southwest:{x:Math.round(W*.17),y:Math.round(H*.78)},southeast:{x:Math.round(W*.82),y:Math.round(H*.76)}};
@@ -174,7 +174,7 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
  if(a.type==='send'){
   let tx=Math.floor(a.x),ty=Math.floor(a.y);const percent=clamp(Number(a.percent)||30,5,95);
   if(!inside(tx,ty))return {ok:false,error:'Choose a target on the map.'};
-  if(s.armies.filter(u=>u.owner===id).length>=12)return {ok:false,error:'You can have at most 12 active offensives.'};
+  if(s.armies.filter(u=>u.owner===id).length>=12||!p.bot&&(s.attackPlans||[]).filter(plan=>plan.owner===id).length>=12)return {ok:false,error:'You can have at most 12 active offensives.'};
   if(owner(s,tx,ty)===id)return {ok:false,error:'Choose neutral or enemy territory.'};
   if(p.allies.includes(owner(s,tx,ty)))return {ok:false,error:'Cannot attack an ally. End the alliance first.'};
   if(tile(s,tx,ty)===0)return {ok:false,error:'You cannot conquer the sea. Choose land.'};
@@ -185,17 +185,24 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
   // automatically expand the whole accessible neutral perimeter (layer by layer).
   // Hostile attacks expand only into the clicked opponent, never across bystanders.
   const targetOwner=owner(s,tx,ty);
-  if(!p.bot&&a.zone==null)return {ok:false,error:'Use Attack to draw an offensive zone.'};
+  if(!p.bot&&a.zone==null)return {ok:false,error:'Use Attack to paint an offensive zone.'};
   const zoneResult=validateZone(s,id,targetOwner,a.zone);
   if(zoneResult.error)return {ok:false,error:zoneResult.error};
   const zoneCells=zoneResult.cells;
-  if(zoneCells&&!zoneCells.includes(idx(tx,ty)))return {ok:false,error:'Plan target must be inside the outlined area.'};
+  if(zoneCells&&!zoneCells.includes(idx(tx,ty)))return {ok:false,error:'Starting point must be in the painted area.'};
+  if(!p.bot&&zoneCells&&(s.attackPlans||[]).some(plan=>plan.owner===id&&plan.zoneCells.some(i=>zoneCells.includes(i))))return {ok:false,error:'This area already belongs to an active plan.'};
   if(!initialFront(s,id,tx,ty,targetOwner,zoneCells?new Set(zoneCells):null).length){
    return {ok:false,error:targetOwner?'Reach the enemy border first.':'No shared border with available neutral land.'};
   }
   if(targetOwner){s.wars??=[];const key=warKey(id,targetOwner);if(!s.wars.includes(key)){s.wars.push(key);s.peaceOffers=(s.peaceOffers||[]).filter(o=>warKey(o.from,o.to)!==key);log(s,p.name+' declared war on '+person(s,targetOwner)?.name);}}
+  let planId=null;
+  if(!p.bot&&zoneCells){
+   s.attackPlans??=[];
+   const plan={id:'p'+(++s.nonce),owner:id,targetOwner,zoneCells,percent,initialStrength:strength,waves:1,nextWaveTick:s.tick+4};
+   s.attackPlans.push(plan);planId=plan.id;
+  }
   p.troops-=strength;
-  s.armies.push({id:'a'+(++s.nonce),owner:id,x:src.x,y:src.y,ox:src.x,oy:src.y,tx,ty,targetOwner,zoneCells,frontCells:initialFront(s,id,tx,ty,targetOwner,zoneCells?new Set(zoneCells):null),strength,initialStrength:strength,captured:0,turns:0,stuck:0});
+  s.armies.push({id:'a'+(++s.nonce),owner:id,x:src.x,y:src.y,ox:src.x,oy:src.y,tx,ty,targetOwner,planId,zoneCells,frontCells:initialFront(s,id,tx,ty,targetOwner,zoneCells?new Set(zoneCells):null),strength,initialStrength:strength,captured:0,turns:0,stuck:0});
   return {ok:true};
  }
  if(a.type==='redirect'){
@@ -208,11 +215,16 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
   if(targetOwner){s.wars??=[];const key=warKey(id,targetOwner);if(!s.wars.includes(key)){s.wars.push(key);log(s,p.name+' declared war on '+person(s,targetOwner)?.name);}}
   army.tx=tx;army.ty=ty;army.targetOwner=targetOwner;army.zoneCells=null;army.frontCells=initialFront(s,id,tx,ty,targetOwner);army.stuck=0;attackFronts.delete(army);return {ok:true};
  }
+ if(a.type==='cancelPlan'){
+  const plan=(s.attackPlans||[]).find(v=>v.id===a.id&&v.owner===id);
+  if(!plan)return {ok:false,error:'Offensive plan not found.'};
+  cancelOffensivePlan(s,plan);return {ok:true};
+ }
  if(a.type==='return'){
   const army=s.armies.find(v=>v.id===a.id&&v.owner===id);if(!army)return {ok:false,error:'Army not found.'};
-  // A recall stops conquest immediately. Returning survivors pay 4% for withdrawal.
-  finishWave(s,army,p);s.armies=s.armies.filter(v=>v!==army);
-  return {ok:true};
+  const plan=(s.attackPlans||[]).find(v=>v.id===army.planId&&v.owner===id);
+  if(plan){cancelOffensivePlan(s,plan);return {ok:true};}
+  finishWave(s,army,p);s.armies=s.armies.filter(v=>v!==army);return {ok:true};
  }
  if(a.type==='build'){
   const kind=String(a.kind),x=Math.floor(a.x),y=Math.floor(a.y),fail=canBuild(s,id,kind,x,y);if(fail)return {ok:false,error:fail};
@@ -233,7 +245,9 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
   if(s.peaceOffers.some(o=>o.from===other.id&&o.to===id)){
    s.wars=s.wars.filter(k=>k!==key);s.peaceOffers=s.peaceOffers.filter(o=>warKey(o.from,o.to)!==key);
    for(const wave of s.armies){if((wave.owner===id&&wave.targetOwner===other.id)||(wave.owner===other.id&&wave.targetOwner===id))finishWave(s,wave,person(s,wave.owner));}
-   s.armies=s.armies.filter(w=>w.strength>=8);log(s,p.name+' and '+other.name+' signed a peace treaty.');return {ok:true,peace:true};
+   s.armies=s.armies.filter(w=>w.strength>=8);
+   s.attackPlans=(s.attackPlans||[]).filter(plan=>!((plan.owner===id&&plan.targetOwner===other.id)||(plan.owner===other.id&&plan.targetOwner===id)));
+   log(s,p.name+' and '+other.name+' signed a peace treaty.');return {ok:true,peace:true};
   }
   if(!s.peaceOffers.some(o=>o.from===id&&o.to===other.id)){s.peaceOffers.push({from:id,to:other.id});log(s,p.name+' proposed peace to '+other.name+'.');}return {ok:true};
  }
@@ -285,7 +299,7 @@ const SIDE=[1,-1,W,-W];
 const warKey=(a,b)=>Math.min(a,b)+':'+Math.max(a,b);
 function validateZone(s,id,targetOwner,request){
  if(request==null)return {cells:null}; // Legacy/AI commands can use border targeting.
- if(!Array.isArray(request)||request.length<2||request.length>3500)return {error:'Outline between 2 and 3,500 target cells.'};
+ if(!Array.isArray(request)||request.length<2||request.length>3500)return {error:'Paint between 2 and 3,500 target cells.'};
  const zone=new Set();for(const i of request){if(!Number.isInteger(i)||i<0||i>=W*H||!s.tiles[i]||s.owners[i]!==targetOwner||targetOwner===id)return {error:'The planned area must belong to one kingdom and be on land.'};zone.add(i);}
  if(zone.size<2)return {error:'Draw a larger area.'};
  const seeds=[];for(const i of zone){const x=i%W,y=(i/W)|0;for(const j of [x>0?i-1:-1,x<W-1?i+1:-1,y>0?i-W:-1,y<H-1?i+W:-1])if(j>=0&&s.owners[j]===id){seeds.push(i);break;}}
@@ -330,9 +344,47 @@ function waveFront(s,a){
  f={targetOwner,allowed,candidates:new Set(initialFront(s,a.owner,a.tx,a.ty,targetOwner,allowed)),layers:0};
  attackFronts.set(a,f);return f;
 }
+function cancelOffensivePlan(s,plan){
+ for(const a of s.armies)if(a.planId===plan.id)finishWave(s,a,person(s,a.owner));
+ s.armies=s.armies.filter(a=>a.planId!==plan.id);
+ s.attackPlans=(s.attackPlans||[]).filter(v=>v.id!==plan.id);
+}
+function sendNextPlannedWave(s,plan){
+ const p=person(s,plan.owner);if(!alive(p)||!p.land||p.allies.includes(plan.targetOwner))return false;
+ const allowed=new Set(plan.zoneCells.filter(i=>s.tiles[i]&&s.owners[i]===plan.targetOwner));
+ const border=borderCandidates(s,plan.owner,plan.targetOwner).filter(i=>allowed.has(i));
+ if(!border.length)return false;
+ const reserveRequired=Math.max(160,Math.ceil(35*100/plan.percent),Math.floor(plan.initialStrength*.45));
+ if(p.troops<reserveRequired||s.armies.filter(a=>a.owner===plan.owner).length>=12)return false;
+ const strength=Math.floor(p.troops*plan.percent/100);
+ if(strength<35)return false;
+ const start=border[(border.length/2)|0],tx=start%W,ty=(start/W)|0,src=nearestBorderLand(s,plan.owner,tx,ty);
+ if(!src)return false;
+ const front=initialFront(s,plan.owner,tx,ty,plan.targetOwner,allowed);
+ if(!front.length)return false;
+ p.troops-=strength;
+ s.armies.push({id:'a'+(++s.nonce),owner:plan.owner,x:src.x,y:src.y,ox:src.x,oy:src.y,tx,ty,targetOwner:plan.targetOwner,planId:plan.id,zoneCells:plan.zoneCells,frontCells:front,strength,initialStrength:strength,captured:0,turns:0,stuck:0});
+ plan.waves++;plan.nextWaveTick=s.tick+4;
+ log(s,'Reinforcements launched for '+p.name+' offensive plan.');
+ return true;
+}
+function advanceOffensivePlans(s){
+ if(!s.attackPlans?.length)return;
+ for(const plan of [...s.attackPlans]){
+  const p=person(s,plan.owner);
+  if(!alive(p)||!p.land||p.allies.includes(plan.targetOwner)){cancelOffensivePlan(s,plan);continue;}
+  if(plan.targetOwner&&!(s.wars||[]).includes(warKey(plan.owner,plan.targetOwner))){cancelOffensivePlan(s,plan);continue;}
+  if(plan.zoneCells.every(i=>s.tiles[i]&&s.owners[i]===plan.owner)){cancelOffensivePlan(s,plan);continue;}
+  if(s.armies.some(a=>a.planId===plan.id&&a.strength>=8))continue;
+  if(s.tick<(plan.nextWaveTick||0))continue;
+  sendNextPlannedWave(s,plan);
+ }
+}
 function finishWave(s,a,p){
  if(p&&!p.eliminated&&a.strength>0)p.troops=Math.min(p.troopCap,p.troops+Math.floor(a.strength*.96));
  a.strength=0;a.frontCells=[];attackFronts.delete(a);
+ const plan=(s.attackPlans||[]).find(v=>v.id===a.planId);
+ if(plan)plan.nextWaveTick=Math.max(plan.nextWaveTick||0,s.tick+4);
 }
 // Distribute any *partially funded* final layer across the whole frontage, not
 // in a sequential snake at one end. Ordered buckets cover 16 angular sectors.
@@ -443,6 +495,7 @@ function tick(s){if(s.phase!=='playing')return;s.tick++;
  for(const p of s.players){if(!alive(p))continue;income(s,p);}
  combatStep(s);
  for(const p of s.players){if(!p.eliminated&&p.land<=0){p.eliminated=true;p.troops=0;s.armies=s.armies.filter(a=>a.owner!==p.id);log(s,p.name+' lost all territory.');}}
+ advanceOffensivePlans(s);
  for(const p of s.players)if(p.bot&&alive(p))bot(s,p.id);
  // Capturing land always costs troops; do not award free cells at every tick.
  checkWin(s);
