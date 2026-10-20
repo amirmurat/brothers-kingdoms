@@ -676,6 +676,11 @@ function positionAttack(s,a,front,partial=false){
  if(Math.abs(sum-a.strength)>1e-7)units=units.map(c=>({...c,strength:c.strength*a.strength/Math.max(1e-7,sum)}));
  const signature=front.join(',');
  if(a.frontSignature===signature&&a.columns?.length){a.columns=units;return true;}
+ // Re-form groups only at the same physical coordinate, preventing packet
+ // fragmentation from growing on every successive border layer.
+ const combined=new Map();
+ for(const c of units){const key=idx(c.x,c.y),g=combined.get(key);if(g)g.strength+=c.strength;else combined.set(key,{x:c.x,y:c.y,strength:c.strength});}
+ units=[...combined.values()];
  const sectors=frontSectors(s,a.owner,front),components=ownedComponents(s,a.owner);
  const reachable=sectors.filter(t=>units.some(c=>components[idx(c.x,c.y)]&&components[idx(c.x,c.y)]===components[t.anchor]));
  if(!reachable.length||!partial&&reachable.length!==sectors.length)return false;
