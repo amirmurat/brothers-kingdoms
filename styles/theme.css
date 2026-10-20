@@ -986,3 +986,7 @@ body :is(input,textarea,[contenteditable="true"]){-webkit-user-select:text!impor
  margin:12px 0 6px!important;font-size:10px!important;line-height:1.5!important;color:#b0bac9!important;
 }
 #game#game#game #tutorial .icon-credit a{color:#a7dfff!important;text-decoration:underline!important}
+
+/* v52: the licensed Stone Pile is an IMG in both the HUD and resource prices. */
+#game#game#game #resourceSummary [data-resource="stone"] img.res-icon{display:block!important;object-fit:contain!important;image-rendering:auto!important}
+#game#game#game .cost-unit img.stone-resource-icon{display:inline-block!important;object-fit:contain!important;image-rendering:auto!important}

@@ -429,3 +429,7 @@ _Актуальный реестр, извлечённый из `index.html` н�
 ### v51 — Farm / Reserve icons (20.10.2026)
 - Farm: SVG `assets/shapes/farm.svg` (Delapouite Barn) and `BUILDING_PATHS.farm` both use 512 coordinates; `draw()` draws thin white 12/512 stroke without zoom compensation, same as Barracks.
 - HUD Reserve: `#hudTroops .reserve-label img.reserve-army-icon`, `assets/shapes/reserve.svg` (Lorc Dark Squad), CSS size 16px; no HUD value changes. Asset attribution in README and `#tutorial` Help.
+
+### v52 — замена иконок (20.10.2026)
+- game.js: BUILDING_PATHS для lumber/quarry/mine/fort/city теперь используют оригиналы в 512x512, BUILDING_PALETTE окрашивает Canvas в тон SVG. Все здания, кроме столицы, получают масштабируемый контур 12/512; столица 64x64 не изменена.
+- assets/shapes/stone.svg: Stone Pile для HUD (resourceSummary data-resource=stone img.res-icon) и затрат (uiIcon('stone')); styles/theme.css обеспечивает размер и object-fit. Другие ресурсы/правила не затронуты. Источники в README, Help.

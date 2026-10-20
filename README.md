@@ -62,3 +62,17 @@
 - **Medieval Pavilion** (Barracks) and **Barn** (Farm) by **Delapouite** — [Pavilion](https://game-icons.net/1x1/delapouite/medieval-pavilion.html), [Barn](https://game-icons.net/1x1/delapouite/barn.html), [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Black backgrounds removed, fills changed to #eef2f8; thin white outline added on Canvas map.
 - **Dark Squad** (Reserve) by **Lorc** — [source](https://game-icons.net/1x1/lorc/dark-squad.html), [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Black background removed, fill changed to #eef2f8.
 - Adaptations: original black background removed, pavilion recolored to `#eef2f8`, and same vector geometry reused for map building marker. Attribution is also visible in the game's Help panel.
+
+### v52 — color-coded licensed shapes
+All assets adapted from [Game-icons.net](https://game-icons.net/) under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
+- [Medieval Pavilion](https://game-icons.net/1x1/delapouite/medieval-pavilion.html) — Delapouite.
+- [Barn](https://game-icons.net/1x1/delapouite/barn.html) — Delapouite.
+- [Axe in Stump](https://game-icons.net/1x1/lorc/axe-in-stump.html) — Lorc.
+- [Tumulus](https://game-icons.net/1x1/cathelineau/tumulus.html) — Cathelineau.
+- [Gold Mine](https://game-icons.net/1x1/delapouite/gold-mine.html) — Delapouite.
+- [Defensive Wall](https://game-icons.net/1x1/heavenly-dog/defensive-wall.html) — HeavenlyDog.
+- [Qaitbay Citadel](https://game-icons.net/1x1/delapouite/qaitbay-citadel.html) — Delapouite.
+- [Dark Squad](https://game-icons.net/1x1/lorc/dark-squad.html) — Lorc.
+- [Stone Pile](https://game-icons.net/1x1/delapouite/stone-pile.html) — Delapouite.
+
+Adaptations: original black backgrounds removed, fills recolored for visibility, and buildings outlined with a thin white stroke on Canvas. Palette: Farm orange, Lumber green, Quarry silver-blue, Mine gold, Barracks blue, Fort coral, City purple, Reserve light blue, Stone blue-gray. No artwork generated.

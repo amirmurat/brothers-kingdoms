@@ -1,10 +1,11 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
-_Обновлено: 20 октября 2026 года, рабочая preview-версия v51. Историческая v25 в разделе 0 не является текущей._
+_Обновлено: 20 октября 2026 года, рабочая preview-версия v52. Историческая v25 в разделе 0 не является текущей._
 
 
-## СРОЧНО: АКТУАЛЬНОЕ СОСТОЯНИЕ v51 (20.10.2026)
+## СРОЧНО: АКТУАЛЬНОЕ СОСТОЯНИЕ v52 (20.10.2026)
 - **Рабочая ветка:** `design/visual-review-v26` (НЕ `main`). Последний точный SHA смотри у HEAD ветки, так как дальнейшие коммиты могут сдвинуть его. Исходное основание этой правки: `bb8e7ea1ae59b038eba6ccf494acec0ea46b8fbc` (v48).
-- **Что изменено в v51:** Farm теперь использует оригинальную иконку Barn (Delapouite) в каталоге/размещении/на карте, с белой тонкой контурной линией 12/512, как у Barracks. Reserve в HUD использует оригинальную Dark Squad (Lorc) 16px вместо палатки. Лицензии CC BY 3.0 и изменения указаны в README и Help. Только preview-ветка; реальный iPhone не проверен.
+- **Что изменено в v52:** По выбору владельца: Mine/Gold Mine, Quarry/Tumulus, Lumber/Axe in Stump, Fort/Defensive Wall, City/Qaitbay Citadel, Stone/Stone Pile. Оригиналы Game-icons.net CC BY 3.0, с авторством в README и Help. Векторные контуры синхронизированы с Canvas. У построек разные цвета; контур тонкий и уменьшается с зумом. Только preview-ветка, iPhone/Safari не проверен.
+- **Предыдущая v51:** Farm теперь использует оригинальную иконку Barn (Delapouite) в каталоге/размещении/на карте, с белой тонкой контурной линией 12/512, как у Barracks. Reserve в HUD использует оригинальную Dark Squad (Lorc) 16px вместо палатки. Лицензии CC BY 3.0 и изменения указаны в README и Help. Только preview-ветка; реальный iPhone не проверен.
 - **Предыдущая v50:** в Canvas уменьшена белая обводка Medieval Pavilion для `barracks` с 30 до 12 единиц при viewBox 512, без обратной компенсации зума. Контур масштабируется вместе с иконкой и не утолщается при отдалении; остальные постройки/правила не изменены. Изменение в preview-ветке, ещё не в main, и не проверено на iPhone.
 - **Предыдущая v49:** на карте для `barracks` SVG-path Medieval Pavilion (Delapouite, CC BY 3.0) получает белый контур `#ffffff`, ширина 30 в координатах 512 вместо тёмного 24. Иконки Reserve и Build уже используют `assets/shapes/barracks.svg`; остальные здания не изменены. При дальнем масштабе читаемость ещё нужно визуально проверить на iPhone.
 - **Пользователь попросил перенести работу в новый чат:** текущий чат тормозит. Новому чату сначала прочитать `AGENTS.md`, этот HANDOFF целиком и `docs/GAME_MAP.md`, затем сверить HEAD указанной ветки и продолжать без перезапуска проекта.
@@ -16,7 +17,7 @@ _Обновлено: 20 октября 2026 года, рабочая preview-в�
 ## 0. Начни здесь
 - **Репозиторий:** https://github.com/amirmurat/brothers-kingdoms
 - **Игра (GitHub Pages):** https://amirmurat.github.io/brothers-kingdoms/?v=25
-- **Основная ветка:** `main` (сохранена отдельно). Текущая рабочая ветка UX: `design/visual-review-v26` (v51).
+- **Основная ветка:** `main` (сохранена отдельно). Текущая рабочая ветка UX: `design/visual-review-v26` (v52).
 - **Предыдущая публикация:** v16, PR https://github.com/amirmurat/brothers-kingdoms/pull/10 (merged), `index.html` blob SHA `829e7cd103441c2754eb2d54e9eb9c1168fb37fe`. Это снимок на 19.10.2026; перед работой заново читай актуальный GitHub.
 - **Источник правды для запуска сайта начиная с v22:** `index.html` содержит разметку и ссылки на `styles/legacy.css` (старый layout), `styles/theme.css` (единый активный дизайн), `engine.js` (правила) и `game.js` (UI/сеть). Встроенные копии JS/CSS удалены; файлы версионируются через `?v=25`. PeerJS по-прежнему на CDN. При изменении JS достаточно править соответствующий активный файл, при изменении оформления — `styles/theme.css`.
 - **Другие файлы:** `game.js`, `engine.js`, `game-v13.css`, `game-v15.css`, `UX_AUDIT_V15.md`, `DEEP_UI_AUDIT.md`, `UI_V13_STATUS.md`, `README.md`; часть старых документов отражает предыдущие версии и устарела.
@@ -247,3 +248,7 @@ _Обновлено: 20 октября 2026 года, рабочая preview-в�
 - `assets/shapes/farm.svg`: Barn by Delapouite (Game-icons.net CC BY 3.0) replaces circle placeholder; SVG path imported exactly (only background removed and fill recolored). `game.js` matches same geometry in `BUILDING_PATHS`, renders `farm` with 512 icon units and thin white 12/512 outline that scales with zoom.
 - `assets/shapes/reserve.svg`: Dark Squad by Lorc (Game-icons.net CC BY 3.0), replacing Pavilion in Reserve HUD. 16px Reserve symbol with unchanged label/values. Credits and modifications in README and in-game Help.
 - No change to economics, building rules or multiplayer. Changed only preview branch `design/visual-review-v26`; CSS/JS cache tags `v51-farm-reserve-icons`. iPhone/Safari, online play and visual QA not physically tested.
+
+### v52 — индивидуальные цвета и 6 новых иконок (20.10.2026)
+- Пять зданий теперь получают согласованные оригинальные 512x512 Game-icons.net в SVG и Canvas: Gold Mine, Tumulus, Defensive Wall, Qaitbay Citadel, Axe in Stump. Stone Pile используется в HUD и динамических ценах. Цветные заливки семи зданий и Reserve одинаковые между SVG и картой, тонкая белая обводка зависит от zoom пропорционально размеру. Столица оставлена прежней. Источники, авторы, лицензия и изменения указаны в README и Help.
+- Изменены game.js, index.html, styles/theme.css, assets/shapes/, README, GAME_MAP. Кэш v52-distinct-icons. Preview branch design/visual-review-v26. Main/Pages не изменялись, iPhone и multiplayer не проверялись.
