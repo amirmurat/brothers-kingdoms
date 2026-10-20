@@ -206,7 +206,8 @@ function createPaintedPlan(s,id,a,percent){
  const p=person(s,id);
  const result=validatePaintedRegion(s,a.zone);
  if(result.error)return {ok:false,error:result.error};
- const remaining=result.cells.filter(i=>!(s.attackPlans||[]).some(plan=>plan.owner===id&&plan.zoneCells.includes(i)));
+ const occupied=new Set((s.attackPlans||[]).filter(plan=>plan.owner===id).flatMap(plan=>plan.zoneCells));
+ const remaining=result.cells.filter(i=>!occupied.has(i));
  if(remaining.length<2)return {ok:false,error:'These cells are already in an existing plan. Edit that plan instead.'};
  const targets=parseTargets(s,id,a.targets??[s.owners[remaining[0]]]);
  if(!targets.length)return {ok:false,error:'Choose at least one territory owner to attack.'};
@@ -224,7 +225,8 @@ function changePaintedPlan(s,id,a){
  if(!plan)return {ok:false,error:'Offensive plan not found.'};
  const request=a.zone??plan.zoneCells,result=validatePaintedRegion(s,request);
  if(result.error)return {ok:false,error:result.error};
- const next=result.cells.filter(i=>!(s.attackPlans||[]).some(other=>other!==plan&&other.owner===id&&other.zoneCells.includes(i)));
+ const occupied=new Set((s.attackPlans||[]).filter(other=>other!==plan&&other.owner===id).flatMap(other=>other.zoneCells));
+ const next=result.cells.filter(i=>!occupied.has(i));
  if(next.length<2)return {ok:false,error:'That region is already covered by another plan.'};
  const targets=parseTargets(s,id,a.targets??plan.targets??[plan.targetOwner]);
  if(!targets.length)return {ok:false,error:'Select at least one target before saving.'};
