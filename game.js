@@ -57,11 +57,21 @@ let activeThreats=[],announcedThreats=new Set(),lastThreatSignature="",attackFoc
 let quickBuildOpen=false,buildPlacementChecks=0;
 let zoom=1.05,camX=0,camY=0,terrainSeed=null,pressed=new Map(),pointerStart=null,gesture=null,selected=null,buildMode=null,currentTab='build',percent=30,tooltipTimer=null,worldLayer=null,paintedRevision=-1,miniRevision=-1,renderQueued=false,panelOpen=false;let toastTimeout=null,target=null,redirectArmy=null,pauseSolo=false,moveCursor=null,lastTap=0,lastStateAt=Date.now(),pendingOrders=new Map(),seq=0,readyLocal=false,reconnectTries=0,reconnectTimer=null,connectTimer=null,tokenStore=new Map(),previousFocus=null,showTutorialOnce=true,lastRoster='',previousOwners=new Map(),previousRevs=new Map(),lastSaveTick=-1,oldArmyPositions=new Map(),movementStart=0,lastAnnounced='',frontIndex=0;
 const TILE=14;const mine=()=>state?.players.find(p=>p.id===myId);const color=id=>state?.players.find(p=>p.id===id)?.color||'#e8f3f3';
-function toast(msg,kind){const t=$('toast');
+function toast(msg,kind){
+ const inGame=!$('game').classList.contains('hidden');
+ const t=inGame?$('gameToast'):$('toast');
  const severity=kind||(/не хватает|отклонён|ошибк|нет связи|невозмож|не удало|недоступ|разрыв|устарел/i.test(String(msg))?'error':/готова|выполнен|побед|началось|исследован/i.test(String(msg))?'success':'info');
  t.dataset.kind=severity;t.textContent=msg;$('gameError').textContent=severity==='error'?msg:'';
- t.classList.remove('hidden');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.classList.add('hidden'),2450);} 
-function show(screen){for(const name of ['lobby','waiting','game'])$(name).classList.toggle('hidden',name!==screen);if(screen==='game')setTimeout(resize,10);if(screen==='lobby')updateResume();}
+ $('toast').classList.add('hidden');
+ t.classList.remove('hidden');
+ clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.classList.add('hidden'),2450);
+}
+function show(screen){
+ for(const name of ['lobby','waiting','game'])$(name).classList.toggle('hidden',name!==screen);
+ if(screen==='game'){$('toast').classList.add('hidden');setTimeout(resize,10);}
+ else $('gameToast').classList.add('hidden');
+ if(screen==='lobby')updateResume();
+}
 function error(s){$('lobbyError').textContent=s;toast(s);}
 // One auxiliary surface at a time. No panel stacks above another.
 const AUX_IDS=['economyPanel','armiesPanel','quickLeadersPanel','contextCard'];
@@ -92,7 +102,11 @@ function pack(s,includeTerrain=true){if(!s||!s.owners?.length)return s;return {.
 function unpack(s){if(s?.ownerDelta){const owners=state?.owners?.slice();if(!owners?.length)throw Error('Missing state for delta');for(let i=0;i<s.owners.length;i+=2)owners[s.owners[i]]=s.owners[i+1];s.owners=owners;s.tiles=state.tiles;delete s.ownerDelta;}if(s?.packed){s.tiles=s.tiles?expand(s.tiles):(state?.tiles||[]);s.owners=s.ownerRle?rleUnpack(s.owners):expand(s.owners);delete s.ownerRle;delete s.packed;}return s;}
 function getPeer(){if(window.Peer)return true;error('Не загрузилась библиотека PeerJS. Проверь интернет.');return false;}
 function setBusy(v){$('hostButton').disabled=v;$('joinButton').disabled=v;}
-function setNetwork(text){$('networkStatus').textContent=text;if(state?.phase==='playing'&&$('game')&&!$('game').classList.contains('hidden'))refreshHudAlert(mine());}
+function setNetwork(text){
+ $('networkStatus').textContent=text;
+ $('feedbackStatus').textContent=text==='ОДИНОЧНО'?'ОДИНОЧНАЯ ИГРА':'СЕТЬ · '+text;
+ if(state?.phase==='playing'&&!$('game').classList.contains('hidden'))refreshHudAlert(mine());
+}
 function warnHud(text,kind='notice',action=null,seconds=6){hudNotice={text,kind,action,until:Date.now()+seconds*1000};refreshHudAlert(mine());}
 function hostileAttacks(p){
  if(!state||!p||state.phase!=='playing')return [];

@@ -1016,6 +1016,47 @@ body:has(#waiting:not(.hidden)) #toast:not(.hidden),body:has(#lobby:not(.hidden)
  .game-screen .map-view:has(#threatRail:not(.hidden)) #hudAlert.hud-alert{top:98px!important}
  .game-screen .threat-list{max-height:43dvh}
 }
+/* v18 — the notification bar is IN LAYOUT, never over the minimap, map buttons or terrain.
+   One priority message occupies one stable row: danger > temporary toast > ordinary alert > connection. */
+.game-screen .game-feedback{
+ flex:0 0 36px!important;height:36px!important;min-height:36px!important;
+ display:flex;align-items:center;overflow:hidden;min-width:0;position:relative;
+ padding:0 9px;background:#26483c;color:#f4edd5;border-bottom:1px solid #7b8a63;
+ box-shadow:inset 0 1px #ffffff12;
+}
+.game-screen .game-feedback .feedback-idle{display:flex;align-items:center;gap:8px;min-width:0;width:100%;
+ font-size:11px;font-weight:750;letter-spacing:.03em;color:#c7e2cd;white-space:nowrap;overflow:hidden}
+.game-screen .game-feedback .feedback-idle #feedbackStatus{overflow:hidden;text-overflow:ellipsis}
+.game-screen .game-feedback .feedback-dot{width:7px;height:7px;background:#92d4a2;border-radius:50%;flex:0 0 7px;box-shadow:0 0 0 3px #92d4a21a}
+.game-screen .game-feedback #hudAlert.hud-alert{
+ position:relative!important;inset:auto!important;top:auto!important;bottom:auto!important;left:auto!important;right:auto!important;
+ max-width:none!important;width:100%!important;max-height:100%!important;min-height:0!important;height:100%!important;
+ margin:0!important;padding:0 4px!important;border:0!important;border-radius:0!important;
+ background:transparent!important;box-shadow:none!important;transform:none!important;
+ color:#fceacb!important;font-size:12px!important;font-weight:750;line-height:1.2!important;gap:8px!important;
+ overflow:hidden!important;white-space:nowrap;text-align:left;
+}
+.game-screen .game-feedback #hudAlert #hudAlertText{min-width:0;max-width:none!important;flex:1;
+ display:block!important;overflow:hidden!important;text-overflow:ellipsis;white-space:nowrap!important;
+ -webkit-line-clamp:unset!important}
+.game-screen .game-feedback #hudAlert #hudAlertIcon{display:grid;place-items:center;flex:0 0 20px;
+ height:20px!important;width:20px!important;border-radius:50%;background:#a58452;color:#fff9e6;font-weight:900}
+.game-screen .game-feedback #hudAlert.danger #hudAlertIcon{background:#e88d6b;color:#422320}
+.game-screen .game-feedback:has(#hudAlert.danger:not(.hidden)){background:#803830;border-color:#c48f69}
+.game-screen .game-feedback:has(#gameToast[data-kind="error"]:not(.hidden)):not(:has(#hudAlert.danger:not(.hidden))){background:#6e3e36}
+.game-screen .game-feedback .game-toast{font-size:12px;line-height:1.2;font-weight:750;min-width:0;max-width:100%;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px}
+.game-screen .game-feedback .game-toast:before{content:"•";margin-right:8px;color:#d6ddc8}
+.game-screen .game-feedback .game-toast[data-kind="success"]:before{content:"✓";color:#a8f2a3}
+.game-screen .game-feedback .game-toast[data-kind="error"]:before{content:"!";color:#ffc7aa;font-weight:950}
+.game-screen .game-feedback:has(#gameToast:not(.hidden)) #hudAlert:not(.danger){display:none!important}
+.game-screen .game-feedback:has(#hudAlert.danger:not(.hidden)) #gameToast{display:none!important}
+.game-screen .game-feedback:has(#hudAlert:not(.hidden)) .feedback-idle,
+.game-screen .game-feedback:has(#gameToast:not(.hidden)) .feedback-idle{display:none!important}
+@media(max-height:480px) and (orientation:landscape){
+ .game-screen .game-feedback{flex-basis:29px!important;height:29px!important;min-height:29px!important}
+ .game-screen .game-feedback .game-toast,.game-screen .game-feedback #hudAlert.hud-alert{font-size:11px!important}
+}
 </style>
 </head>
 <body>
@@ -1067,6 +1108,11 @@ body:has(#waiting:not(.hidden)) #toast:not(.hidden),body:has(#lobby:not(.hidden)
 <div data-resource="stone"><img alt="" aria-hidden="true" class="res-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9ItCa0LDQvNC10L3RjCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJiZyIgeDI9IjAiIHkyPSIxIj48c3RvcCBzdG9wLWNvbG9yPSIjNTE2NzU4Ii8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMzQ0ODNjIi8+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImdvbGQiIHgyPSIwIiB5Mj0iMSI+PHN0b3Agc3RvcC1jb2xvcj0iI2ZmZjRhZCIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2Q0OTAzMyIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxwYXRoIGQ9Im03IDQ2IDktMjQgMjItNyAxNyAyMC03IDE4SDE3WiIgZmlsbD0iIzkxOWRhZCIgc3Ryb2tlPSIjNGQ2MTc1IiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48cGF0aCBkPSJtMTYgMjIgMTcgMTAgNS0xN00zMyAzMmwxNSAyMU0xNyA1M2wxNi0yMSIgc3Ryb2tlPSIjY2JkNmRiIiBzdHJva2Utd2lkdGg9IjIuNSIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Im0zNyAxOCA5IDExLTkgMyIgZmlsbD0iI2UxZTllNyIgb3BhY2l0eT0iLjU4Ii8+PC9zdmc+"/><span>КАМЕНЬ</span><b id="resStone">0</b><small aria-label="Изменение в секунду" id="incStone">+0</small></div>
 <div data-resource="gold"><img alt="" aria-hidden="true" class="res-icon" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByb2xlPSJpbWciIGFyaWEtbGFiZWw9ItCX0L7Qu9C+0YLQviI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJiZyIgeDI9IjAiIHkyPSIxIj48c3RvcCBzdG9wLWNvbG9yPSIjNTE2NzU4Ii8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMzQ0ODNjIi8+PC9saW5lYXJHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9ImdvbGQiIHgyPSIwIiB5Mj0iMSI+PHN0b3Agc3RvcC1jb2xvcj0iI2ZmZjRhZCIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2Q0OTAzMyIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxlbGxpcHNlIGN4PSIzMiIgY3k9IjQ4IiByeD0iMjMiIHJ5PSI5IiBmaWxsPSIjYTQ2YjI2IiBzdHJva2U9IiM3MDQ2MWMiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik05IDQxdjhjNCAxMSA0MiAxMyA0NiAwdi04IiBmaWxsPSIjYzM4YzJlIiBzdHJva2U9IiM3MDQ2MWMiIHN0cm9rZS13aWR0aD0iMiIvPjxlbGxpcHNlIGN4PSIzMiIgY3k9IjQwIiByeD0iMjMiIHJ5PSI5IiBmaWxsPSJ1cmwoI2dvbGQpIiBzdHJva2U9IiNhNTZiMWQiIHN0cm9rZS13aWR0aD0iMiIvPjxwYXRoIGQ9Ik0xNyAzMHY5YzQgOCAzMCA5IDM0IDB2LTkiIGZpbGw9IiNiODgwMjgiIHN0cm9rZT0iIzgxNTAxOSIgc3Ryb2tlLXdpZHRoPSIyIi8+PGVsbGlwc2UgY3g9IjM0IiBjeT0iMjkiIHJ4PSIxOCIgcnk9IjgiIGZpbGw9IiNmZmRmNmUiIHN0cm9rZT0iI2I3ODMyYSIgc3Ryb2tlLXdpZHRoPSIyIi8+PHBhdGggZD0iTTMxIDI1aDdsMiA0LTkgMy0zLTRaIiBmaWxsPSIjZWZiNDM4Ii8+PC9zdmc+"/><span>ЗОЛОТО</span><b id="resGold">0</b><small aria-label="Изменение в секунду" id="incGold">+0</small></div>
 </div>
+<div class="game-feedback" id="gameFeedback" aria-label="Сообщения матча и состояние соединения">
+<div class="feedback-idle" id="feedbackIdle"><span class="feedback-dot" aria-hidden="true"></span><span id="feedbackStatus">МАТЧ АКТИВЕН</span></div>
+<button aria-live="polite" class="hud-alert hidden" id="hudAlert" type="button"><span aria-hidden="true" id="hudAlertIcon">!</span><span id="hudAlertText"></span><span aria-hidden="true">›</span></button>
+<div aria-live="polite" class="game-toast hidden" id="gameToast" role="status"></div>
+</div>
 <div aria-live="assertive" class="sr-only" id="incomingAnnouncement" role="alert"></div>
 <main class="game-layout">
 <section class="map-shell">
@@ -1092,7 +1138,7 @@ body:has(#waiting:not(.hidden)) #toast:not(.hidden),body:has(#lobby:not(.hidden)
 <div class="threat-list hidden" id="threatList" aria-label="Список входящих атак"><header><strong>Входящие атаки</strong><button type="button" id="threatClose" aria-label="Закрыть список угроз">×</button></header><div class="threat-items" id="threatItems"></div></div>
 </div><canvas aria-label="Карта государств. Стрелки передвигают курсор, Enter выбирает цель." id="mapCanvas" role="application" tabindex="0"></canvas><div aria-live="polite" class="sr-only" id="keyboardPosition"></div>
 <div class="map-hint" id="mapHint">Нейтральная земля — широкий фронт · Сосед — атака по границе</div>
-<button aria-live="polite" class="hud-alert hidden" id="hudAlert" type="button"><span aria-hidden="true" id="hudAlertIcon">!</span><span id="hudAlertText"></span><span aria-hidden="true">›</span></button><div class="map-tooltip hidden" id="mapTooltip"></div><div aria-live="polite" class="map-status-mobile hidden" id="mapStatusMobile"></div><ul aria-label="Доступные объекты карты" class="sr-only" id="accessibleObjects"></ul>
+<div class="map-tooltip hidden" id="mapTooltip"></div><div aria-live="polite" class="map-status-mobile hidden" id="mapStatusMobile"></div><ul aria-label="Доступные объекты карты" class="sr-only" id="accessibleObjects"></ul>
 <div class="minimap-wrap" id="minimapWrap"><button aria-expanded="true" aria-label="Скрыть миникарту" id="minimapToggle">Мир <span>−</span></button><canvas aria-label="Миникарта, Enter переместиться к центру мира" height="104" id="minimap" role="button" tabindex="0" width="160"></canvas></div>
 <div aria-live="polite" class="target-preview hidden" id="targetPreview"><div class="target-info"><strong id="targetTitle">Цель</strong><span id="targetDetail">Выбери территорию</span><span id="targetForecast">—</span></div><div aria-label="Размер армии" class="target-quick-percents" id="targetQuickPercents" role="group"><button data-target-percent="15">15%</button><button class="active" data-target-percent="30">30%</button><button data-target-percent="50">50%</button><button data-target-percent="75">75%</button><button data-target-percent="95">95%</button></div><div class="target-actions"><button class="secondary" id="cancelTarget">Отмена</button><button class="primary" id="confirmTarget">Отправить войска</button></div></div><div class="quick-build hidden" id="quickBuild" role="region" aria-label="Быстрое строительство">
   <div class="quick-build-head"><strong>Выбери здание</strong><button type="button" id="quickBuildInfo" aria-label="Подробные описания зданий">Подробнее</button><button type="button" id="quickBuildClose" aria-label="Закрыть быстрый выбор зданий">×</button></div>
@@ -1626,11 +1672,21 @@ let activeThreats=[],announcedThreats=new Set(),lastThreatSignature="",attackFoc
 let quickBuildOpen=false,buildPlacementChecks=0;
 let zoom=1.05,camX=0,camY=0,terrainSeed=null,pressed=new Map(),pointerStart=null,gesture=null,selected=null,buildMode=null,currentTab='build',percent=30,tooltipTimer=null,worldLayer=null,paintedRevision=-1,miniRevision=-1,renderQueued=false,panelOpen=false;let toastTimeout=null,target=null,redirectArmy=null,pauseSolo=false,moveCursor=null,lastTap=0,lastStateAt=Date.now(),pendingOrders=new Map(),seq=0,readyLocal=false,reconnectTries=0,reconnectTimer=null,connectTimer=null,tokenStore=new Map(),previousFocus=null,showTutorialOnce=true,lastRoster='',previousOwners=new Map(),previousRevs=new Map(),lastSaveTick=-1,oldArmyPositions=new Map(),movementStart=0,lastAnnounced='',frontIndex=0;
 const TILE=14;const mine=()=>state?.players.find(p=>p.id===myId);const color=id=>state?.players.find(p=>p.id===id)?.color||'#e8f3f3';
-function toast(msg,kind){const t=$('toast');
+function toast(msg,kind){
+ const inGame=!$('game').classList.contains('hidden');
+ const t=inGame?$('gameToast'):$('toast');
  const severity=kind||(/не хватает|отклонён|ошибк|нет связи|невозмож|не удало|недоступ|разрыв|устарел/i.test(String(msg))?'error':/готова|выполнен|побед|началось|исследован/i.test(String(msg))?'success':'info');
  t.dataset.kind=severity;t.textContent=msg;$('gameError').textContent=severity==='error'?msg:'';
- t.classList.remove('hidden');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.classList.add('hidden'),2450);} 
-function show(screen){for(const name of ['lobby','waiting','game'])$(name).classList.toggle('hidden',name!==screen);if(screen==='game')setTimeout(resize,10);if(screen==='lobby')updateResume();}
+ $('toast').classList.add('hidden');
+ t.classList.remove('hidden');
+ clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.classList.add('hidden'),2450);
+}
+function show(screen){
+ for(const name of ['lobby','waiting','game'])$(name).classList.toggle('hidden',name!==screen);
+ if(screen==='game'){$('toast').classList.add('hidden');setTimeout(resize,10);}
+ else $('gameToast').classList.add('hidden');
+ if(screen==='lobby')updateResume();
+}
 function error(s){$('lobbyError').textContent=s;toast(s);}
 // One auxiliary surface at a time. No panel stacks above another.
 const AUX_IDS=['economyPanel','armiesPanel','quickLeadersPanel','contextCard'];
@@ -1661,7 +1717,11 @@ function pack(s,includeTerrain=true){if(!s||!s.owners?.length)return s;return {.
 function unpack(s){if(s?.ownerDelta){const owners=state?.owners?.slice();if(!owners?.length)throw Error('Missing state for delta');for(let i=0;i<s.owners.length;i+=2)owners[s.owners[i]]=s.owners[i+1];s.owners=owners;s.tiles=state.tiles;delete s.ownerDelta;}if(s?.packed){s.tiles=s.tiles?expand(s.tiles):(state?.tiles||[]);s.owners=s.ownerRle?rleUnpack(s.owners):expand(s.owners);delete s.ownerRle;delete s.packed;}return s;}
 function getPeer(){if(window.Peer)return true;error('Не загрузилась библиотека PeerJS. Проверь интернет.');return false;}
 function setBusy(v){$('hostButton').disabled=v;$('joinButton').disabled=v;}
-function setNetwork(text){$('networkStatus').textContent=text;if(state?.phase==='playing'&&$('game')&&!$('game').classList.contains('hidden'))refreshHudAlert(mine());}
+function setNetwork(text){
+ $('networkStatus').textContent=text;
+ $('feedbackStatus').textContent=text==='ОДИНОЧНО'?'ОДИНОЧНАЯ ИГРА':'СЕТЬ · '+text;
+ if(state?.phase==='playing'&&!$('game').classList.contains('hidden'))refreshHudAlert(mine());
+}
 function warnHud(text,kind='notice',action=null,seconds=6){hudNotice={text,kind,action,until:Date.now()+seconds*1000};refreshHudAlert(mine());}
 function hostileAttacks(p){
  if(!state||!p||state.phase!=='playing')return [];
