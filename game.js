@@ -282,7 +282,8 @@ function resetAttackPlanner(){
 }
 function beginAttackPlanner(){
  if(!state||state.phase!=='playing'||mine()?.eliminated)return;
- hideAux();toggleQuickBuild(false);setPreview(null);buildMode=null;redirectArmy=null;selected=null;
+ hideAux();toggleQuickBuild(false);setPreview(null);buildMode=null;redirectArmy=null;selected=null;moveCursor=null;
+ $('warPanel').classList.add('hidden');$('warChip').setAttribute('aria-expanded','false');
  clearTimeout(longPressTimer);dragAttack=null;pointerStart=null;
  attackPlanner={mode:'draw',path:[],pointerId:null,zoneCells:null,targetOwner:0};
  $('game').classList.add('plan-drawing');$('game').classList.remove('plan-reviewing');
@@ -651,6 +652,7 @@ $('planCancelYes').onclick=()=>{
  $('planCancelDialog').classList.add('hidden');planCancelArmy=null;
 };
 $('warChip').onclick=()=>{
+ if(attackPlanner)resetAttackPlanner();
  const panel=$('warPanel'),opening=panel.classList.contains('hidden');
  panel.classList.toggle('hidden',!opening);$('warChip').setAttribute('aria-expanded',String(opening));
 };
