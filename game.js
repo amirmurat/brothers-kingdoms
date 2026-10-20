@@ -3,6 +3,13 @@
 'use strict';
 const ART_ASSETS={"building-farm.svg":"assets/pixel-ui/building-farm.png","building-lumber.svg":"assets/pixel-ui/building-lumber.png","building-quarry.svg":"assets/pixel-ui/building-quarry.png","building-mine.svg":"assets/pixel-ui/building-mine.png","building-barracks.svg":"assets/pixel-ui/building-barracks.png","building-fort.svg":"assets/pixel-ui/building-fort.png","building-city.svg":"assets/pixel-ui/building-city.png","building-capital.svg":"assets/pixel-ui/building-capital.png","building-port.svg":"assets/pixel-ui/building-city.png","food.svg":"assets/pixel-ui/resource-food.png","wood.svg":"assets/pixel-ui/resource-wood.png","stone.svg":"assets/pixel-ui/resource-stone.png","gold.svg":"assets/pixel-ui/resource-gold.png","army.svg":"assets/pixel-ui/building-barracks.png","hammer.svg":"assets/pixel-ui/action-build.png","swords.svg":"assets/pixel-ui/action-attack.png","crown.svg":"assets/pixel-ui/icon-leaderboardsSimple.png"};const artSrc=name=>ART_ASSETS[name]||'';
 const E=window.BKEngine,$=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Verified Phosphor MIT icon family for game UI; canvas buildings remain separate assets.
+const UI_ICON_NAMES={food:'grains',wood:'tree',stone:'mountains',gold:'coins',farm:'grains',lumber:'tree',quarry:'mountains',mine:'coins',barracks:'sword',fort:'shield',city:'buildings',capital:'castle-turret',economy:'coins',war:'sword',logistics:'flag-banner'};
+const uiIcon=name=>{
+ const id=UI_ICON_NAMES[name]||name;
+ const set=id==='flag-banner'?'controls':'game';
+ return `<svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/${set}.svg#${id}"></use></svg>`;
+};
 const view=$('mapView'),canvas=$('mapCanvas'),ctx=canvas.getContext('2d',{alpha:false}),mini=$('minimap'),mctx=mini.getContext('2d');
 const terrainNames=['Море','Равнина','Лес','Холмы','Плодородная земля','Рудное месторождение','Горы'];
 const iconImages=Object.fromEntries(['capital','farm','lumber','quarry','mine','barracks','fort','city'].map(id=>{const im=new Image();im.src=artSrc('building-'+id+'.svg');im.onload=()=>queueDraw();return [id,im];}));
@@ -16,7 +23,7 @@ const buildingInfo={
  city:{short:'Приносит еду, золото и новых солдат.',detail:'+5 еды/с · +5 золота/с · +260 лимит · +3 набор/с за уровень',place:'Своя земля, кроме горных вершин',cap:260,rate:3}
 };
 const nameResource={food:'Еда',wood:'Дерево',stone:'Камень',gold:'Золото'};
-const briefCost=c=>Object.entries(c||{}).map(([k,v])=>`<span class="cost-unit"><img src="${artSrc(k+'.svg')}" alt="${nameResource[k]}">${number(v)}</span>`).join(' ');
+const briefCost=c=>Object.entries(c||{}).map(([k,v])=>`<span class="cost-unit">${uiIcon(k)}${number(v)}</span>`).join(' ');
 function buildingBenefit(id,p,level=1){const b=buildingInfo[id];if(!b)return '';if(b.resource)return `+${Math.round(b.perLevel*level*(1+.25*(p?.tech?.economy||0)))}/с ${({food:'еды',wood:'древесины',stone:'камня',gold:'золота'})[b.resource]}`;if(id==='city')return `+${Math.round(5*level*(1+.25*(p?.tech?.economy||0)))}/с еды и золота · +${260*level} лимит · +${3*level} набор/с`;if(id==='barracks')return `+${430*level} лимит · +${5*level} набор/с`;if(id==='fort')return `до +${(18.5*level).toFixed(1)} защиты в радиусе 4`;return b.detail;}
 function techBenefit(id,level){if(id==='economy')return `Множитель дохода ×${(1+level*.25).toFixed(2)}`;if(id==='war')return `Атака эффективнее · защита +${(1.9*level).toFixed(1)} · набор +${2*level} войск/с`;if(id==='logistics')return `Затраты войск при захвате −${8*level}%`;return '';}
 function resourceRates(p){
@@ -35,7 +42,7 @@ function resourceRates(p){
 }
 function resourceStrip(p){const {gross,recruited,foodNet}=resourceRates(p);return `<div class="resource-ledger">`+Object.keys(nameResource).map(k=>{
  const net=k==='food'?foodNet:Math.floor(gross[k]||0);
- return `<div class="ledger-item" data-ledger="${k}"><img src="${artSrc(k+'.svg')}" alt="" aria-hidden="true"><div class="ledger-values"><span class="ledger-name">${nameResource[k]}</span><strong>${number(p.res[k])}</strong><small class="${net<0?'is-negative':''}">${net>=0?'+':'−'}${number(Math.abs(net))}/с</small></div></div>`;
+ return `<div class="ledger-item" data-ledger="${k}">${uiIcon(k)}<div class="ledger-values"><span class="ledger-name">${nameResource[k]}</span><strong>${number(p.res[k])}</strong><small class="${net<0?'is-negative':''}">${net>=0?'+':'−'}${number(Math.abs(net))}/с</small></div></div>`;
  }).join('')+`</div>`;}
 
 const costText=c=>Object.entries(c||{}).map(([k,v])=>({wood:'Древесина',stone:'Камень',gold:'Золото',food:'Еда'}[k]||k)+' '+v).join(' · ');
@@ -341,7 +348,7 @@ function render(){if(!state)return;
  }
  if(phaseShown!=='playing'&&phaseShown!=='ended'){
   lastHudLand=null;lastHudTick=-1;lastHudOwners=null;lastHudArmies=new Map();hudNotice=null;activeThreats=[];announcedThreats.clear();lastThreatSignature="";
-  show('game');phaseShown='playing';zoom=window.innerWidth<600?.54:.78;if(window.innerWidth<850){$('minimapWrap').classList.remove('minimized');$('minimapToggle').setAttribute('aria-expanded','true');document.querySelector('#minimapToggle span').textContent='−';}resize();centerOnCapital();
+  show('game');phaseShown='playing';zoom=window.innerWidth<600?.54:.78;setMinimapExpanded(window.innerWidth>=850);resize();centerOnCapital();
  }else if(phaseShown==='ended'&&state.phase==='playing'){phaseShown='playing';}
  updateUI();repaintWorld();queueDraw();
  if(state.phase==='ended'&&phaseShown!=='ended'){
@@ -390,7 +397,7 @@ function updateUI(){const p=mine();if(!p)return;
    const info=buildingInfo[id],ok=canPay(p,k.cost),count=counts[id]||0;
    const countBuildings=state.buildings.filter(b=>b.owner===myId&&b.kind===id).length;
    return `<button data-build="${id}" class="build-btn build-detail ${buildMode===id?'active':''}" ${!ok||p.eliminated?'disabled':''}>
-    <span class="build-icon"><img src="${artSrc('building-'+id+'.svg')}" alt="" loading="lazy"></span><span class="build-copy"><strong>${esc(k.name)}</strong><small>${esc(info.short)}</small></span>
+    <span class="build-icon">${uiIcon(id)}</span><span class="build-copy"><strong>${esc(k.name)}</strong><small>${esc(info.short)}</small></span>
     <span class="build-gain">${esc(buildingBenefit(id,p,1))}</span>
     <span class="build-meta">${esc(info.place)} · Построено: ${countBuildings}${count?` (уровней: ${count})`:''}</span>
     <span class="build-price">${briefCost(k.cost)}</span>
@@ -400,7 +407,7 @@ function updateUI(){const p=mine();if(!p)return;
   patchHtml('techResourceSummary',resourceStrip(p));
   patchHtml('techPanel',Object.entries(E.TECH).map(([id,t])=>{
    const l=p.tech[id],cost=E.costTech(id,l),ok=canPay(p,cost);
-   return `<div class="tech-item tech-detail"><div class="tech-heading"><img class="tech-art" src="${artSrc(({economy:'gold',war:'swords',logistics:'army'})[id]+'.svg')}" alt=""><strong>${esc(t.name)}</strong><span>Уровень ${l}/3</span></div>
+   return `<div class="tech-item tech-detail"><div class="tech-heading">${uiIcon(id)}<strong>${esc(t.name)}</strong><span>Уровень ${l}/3</span></div>
      <p>${esc(techBenefit(id,l))}</p><div class="tech-next">${l<3?`После исследования: ${esc(techBenefit(id,l+1))}`:'Максимальный уровень'}</div>
      ${l<3?`<small>Цена: ${briefCost(cost)}</small>`:''}
      <button data-research="${id}" ${l>=3||!ok||p.eliminated?'disabled':''}>${l>=3?'Исследовано':ok?'Исследовать':'Не хватает: '+deficit(p,cost)}</button>
@@ -423,7 +430,7 @@ function refreshQuickBuild(){
  const html=Object.entries(E.KINDS).map(([id,item])=>{
   const costs=Object.entries(item.cost).map(([r,n])=>`${({food:'Е',wood:'Д',stone:'К',gold:'З'})[r]}${n}`).join(' ');
   const affordable=Object.entries(item.cost).every(([r,n])=>(p.res[r]||0)>=n);
-  return `<button type="button" class="quick-build-item ${buildMode===id?'chosen':''} ${!affordable?'unaffordable':''}" data-fast-build="${id}" aria-pressed="${buildMode===id}" title="${esc(item.name)} — ${esc(buildingInfo[id]?.short||'')} · ${costs}"><img alt="" src="${artSrc('building-'+id+'.svg')}"><span>${esc(item.name)}</span><small>${costs}</small></button>`;
+  return `<button type="button" class="quick-build-item ${buildMode===id?'chosen':''} ${!affordable?'unaffordable':''}" data-fast-build="${id}" aria-pressed="${buildMode===id}" title="${esc(item.name)} — ${esc(buildingInfo[id]?.short||'')} · ${costs}">${uiIcon(id)}<span>${esc(item.name)}</span><small>${costs}</small></button>`;
  }).join('');
  if(container.dataset.html!==html){const scroll=container.scrollLeft;container.innerHTML=html;container.dataset.html=html;container.scrollLeft=scroll;}
  const description=buildMode?`${E.KINDS[buildMode]?.name}: зелёный — можно, красный — нельзя. ${buildMode==='fort'?'Жёлтый ромб — радиус защиты.':''}`:'Выбери тип здания. Зелёные клетки доступны, красные запрещены.';
@@ -479,7 +486,14 @@ $('targetDiplomacy').onclick=()=>{
  }
 };
 $('dockToggle').onclick=()=>{const dock=$('battleDock');const collapsed=dock.classList.toggle('collapsed');$('dockToggle').setAttribute('aria-expanded',String(!collapsed));};
-$('minimapToggle').onclick=()=>{const v=$('minimapWrap').classList.toggle('minimized');$('minimapToggle').setAttribute('aria-expanded',String(!v));document.querySelector('#minimapToggle span').textContent=v?'+':'−';};
+function setMinimapExpanded(expanded){
+ $('minimapWrap').classList.toggle('minimized',!expanded);
+ $('minimapToggle').setAttribute('aria-expanded',String(!!expanded));
+ $('minimapToggle').setAttribute('aria-label',expanded?'Скрыть миникарту':'Открыть миникарту');
+ $('minimapToggle').querySelector('.minimap-chevron').textContent=expanded?'−':'+';
+ $('minimap').tabIndex=expanded?0:-1;
+}
+$('minimapToggle').onclick=()=>setMinimapExpanded($('minimapWrap').classList.contains('minimized'));
 function renderArmies(){if(!state||!myId)return;const mineArmies=state.armies.filter(a=>a.owner===myId);
  patchHtml('armiesList',mineArmies.length?mineArmies.map(a=>{
   const initial=a.initialStrength||a.strength,spent=Math.max(0,initial-a.strength),percentSpent=Math.floor(spent/Math.max(1,initial)*100);
@@ -734,7 +748,8 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
    for(const i of actual.cells){const x=i%E.W,y=Math.floor(i/E.W);ctx.fillRect(x*TILE,y*TILE,TILE,TILE);ctx.strokeRect(x*TILE,y*TILE,TILE,TILE);}
    ctx.restore();
   }
-  const from=dragAttack?.from||(actual.cells.length?{x:actual.cells[0]%E.W,y:Math.floor(actual.cells[0]/E.W)}:E.nearestBorderLand(state,myId,to.x,to.y))||mine()?.capital;
+  // Display the strategic origin. The real frontline stays separately highlighted.
+   const from=(target?.type==='redirect'?state.armies.find(a=>a.id===target.id):null)||mine()?.capital||dragAttack?.from;
   if(to&&from){
    const ax=(from.x+.5)*TILE,ay=(from.y+.5)*TILE,bx=(to.x+.5)*TILE,by=(to.y+.5)*TILE;
    ctx.save();ctx.strokeStyle='#ffffffd8';ctx.lineWidth=3/Math.max(.45,zoom);ctx.setLineDash([10/Math.max(.5,zoom),7/Math.max(.5,zoom)]);
