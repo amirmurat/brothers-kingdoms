@@ -96,7 +96,7 @@ function showAux(id){
  if(id!=='contextCard')selected=null;
  toggleQuickBuild(false);setPreview(null);$('battleDock').classList.add('collapsed');
  if(panelOpen)closePanel();
- el.classList.remove('hidden');el.querySelector('button:not([disabled]):not(.hidden)')?.focus();$('auxBackdrop')?.classList.remove('hidden');document.body.classList.add('aux-open');
+ el.classList.remove('hidden');if(id==='armiesPanel')renderArmies();el.querySelector('button:not([disabled]):not(.hidden)')?.focus();$('auxBackdrop')?.classList.remove('hidden');document.body.classList.add('aux-open');
 }
 
 function name(){const val=$('nickname').value.trim().slice(0,18)||'Kingdom';try{localStorage.setItem('bk-name',val);}catch(_){ }return val;}
@@ -106,8 +106,8 @@ function compress(arr){let chunks=[];for(let i=0;i<arr.length;i+=8192)chunks.pus
 function expand(str){const raw=atob(str),out=new Array(raw.length);for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);return out;}
 function rlePack(arr){const b=[];for(let i=0;i<arr.length;){const id=arr[i];let n=1;while(i+n<arr.length&&arr[i+n]===id&&n<65535)n++;b.push(id,n&255,n>>8);i+=n;}return compress(b);}
 function rleUnpack(data){const a=expand(data),out=[];for(let i=0;i<a.length;i+=3){const id=a[i],n=a[i+1]+256*a[i+2];for(let j=0;j<n;j++)out.push(id);}return out;}
-function pack(s,includeTerrain=true){if(!s||!s.owners?.length)return s;return {...s,tiles:includeTerrain?compress(s.tiles):null,owners:rlePack(s.owners),ownerRle:true,packed:true};}
-function unpack(s){if(s?.ownerDelta){const owners=state?.owners?.slice();if(!owners?.length)throw Error('Missing state for delta');for(let i=0;i<s.owners.length;i+=2)owners[s.owners[i]]=s.owners[i+1];s.owners=owners;s.tiles=state.tiles;delete s.ownerDelta;}if(s?.packed){s.tiles=s.tiles?expand(s.tiles):(state?.tiles||[]);s.owners=s.ownerRle?rleUnpack(s.owners):expand(s.owners);delete s.ownerRle;delete s.packed;}return s;}
+function pack(s,includeTerrain=true){if(!s||!s.owners?.length)return s;return {...E.networkState(s),tiles:includeTerrain?compress(s.tiles):null,owners:rlePack(s.owners),ownerRle:true,packed:true};}
+function unpack(s){E.restoreNetworkState(s);if(s?.ownerDelta){const owners=state?.owners?.slice();if(!owners?.length)throw Error('Missing state for delta');for(let i=0;i<s.owners.length;i+=2)owners[s.owners[i]]=s.owners[i+1];s.owners=owners;s.tiles=state.tiles;delete s.ownerDelta;}if(s?.packed){s.tiles=s.tiles?expand(s.tiles):(state?.tiles||[]);s.owners=s.ownerRle?rleUnpack(s.owners):expand(s.owners);delete s.ownerRle;delete s.packed;}return s;}
 function getPeer(){if(window.Peer)return true;error('PeerJS failed to load. Check your connection.');return false;}
 function setBusy(v){for(const id of ['hostButton','joinButton','demoButton','resumeButton'])$(id).disabled=v;$('joinButton').textContent=v?'Connecting…':'Join';$('cancelConnect').classList.toggle('hidden',!v);}
 function setNetwork(text){
@@ -406,6 +406,7 @@ function overlappingPlans(plan){
 }
 function refreshPaintTargets(plan){plan.targets=new Set(selectedNationTargets());}
 function refreshPaintGuide(){
+ planningVisualCache=null;
  const plan=attackPlanner;if(plan?.mode!=='paint')return;
  const checked=checkPaintZone(plan),count=plan.cells.size;
  refreshPaintTargets(plan);
@@ -475,10 +476,16 @@ function openCancelPlan(item){
  $('planCancelYes').textContent=planned?'Cancel plan':'Recall army';
  $('planCancelDialog').classList.remove('hidden');$('planCancelNo').focus();
 }
+let planningVisualCache=null;
 function drawAttackPlanning(){
  // Union all saved and in-progress zones before tracing boundaries. A newly
  // painted stroke above an old plan has exactly one contour, never two seams.
- const visual=new Map(),editId=attackPlanner?.mode==='paint'?attackPlanner.editId:null;
+ const sources=[...(state.attackPlans||[]),...(state.recoveryPlans||[]),...state.armies.filter(a=>a.strength>0&&!a.planId&&Array.isArray(a.zoneCells))].filter(p=>p.owner===myId);
+ const visualKey=state.territoryRevision+'|'+sources.map(p=>p.id+':'+(p.targets||[p.targetOwner]).join(',')+':'+state.armies.some(a=>a.planId===p.id)).join('|');
+ if(planningVisualCache&&(planningVisualCache.visualKey!==visualKey||sources.length!==planningVisualCache.sources.length||sources.some((p,i)=>p.zoneCells!==planningVisualCache.sources[i])))
+  planningVisualCache=null;
+ const visual=planningVisualCache||new Map(),editId=attackPlanner?.mode==='paint'?attackPlanner.editId:null;
+ if(!planningVisualCache){
  const collect=(plan,preview=false,recovery=false)=>{
   const eligible=new Set(plan.targets??[plan.targetOwner]);
   for(const i of plan.zoneCells||[]){
@@ -502,6 +509,8 @@ function drawAttackPlanning(){
   collect({zoneCells:attackPlanner.zoneCells,targets:[attackPlanner.targetOwner]},true);
  if(attackPlanner?.mode==='paint'&&attackPlanner.cells.size)
   collect({zoneCells:attackPlanner.cells,targets:[...attackPlanner.targets]},true);
+ visual.visualKey=visualKey;visual.sources=sources.map(p=>p.zoneCells);planningVisualCache=visual;
+ }
  const left=Math.max(0,Math.floor(-camX/(TILE*zoom))-2),right=Math.min(E.W-1,Math.ceil((canvas.clientWidth-camX)/(TILE*zoom))+2),
   top=Math.max(0,Math.floor(-camY/(TILE*zoom))-2),bottom=Math.min(E.H-1,Math.ceil((canvas.clientHeight-camY)/(TILE*zoom))+2);
  const T=TILE,hasPreview=[...visual.values()].some(v=>v.preview);
@@ -1005,7 +1014,7 @@ function setMinimapExpanded(expanded){
 }
 $('minimapToggle').onclick=()=>setMinimapExpanded($('minimapWrap').classList.contains('minimized'));
 function renderArmies(){
- if(!state||!myId)return;
+ if(!state||!myId||$('armiesPanel').classList.contains('hidden'))return;
  const plans=(state.attackPlans||[]).filter(p=>p.owner===myId);
  const recovery=(state.recoveryPlans||[]).filter(p=>p.owner===myId);
  const plannedIDs=new Set([...plans,...recovery].map(p=>p.id)),rows=[];
@@ -1053,7 +1062,7 @@ function renderArmies(){
   for(const field of ['title','status','detail']){const target=node.querySelector('[data-front-'+field+']');if(target)target.textContent=row[field];}
  }
 }
-$('armiesToggle').onclick=()=>{showAux('armiesPanel');renderArmies();};
+$('armiesToggle').onclick=()=>showAux('armiesPanel');
 $('closeArmies').onclick=hideAux;
 $('armiesList').onclick=e=>{
  const cancel=e.target.closest('[data-cancel-plan]'),edit=e.target.closest('[data-edit-plan]'),focus=e.target.closest('[data-focus-plan]');
@@ -1367,7 +1376,7 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   else squadMarkers.set(key,{x:c.x,y:c.y,strength:c.strength,id,active,marching});
  };
  for(const p of state.players)if(p.id===myId&&!p.eliminated)for(const c of p.garrisons||[])addSquad(c,p.id,false,c.returning||c.x!==c.tx||c.y!==c.ty);
- for(const a of state.armies)for(const c of a.columns||[])addSquad(c,a.owner,true,!!c.route?.length);
+ for(const a of state.armies)for(const c of a.columns||[])addSquad(c,a.owner,true,c.x!==c.tx||c.y!==c.ty);
  for(const c of squadMarkers.values())drawSquad(c,c.id,c.marching,c.active);
  // Front cells come from the authoritative conquest wave, including online snapshots.
  for(const a of state.armies){
@@ -1427,6 +1436,7 @@ function drawMini(){
 window.addEventListener('resize',()=>{resize();clampCamera();queueDraw();});document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeNations();toggleQuickBuild(false);if(attackPlanner)resetAttackPlanner();setThreatList(false);hideAux();setPreview(null);redirectArmy=null;if(panelOpen)closePanel();else cancelMode();$('tutorial').classList.add('hidden');return;}if(panelOpen&&window.innerWidth<851&&e.key==='Tab'){const items=[...$('sidebar').querySelectorAll('button:not([disabled]), select:not([disabled])')].filter(el=>el.offsetParent!==null);if(items.length){const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}}
  if(!state||state.phase!=='playing'||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;if(e.key==='+'||e.key==='=')zoomAt(1.2,canvas.clientWidth/2,canvas.clientHeight/2);if(e.key==='-')zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);if(document.activeElement===canvas){if(!moveCursor)moveCursor=mine()?.capital?{...mine().capital}:{x:80,y:52};if(e.key.startsWith('Arrow')){e.preventDefault();const d={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[e.key];moveCursor.x=Math.max(0,Math.min(E.W-1,moveCursor.x+d[0]));moveCursor.y=Math.max(0,Math.min(E.H-1,moveCursor.y+d[1]));camX=canvas.clientWidth/2-(moveCursor.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(moveCursor.y+.5)*TILE*zoom;clampCamera();inspectCell(moveCursor.x,moveCursor.y);$('keyboardPosition').textContent=$('mapStatus').textContent;queueDraw();}if(e.key==='Enter'){e.preventDefault();const x=moveCursor.x,y=moveCursor.y;const r=canvas.getBoundingClientRect();selectMap(r.left+camX+(x+.5)*TILE*zoom,r.top+camY+(y+.5)*TILE*zoom);}}});
 function goHome(){
+ planningVisualCache=null;
  if(serverActive||serverSocket)leaveServer();
  if(attackPlanner)resetAttackPlanner();
  if(demo&&state?.phase==='playing')saveSolo();

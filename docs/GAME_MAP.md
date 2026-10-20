@@ -544,3 +544,8 @@ _Актуальный реестр, извлечённый из `index.html` н�
 - Fixes v72's single-point assembly/global conquest mismatch. A wave retains physical columns throughout combat. frontSectors groups a frontier into small locally connected sectors; positionAttack/marchWave deploy survivors to their own sector anchors.
 - localAttackStrength/spendAttack allow only arrived, assigned troops within range 7 to pay a sector's capture cost. Manual layers remain atomic across all sectors; recovery can advance funded local sectors separately. a.strength is only the aggregate military total, not an independent remote budget.
 - frontDeployment supplies ready/total sector counts to existing army rows. Canvas aggregates actual co-located columns, keeps them visible after arrival and highlights only manned cells. Saved/server states retain columns, sectors, destinations and paths.
+
+### v74 army performance
+- Home squads reuse valid routes and component reachability, instead of whole-map path floods every tick. Local arrived sector strengths are cached and invalidated on movement/payment.
+- renderArmies skips hidden #armiesPanel; showAux refreshes it upon opening. drawAttackPlanning caches contour union through animation/panning, invalidating on real geometry/ownership/target/draft changes.
+- networkState/restoreNetworkState provide compact display snapshots for server and PeerJS. Wire geometry uses exact zoneRuns, reused as shared zoneCells arrays after decode. Internal routes/front keys remain only in authoritative state/saves. Arrival derives from coordinates/destination, not missing wire routes.

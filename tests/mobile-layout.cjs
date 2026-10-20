@@ -8,7 +8,7 @@ const server=http.createServer((req,res)=>{
  try{
   let body=fs.readFileSync(file);
   if(name==='/'||name==='/index.html')body=body.toString().split('\n').filter(line=>!line.includes('unpkg.com/peerjs')).join('\n');
-  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
+  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
   res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream'});res.end(body);
  }catch(_){res.writeHead(404);res.end();}
 });
@@ -31,6 +31,23 @@ const server=http.createServer((req,res)=>{
    assert.deepEqual(await page.evaluate(()=>window.__layout.getState().players[0].spawnPoint),chosen,label+' map click chooses exact point');
    await page.locator('#spawnAuto').click();assert.equal(await page.evaluate(()=>window.__layout.getState().players[0].spawnPoint),null,label+' automatic resets selection');
    await page.evaluate(()=>window.__layout.createDemo(false));
+   const performanceChecks=await page.evaluate(()=>{
+    const E=window.BKEngine,L=window.__layout,s=L.getState(),id=s.players.find(p=>!p.bot).id;
+    const zone=s.tiles.flatMap((tile,i)=>tile&&s.owners[i]!==id?[i]:[]),i=zone[0];
+    const result=E.action(s,id,{type:'send',x:i%E.W,y:(i/E.W)|0,zone,percent:30});
+    if(!result.ok)throw Error(result.error);
+    const original=E.estimatePlanFront;let estimates=0;
+    E.estimatePlanFront=(...args)=>{estimates++;return original(...args);};
+    L.render();const closed=estimates;L.showAux('armiesPanel');const opened=estimates;L.hideAux();E.estimatePlanFront=original;
+    const plan=s.attackPlans.find(p=>p.owner===id);let traversals=0;
+    plan.zoneCells[Symbol.iterator]=function*(){traversals++;for(let k=0;k<this.length;k++)yield this[k];};
+    L.draw();const first=traversals;L.draw();const second=traversals;delete plan.zoneCells[Symbol.iterator];
+    return {closed,opened,first,second};
+   });
+   assert.equal(performanceChecks.closed,0,label+' closed army panel performs no frontier estimates');
+   assert(performanceChecks.opened>0,label+' opening army panel still renders live estimates');
+   assert(performanceChecks.first>0,label+' initial planned geometry is drawn');
+   assert.equal(performanceChecks.second,performanceChecks.first,label+' repeated frames reuse plan geometry');
    await page.evaluate(()=>window.__layout.setBuildingMode('lumber'));
    const geometry=await page.locator('#placingBuild').evaluate(bar=>{
     const r=bar.getBoundingClientRect(),name=document.getElementById('placingBuildName').getBoundingClientRect(),cost=document.getElementById('placingBuildCost').getBoundingClientRect();
