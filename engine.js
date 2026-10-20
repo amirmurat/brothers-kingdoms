@@ -312,6 +312,28 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
   army.tx=tx;army.ty=ty;army.targetOwner=targetOwner;army.zoneCells=null;army.frontCells=initialFront(s,id,tx,ty,targetOwner);army.stuck=0;attackFronts.delete(army);return {ok:true};
  }
  if(a.type==='updatePlan')return changePaintedPlan(s,id,a);
+ if(a.type==='erasePlanCells'){
+  // Only the owner can trim their own saved geometry. Other kingdoms' plans,
+  // troop reserves and ownership of already captured cells remain untouched.
+  if(!Array.isArray(a.cells)||a.cells.length<1||a.cells.length>3500||
+    a.cells.some(i=>!Number.isInteger(i)||i<0||i>=W*H))
+   return {ok:false,error:'Choose up to 3,500 valid cells to erase.'};
+  const erased=new Set(a.cells),owned=(s.attackPlans||[]).filter(plan=>plan.owner===id);
+  let changed=0,affected=0,deleted=0;
+  for(const plan of owned){
+   const remainder=plan.zoneCells.filter(i=>!erased.has(i));
+   if(remainder.length===plan.zoneCells.length)continue;
+   changed+=plan.zoneCells.length-remainder.length;affected++;
+   if(!remainder.length){cancelOffensivePlan(s,plan);deleted++;continue;}
+   // A modified front must be recalculated as a single full-width layer.
+   // Withdraw its active wave before changing zone geometry.
+   for(const army of s.armies.filter(w=>w.planId===plan.id))finishWave(s,army,p);
+   s.armies=s.armies.filter(w=>w.planId!==plan.id);
+   plan.zoneCells=remainder;
+   plan.nextWaveTick=Math.max(plan.nextWaveTick||0,s.tick+1);
+  }
+  return {ok:true,erased:changed,affected,deleted};
+ }
  if(a.type==='cancelPlan'){
   const plan=(s.attackPlans||[]).find(v=>v.id===a.id&&v.owner===id);
   if(!plan)return {ok:false,error:'Offensive plan not found.'};
