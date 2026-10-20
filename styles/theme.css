@@ -764,39 +764,39 @@ html,body{background:#090c11!important;color:#eef2f8!important}
 #game#game#game #resourceSummary [data-trend="negative"],#game#game#game #hudTroops #troopGrowth[data-trend="negative"]{color:#ff8e9e!important}
 #game#game#game #resourceSummary [data-trend="neutral"],#game#game#game #hudTroops #troopGrowth[data-trend="neutral"]{color:#bec7d5!important}
 
-/* v40: retain centered grid, restore vertical breathing room and simplify menu. */
+/* v53: icon-safe taller HUD, keeping four centered columns. */
 #game#game#game .topbar{
   display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
-  height:64px!important;min-height:64px!important;padding:6px 18px!important;
+  height:86px!important;min-height:86px!important;padding:8px 18px!important;
   gap:0!important;align-items:center!important;box-sizing:border-box!important;
   background:#11161e!important;border:0!important;
 }
 #game#game#game .topbar .top-stat{
   display:grid!important;grid-template-columns:minmax(0,1fr)!important;
-  grid-template-rows:12px 24px 14px!important;gap:1px!important;
+  grid-template-rows:20px 28px 16px!important;gap:3px!important;
   align-items:center!important;justify-items:center!important;align-content:center!important;
   min-width:0!important;margin:0!important;padding:0 2px!important;
   border:0!important;border-radius:0!important;background:transparent!important;
   color:#eef2f8!important;text-align:center!important;overflow:hidden!important;
 }
 #game#game#game .topbar .top-stat>span{
-  grid-row:1!important;height:12px!important;line-height:12px!important;
-  margin:0!important;font-size:9px!important;font-weight:600!important;
+  grid-row:1!important;height:20px!important;line-height:20px!important;
+  margin:0!important;font-size:10px!important;font-weight:600!important;
   letter-spacing:.035em!important;color:#a7b2c2!important;text-align:center!important;
 }
 #game#game#game .topbar .top-stat>b{
-  grid-row:2!important;height:24px!important;line-height:24px!important;
-  margin:0!important;font-size:21px!important;font-weight:750!important;
+  grid-row:2!important;height:28px!important;line-height:28px!important;
+  margin:0!important;font-size:22px!important;font-weight:750!important;
   color:#eef2f8!important;text-align:center!important;font-variant-numeric:tabular-nums!important;
 }
 #game#game#game #hudTroops .stat-meta{
   grid-row:3!important;display:flex!important;justify-content:center!important;
-  align-items:center!important;width:100%!important;height:14px!important;gap:4px!important;
+  align-items:center!important;width:100%!important;height:16px!important;gap:4px!important;
   white-space:nowrap!important;overflow:hidden!important;
 }
 #game#game#game #hudTroops :is(#troopGrowth,#troopCap){
-  position:static!important;height:14px!important;line-height:14px!important;
-  font-size:9px!important;flex:0 0 auto!important;margin:0!important;
+  position:static!important;height:16px!important;line-height:16px!important;
+  font-size:10px!important;flex:0 0 auto!important;margin:0!important;
 }
 #game#game#game .topbar #menuToggle{
   width:44px!important;min-width:44px!important;max-width:44px!important;
@@ -815,13 +815,13 @@ html,body{background:#090c11!important;color:#eef2f8!important}
 }
 #game#game#game #resourceSummary.resource-hud{
   display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
-  gap:0!important;height:62px!important;min-height:62px!important;flex:0 0 62px!important;
-  padding:4px 18px!important;box-sizing:border-box!important;
+  gap:0!important;height:78px!important;min-height:78px!important;flex:0 0 78px!important;
+  padding:6px 18px!important;box-sizing:border-box!important;
   background:#11161e!important;border:0!important;border-bottom:1px solid #29313f!important;
 }
 #game#game#game #resourceSummary.resource-hud>div{
   display:grid!important;grid-template-columns:14px max-content!important;
-  grid-template-rows:14px 22px 14px!important;column-gap:3px!important;row-gap:2px!important;
+  grid-template-rows:18px 26px 16px!important;column-gap:4px!important;row-gap:2px!important;
   justify-content:center!important;justify-items:center!important;align-content:center!important;
   align-items:center!important;min-width:0!important;padding:0 2px!important;
   border:0!important;border-radius:0!important;background:transparent!important;
@@ -829,20 +829,20 @@ html,body{background:#090c11!important;color:#eef2f8!important}
 }
 #game#game#game #resourceSummary.resource-hud .res-icon{
   grid-column:1!important;grid-row:1!important;justify-self:center!important;
-  width:13px!important;height:13px!important;margin:0!important;
+  width:16px!important;height:16px!important;margin:0!important;
 }
 #game#game#game #resourceSummary.resource-hud span{
   grid-column:2!important;grid-row:1!important;justify-self:start!important;
-  font-size:9px!important;line-height:14px!important;letter-spacing:0!important;color:#a7b2c2!important;
+  font-size:10px!important;line-height:18px!important;letter-spacing:0!important;color:#a7b2c2!important;
 }
 #game#game#game #resourceSummary.resource-hud b{
   grid-column:1/-1!important;grid-row:2!important;
-  font-size:19px!important;line-height:22px!important;font-weight:700!important;
+  font-size:21px!important;line-height:26px!important;font-weight:700!important;
   color:#eef2f8!important;font-variant-numeric:tabular-nums!important;
 }
 #game#game#game #resourceSummary.resource-hud small{
   grid-column:1/-1!important;grid-row:3!important;
-  font-size:10px!important;line-height:14px!important;font-weight:600!important;
+  font-size:11px!important;line-height:16px!important;font-weight:600!important;
   font-variant-numeric:tabular-nums!important;
 }
 #game#game#game #resourceSummary [data-resource="food"] .res-icon{color:#c8df8e!important}
@@ -867,14 +867,17 @@ html,body{background:#090c11!important;color:#eef2f8!important}
  #game#game#game #resourceSummary.resource-hud b{font-size:16px!important}
 }
 @media(max-height:480px) and (orientation:landscape){
- #game#game#game .topbar{height:52px!important;min-height:52px!important;padding-top:2px!important;padding-bottom:2px!important}
- #game#game#game .topbar .top-stat{grid-template-rows:10px 20px 12px!important}
- #game#game#game .topbar .top-stat>b{height:19px!important;line-height:19px!important;font-size:18px!important}
+ #game#game#game .topbar{height:66px!important;min-height:66px!important;padding-top:2px!important;padding-bottom:2px!important}
+ #game#game#game .topbar .top-stat{grid-template-rows:16px 22px 14px!important;gap:2px!important}
+ #game#game#game .topbar .top-stat>span{height:16px!important;line-height:16px!important;font-size:9px!important}
+  #game#game#game .topbar .top-stat>b{height:22px!important;line-height:22px!important;font-size:18px!important}
+  #game#game#game #hudTroops .stat-meta,#game#game#game #hudTroops :is(#troopGrowth,#troopCap){height:14px!important;line-height:14px!important}
  #game#game#game .topbar #menuToggle{height:44px!important;min-height:44px!important}
- #game#game#game #resourceSummary.resource-hud{height:50px!important;min-height:50px!important;flex-basis:50px!important;padding-top:2px!important;padding-bottom:2px!important}
- #game#game#game #resourceSummary.resource-hud>div{grid-template-rows:12px 17px 10px!important}
- #game#game#game #resourceSummary.resource-hud b{font-size:16px!important;line-height:17px!important}
- #game#game#game #resourceSummary.resource-hud small{line-height:10px!important}
+ #game#game#game #resourceSummary.resource-hud{height:56px!important;min-height:56px!important;flex-basis:56px!important;padding-top:2px!important;padding-bottom:2px!important}
+ #game#game#game #resourceSummary.resource-hud>div{grid-template-rows:14px 19px 12px!important;row-gap:2px!important}
+ #game#game#game #resourceSummary.resource-hud span{line-height:14px!important;font-size:9px!important}
+  #game#game#game #resourceSummary.resource-hud b{font-size:17px!important;line-height:19px!important}
+ #game#game#game #resourceSummary.resource-hud small{line-height:12px!important;font-size:9px!important}
 }
 #game#game#game #sessionPanel #sessionPause{display:none!important}
 #game#game#game #resourceSummary.resource-hud small[data-trend="positive"]{color:#8ee5a1!important}
@@ -974,14 +977,14 @@ body :is(input,textarea,[contenteditable="true"]){-webkit-user-select:text!impor
 #game#game#game #hudTroops .reserve-label{
  display:flex!important;flex-direction:row!important;justify-content:center!important;
  align-items:center!important;gap:4px!important;white-space:nowrap!important;
- height:14px!important;line-height:14px!important;min-width:0!important;
+ height:20px!important;line-height:20px!important;min-width:0!important;
 }
 #game#game#game #hudTroops .reserve-label .reserve-army-icon{
- display:block!important;flex:0 0 16px!important;width:16px!important;height:16px!important;
- max-width:16px!important;max-height:16px!important;object-fit:contain!important;
+ display:block!important;flex:0 0 18px!important;width:18px!important;height:18px!important;
+ max-width:18px!important;max-height:18px!important;object-fit:contain!important;
  margin:0!important;padding:0!important;opacity:.87!important;
 }
-#game#game#game #hudTroops .reserve-label>span{color:inherit!important;line-height:14px!important}
+#game#game#game #hudTroops .reserve-label>span{color:inherit!important;line-height:20px!important}
 #game#game#game #tutorial .icon-credit{
  margin:12px 0 6px!important;font-size:10px!important;line-height:1.5!important;color:#b0bac9!important;
 }
@@ -990,3 +993,10 @@ body :is(input,textarea,[contenteditable="true"]){-webkit-user-select:text!impor
 /* v52: the licensed Stone Pile is an IMG in both the HUD and resource prices. */
 #game#game#game #resourceSummary [data-resource="stone"] img.res-icon{display:block!important;object-fit:contain!important;image-rendering:auto!important}
 #game#game#game .cost-unit img.stone-resource-icon{display:inline-block!important;object-fit:contain!important;image-rendering:auto!important}
+
+/* v53: keep Reserve icon inside the compact landscape heading. */
+@media(max-height:480px) and (orientation:landscape){
+ #game#game#game #hudTroops .reserve-label{height:16px!important;line-height:16px!important}
+ #game#game#game #hudTroops .reserve-label .reserve-army-icon{flex-basis:14px!important;width:14px!important;height:14px!important;max-width:14px!important;max-height:14px!important}
+ #game#game#game #hudTroops .reserve-label>span{line-height:16px!important}
+}

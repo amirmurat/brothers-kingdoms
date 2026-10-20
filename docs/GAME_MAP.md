@@ -433,3 +433,6 @@ _Актуальный реестр, извлечённый из `index.html` н�
 ### v52 — замена иконок (20.10.2026)
 - game.js: BUILDING_PATHS для lumber/quarry/mine/fort/city теперь используют оригиналы в 512x512, BUILDING_PALETTE окрашивает Canvas в тон SVG. Все здания, кроме столицы, получают масштабируемый контур 12/512; столица 64x64 не изменена.
 - assets/shapes/stone.svg: Stone Pile для HUD (resourceSummary data-resource=stone img.res-icon) и затрат (uiIcon('stone')); styles/theme.css обеспечивает размер и object-fit. Другие ресурсы/правила не затронуты. Источники в README, Help.
+
+### v53 — HUD height and Reserve icon clipping (20.10.2026)
+- `styles/theme.css`: topbar 86px, resourceSummary 78px; Reserve label 20px and icon 18px. Landscape compact 66px+56px and 14px icon. Four column alignment remains. `index.html`: `styles/theme.css?v=53-hud-height`.

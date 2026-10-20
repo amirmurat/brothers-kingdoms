@@ -1,10 +1,11 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
-_Обновлено: 20 октября 2026 года, рабочая preview-версия v52. Историческая v25 в разделе 0 не является текущей._
+_Обновлено: 20 октября 2026 года, рабочая preview-версия v53. Историческая v25 в разделе 0 не является текущей._
 
 
-## СРОЧНО: АКТУАЛЬНОЕ СОСТОЯНИЕ v52 (20.10.2026)
+## СРОЧНО: АКТУАЛЬНОЕ СОСТОЯНИЕ v53 (20.10.2026)
 - **Рабочая ветка:** `design/visual-review-v26` (НЕ `main`). Последний точный SHA смотри у HEAD ветки, так как дальнейшие коммиты могут сдвинуть его. Исходное основание этой правки: `bb8e7ea1ae59b038eba6ccf494acec0ea46b8fbc` (v48).
-- **Что изменено в v52:** По выбору владельца: Mine/Gold Mine, Quarry/Tumulus, Lumber/Axe in Stump, Fort/Defensive Wall, City/Qaitbay Citadel, Stone/Stone Pile. Оригиналы Game-icons.net CC BY 3.0, с авторством в README и Help. Векторные контуры синхронизированы с Canvas. У построек разные цвета; контур тонкий и уменьшается с зумом. Только preview-ветка, iPhone/Safari не проверен.
+- **Что изменено в v53:** После скриншота пользователя исправлена обрезка Dark Squad: заголовок 20px, иконка 18px. HUD получил свободное вертикальное пространство (верх 64→86px; ресурсы 62→78px) без изменения четырёх колонок. Landscape: 66+56px и иконка 14px. Изменения только CSS и cache tag; физический iPhone/Safari после правки не проверен.
+- **Предыдущая v52:** По выбору владельца: Mine/Gold Mine, Quarry/Tumulus, Lumber/Axe in Stump, Fort/Defensive Wall, City/Qaitbay Citadel, Stone/Stone Pile. Оригиналы Game-icons.net CC BY 3.0, с авторством в README и Help. Векторные контуры синхронизированы с Canvas. У построек разные цвета; контур тонкий и уменьшается с зумом. Только preview-ветка, iPhone/Safari не проверен.
 - **Предыдущая v51:** Farm теперь использует оригинальную иконку Barn (Delapouite) в каталоге/размещении/на карте, с белой тонкой контурной линией 12/512, как у Barracks. Reserve в HUD использует оригинальную Dark Squad (Lorc) 16px вместо палатки. Лицензии CC BY 3.0 и изменения указаны в README и Help. Только preview-ветка; реальный iPhone не проверен.
 - **Предыдущая v50:** в Canvas уменьшена белая обводка Medieval Pavilion для `barracks` с 30 до 12 единиц при viewBox 512, без обратной компенсации зума. Контур масштабируется вместе с иконкой и не утолщается при отдалении; остальные постройки/правила не изменены. Изменение в preview-ветке, ещё не в main, и не проверено на iPhone.
 - **Предыдущая v49:** на карте для `barracks` SVG-path Medieval Pavilion (Delapouite, CC BY 3.0) получает белый контур `#ffffff`, ширина 30 в координатах 512 вместо тёмного 24. Иконки Reserve и Build уже используют `assets/shapes/barracks.svg`; остальные здания не изменены. При дальнем масштабе читаемость ещё нужно визуально проверить на iPhone.
@@ -17,7 +18,7 @@ _Обновлено: 20 октября 2026 года, рабочая preview-в�
 ## 0. Начни здесь
 - **Репозиторий:** https://github.com/amirmurat/brothers-kingdoms
 - **Игра (GitHub Pages):** https://amirmurat.github.io/brothers-kingdoms/?v=25
-- **Основная ветка:** `main` (сохранена отдельно). Текущая рабочая ветка UX: `design/visual-review-v26` (v52).
+- **Основная ветка:** `main` (сохранена отдельно). Текущая рабочая ветка UX: `design/visual-review-v26` (v53).
 - **Предыдущая публикация:** v16, PR https://github.com/amirmurat/brothers-kingdoms/pull/10 (merged), `index.html` blob SHA `829e7cd103441c2754eb2d54e9eb9c1168fb37fe`. Это снимок на 19.10.2026; перед работой заново читай актуальный GitHub.
 - **Источник правды для запуска сайта начиная с v22:** `index.html` содержит разметку и ссылки на `styles/legacy.css` (старый layout), `styles/theme.css` (единый активный дизайн), `engine.js` (правила) и `game.js` (UI/сеть). Встроенные копии JS/CSS удалены; файлы версионируются через `?v=25`. PeerJS по-прежнему на CDN. При изменении JS достаточно править соответствующий активный файл, при изменении оформления — `styles/theme.css`.
 - **Другие файлы:** `game.js`, `engine.js`, `game-v13.css`, `game-v15.css`, `UX_AUDIT_V15.md`, `DEEP_UI_AUDIT.md`, `UI_V13_STATUS.md`, `README.md`; часть старых документов отражает предыдущие версии и устарела.
@@ -252,3 +253,6 @@ _Обновлено: 20 октября 2026 года, рабочая preview-в�
 ### v52 — индивидуальные цвета и 6 новых иконок (20.10.2026)
 - Пять зданий теперь получают согласованные оригинальные 512x512 Game-icons.net в SVG и Canvas: Gold Mine, Tumulus, Defensive Wall, Qaitbay Citadel, Axe in Stump. Stone Pile используется в HUD и динамических ценах. Цветные заливки семи зданий и Reserve одинаковые между SVG и картой, тонкая белая обводка зависит от zoom пропорционально размеру. Столица оставлена прежней. Источники, авторы, лицензия и изменения указаны в README и Help.
 - Изменены game.js, index.html, styles/theme.css, assets/shapes/, README, GAME_MAP. Кэш v52-distinct-icons. Preview branch design/visual-review-v26. Main/Pages не изменялись, iPhone и multiplayer не проверялись.
+
+### v53 — Reserve clipping and HUD breathing room (20.10.2026)
+- Исправлены строки основной верхней панели 86px (64 до) и ресурсов 78px (62 до) с согласованными высотами grid track, Reserve SVG 18px и подписью 20px; больше нет необходимости вылезать за границы строки. Для compact landscape оставлены 66+56px и Reserve 14px. Cache bust `v53-hud-height`, четыре колонки сохранены. Main не изменён; визуальный Safari/iPhone не проверен.
