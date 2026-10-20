@@ -388,3 +388,12 @@ body :is(button,input,select,summary){font-family:var(--ui-font)!important}
 #game #resourceSummary [data-resource="wood"] .res-icon{color:#46805c!important}
 #game #resourceSummary [data-resource="stone"] .res-icon{color:#73818a!important}
 #game #resourceSummary [data-resource="gold"] .res-icon{color:#aa8331!important}
+@media(max-width:600px) and (orientation:portrait){
+ #game .topbar{grid-template-columns:minmax(0,1.25fr) minmax(0,.9fr) minmax(0,.72fr) 46px 46px!important;padding:4px!important;gap:2px!important;box-sizing:border-box!important}
+ #game .topbar .top-stat{min-width:0!important;padding-left:3px!important;padding-right:3px!important}
+}
+@media(max-width:360px){
+ #waiting .room-token{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:10px!important}
+ #waiting .room-token strong{font-size:26px!important;text-align:center!important}
+ #waiting .room-token #copyCode{width:100%!important}
+}
