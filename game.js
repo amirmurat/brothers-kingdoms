@@ -678,8 +678,8 @@ canvas.addEventListener('pointermove',onPointerMove);
 canvas.addEventListener('pointerup',onPointerUp);
 canvas.addEventListener('pointercancel',e=>{clearTimeout(longPressTimer);pressed.delete(e.pointerId);pointerStart=null;gesture=null;dragAttack=null;});
 canvas.addEventListener('wheel',e=>{e.preventDefault();const p=pixelAt(e.clientX,e.clientY);zoomAt(e.deltaY<0?1.13:.885,p.x,p.y);},{passive:false});canvas.addEventListener('contextmenu',e=>e.preventDefault());
-$('zoomIn').onclick=()=>zoomAt(1.24,canvas.clientWidth/2,canvas.clientHeight/2);$('zoomOut').onclick=()=>zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);$('viewAll').onclick=()=>{hideAux();zoom=Math.min((canvas.clientWidth-16)/(E.W*TILE),(canvas.clientHeight-16)/(E.H*TILE));camX=(canvas.clientWidth-E.W*TILE*zoom)/2;camY=(canvas.clientHeight-E.H*TILE*zoom)/2;$('zoomText').textContent=Math.round(zoom*100)+'%';queueDraw();};$('centerMap').onclick=()=>{hideAux();zoom=window.innerWidth<650?2.2:1.8;$('zoomText').textContent=Math.round(zoom*100)+'%';centerOnCapital();};
-mini.addEventListener('pointerdown',e=>{const r=mini.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*E.W,y=(e.clientY-r.top)/r.height*E.H;camX=canvas.clientWidth/2-x*TILE*zoom;camY=canvas.clientHeight/2-y*TILE*zoom;clampCamera();queueDraw();});mini.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('viewAll').click();}});
+$('zoomIn').onclick=()=>zoomAt(1.24,canvas.clientWidth/2,canvas.clientHeight/2);$('zoomOut').onclick=()=>zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);function fitWorld(){hideAux();zoom=Math.min((canvas.clientWidth-16)/(E.W*TILE),(canvas.clientHeight-16)/(E.H*TILE));camX=(canvas.clientWidth-E.W*TILE*zoom)/2;camY=(canvas.clientHeight-E.H*TILE*zoom)/2;$('zoomText').textContent=Math.round(zoom*100)+'%';queueDraw();}
+mini.addEventListener('pointerdown',e=>{const r=mini.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*E.W,y=(e.clientY-r.top)/r.height*E.H;camX=canvas.clientWidth/2-x*TILE*zoom;camY=canvas.clientHeight/2-y*TILE*zoom;clampCamera();queueDraw();});mini.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();fitWorld();}});
 // Low-resolution territory bitmap: one pixel per world tile. The GPU enlarges it.
 // It is updated only when a territory changes, NOT once per animation frame.
 const TERRAIN_RGB=[[8,10,14],[36,40,48],[25,34,39],[53,55,64],[47,53,54],[65,66,78],[79,81,91]];
@@ -873,7 +873,7 @@ function openSession(){
  $('sessionPause').classList.toggle('hidden',!demo);
  $('sessionPause').textContent=pauseSolo?'Resume game':'Pause';
  $('sessionReconnect').classList.toggle('hidden',host||demo||!state||!/RECONNECT|OFFLINE|DELAY|SYNC/.test($('networkStatus').textContent));
- $('sessionHint').textContent=demo?'Game paused. Leaving saves progress on this device.':host?'You are the host. Leaving ends the match for everyone.':'You can leave and rejoin on this device while the host remains online.';
+ $('sessionHint').textContent=demo?'Paused. Your progress is saved when you leave.':host?'Host: leaving ends the match for everyone.':'Rejoin later on this device using the room code.';
  showAux('sessionPanel');
  if(demo&&!$('sessionPanel').classList.contains('hidden')&&!pauseSolo){pauseSolo=true;menuPausedSolo=true;saveSolo();}
  $('sessionPause').textContent=pauseSolo?'Resume game':'Pause';

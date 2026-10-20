@@ -8,8 +8,8 @@
 <meta content="Brothers Kingdoms — real-time conquest strategy. Play against bots or with friends." name="description"/>
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
-<link rel="stylesheet" href="styles/legacy.css?v=42-hud-only"/>
-<link rel="stylesheet" href="styles/theme.css?v=42-hud-only"/>
+<link rel="stylesheet" href="styles/legacy.css?v=43-match-menu"/>
+<link rel="stylesheet" href="styles/theme.css?v=43-match-menu"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -119,18 +119,20 @@
 </aside>
 </main>
 <div id="sessionPanel" class="session-panel hidden" role="dialog" aria-modal="true" aria-label="Match menu">
-<div class="aux-head"><strong>Match</strong><button id="closeSession" aria-label="Return to game"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button></div>
-<button id="openDevelopment">Overview</button>
-<button id="sessionPause">Pause</button>
-<button id="sessionReconnect" class="hidden">Reconnect</button>
-<div id="mapTools" aria-label="Map and help"><div class="map-toolbar-actions"><button aria-label="Open offensives list" class="action-armies" id="armiesToggle" title="My offensives"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#flag-banner"></use></svg><span id="frontCountBadge">0</span><span class="tool-label">Offensives</span></button>
-<button class="develop-button" id="pauseGame" title="Pause solo match">Pause</button><button aria-label="Game rules" class="square-button" id="helpButton"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#question"></use></svg><span class="tool-label">Help</span></button>
+<div class="aux-head"><strong>Match</strong><button id="closeSession" aria-label="Return to game"><svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button></div>
+<div class="session-action-list">
+<button id="openDevelopment" class="session-action"><svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#chart-bar"></use></svg><span>Overview</span></button>
+<div id="mapTools" aria-label="Match help"><div class="map-toolbar-actions">
+<button aria-label="Open offensives list" class="action-armies" id="armiesToggle" title="My offensives"><svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#flag-banner"></use></svg><span id="frontCountBadge">0</span><span class="tool-label">Offensives</span></button>
+<button class="develop-button" id="pauseGame" title="Pause solo match">Pause</button>
+<button aria-label="Game rules and help" class="square-button session-action" id="helpButton"><svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#question"></use></svg><span class="tool-label">Help</span></button>
 <button aria-label="Zoom out" class="square-button" id="zoomOut" title="Zoom out"><span class="zoom-glyph" aria-hidden="true">−</span><span class="tool-label">Out</span></button>
 <span class="zoom-label" id="zoomText">100%</span>
 <button aria-label="Zoom in" class="square-button" id="zoomIn" title="Zoom in"><span class="zoom-glyph" aria-hidden="true">+</span><span class="tool-label">In</span></button>
-<button aria-label="Full map" class="square-button" id="viewAll" title="Full map"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#map-trifold"></use></svg><span class="tool-label">Full map</span></button>
-<button aria-label="My capital" class="square-button" id="centerMap" title="My capital"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#crown"></use></svg><span class="tool-label">To capital</span></button>
 </div></div>
+<button id="sessionPause" class="hidden">Pause</button>
+<button id="sessionReconnect" class="session-action hidden">Reconnect</button>
+</div>
 <button id="exitMatch">Leave match</button>
 <p id="sessionHint"></p></div>
 <div id="exitPanel" class="session-panel hidden" role="dialog" aria-modal="true" aria-labelledby="exitTitle"><h2 id="exitTitle">Leave match?</h2><p id="exitExplanation"></p><div class="exit-actions"><button id="cancelExit">Stay</button><button id="confirmExit">Leave</button></div></div>
@@ -148,7 +150,7 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="engine.js?v=42-hud-only"></script>
+<script src="engine.js?v=43-match-menu"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=42-hud-only"></script>
+<script src="game.js?v=43-match-menu"></script>
 </body></html>

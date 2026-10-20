@@ -854,3 +854,71 @@ html,body{background:#090c11!important;color:#eef2f8!important}
 html,body,body *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}
 body :is(input,textarea,[contenteditable="true"]){-webkit-user-select:text!important;user-select:text!important;-webkit-touch-callout:default!important}
 #mapCanvas,#minimap,#mapView{-webkit-user-drag:none!important;touch-action:none!important}
+
+/* v43: compact match menu; only Overview, Help and Leave match are presented. */
+#game#game#game #sessionPanel{
+  height:auto!important;min-height:0!important;
+  width:min(400px,calc(100vw - 24px))!important;
+  padding:18px 18px 14px!important;
+  overflow-y:auto!important;
+}
+#game#game#game #sessionPanel .aux-head{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;
+  min-height:44px!important;margin:0 0 10px!important;padding:0 0 10px!important;
+  border-bottom:1px solid #29313f!important;
+}
+#game#game#game #sessionPanel .aux-head>strong{font-size:19px!important;line-height:24px!important;font-weight:750!important;letter-spacing:-.02em!important}
+#game#game#game #sessionPanel #closeSession{
+  display:grid!important;place-items:center!important;width:44px!important;height:44px!important;
+  min-width:44px!important;min-height:44px!important;flex:0 0 44px!important;
+  border:0!important;background:transparent!important;box-shadow:none!important;padding:11px!important;
+}
+#game#game#game #sessionPanel .session-action-list{
+  display:flex!important;flex-direction:column!important;gap:0!important;
+  padding:0!important;margin:0!important;
+}
+#game#game#game #sessionPanel #mapTools{
+  display:block!important;margin:0!important;padding:0!important;
+  background:transparent!important;border:0!important;border-radius:0!important;
+}
+#game#game#game #sessionPanel #mapTools .map-toolbar-actions{
+  display:block!important;margin:0!important;padding:0!important;
+}
+#game#game#game #sessionPanel .session-action-list .session-action,
+#game#game#game #sessionPanel #mapTools #helpButton{
+  display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;
+  width:100%!important;max-width:none!important;height:48px!important;min-height:48px!important;max-height:48px!important;
+  margin:0!important;padding:0 8px!important;box-sizing:border-box!important;
+  gap:12px!important;text-align:left!important;border:0!important;border-radius:8px!important;
+  background:transparent!important;color:#eef2f8!important;box-shadow:none!important;
+  font-size:15px!important;font-weight:650!important;line-height:20px!important;
+}
+#game#game#game #sessionPanel .session-action-list .session-action .ui-icon,
+#game#game#game #sessionPanel #mapTools #helpButton .ui-icon{
+  display:block!important;flex:0 0 22px!important;width:22px!important;height:22px!important;
+  padding:0!important;margin:0!important;color:#a7b2c2!important;
+}
+#game#game#game #sessionPanel #mapTools #helpButton .tool-label{
+  font-size:15px!important;line-height:20px!important;color:#eef2f8!important;text-align:left!important;
+}
+#game#game#game #sessionPanel .session-action-list .session-action:active,
+#game#game#game #sessionPanel #mapTools #helpButton:active{background:#202a38!important}
+#game#game#game #sessionPanel .session-action-list .session-action:focus-visible,
+#game#game#game #sessionPanel #mapTools #helpButton:focus-visible{
+  outline:2px solid #39d5ff!important;outline-offset:-2px!important;
+}
+#game#game#game #sessionPanel #sessionReconnect.hidden{display:none!important}
+#game#game#game #sessionPanel #exitMatch{
+  display:flex!important;align-items:center!important;justify-content:flex-start!important;
+  width:100%!important;height:50px!important;min-height:50px!important;max-height:50px!important;
+  margin:10px 0 0!important;padding:8px!important;
+  border:0!important;border-top:1px solid #353f50!important;border-radius:0!important;
+  background:transparent!important;color:#ff8e9e!important;font-size:15px!important;font-weight:700!important;
+}
+#game#game#game #sessionPanel #sessionHint{
+  margin:4px 8px 0!important;padding:0!important;max-width:100%!important;
+  font-size:11px!important;line-height:1.45!important;color:#9ca9ba!important;
+}
+@media(max-height:480px) and (orientation:landscape){
+  #game#game#game #sessionPanel{bottom:8px!important;max-height:calc(100dvh - 16px)!important}
+}
