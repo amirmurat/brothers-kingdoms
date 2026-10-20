@@ -1126,3 +1126,23 @@ body :is(input,textarea,[contenteditable="true"]){-webkit-user-select:text!impor
  #game#game#game #planGuide{padding:8px!important;gap:5px!important}
  #game#game#game .plan-guide-actions button{height:40px!important;min-height:40px!important;max-height:40px!important}
 }
+
+
+/* v59 — country consent lives inside the existing compact paint sheet. */
+#game#game#game .plan-targets{display:flex;flex-direction:column;gap:6px;min-width:0}
+#game#game#game .plan-targets-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px;letter-spacing:.075em;font-weight:800;color:#becfdf}
+#game#game#game #planTargetsHint{font-size:10px;letter-spacing:0;text-align:right;color:#869eaf;font-weight:500;line-height:1.2}
+#game#game#game .plan-targets-list{display:flex;gap:6px;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;padding:2px 1px 5px;scrollbar-width:thin}
+#game#game#game .plan-target-choice{min-height:37px;display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;max-width:205px;padding:6px 9px!important;border:1px solid #46586b!important;border-radius:9px!important;background:#1e2a38!important;color:#bacbd9!important;font-size:11px!important;font-weight:750!important;line-height:1.1!important}
+#game#game#game .plan-target-choice.chosen{border-color:#72cfe9!important;background:#183d50!important;color:#f3fbff!important}
+#game#game#game .plan-target-choice:focus-visible{outline:2px solid #84eaff;outline-offset:2px}
+#game#game#game .plan-target-choice[disabled]{opacity:.5!important;cursor:not-allowed}
+#game#game#game .plan-target-choice>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#game#game#game .plan-target-choice small{color:#91b3c4;white-space:nowrap;font-size:10px;font-weight:750}
+#game#game#game .plan-target-dot{width:8px;height:8px;border-radius:50%;flex:none}
+#game#game#game .plan-target-empty{font-size:11px;color:#9aabbc}
+@media(max-width:360px){
+ #game#game#game .plan-targets-heading{font-size:9px}
+ #game#game#game #planTargetsHint{font-size:9px}
+ #game#game#game .plan-target-choice{min-height:36px;font-size:10px!important}
+}
