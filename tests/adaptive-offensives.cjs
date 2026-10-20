@@ -13,6 +13,7 @@ function game(){
  return {s,a,b,x,y,i};
 }
 function lose(t){
+ assert(E.action(t.s,t.b,{type:'setNationTarget',target:t.a,enabled:true}).ok);
  const result=E.action(t.s,t.b,{type:'send',x:t.x,y:t.y,zone:[t.i],targets:[t.a],percent:50});
  assert(result.ok,result.error);E.combatStep(t.s);
  assert.equal(t.s.owners[t.i],t.b,'Attacker captured tile');

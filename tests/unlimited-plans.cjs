@@ -15,5 +15,5 @@ const trimmed=E.action(s,id,{type:'erasePlanCells',cells:plan.zoneCells.slice(0,
 assert(trimmed.ok,trimmed.error);
 assert.equal(trimmed.erased,4100);
 assert.equal(plan.zoneCells.length,3500);
-assert.equal(E.BUILD,'v64','Build marker reveals outdated game engine');
+assert.equal(E.BUILD,'v65','Build marker reveals outdated game engine');
 console.log('PASS: 4,200 + 4,600 cells merge into a 7,600-cell plan; 4,100-cell eraser works');

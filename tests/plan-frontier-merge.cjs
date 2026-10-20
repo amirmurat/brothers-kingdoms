@@ -72,12 +72,14 @@ function testMergingAndEraser(){
 function testConsentAndOverlap(){
  const t=setup(),i=E.idx(55,42),j=E.idx(55,43);
  t.s.owners[j]=t.foe;E.person(t.s,t.foe).land++;
+ assert(E.action(t.s,t.id,{type:'setNationTarget',target:t.foe,enabled:true}).ok);
  assert(attack(t,[i,j],[0,t.foe]).ok);
  assert.equal(t.s.wars.length,1);
+ assert(E.action(t.s,t.id,{type:'setNationTarget',target:t.foe,enabled:false}).ok);
  const merged=attack(t,[i,j],[0],30,{excludeTargets:[t.foe]});
  assert(merged.ok,merged.error);
  assert.equal(t.s.attackPlans.length,1);
- assert.deepEqual(t.s.attackPlans[0].targets,[0],'Merge must honor deliberately excluded countries');
+ assert.deepEqual(t.s.attackPlans[0].targets,[0],'Merge must use nation-wide attack preferences');
  assert.equal(E.estimatePlanFront(t.s,t.s.attackPlans[0]).cells,1,'Front must ignore protected enemy tile');
 }
 testFullFront();testNoTroops();testMergingAndEraser();testConsentAndOverlap();

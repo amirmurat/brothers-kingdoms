@@ -41,13 +41,13 @@ function attack(t){
  E.tick(t.s);assert.equal(t.s.attackPlans.length,0,'Fully captured zone retires');
 }
 {
- const t=setup(true);assert(attack(t).ok);
+ const t=setup(true);assert(E.action(t.s,t.id,{type:'setNationTarget',target:t.other,enabled:true}).ok);assert(attack(t).ok);
  assert.equal(t.s.wars.length,1);
  assert(E.action(t.s,t.id,{type:'peace',target:t.other}).ok);
  assert(E.action(t.s,t.other,{type:'peace',target:t.id}).ok);
  assert.equal(t.s.wars.length,0);
  assert.equal(t.s.attackPlans.length,1,'Peace preserves editable zone');
- assert.deepEqual(t.s.attackPlans[0].targets,[],'Peace revokes consent');
+ assert.deepEqual(t.s.attackPlans[0].targets,[0],'Peace leaves neutral territory available');
  assert.equal(t.s.armies.length,0);
  for(let i=0;i<6;i++)E.tick(t.s);
  assert.equal(t.s.armies.length,0,'Peace must prevent automatic renewed war');
@@ -62,33 +62,34 @@ function attack(t){
 {
  const t=setup(true),enemy=E.person(t.s,t.other),first=t.zone[0];
  t.s.owners[first]=0;enemy.land--;
- const order=E.action(t.s,t.id,{type:'send',x:first%E.W,y:(first/E.W)|0,percent:30,zone:t.zone,targets:[0]});
- assert(order.ok,order.error);const plan=t.s.attackPlans[0];
+ const order=attack(t);assert(order.ok,order.error);
+ const plan=t.s.attackPlans[0];
  assert.deepEqual(plan.targets,[0]);
- assert.equal(t.s.wars.length,0,'Excluded rival must not enter war');
- assert.equal(plan.zoneCells.length,2,'Preserve all colors in same painted region');
+ assert.equal(t.s.wars.length,0,'Painting does not declare a new war');
+ assert.equal(plan.zoneCells.length,2);
  assert.equal(t.s.armies[0].targetOwner,0);
- assert(E.action(t.s,t.id,{type:'updatePlan',id:plan.id,targets:[0,t.other],percent:40}).ok);
- assert.equal(t.s.wars.length,1,'Explicit inclusion declares war');
- assert(E.action(t.s,t.id,{type:'updatePlan',id:plan.id,targets:[0],percent:40}).ok);
- if(t.s.armies[0])t.s.armies[0].strength=1;t.player.troops=0;E.tick(t.s);
+ assert(E.action(t.s,t.id,{type:'setNationTarget',target:t.other,enabled:true}).ok);
+ assert.equal(t.s.wars.length,1,'Nations attack action declares war');
+ assert.deepEqual(plan.targets,[0,t.other]);
+ assert(E.action(t.s,t.id,{type:'setNationTarget',target:t.other,enabled:false}).ok);
+ assert.deepEqual(plan.targets,[0]);
+ assert.equal(t.s.wars.length,1,'Stopping attacks does not sign peace');
+ if(t.s.armies[0])t.s.armies[0].strength=1;
+ t.player.troops=0;E.tick(t.s);
  assert.equal(t.s.attackPlans.length,1);
+ t.s.owners[first]=t.other;enemy.land++;
  for(let k=0;k<5;k++)E.tick(t.s);
- assert.equal(t.s.armies.length,0,'No wave without reserves');
- t.s.owners[first]=t.other;enemy.land++;t.player.troops=900;
- for(let k=0;k<5;k++)E.tick(t.s);
- assert.equal(t.s.armies.length,0,'Unselected rival must never be attacked');
- assert.equal(t.s.wars.length,1,'War status is separate from plan permission');
- assert(E.action(t.s,t.id,{type:'updatePlan',id:plan.id,targets:[t.other],percent:40}).ok);
- let started=false;
- for(let k=0;k<3;k++){E.tick(t.s);if(plan.waves>1||t.s.armies.some(a=>a.planId===plan.id&&a.targetOwner===t.other)){started=true;break;}}
- assert(started,'New wave should follow edited permission and current owner');
+ assert.equal(t.s.armies.length,0,'Disabled targets never attacked');
+ assert(E.action(t.s,t.id,{type:'setNationTarget',target:t.other,enabled:true}).ok);
+ t.player.troops=900;let launched=false;
+ for(let k=0;k<8;k++){E.tick(t.s);if(plan.waves>1||t.s.armies.some(a=>a.planId===plan.id&&a.targetOwner===t.other)){launched=true;break;}}
+ assert(launched,'Plan resumes after Nations enables the target');
 }
 {
  const t=setup();assert(attack(t).ok);
  const plan=t.s.attackPlans[0];
- assert(E.action(t.s,t.id,{type:'updatePlan',id:plan.id,targets:[t.id,99999]}).ok);
- assert.deepEqual(t.s.attackPlans[0].targets,[],'Unknown and self targets must not declare war');
- assert.equal(t.s.attackPlans.length,1,'Invalid edit must preserve the plan');
+ assert(E.action(t.s,t.id,{type:'updatePlan',id:plan.id,targets:[99999]}).ok);
+ assert.deepEqual(t.s.attackPlans[0].targets,[0],'Editing geography cannot change global targets');
+ assert.equal(t.s.attackPlans.length,1);
 }
 console.log('PASS: persistent waves, mixed nations, target permission, ownership changes, peace');
