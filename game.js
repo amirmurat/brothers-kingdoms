@@ -285,7 +285,7 @@ function beginAttackPlanner(){
  hideAux();toggleQuickBuild(false);setPreview(null);buildMode=null;redirectArmy=null;selected=null;moveCursor=null;
  $('warPanel').classList.add('hidden');$('warChip').setAttribute('aria-expanded','false');
  clearTimeout(longPressTimer);dragAttack=null;pointerStart=null;pressed.clear();
- attackPlanner={mode:'paint',cells:new Set(),targetOwner:null,pointerId:null,lastPoint:null,brushPoint:null,zoneCells:null};
+ attackPlanner={mode:'paint',cells:new Set(),targetOwner:null,pointerId:null,lastPoint:null,brushPoint:null,zoneCells:null,brushRadius:2};
  $('game').classList.add('plan-drawing');$('game').classList.remove('plan-reviewing');
  $('planGuide').classList.remove('hidden');$('planReview').classList.add('hidden');
  $('planAttackButton').setAttribute('aria-pressed','true');
@@ -294,8 +294,9 @@ function beginAttackPlanner(){
 // A brush paints cross-shaped five-tile stamps, keeping exactly one target owner.
 function brushAt(pt){
  const plan=attackPlanner;if(plan?.mode!=='paint')return;
- for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
-  if(dx*dx+dy*dy>1)continue;
+ const radius=plan.brushRadius;
+ for(let dy=-radius;dy<=radius;dy++)for(let dx=-radius;dx<=radius;dx++){
+  if(dx*dx+dy*dy>radius*radius)continue;
   const x=pt.x+dx,y=pt.y+dy;if(!E.inside(x,y)||!E.tile(state,x,y))continue;
   const owner=E.owner(state,x,y);if(owner===myId||mine()?.allies.includes(owner))continue;
   if(plan.targetOwner===null)plan.targetOwner=owner;
@@ -346,8 +347,10 @@ function refreshPaintGuide(){
  const check=checkPaintZone(plan),count=plan.cells.size;
  $('planPaintCount').textContent=number(count)+' cells';
  $('planPaintClear').disabled=count===0;
- $('planReviewButton').disabled=!!check.error;
- $('planGuideHint').textContent=check.error||'Zone ready. Add more paint or review the attack.';
+ $('planReviewButton').disabled=!!check.error||Math.floor((mine()?.troops||0)*percent/100)<35||(state.armies||[]).filter(a=>a.owner===myId).length>=12;
+ $('planBrushValue').textContent=String(plan.brushRadius)+' tiles';
+ $('planTroopsValue').textContent=percent+'% · '+number(Math.floor((mine()?.troops||0)*percent/100));
+ $('planGuideHint').textContent=check.error||'Ready to start the offensive.';
 }
 function clearPaintedZone(){
  const plan=attackPlanner;if(plan?.mode!=='paint')return;
@@ -355,15 +358,13 @@ function clearPaintedZone(){
  refreshPaintGuide();queueDraw();
 }
 function reviewPaintedZone(){
- const plan=attackPlanner;if(plan?.mode!=='paint')return;
+ const plan=attackPlanner;if(plan?.mode!=='paint'||plan.pointerId!==null)return;
  const check=checkPaintZone(plan);
  if(check.error){refreshPaintGuide();toast(check.error,'error');return;}
- plan.mode='review';plan.zoneCells=check.cells;
- const start=check.border[(check.border.length/2)|0];plan.x=start%E.W;plan.y=(start/E.W)|0;
- plan.brushPoint=null;plan.lastPoint=null;
- $('game').classList.remove('plan-drawing');$('game').classList.add('plan-reviewing');
- $('planGuide').classList.add('hidden');$('planReview').classList.remove('hidden');
- refreshPlanReview();queueDraw();
+ if(Math.floor((mine()?.troops||0)*percent/100)<35)return toast('At least 35 troops required.','error');
+ if((state.armies||[]).filter(a=>a.owner===myId).length>=12)return toast('Maximum 12 offensives.','error');
+ const start=check.border[(check.border.length/2)|0];
+ if(command({type:'send',x:start%E.W,y:(start/E.W)|0,percent,zone:check.cells}))resetAttackPlanner();
 }
 function editPaintedZone(){
  const plan=attackPlanner;if(plan?.mode!=='review')return;
@@ -421,7 +422,7 @@ function drawAttackPlanning(){
  }
  const brush=attackPlanner?.mode==='paint'&&attackPlanner.brushPoint;
  if(brush&&E.inside(brush.x,brush.y)){
-  ctx.save();ctx.beginPath();ctx.arc((brush.x+.5)*T,(brush.y+.5)*T,T*1.15,0,Math.PI*2);
+  ctx.save();ctx.beginPath();ctx.arc((brush.x+.5)*T,(brush.y+.5)*T,T*(attackPlanner.brushRadius+.5),0,Math.PI*2);
   ctx.fillStyle='rgba(103,223,255,.12)';ctx.strokeStyle='#b1f1ff';ctx.lineWidth=Math.max(1,1.6/zoom);
   ctx.fill();ctx.stroke();ctx.restore();
  }
@@ -671,6 +672,8 @@ $('planReviewClose').onclick=editPaintedZone;
 $('planDiscard').onclick=editPaintedZone;
 $('planPaintClear').onclick=clearPaintedZone;
 $('planReviewButton').onclick=reviewPaintedZone;
+$('planBrushSize').oninput=e=>{if(!attackPlanner)return;attackPlanner.brushRadius=Number(e.target.value)||2;refreshPaintGuide();queueDraw();};
+$('planTroopsPercent').oninput=e=>{percent=Number(e.target.value)||30;$('attackPercent').value=percent;$('percentLabel').textContent=percent+'%';refreshPaintGuide();};
 document.querySelectorAll('[data-plan-percent]').forEach(btn=>btn.onclick=()=>{
  percent=Number(btn.dataset.planPercent);$('attackPercent').value=percent;$('percentLabel').textContent=percent+'%';refreshPlanReview();
 });
@@ -773,8 +776,9 @@ function selectMap(clientX,clientY){
  if(clickedOwner!==myId){
   if(!E.tile(state,p.x,p.y))return toast('You cannot conquer the sea. Choose land.');
   selected=null;contextual(null);
-  if(target?.type==='send'&&target.x===p.x&&target.y===p.y)return;
-  setPreview({type:'send',x:p.x,y:p.y,valid:true});return;
+  const opponent=E.person(state,clickedOwner);
+  if(opponent&&!opponent.bot)setPreview({type:'send',x:p.x,y:p.y,valid:true});else setPreview(null);
+  return;
  }
  const a=nearestObject(pt.x,pt.y,'army');
  if(a?.owner===myId){selected={kind:'army',id:a.id};updateSelection();setPreview(null);return;}
@@ -799,7 +803,7 @@ function onPointerDown(e){
  if(pressed.size===1){
   pointerStart={x:e.clientX,y:e.clientY,camX,camY,moved:false};gesture=null;
   const at=gridAt(e.clientX,e.clientY);
-  if(e.pointerType==='touch'&&state.phase==='playing'&&!buildMode&&E.inside(at.x,at.y)&&E.owner(state,at.x,at.y)===myId){
+  if(false&&e.pointerType==='touch'&&state.phase==='playing'&&!buildMode&&E.inside(at.x,at.y)&&E.owner(state,at.x,at.y)===myId){
    longPressTimer=setTimeout(()=>{
     if(pressed.size!==1||!pointerStart||pointerStart.moved)return;
     dragAttack={from:at,to:at};pointerStart=null;
@@ -851,7 +855,7 @@ function onPointerUp(e){
   return;
  }
  clearTimeout(longPressTimer);
- const drag=dragAttack,was=pointerStart,touch=pressed.size;
+ const drag=null,was=pointerStart,touch=pressed.size;
  pressed.delete(e.pointerId);dragAttack=null;
  if(drag){
   const pos=gridAt(e.clientX,e.clientY);
@@ -1018,7 +1022,7 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   const b=state.buildings.find(v=>v.id===selected.id);
   if(b?.kind==='fort')drawFortRange(b.x,b.y,false);
  }
- if(target||dragAttack){
+ if(target?.type==='redirect'){
   const to=dragAttack?.to||target;
   const actual=E.previewFront(state,myId,to.x,to.y);
   if(actual.cells.length){
