@@ -8,8 +8,8 @@
 <meta content="Brothers Kingdoms — стратегия за территорию в реальном времени. Играй с братьями или против ботов." name="description"/>
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
-<link rel="stylesheet" href="styles/legacy.css?v=36-front"/>
-<link rel="stylesheet" href="styles/theme.css?v=36-front"/>
+<link rel="stylesheet" href="styles/legacy.css?v=37-hud"/>
+<link rel="stylesheet" href="styles/theme.css?v=37-hud"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -120,7 +120,7 @@
 </main>
 <div id="sessionPanel" class="session-panel hidden" role="dialog" aria-modal="true" aria-label="Меню матча">
 <div class="aux-head"><strong>Матч</strong><button id="closeSession" aria-label="Вернуться к игре"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button></div>
-<button id="openDevelopment">Обзор королевства</button>
+<button id="openDevelopment">Обзор</button>
 <button id="sessionPause">Пауза</button>
 <button id="sessionReconnect" class="hidden">Восстановить соединение</button>
 <div id="mapTools" aria-label="Карта и помощь"><div class="map-toolbar-actions"><button aria-label="Открыть список походов" class="action-armies" id="armiesToggle" title="Мои походы"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#flag-banner"></use></svg><span id="frontCountBadge">0</span><span class="tool-label">Походы</span></button>
@@ -129,7 +129,7 @@
 <span class="zoom-label" id="zoomText">100%</span>
 <button aria-label="Увеличить" class="square-button" id="zoomIn" title="Увеличить"><span class="zoom-glyph" aria-hidden="true">+</span><span class="tool-label">Больше</span></button>
 <button aria-label="Вся карта" class="square-button" id="viewAll" title="Вся карта"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#map-trifold"></use></svg><span class="tool-label">Вся карта</span></button>
-<button aria-label="Моя столица" class="square-button" id="centerMap" title="Моя столица"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#crown"></use></svg><span class="tool-label">Столица</span></button>
+<button aria-label="Моя столица" class="square-button" id="centerMap" title="Моя столица"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#crown"></use></svg><span class="tool-label">К столице</span></button>
 </div></div>
 <button id="exitMatch">Выйти из матча</button>
 <p id="sessionHint"></p></div>
@@ -150,7 +150,7 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="engine.js?v=36-front"></script>
+<script src="engine.js?v=37-hud"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=36-front"></script>
+<script src="game.js?v=37-hud"></script>
 </body></html>

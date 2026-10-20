@@ -49,6 +49,7 @@ function resourceStrip(p){const {gross,recruited,foodNet}=resourceRates(p);retur
 
 const costText=c=>Object.entries(c||{}).map(([k,v])=>({wood:'Древесина',stone:'Камень',gold:'Золото',food:'Еда'}[k]||k)+' '+v).join(' · ');
 const number=n=>Math.floor(n||0).toLocaleString('ru-RU');
+const hudNumber=n=>{const value=Math.floor(Number(n)||0);return Math.abs(value)<10000?number(value):(Math.trunc(value/100)/10).toLocaleString('ru-RU')+'к';};
 let dragAttack=null,longPressTimer=null,dragHint=null;
 let defeatDismissed=false,menuPausedSolo=false;
 let state=null,myId=null,host=false,demo=false,peer=null,upstream=null,code='',connections=new Map(),lastSendTime=new Map(),phaseShown='',timer=0;
@@ -389,7 +390,7 @@ function updateUI(){const p=mine();if(!p)return;
  for(const r of ['food','wood','stone','gold']){
   const suffix=r[0].toUpperCase()+r.slice(1),amount=Math.floor(p.res[r]||0);
   const rate=r==='food'?foodNet:Math.floor(gross[r]||0);
-  $('res'+suffix).textContent=number(amount);
+  $('res'+suffix).textContent=hudNumber(amount);
   const rateNode=$('inc'+suffix),item=rateNode.closest('[data-resource]');
   setRate(rateNode,rate);
   rateNode.classList.toggle('resource-negative',rate<0);
@@ -398,7 +399,7 @@ function updateUI(){const p=mine();if(!p)return;
  }
 
  updateIncomingAttack(p);
- $('troopCount').textContent=number(p.troops);$('troopCap').textContent='/ '+number(p.troopCap);setRate($('troopGrowth'),p.troopIncome||0);updateHudSignals(p);$('myKingdom').textContent=p.name+(p.eliminated?' · РАЗГРОМ':'');$('myKingdom').title=p.name;$('myKingdom').style.color=p.color;
+ $('troopCount').textContent=hudNumber(p.troops);$('troopCount').title=number(p.troops);$('troopCap').textContent='/ '+hudNumber(p.troopCap);$('troopCap').title=number(p.troopCap);setRate($('troopGrowth'),p.troopIncome||0);updateHudSignals(p);$('myKingdom').textContent=p.name+(p.eliminated?' · РАЗГРОМ':'');$('myKingdom').title=p.name;$('myKingdom').style.color=p.color;
  const sent=Math.floor(p.troops*percent/100);$('sendingTroops').textContent=number(sent);$('remainingTroops').textContent=number(p.troops-sent);$('activeArmies').textContent=state.armies.filter(a=>a.owner===myId).length+'/12';$('dockSummary').textContent=percent+'%';if(target)setPreview(target);const frontNum=state.armies.filter(a=>a.owner===myId).length;$('frontCountBadge').textContent=String(frontNum);$('frontCountBadge').classList.toggle('hidden',frontNum===0);$('armiesToggle').setAttribute('aria-label',`Мои походы: ${frontNum}`);$('armiesToggle').classList.toggle('has-fronts',state.armies.some(a=>a.owner===myId));renderArmies();
  const top=[...state.players].filter(p=>p.land>0).sort((a,b)=>b.land-a.land);
  patchHtml('quickLeadersList',top.slice(0,6).map(v=>'<div class="quick-row"><span style="background:'+v.color+'"></span><b>'+esc(v.name)+'</b><small>'+number(v.land)+' клеток</small></div>').join(''));

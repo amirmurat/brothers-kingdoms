@@ -730,17 +730,50 @@ html,body{background:#090c11!important;color:#eef2f8!important}
 :is(#game#game#game,#waiting#waiting#waiting) :is(.square-button,.icon-close,#closeSession,#closeContext,#closeArmies,#closeQuickLeaders)>.ui-icon{width:22px!important;height:22px!important;margin:0!important}
 #game#game#game :is(.building-art,#placingBuildIcon){object-fit:contain!important;image-rendering:auto!important}
 
-/* v36: metric identity is separate from the sign of its change. */
-#game#game#game .topbar .top-stat{border-radius:8px!important;border-right:0!important;margin-right:4px!important}
-#game#game#game #hudTroops{background:#172b3b!important;color:#8cdaff!important}
-#game#game#game .topbar .land-stat{background:#172f26!important;color:#a8e8bb!important}
-#game#game#game #hudFronts{background:#29213d!important;color:#d1b8ff!important}
-#game#game#game .topbar .top-stat>:is(span,b){color:inherit!important}
-#game#game#game #resourceSummary [data-resource="food"]{background:#27301b!important;color:#d4eaa0!important}
-#game#game#game #resourceSummary [data-resource="wood"]{background:#192f29!important;color:#a4dfc0!important}
-#game#game#game #resourceSummary [data-resource="stone"]{background:#252c3a!important;color:#becde9!important}
-#game#game#game #resourceSummary [data-resource="gold"]{background:#342c18!important;color:#f3d38b!important}
-#game#game#game #resourceSummary [data-resource]>:is(svg,span,b){color:inherit!important}
 #game#game#game #resourceSummary [data-trend="positive"],#game#game#game #hudTroops #troopGrowth[data-trend="positive"]{color:#8ee5a1!important}
 #game#game#game #resourceSummary [data-trend="negative"],#game#game#game #hudTroops #troopGrowth[data-trend="negative"]{color:#ff8e9e!important}
 #game#game#game #resourceSummary [data-trend="neutral"],#game#game#game #hudTroops #troopGrowth[data-trend="neutral"]{color:#bec7d5!important}
+
+/* v37: a single quiet HUD surface; only resource icons and signed rates carry color. */
+#game#game#game .topbar{height:60px!important;min-height:60px!important;padding:4px 10px!important;background:#11161e!important;border:0!important;gap:4px!important}
+#game#game#game .topbar .top-stat{grid-template-rows:10px 22px 12px!important;gap:2px!important;padding:0 5px!important;margin:0!important;border:0!important;border-radius:0!important;background:transparent!important;color:#eef2f8!important}
+#game#game#game .topbar .top-stat>span{height:10px!important;line-height:10px!important;font-size:9px!important;font-weight:600!important;letter-spacing:.05em!important;color:#a7b2c2!important}
+#game#game#game .topbar .top-stat>b{height:22px!important;line-height:22px!important;font-size:21px!important;font-weight:750!important;color:#eef2f8!important}
+#game#game#game #hudTroops .stat-meta{height:12px!important;gap:5px!important}
+#game#game#game #hudTroops :is(#troopGrowth,#troopCap){height:12px!important;line-height:12px!important;font-size:9px!important}
+#game#game#game .topbar #menuToggle{border:0!important;border-radius:8px!important;background:transparent!important;display:grid!important;place-items:center!important;padding:10px!important;color:#eef2f8!important}
+#game#game#game #resourceSummary.resource-hud{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:0!important;height:58px!important;min-height:58px!important;flex:0 0 58px!important;padding:0 10px 4px!important;box-sizing:border-box!important;background:#11161e!important;border:0!important;border-bottom:1px solid #29313f!important}
+#game#game#game #resourceSummary.resource-hud>div{display:grid!important;grid-template-columns:16px minmax(0,1fr)!important;grid-template-rows:14px 20px 14px!important;column-gap:4px!important;row-gap:0!important;align-content:center!important;align-items:center!important;justify-items:center!important;min-width:0!important;padding:2px 4px!important;border:0!important;border-radius:0!important;background:transparent!important;color:#eef2f8!important;box-sizing:border-box!important}
+#game#game#game #resourceSummary.resource-hud .res-icon{grid-column:1!important;grid-row:1!important;justify-self:center!important;width:14px!important;height:14px!important;margin:0!important}
+#game#game#game #resourceSummary.resource-hud span{grid-column:2!important;grid-row:1!important;justify-self:start!important;font-size:9px!important;line-height:14px!important;letter-spacing:.02em!important;color:#a7b2c2!important}
+#game#game#game #resourceSummary.resource-hud b{grid-column:1/-1!important;grid-row:2!important;font-size:18px!important;line-height:20px!important;font-weight:700!important;color:#eef2f8!important;font-variant-numeric:tabular-nums!important}
+#game#game#game #resourceSummary.resource-hud small{grid-column:1/-1!important;grid-row:3!important;font-size:10px!important;line-height:14px!important;font-weight:600!important;font-variant-numeric:tabular-nums!important}
+#game#game#game #resourceSummary [data-resource="food"] .res-icon{color:#c8df8e!important}
+#game#game#game #resourceSummary [data-resource="wood"] .res-icon{color:#85cda9!important}
+#game#game#game #resourceSummary [data-resource="stone"] .res-icon{color:#aebfda!important}
+#game#game#game #resourceSummary [data-resource="gold"] .res-icon{color:#e9c56e!important}
+#game#game#game #sessionPanel>button{height:48px!important;min-height:48px!important;margin:0!important;padding:12px 4px!important;text-align:left!important;border:0!important;border-radius:0!important;background:transparent!important;font-size:15px!important;box-sizing:border-box!important}
+#game#game#game #mapTools{margin:0!important;padding:0!important}
+#game#game#game #mapTools .map-toolbar-actions{display:flex!important;flex-direction:column!important;gap:0!important;padding:0!important}
+#game#game#game #mapTools .map-toolbar-actions button{flex-direction:row!important;justify-content:flex-start!important;gap:12px!important;padding:12px 4px!important;height:48px!important;min-height:48px!important;max-height:48px!important;border:0!important;border-radius:0!important;background:transparent!important;font-size:15px!important}
+#game#game#game #mapTools .tool-label{font-size:15px!important;line-height:20px!important;text-align:left!important}
+#game#game#game #mapTools .ui-icon{width:20px!important;height:20px!important;flex:0 0 20px!important;color:#a7b2c2!important}
+#game#game#game #sessionPanel #exitMatch{margin-top:8px!important;border-top:1px solid #353f50!important;padding-top:16px!important;height:56px!important;color:#ff8e9e!important}
+#game#game#game #sessionPanel #sessionHint{margin:12px 0 0!important;font-size:11px!important}
+#game#game#game #sessionPanel #closeSession{border:0!important;background:transparent!important}
+@media(max-width:360px){
+ #game#game#game .topbar{padding-left:6px!important;padding-right:6px!important}
+ #game#game#game .topbar .top-stat>b{font-size:19px!important}
+ #game#game#game #resourceSummary.resource-hud{padding-left:6px!important;padding-right:6px!important}
+ #game#game#game #resourceSummary.resource-hud span{font-size:8px!important}
+ #game#game#game #resourceSummary.resource-hud b{font-size:17px!important}
+}
+@media(max-height:480px) and (orientation:landscape){
+ #game#game#game .topbar{height:54px!important;min-height:54px!important;padding-top:1px!important;padding-bottom:1px!important}
+ #game#game#game #resourceSummary.resource-hud{height:50px!important;min-height:50px!important;flex-basis:50px!important;padding-bottom:0!important}
+ #game#game#game #resourceSummary.resource-hud>div{padding-top:0!important;padding-bottom:0!important;grid-template-rows:12px 20px 14px!important}
+}
+#game#game#game #sessionPanel #sessionPause{display:none!important}
+#game#game#game #resourceSummary.resource-hud small[data-trend="positive"]{color:#8ee5a1!important}
+#game#game#game #resourceSummary.resource-hud small[data-trend="negative"]{color:#ff8e9e!important}
+#game#game#game #resourceSummary.resource-hud small[data-trend="neutral"]{color:#bec7d5!important}
