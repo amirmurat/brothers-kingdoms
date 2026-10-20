@@ -286,25 +286,35 @@ function beginAttackPlanner(existing=null){
  hideAux();toggleQuickBuild(false);setPreview(null);buildMode=null;redirectArmy=null;selected=null;moveCursor=null;
  $('warPanel').classList.add('hidden');$('warChip').setAttribute('aria-expanded','false');
  pointerStart=null;gesture=null;pressed.clear();
- attackPlanner={mode:'paint',cells:new Set(existing?.zoneCells||[]),targets:new Set(existing?.targets??(existing?[existing.targetOwner]:[0])),editId:existing?.id||null,optionsKey:'',pointerId:null,lastPoint:null,brushPoint:null,zoneCells:null,brushRadius:2,touchLocked:false,strokeStart:null,strokeOrigin:null};
+ attackPlanner={mode:'paint',cells:new Set(existing?.zoneCells||[]),targets:new Set(existing?.targets??(existing?[existing.targetOwner]:[0])),editId:existing?.id||null,optionsKey:'',pointerId:null,lastPoint:null,brushPoint:null,zoneCells:null,brushRadius:2,tool:'paint',removedTargets:new Set(),originalCells:new Set(existing?.zoneCells||[]),touchLocked:false,strokeStart:null,strokeOrigin:null};
  if(existing){percent=existing.percent;$('attackPercent').value=String(percent);$('percentLabel').textContent=percent+'%';}
  $('planTroopsPercent').value=String(percent);$('planBrushSize').value='2';
  $('game').classList.add('plan-drawing');$('game').classList.remove('plan-reviewing');
  $('planGuide').classList.remove('hidden');$('planReview').classList.add('hidden');
  $('planAttackButton').setAttribute('aria-pressed','true');
- $('planReviewButton').textContent=existing?'Save plan':'Start offensive';
+ $('planReviewButton').textContent=existing?'Save changes':'Start offensive';
+ $('planPaintClear').textContent=existing?'Reset':'Clear';
+ setPaintTool('paint');
  $('planHeading').textContent=existing?'EDIT OFFENSIVE PLAN':'PAINT ATTACK ZONE';
  $('mapHint').classList.add('hidden');refreshPaintGuide();queueDraw();
 }
 // A brush paints cross-shaped five-tile stamps, keeping exactly one target owner.
+function setPaintTool(tool){
+ const plan=attackPlanner;if(!plan)return;plan.tool=tool;
+ $('planToolPaint').setAttribute('aria-pressed',String(tool==='paint'));
+ $('planToolErase').setAttribute('aria-pressed',String(tool==='erase'));
+ $('planToolPaint').classList.toggle('chosen',tool==='paint');$('planToolErase').classList.toggle('chosen',tool==='erase');queueDraw();
+}
 function brushAt(pt){
  const plan=attackPlanner;if(plan?.mode!=='paint')return;
  const radius=plan.brushRadius;
  for(let dy=-radius;dy<=radius;dy++)for(let dx=-radius;dx<=radius;dx++){
   if(dx*dx+dy*dy>radius*radius)continue;
   const x=pt.x+dx,y=pt.y+dy;if(!E.inside(x,y)||!E.tile(state,x,y))continue;
+  const cell=y*E.W+x;
+  if(plan.tool==='erase'){plan.cells.delete(cell);continue;}
   if(E.owner(state,x,y)===myId||plan.cells.size>=3500)continue;
-  plan.cells.add(y*E.W+x);
+  plan.cells.add(cell);
  }
 }
 // Interpolate missing pointer events so quick drags stay continuous.
@@ -325,12 +335,17 @@ function paintAtPointer(pt){
 function checkPaintZone(plan){
  if(!plan?.cells?.size)return {error:'Paint land to begin.'};
  const cells=[...plan.cells].sort((a,b)=>a-b);
- if(cells.length<2)return {error:'Paint at least two cells.'};
+ if(cells.length<(plan.editId?1:2))return {error:plan.editId?'Keep one cell or cancel from Offensives.':'Paint at least two cells.'};
  if(cells.length>3500)return {error:'Maximum 3,500 cells.'};
  if(cells.some(i=>!Number.isInteger(i)||i<0||i>=E.W*E.H||!state.tiles[i]))return {error:'Only land can be planned.'};
  return {cells};
 }
+function overlappingPlans(plan){
+ return (state.attackPlans||[]).filter(p=>p.owner===myId&&p.id!==plan.editId&&p.zoneCells.some(i=>plan.cells.has(i)));
+}
 function refreshPaintTargets(plan){
+ const joined=overlappingPlans(plan);
+ for(const old of joined)for(const target of old.targets??[old.targetOwner])if(!plan.removedTargets.has(target))plan.targets.add(target);
  const touched=new Set([...plan.cells].map(i=>state.owners[i]).filter(id=>id!==myId));
  for(const id of plan.targets)touched.add(id);
  const owners=[...touched].filter(id=>id===0||E.person(state,id)).sort((a,b)=>a-b);
@@ -353,18 +368,23 @@ function refreshPaintGuide(){
  const selected=[...plan.targets].filter(t=>t===0||E.person(state,t)&&!mine()?.allies.includes(t));
  const allowed=[...plan.cells].filter(i=>selected.includes(state.owners[i]));
  const blocked=[...plan.cells].filter(i=>state.owners[i]!==myId&&!selected.includes(state.owners[i]));
- const sent=Math.floor((mine()?.troops||0)*percent/100),slotLimit=(state.attackPlans||[]).filter(p=>p.owner===myId).length>=12;
- $('planPaintCount').textContent=number(count)+' cells';$('planPaintClear').disabled=count===0||pressed.size>0;
- $('planReviewButton').disabled=!!checked.error||pressed.size>0||!selected.length||(!plan.editId&&(sent<35||slotLimit||!allowed.length));
+ const sent=Math.floor((mine()?.troops||0)*percent/100),overlap=overlappingPlans(plan).length;
+ const slotLimit=(state.attackPlans||[]).filter(p=>p.owner===myId).length>=12;
+ $('planPaintCount').textContent=number(count)+' cells';$('planPaintClear').disabled=pressed.size>0||(!plan.editId&&!count);
+ $('planReviewButton').disabled=!!checked.error||pressed.size>0||!selected.length||(!plan.editId&&!overlap&&!allowed.length)||(!plan.editId&&!overlap&&slotLimit);
  $('planBrushValue').textContent=String(plan.brushRadius)+' tiles';
  $('planTroopsValue').textContent=percent+'% · '+number(sent);
  $('planGuideHint').textContent=checked.error||(!selected.length?'Choose a country or Neutral land':
+  overlap?'Merges with '+overlap+' existing plan'+(overlap!==1?'s':'')+' on Start':
   blocked.length?number(blocked.length)+' protected cells skipped · '+number(allowed.length)+' permitted':
-  plan.editId?'Adjust the zone or targets, then save':'Ready · only permitted territories will be attacked');
+  plan.editId?'Erase individual cells or select opponents, then save':
+  sent<35?'Plan will wait until enough troops cover the entire frontier.':
+  'Only permitted territories will be attacked');
 }
 function clearPaintedZone(){
  const plan=attackPlanner;if(plan?.mode!=='paint'||pressed.size>0)return;
- plan.cells.clear();plan.lastPoint=null;plan.brushPoint=null;plan.zoneCells=null;plan.optionsKey='';
+ if(plan.editId)plan.cells=new Set(plan.originalCells);else plan.cells.clear();
+ plan.lastPoint=null;plan.brushPoint=null;plan.zoneCells=null;plan.optionsKey='';
  refreshPaintGuide();queueDraw();
 }
 function reviewPaintedZone(){
@@ -375,8 +395,8 @@ function reviewPaintedZone(){
  const foreign=checked.cells.find(i=>state.owners[i]!==myId);
  if(!plan.editId&&foreign===undefined){toast('Choose foreign territory.','error');return;}
  const order=plan.editId?
-  {type:'updatePlan',id:plan.editId,zone:checked.cells,targets,percent}:
-  {type:'send',x:foreign%E.W,y:(foreign/E.W)|0,zone:checked.cells,targets,percent};
+  {type:'updatePlan',id:plan.editId,zone:checked.cells,targets,excludeTargets:[...plan.removedTargets],percent}:
+  {type:'send',x:foreign%E.W,y:(foreign/E.W)|0,zone:checked.cells,targets,excludeTargets:[...plan.removedTargets],percent};
  if(command(order)){resetAttackPlanner();toast(plan.editId?'Offensive plan updated':'Offensive plan created');}
 }
 function editPaintedZone(){
@@ -447,7 +467,8 @@ function drawAttackPlanning(){
  const brush=attackPlanner?.mode==='paint'&&attackPlanner.brushPoint;
  if(brush&&E.inside(brush.x,brush.y)){
   ctx.save();ctx.beginPath();ctx.arc((brush.x+.5)*T,(brush.y+.5)*T,T*(attackPlanner.brushRadius+.5),0,Math.PI*2);
-  ctx.fillStyle='rgba(103,223,255,.12)';ctx.strokeStyle='#b1f1ff';ctx.lineWidth=Math.max(1,1.6/zoom);
+  ctx.fillStyle=attackPlanner.tool==='erase'?'rgba(255,155,114,.15)':'rgba(103,223,255,.12)';
+  ctx.strokeStyle=attackPlanner.tool==='erase'?'#ffab87':'#b1f1ff';ctx.lineWidth=Math.max(1,1.6/zoom);
   ctx.fill();ctx.stroke();ctx.restore();
  }
 }
@@ -698,12 +719,14 @@ $('planGuideExit').onclick=resetAttackPlanner;
 $('planReviewClose').onclick=editPaintedZone;
 $('planDiscard').onclick=editPaintedZone;
 $('planPaintClear').onclick=clearPaintedZone;
+$('planToolPaint').onclick=()=>setPaintTool('paint');
+$('planToolErase').onclick=()=>setPaintTool('erase');
 $('planReviewButton').onclick=reviewPaintedZone;
 $('planTargetOptions').onclick=e=>{
  const btn=e.target.closest('[data-plan-country]'),plan=attackPlanner;
  if(!btn||btn.disabled||!plan)return;
  const id=Number(btn.dataset.planCountry);
- if(plan.targets.has(id))plan.targets.delete(id);else plan.targets.add(id);
+ if(plan.targets.has(id)){plan.targets.delete(id);plan.removedTargets.add(id);}else{plan.targets.add(id);plan.removedTargets.delete(id);}
  plan.optionsKey='';refreshPaintGuide();queueDraw();
 };
 $('planBrushSize').oninput=e=>{if(!attackPlanner)return;attackPlanner.brushRadius=Number(e.target.value)||2;refreshPaintGuide();queueDraw();};
@@ -770,7 +793,9 @@ function renderArmies(){
   const left=p.zoneCells.filter(i=>state.tiles[i]&&state.owners[i]!==myId).length;
   const choices=p.targets??[p.targetOwner],label=choices.length?choices.map(id=>esc(E.person(state,id)?.name||'Neutral land')).join(', '):'Choose targets';
   const capturable=p.zoneCells.some(i=>state.tiles[i]&&state.owners[i]!==myId&&choices.includes(state.owners[i]));
-  const status=active?'Wave '+number(p.waves)+' advancing · '+number(active.strength)+' troops':
+  const estimate=E.estimatePlanFront(state,p),reserve=Math.ceil(Math.max(35,estimate.required)*100/Math.max(5,p.percent));
+  const status=active?'Wave '+number(p.waves)+' · '+number(active.strength)+' troops · '+estimate.cells+' frontier cells':
+   estimate.cells&&reserve>mine().troops?'Waiting for '+number(reserve)+' reserve troops · full-front expansion':
    !choices.length||!capturable?'Waiting for permissions · edit targets':'Waiting for route / troops';
   return `<div class="army-line"><div><strong>${label} <small>· ${number(left)} cells left</small></strong>
    <small>${status}</small><small class="army-stats">Plan persists until captured or cancelled · ${p.percent}% per wave</small></div>
