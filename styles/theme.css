@@ -743,7 +743,7 @@ html,body{background:#090c11!important;color:#eef2f8!important}
 #game#game#game #mapTools :is(#armiesToggle,#pauseGame,#zoomIn,#zoomOut,#zoomText){display:none!important}
 #game#game#game.is-targeting #gameActionBar,#game#game#game .map-view.build-palette-open #gameActionBar,#game#game#game .map-view:has(.placing-build:not(.hidden)) #gameActionBar{display:none!important}
 /* A compound control owns one surface; its inner label/action is not another card. */
-#game#game#game #gameFeedback :is(#hudAlert,#gameToast){border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;margin:0!important;padding:0 4px!important;min-width:0!important;width:100%!important;box-sizing:border-box!important}
+#game#game#game #gameFeedback :is(#hudAlert,#gameToast){border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;margin:0!important;padding:0 4px!important;min-width:0!important;width:auto!important;max-width:100%!important;box-sizing:border-box!important}
 #lobby#lobby#lobby .start-choice .choice-symbol{border:0!important;background:transparent!important;box-shadow:none!important}
 #lobby#lobby#lobby .start-settings>summary,#waiting#waiting#waiting :is(.room-settings,.room-rules)>summary{border:0!important;background:transparent!important;box-shadow:none!important;border-radius:0!important}
 #waiting#waiting#waiting .room-invite{border:0!important;background:transparent!important;padding:0!important;box-shadow:none!important}
