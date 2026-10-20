@@ -169,12 +169,89 @@ function takeCapital(s,attacker,defender){
  p.troops-=lost;
  log(s,'Capital '+p.name+' captured! The remaining territory still resists.');
 }
+
+function parseTargets(s,id,values){
+ if(!Array.isArray(values))return [];
+ const p=person(s,id),targets=new Set();
+ for(const v of values){
+  if(!Number.isInteger(v)||v===id)continue;
+  if(v===0){targets.add(0);continue;}
+  const rival=person(s,v);
+  if(alive(rival)&&!p.allies.includes(v))targets.add(v);
+ }
+ return [...targets];
+}
+function validatePaintedRegion(s,request){
+ if(!Array.isArray(request)||request.length<2||request.length>3500)return {error:'Paint at least 2 and at most 3,500 land cells.'};
+ const cells=new Set();
+ for(const i of request){
+  if(!Number.isInteger(i)||i<0||i>=W*H||!s.tiles[i])return {error:'Only land cells can be planned.'};
+  cells.add(i);
+ }
+ if(cells.size<2)return {error:'Paint a larger area.'};
+ return {cells:[...cells].sort((a,b)=>a-b)};
+}
+function declareApprovedWars(s,id,targets){
+ s.wars??=[];s.peaceOffers??=[];
+ for(const target of targets){
+  if(!target)continue;
+  const key=warKey(id,target);
+  if(s.wars.includes(key))continue;
+  s.wars.push(key);
+  s.peaceOffers=s.peaceOffers.filter(o=>warKey(o.from,o.to)!==key);
+  log(s,person(s,id).name+' declared war on '+person(s,target)?.name);
+ }
+}
+function createPaintedPlan(s,id,a,percent){
+ const p=person(s,id);
+ const result=validatePaintedRegion(s,a.zone);
+ if(result.error)return {ok:false,error:result.error};
+ const remaining=result.cells.filter(i=>!(s.attackPlans||[]).some(plan=>plan.owner===id&&plan.zoneCells.includes(i)));
+ if(remaining.length<2)return {ok:false,error:'These cells are already in an existing plan. Edit that plan instead.'};
+ const targets=parseTargets(s,id,a.targets??[s.owners[remaining[0]]]);
+ if(!targets.length)return {ok:false,error:'Choose at least one territory owner to attack.'};
+ if(!remaining.some(i=>targets.includes(s.owners[i])))return {ok:false,error:'Enable at least one owner inside the painted area.'};
+ const planned={id:'p'+(++s.nonce),owner:id,targetOwner:targets[0],targets,zoneCells:remaining,
+  percent,initialStrength:Math.floor(p.troops*percent/100),waves:0,nextWaveTick:s.tick};
+ s.attackPlans??=[];s.attackPlans.push(planned);
+ declareApprovedWars(s,id,targets.filter(t=>remaining.some(i=>s.owners[i]===t)));
+ // An inaccessible region is a waiting plan, not an invalid plan.
+ sendNextPlannedWave(s,planned);
+ return {ok:true,planId:planned.id,waiting:planned.waves===0};
+}
+function changePaintedPlan(s,id,a){
+ const plan=(s.attackPlans||[]).find(p=>p.id===a.id&&p.owner===id);
+ if(!plan)return {ok:false,error:'Offensive plan not found.'};
+ const request=a.zone??plan.zoneCells,result=validatePaintedRegion(s,request);
+ if(result.error)return {ok:false,error:result.error};
+ const next=result.cells.filter(i=>!(s.attackPlans||[]).some(other=>other!==plan&&other.owner===id&&other.zoneCells.includes(i)));
+ if(next.length<2)return {ok:false,error:'That region is already covered by another plan.'};
+ const targets=parseTargets(s,id,a.targets??plan.targets??[plan.targetOwner]);
+ if(!targets.length)return {ok:false,error:'Select at least one target before saving.'};
+ const oldTargets=plan.targets??[plan.targetOwner],changes=next.length!==plan.zoneCells.length||next.some((i,k)=>i!==plan.zoneCells[k]);
+ const removed=new Set(oldTargets.filter(t=>!targets.includes(t)));
+ // Geometry changed: stop current wave safely before applying a different set of cells.
+ for(const wave of s.armies.filter(w=>w.planId===plan.id)){
+  if(changes||removed.has(wave.targetOwner)){finishWave(s,wave,person(s,wave.owner));}
+  else {wave.zoneCells=next.slice();attackFronts.delete(wave);}
+ }
+ s.armies=s.armies.filter(w=>w.strength>=8);
+ plan.zoneCells=next;plan.targets=targets;plan.targetOwner=targets[0];plan.percent=clamp(Number(a.percent)||plan.percent,5,95);
+ declareApprovedWars(s,id,targets.filter(t=>next.some(i=>s.owners[i]===t)));
+ plan.nextWaveTick=Math.max(s.tick+1,plan.nextWaveTick||0);
+ return {ok:true,planId:plan.id};
+}
 function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is not active.'};const p=person(s,id);
  if(!alive(p)||!a||typeof a!=='object')return {ok:false,error:'Command unavailable.'};
  if(a.type==='send'){
   let tx=Math.floor(a.x),ty=Math.floor(a.y);const percent=clamp(Number(a.percent)||30,5,95);
   if(!inside(tx,ty))return {ok:false,error:'Choose a target on the map.'};
   if(s.armies.filter(u=>u.owner===id).length>=12||!p.bot&&(s.attackPlans||[]).filter(plan=>plan.owner===id).length>=12)return {ok:false,error:'You can have at most 12 active offensives.'};
+  if(!p.bot&&Array.isArray(a.zone)){
+   const strength=Math.floor(p.troops*percent/100);
+   if(strength<35)return {ok:false,error:'An offensive requires at least 35 troops.'};
+   return createPaintedPlan(s,id,a,percent);
+  }
   if(owner(s,tx,ty)===id)return {ok:false,error:'Choose neutral or enemy territory.'};
   if(p.allies.includes(owner(s,tx,ty)))return {ok:false,error:'Cannot attack an ally. End the alliance first.'};
   if(tile(s,tx,ty)===0)return {ok:false,error:'You cannot conquer the sea. Choose land.'};
@@ -215,6 +292,7 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
   if(targetOwner){s.wars??=[];const key=warKey(id,targetOwner);if(!s.wars.includes(key)){s.wars.push(key);log(s,p.name+' declared war on '+person(s,targetOwner)?.name);}}
   army.tx=tx;army.ty=ty;army.targetOwner=targetOwner;army.zoneCells=null;army.frontCells=initialFront(s,id,tx,ty,targetOwner);army.stuck=0;attackFronts.delete(army);return {ok:true};
  }
+ if(a.type==='updatePlan')return changePaintedPlan(s,id,a);
  if(a.type==='cancelPlan'){
   const plan=(s.attackPlans||[]).find(v=>v.id===a.id&&v.owner===id);
   if(!plan)return {ok:false,error:'Offensive plan not found.'};
@@ -246,7 +324,14 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
    s.wars=s.wars.filter(k=>k!==key);s.peaceOffers=s.peaceOffers.filter(o=>warKey(o.from,o.to)!==key);
    for(const wave of s.armies){if((wave.owner===id&&wave.targetOwner===other.id)||(wave.owner===other.id&&wave.targetOwner===id))finishWave(s,wave,person(s,wave.owner));}
    s.armies=s.armies.filter(w=>w.strength>=8);
-   s.attackPlans=(s.attackPlans||[]).filter(plan=>!((plan.owner===id&&plan.targetOwner===other.id)||(plan.owner===other.id&&plan.targetOwner===id)));
+   // Peace revokes permission for this opponent, but preserves the painted zone
+   // and any neutral/other-country targets. It cannot silently restart a war.
+   for(const plan of s.attackPlans||[]){
+    if((plan.owner===id||plan.owner===other.id)&&(plan.targets??[plan.targetOwner]).includes(plan.owner===id?other.id:id)){
+     plan.targets=(plan.targets??[plan.targetOwner]).filter(t=>t!==(plan.owner===id?other.id:id));
+     plan.nextWaveTick=s.tick+4;
+    }
+   }
    log(s,p.name+' and '+other.name+' signed a peace treaty.');return {ok:true,peace:true};
   }
   if(!s.peaceOffers.some(o=>o.from===id&&o.to===other.id)){s.peaceOffers.push({from:id,to:other.id});log(s,p.name+' proposed peace to '+other.name+'.');}return {ok:true};
@@ -350,20 +435,35 @@ function cancelOffensivePlan(s,plan){
  s.attackPlans=(s.attackPlans||[]).filter(v=>v.id!==plan.id);
 }
 function sendNextPlannedWave(s,plan){
- const p=person(s,plan.owner);if(!alive(p)||!p.land||p.allies.includes(plan.targetOwner))return false;
- const allowed=new Set(plan.zoneCells.filter(i=>s.tiles[i]&&s.owners[i]===plan.targetOwner));
- const border=borderCandidates(s,plan.owner,plan.targetOwner).filter(i=>allowed.has(i));
- if(!border.length)return false;
+ const p=person(s,plan.owner);
+ if(!alive(p)||!p.land)return false;
+ plan.targets??=[plan.targetOwner]; // Migrated v57 solo saves.
+ const approved=plan.targets.filter(t=>t===0||!p.allies.includes(t)&&(s.wars||[]).includes(warKey(plan.owner,t)));
+ if(!approved.length)return false;
  const reserveRequired=Math.max(160,Math.ceil(35*100/plan.percent),Math.floor(plan.initialStrength*.45));
  if(p.troops<reserveRequired||s.armies.filter(a=>a.owner===plan.owner).length>=12)return false;
+ let selected=null;
+ for(const target of approved){
+  // Only cells still owned by this *approved* target can be attacked.
+  // An unapproved country crossing the painted area is safely skipped.
+  const candidates=plan.zoneCells.filter(i=>s.tiles[i]&&s.owners[i]===target);
+  if(!candidates.length)continue;
+  const border=new Set(borderCandidates(s,plan.owner,target));
+  const reachable=candidates.filter(i=>border.has(i));
+  if(!reachable.length)continue;
+  selected={target,allowed:new Set(candidates),start:reachable[(reachable.length/2)|0]};
+  break;
+ }
+ if(!selected)return false; // Keep the plan, await a new frontline or permissions.
  const strength=Math.floor(p.troops*plan.percent/100);
  if(strength<35)return false;
- const start=border[(border.length/2)|0],tx=start%W,ty=(start/W)|0,src=nearestBorderLand(s,plan.owner,tx,ty);
+ const tx=selected.start%W,ty=(selected.start/W)|0,src=nearestBorderLand(s,plan.owner,tx,ty);
  if(!src)return false;
- const front=initialFront(s,plan.owner,tx,ty,plan.targetOwner,allowed);
+ const front=initialFront(s,plan.owner,tx,ty,selected.target,selected.allowed);
  if(!front.length)return false;
  p.troops-=strength;
- s.armies.push({id:'a'+(++s.nonce),owner:plan.owner,x:src.x,y:src.y,ox:src.x,oy:src.y,tx,ty,targetOwner:plan.targetOwner,planId:plan.id,zoneCells:plan.zoneCells,frontCells:front,strength,initialStrength:strength,captured:0,turns:0,stuck:0});
+ s.armies.push({id:'a'+(++s.nonce),owner:plan.owner,x:src.x,y:src.y,ox:src.x,oy:src.y,tx,ty,targetOwner:selected.target,
+  planId:plan.id,zoneCells:plan.zoneCells,frontCells:front,strength,initialStrength:strength,captured:0,turns:0,stuck:0});
  plan.waves++;plan.nextWaveTick=s.tick+4;
  log(s,'Reinforcements launched for '+p.name+' offensive plan.');
  return true;
@@ -376,7 +476,7 @@ function adoptLegacyOffensives(s){
   const p=person(s,a.owner);if(!alive(p))continue;
   const original=a.initialStrength||a.strength;
   const estimated=clamp(Math.round(original/Math.max(1,original+p.troops)*100),5,95);
-  const plan={id:'p'+(++s.nonce),owner:a.owner,targetOwner:a.targetOwner,zoneCells:a.zoneCells,percent:estimated,initialStrength:original,waves:1,nextWaveTick:s.tick+4};
+  const plan={id:'p'+(++s.nonce),owner:a.owner,targetOwner:a.targetOwner,targets:[a.targetOwner],zoneCells:a.zoneCells,percent:estimated,initialStrength:original,waves:1,nextWaveTick:s.tick+4};
   a.planId=plan.id;s.attackPlans.push(plan);
  }
 }
@@ -384,8 +484,10 @@ function advanceOffensivePlans(s){
  if(!s.attackPlans?.length)return;
  for(const plan of [...s.attackPlans]){
   const p=person(s,plan.owner);
-  if(!alive(p)||!p.land||p.allies.includes(plan.targetOwner)){cancelOffensivePlan(s,plan);continue;}
-  if(plan.targetOwner&&!(s.wars||[]).includes(warKey(plan.owner,plan.targetOwner))){cancelOffensivePlan(s,plan);continue;}
+  if(!alive(p)||!p.land){cancelOffensivePlan(s,plan);continue;}
+  plan.targets??=[plan.targetOwner];
+  // Revoked alliance/peace targets cannot be attacked by future waves.
+  plan.targets=plan.targets.filter(t=>t===0||!p.allies.includes(t)&&(s.wars||[]).includes(warKey(plan.owner,t)));
   if(plan.zoneCells.every(i=>s.tiles[i]&&s.owners[i]===plan.owner)){cancelOffensivePlan(s,plan);continue;}
   if(s.armies.some(a=>a.planId===plan.id&&a.strength>=8))continue;
   if(s.tick<(plan.nextWaveTick||0))continue;
@@ -422,6 +524,9 @@ function balancedLayer(cells,s,step){
 function advance(s,a){
  const p=person(s,a.owner);if(!alive(p)){a.strength=0;a.frontCells=[];attackFronts.delete(a);return;}
  const f=waveFront(s,a);
+ const plan=(s.attackPlans||[]).find(v=>v.id===a.planId);
+ if(plan&&!(plan.targets??[plan.targetOwner]).includes(a.targetOwner)){finishWave(s,a,p);return;}
+ if(a.targetOwner&&plan&&!(s.wars||[]).includes(warKey(a.owner,a.targetOwner))){finishWave(s,a,p);return;}
  // Alliances or a completed conquest can invalidate a target while in flight.
  if(f.targetOwner&&p.allies.includes(f.targetOwner)){finishWave(s,a,p);return;}
  const layer=[...f.candidates].filter(i=>s.tiles[i]&&s.owners[i]===f.targetOwner&&(!f.allowed||f.allowed.has(i)));
