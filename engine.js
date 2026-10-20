@@ -66,7 +66,7 @@ function log(s,msg){s.log.unshift(msg);if(s.log.length>8)s.log.length=8;}
 function lobby(seed=57283){return {version:14,settings:{bots:0},phase:'lobby',seed:Math.floor(seed),tick:0,tiles:[],owners:[],players:[],buildings:[],armies:[],attackPlans:[],recoveryPlans:[],log:['Conquer land, develop your economy, and defend your capital.'],winner:null,mode:'conquest',duration:null,nonce:0,landTotal:0,territoryRevision:0,wars:[],peaceOffers:[]};}
 function addPlayer(s,name,isBot=false){if(s.phase!=='lobby'||s.players.filter(p=>!p.bot).length>=MAX&&!isBot||s.players.length>=COLORS.length)return null;
  let id=1;while(s.players.some(p=>p.id===id))id++;let safe=String(name||('Kingdom '+id)).trim().slice(0,18)||('Player '+id);
- s.players.push({id,name:safe,bot:!!isBot,color:COLORS[(id-1)%COLORS.length],res:{food:650,wood:390,stone:310,gold:260},troops:450,troopCap:1700,land:0,ready:!!isBot,connected:true,spawnPreference:'auto',eliminated:false,tech:{economy:0,war:0,logistics:0},offers:[],allies:[],capital:null,kills:0});
+ s.players.push({id,name:safe,bot:!!isBot,color:COLORS[(id-1)%COLORS.length],res:{food:650,wood:390,stone:310,gold:260},troops:450,troopCap:1700,land:0,ready:!!isBot,connected:true,spawnPreference:'auto',eliminated:false,attackTargets:[],tech:{economy:0,war:0,logistics:0},offers:[],allies:[],capital:null,kills:0});
  log(s,safe+' entered the battle.');return id;
 }
 function tile(s,x,y){return inside(x,y)?s.tiles[idx(x,y)]:0;}
@@ -195,6 +195,25 @@ function validatePaintedRegion(s,request,min=1){
  if(cells.size<min)return {error:'Paint at least one land cell.'};
  return {cells:[...cells].sort((a,b)=>a-b)};
 }
+function nationTargets(s,id){
+ const p=person(s,id);if(!p)return [];
+ if(!Array.isArray(p.attackTargets)){
+  // Preserve user-selected opponents from saves created before Nations.
+  p.attackTargets=[...new Set((s.attackPlans||[]).filter(plan=>plan.owner===id)
+   .flatMap(plan=>plan.targets??[plan.targetOwner]).filter(t=>t>0&&alive(person(s,t))&&!p.allies.includes(t)))];
+ }
+ return p.attackTargets;
+}
+function syncNationPlans(s,id){
+ const targets=[0,...nationTargets(s,id)];
+ for(const plan of s.attackPlans||[]){
+  if(plan.owner!==id)continue;
+  plan.targets=targets.slice();plan.targetOwner=targets[0];plan.nextWaveTick=Math.max(s.tick+1,plan.nextWaveTick||0);
+  for(const wave of s.armies.filter(a=>a.planId===plan.id&&!targets.includes(a.targetOwner)))
+   finishWave(s,wave,person(s,id));
+ }
+ s.armies=s.armies.filter(w=>w.strength>=8);
+}
 function declareApprovedWars(s,id,targets){
  s.wars??=[];s.peaceOffers??=[];
  for(const target of targets){
@@ -232,12 +251,8 @@ function upsertPaintedPlan(s,id,request,rawTargets,percent,editId=null,excludeTa
  }
  // Preserve the full union instead of rejecting larger combined plans.
  if(!selected.size)return {ok:false,error:'Keep one cell or cancel this plan from Offensives.'};
- const selectedTargets=parseTargets(s,id,rawTargets);
- const prior=[...merged].filter(pl=>pl!==original).flatMap(pl=>pl.targets??[pl.targetOwner]);
- const excluded=new Set(parseTargets(s,id,excludeTargets));
- const live=Array.isArray(rawTargets)?[]:[...selected].map(i=>s.owners[i]).filter(t=>t!==id);
- const targets=[...new Set([...selectedTargets,...prior,...live])]
-  .filter(t=>!excluded.has(t)&&(t===0||!p.allies.includes(t)));
+ // A painted region specifies geography only. Nations manages all hostility.
+ const targets=[0,...nationTargets(s,id)];
  const plan=original||[...merged][0]||{id:'p'+(++s.nonce),owner:id,waves:0,initialStrength:Math.max(35,Math.floor(p.troops*percent/100))};
  if(merged.size){
   const removedIds=new Set([...merged].map(pl=>pl.id));
@@ -248,10 +263,10 @@ function upsertPaintedPlan(s,id,request,rawTargets,percent,editId=null,excludeTa
   s.attackPlans=s.attackPlans.filter(pl=>!removedIds.has(pl.id));
  }
  plan.zoneCells=[...selected].sort((a,b)=>a-b);
- plan.targets=targets;plan.excludedTargets=[...excluded];plan.targetOwner=targets[0]??0;plan.percent=percent;
+ plan.targets=targets;plan.targetOwner=targets[0]??0;plan.percent=percent;
  plan.nextWaveTick=merged.size?s.tick+1:s.tick;
  s.attackPlans??=[];s.attackPlans.push(plan);
- declareApprovedWars(s,id,targets.filter(t=>t!==0&&[...selected].some(i=>s.owners[i]===t)));
+ // War declarations are initiated explicitly in Nations.
  if(!merged.size)sendNextPlannedWave(s,plan);
  return {ok:true,merged:merged.size>0,planId:plan.id,waiting:!s.armies.some(a=>a.planId===plan.id)};
 }
@@ -313,6 +328,20 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
   if(targetOwner){s.wars??=[];const key=warKey(id,targetOwner);if(!s.wars.includes(key)){s.wars.push(key);log(s,p.name+' declared war on '+person(s,targetOwner)?.name);}}
   army.tx=tx;army.ty=ty;army.targetOwner=targetOwner;army.zoneCells=null;army.frontCells=initialFront(s,id,tx,ty,targetOwner);army.stuck=0;attackFronts.delete(army);return {ok:true};
  }
+ if(a.type==='setNationTarget'){
+  const other=person(s,Number(a.target));
+  if(!alive(other)||other.id===id)return {ok:false,error:'Choose another living nation.'};
+  if(p.allies.includes(other.id))return {ok:false,error:'End the alliance before attacking this nation.'};
+  const targets=nationTargets(s,id),enable=a.enabled===true,has=targets.includes(other.id);
+  if(enable&&!has){
+   targets.push(other.id);
+   declareApprovedWars(s,id,[other.id]);
+  }else if(!enable&&has){
+   p.attackTargets=targets.filter(t=>t!==other.id);
+  }
+  syncNationPlans(s,id);
+  return {ok:true,enabled:p.attackTargets.includes(other.id)};
+ }
  if(a.type==='updatePlan')return changePaintedPlan(s,id,a);
  if(a.type==='erasePlanCells'){
   // Only the owner can trim their own saved geometry. Other kingdoms' plans,
@@ -365,6 +394,8 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
   s.peaceOffers??=[];
   if(s.peaceOffers.some(o=>o.from===other.id&&o.to===id)){
    s.wars=s.wars.filter(k=>k!==key);s.peaceOffers=s.peaceOffers.filter(o=>warKey(o.from,o.to)!==key);
+   p.attackTargets=nationTargets(s,id).filter(t=>t!==other.id);
+   other.attackTargets=nationTargets(s,other.id).filter(t=>t!==id);
    for(const wave of s.armies){if((wave.owner===id&&wave.targetOwner===other.id)||(wave.owner===other.id&&wave.targetOwner===id))finishWave(s,wave,person(s,wave.owner));}
    s.armies=s.armies.filter(w=>w.strength>=8);
    // Peace revokes permission for this opponent, but preserves the painted zone
@@ -375,6 +406,7 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
      plan.nextWaveTick=s.tick+4;
     }
    }
+   syncNationPlans(s,id);syncNationPlans(s,other.id);
    for(const recovery of [...(s.recoveryPlans||[])])
     if(warKey(recovery.owner,recovery.targetOwner)===key)cancelRecoveryPlan(s,recovery);
    log(s,p.name+' and '+other.name+' signed a peace treaty.');return {ok:true,peace:true};
@@ -388,7 +420,11 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
    p.allies=p.allies.filter(v=>v!==target.id);target.allies=target.allies.filter(v=>v!==id);log(s,p.name+' ended the alliance with '+target.name);return {ok:true};
   }
   if(target.offers.includes(id)){
-   p.allies.push(target.id);target.allies.push(id);target.offers=target.offers.filter(v=>v!==id);p.offers=p.offers.filter(v=>v!==target.id);log(s,p.name+' and '+target.name+' formed an alliance.');return {ok:true};
+   p.allies.push(target.id);target.allies.push(id);
+   p.attackTargets=nationTargets(s,id).filter(v=>v!==target.id);
+   target.attackTargets=nationTargets(s,target.id).filter(v=>v!==id);
+   syncNationPlans(s,id);syncNationPlans(s,target.id);
+   target.offers=target.offers.filter(v=>v!==id);p.offers=p.offers.filter(v=>v!==target.id);log(s,p.name+' and '+target.name+' formed an alliance.');return {ok:true};
   }
   if(!p.offers.includes(target.id)){p.offers.push(target.id);log(s,p.name+' offered an alliance to '+target.name+'.');}return {ok:true};
  }
@@ -711,5 +747,5 @@ function tick(s){if(s.phase!=='playing')return;s.tick++;
  checkWin(s);
 }
 
-return{BUILD:'v64',W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v65',W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });
