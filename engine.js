@@ -203,7 +203,7 @@ function declareApprovedWars(s,id,targets){
  }
 }
 
-function upsertPaintedPlan(s,id,request,rawTargets,percent,editId=null){
+function upsertPaintedPlan(s,id,request,rawTargets,percent,editId=null,excludeTargets=[]){
  const p=person(s,id),checked=validatePaintedRegion(s,request,editId?1:2);
  if(checked.error)return {ok:false,error:checked.error};
  const own=(s.attackPlans||[]).filter(plan=>plan.owner===id);
@@ -230,7 +230,8 @@ function upsertPaintedPlan(s,id,request,rawTargets,percent,editId=null){
  if(!selected.size)return {ok:false,error:'Keep one cell or cancel this plan from Offensives.'};
  const selectedTargets=parseTargets(s,id,rawTargets);
  const prior=[...merged].filter(pl=>pl!==original).flatMap(pl=>pl.targets??[pl.targetOwner]);
- const targets=[...new Set([...selectedTargets,...prior])].filter(t=>t===0||!p.allies.includes(t));
+ const excluded=new Set(parseTargets(s,id,excludeTargets));
+ const targets=[...new Set([...selectedTargets,...prior])].filter(t=>!excluded.has(t)&&(t===0||!p.allies.includes(t)));
  if(!editId&&!targets.length)return {ok:false,error:'Choose a territory owner to attack.'};
  if(!editId&&!merged.size&&![...selected].some(i=>targets.includes(s.owners[i])))
   return {ok:false,error:'Enable an owner inside the painted area.'};
@@ -253,13 +254,13 @@ function upsertPaintedPlan(s,id,request,rawTargets,percent,editId=null){
  return {ok:true,merged:merged.size>0,planId:plan.id,waiting:!s.armies.some(a=>a.planId===plan.id)};
 }
 function createPaintedPlan(s,id,a,percent){
- return upsertPaintedPlan(s,id,a.zone,a.targets??[0],percent);
+ return upsertPaintedPlan(s,id,a.zone,a.targets??[0],percent,null,a.excludeTargets);
 }
 function changePaintedPlan(s,id,a){
  const plan=(s.attackPlans||[]).find(p=>p.id===a.id&&p.owner===id);
  if(!plan)return {ok:false,error:'Offensive plan not found.'};
  return upsertPaintedPlan(s,id,a.zone??plan.zoneCells,a.targets??plan.targets??[plan.targetOwner],
-  clamp(Number(a.percent)||plan.percent,5,95),plan.id);
+  clamp(Number(a.percent)||plan.percent,5,95),plan.id,a.excludeTargets);
 }
 function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is not active.'};const p=person(s,id);
  if(!alive(p)||!a||typeof a!=='object')return {ok:false,error:'Command unavailable.'};
