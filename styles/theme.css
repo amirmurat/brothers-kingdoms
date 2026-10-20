@@ -327,3 +327,55 @@ body :is(button,input,select,summary){font-family:var(--ui-font)!important}
 #game #techPanel [data-research]{box-sizing:border-box!important;width:100%!important;height:48px!important;min-height:48px!important;max-height:48px!important;padding:0 12px!important;margin:0!important;text-align:left!important}
 #game #buildingsPanel .build-short{display:block!important;box-sizing:border-box!important;height:19px!important;min-height:19px!important;max-height:19px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
 #game #buildingsPanel .build-detail{align-content:start!important}
+
+/* v26 preview: explicit HUD layout replaces inherited image-only grid placement. */
+#game #resourceSummary.resource-hud{
+ grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-template-rows:auto!important;
+ height:68px!important;min-height:68px!important;flex:0 0 68px!important;
+ background:#f5f1e7!important;border-bottom:1px solid #d7d6c8!important;
+}
+#game #resourceSummary.resource-hud>div{
+ grid-template-columns:24px minmax(0,1fr)!important;grid-template-rows:14px 22px 14px!important;
+ gap:0 8px!important;padding:8px 14px!important;border-left:0!important;border-right:1px solid #dddacb!important;
+}
+#game #resourceSummary.resource-hud .res-icon{grid-column:1!important;grid-row:1/4!important;align-self:center!important;width:24px!important;height:24px!important;color:#557861!important}
+#game #resourceSummary.resource-hud span{grid-column:2!important;grid-row:1!important;font-size:9px!important;font-weight:650!important;letter-spacing:.08em!important;color:#6a756b!important}
+#game #resourceSummary.resource-hud b{grid-column:2!important;grid-row:2!important;font-size:18px!important;font-weight:800!important;line-height:22px!important;font-variant-numeric:tabular-nums}
+#game #resourceSummary.resource-hud small{grid-column:2!important;grid-row:3!important;margin:0!important;font-size:10px!important;justify-self:start!important;align-self:center!important;line-height:14px!important}
+#game #resourceSummary.resource-hud .resource-low{background:#f8e3d7!important}
+#game #resourceSummary.resource-hud small.resource-negative{color:#a63d37!important}
+#game .topbar .land-progress{display:none!important}
+#game .topbar{border-bottom:1px solid #527367!important}
+#game .topbar .top-stat b{font-variant-numeric:tabular-nums;letter-spacing:-.025em}
+#game .game-feedback{background:#26493f!important;border-bottom:1px solid #56756a!important}
+#game .building-art{object-fit:contain!important;image-rendering:pixelated!important;filter:drop-shadow(0 2px 1px #263f3326)!important}
+#game .build-icon{width:56px!important;height:56px!important;background:#e8eddf!important;border:1px solid #d2dbc8!important;border-radius:12px!important;display:grid!important;place-items:center!important}
+#game .build-icon .building-art{width:48px!important;height:48px!important}
+#game .quick-build-item .building-art{width:52px!important;height:52px!important;flex:0 0 52px!important}
+#game .quick-build-item{min-height:124px!important;gap:6px!important;padding:9px 5px!important}
+#game :is(.build-btn,.tech-item){border-color:#d8d9c9!important}
+#game .build-copy strong,#game .tech-heading strong{font-size:16px!important;color:#294c3d!important}
+#game .build-copy small,#game .build-meta{color:#657266!important;line-height:1.45!important}
+#game .build-gain{color:#356f49!important}
+#game .game-action-bar .action-build{background:#397950!important;color:#fff9ea!important;border-color:#2c6240!important;box-shadow:0 3px 0 #224d35,0 5px 12px #183e322b!important}
+#game .map-battle-controls.collapsed .dock-toggle{background:#f5ecd8!important;border-color:#c8ba9d!important;box-shadow:0 3px 0 #a29476,0 5px 12px #183e322b!important}
+#game :is(.map-toolbar .square-button,.map-toolbar .action-armies){background:#f6f1e5!important;border-color:#c9cfbc!important;box-shadow:0 2px 7px #183e3226!important}
+#game .tabbar{padding:6px!important;gap:4px!important;background:#ebe9dd!important;border-bottom:1px solid #d5d6c8!important}
+#game .tabbar button{background:transparent!important;border:0!important;box-shadow:none!important;color:#617065!important}
+#game .tabbar button.active{background:#365f49!important;color:white!important}
+@media(max-width:600px){
+ #game #resourceSummary.resource-hud>div{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:14px 22px 14px!important;padding:7px 5px!important;gap:0!important;text-align:center!important}
+ #game #resourceSummary.resource-hud .res-icon{display:none!important}
+ #game #resourceSummary.resource-hud :is(span,b,small){grid-column:1!important;justify-self:center!important}
+ #game #resourceSummary.resource-hud b{font-size:16px!important}
+ #game .build-icon{width:50px!important;height:50px!important}
+ #game .build-icon .building-art{width:44px!important;height:44px!important}
+}
+@media(max-height:480px) and (orientation:landscape){
+ #game #resourceSummary.resource-hud{height:44px!important;min-height:44px!important;flex-basis:44px!important}
+ #game #resourceSummary.resource-hud>div{grid-template-columns:22px minmax(0,1fr) auto!important;grid-template-rows:14px 20px!important;padding:4px 10px!important}
+ #game #resourceSummary.resource-hud .res-icon{display:block!important;grid-row:1/3!important;grid-column:1!important}
+ #game #resourceSummary.resource-hud span{grid-row:1!important;grid-column:2!important}
+ #game #resourceSummary.resource-hud b{grid-row:2!important;grid-column:2!important;font-size:15px!important}
+ #game #resourceSummary.resource-hud small{grid-row:1/3!important;grid-column:3!important}
+}
