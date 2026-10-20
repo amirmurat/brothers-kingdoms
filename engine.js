@@ -452,38 +452,72 @@ function cancelOffensivePlan(s,plan){
  s.armies=s.armies.filter(a=>a.planId!==plan.id);
  s.attackPlans=(s.attackPlans||[]).filter(v=>v.id!==plan.id);
 }
-function sendNextPlannedWave(s,plan){
- const p=person(s,plan.owner);
- if(!alive(p)||!p.land)return false;
- plan.targets??=[plan.targetOwner]; // Migrated v57 solo saves.
- const approved=plan.targets.filter(t=>t===0||!p.allies.includes(t)&&(s.wars||[]).includes(warKey(plan.owner,t)));
- if(!approved.length)return false;
- const reserveRequired=Math.max(160,Math.ceil(35*100/plan.percent),Math.floor(plan.initialStrength*.45));
- if(p.troops<reserveRequired||s.armies.filter(a=>a.owner===plan.owner).length>=12)return false;
- let selected=null;
- for(const target of approved){
-  // Only cells still owned by this *approved* target can be attacked.
-  // An unapproved country crossing the painted area is safely skipped.
-  const candidates=plan.zoneCells.filter(i=>s.tiles[i]&&s.owners[i]===target);
-  if(!candidates.length)continue;
-  const border=new Set(borderCandidates(s,plan.owner,target));
-  const reachable=candidates.filter(i=>border.has(i));
-  if(!reachable.length)continue;
-  selected={target,allowed:new Set(candidates),start:reachable[(reachable.length/2)|0]};
-  break;
+
+function planFrontier(s,plan){
+ const p=person(s,plan.owner);if(!p)return [];
+ const enabled=new Set((plan.targets??[plan.targetOwner]).filter(t=>t===0||!p.allies.includes(t)&&(s.wars||[]).includes(warKey(plan.owner,t))));
+ if(!enabled.size)return [];
+ const front=[];
+ for(const i of plan.zoneCells){
+  if(!s.tiles[i]||s.owners[i]===plan.owner||!enabled.has(s.owners[i]))continue;
+  const x=i%W,y=(i/W)|0;
+  if((x>0&&s.owners[i-1]===plan.owner)||(x<W-1&&s.owners[i+1]===plan.owner)||
+    (y>0&&s.owners[i-W]===plan.owner)||(y<H-1&&s.owners[i+W]===plan.owner))front.push(i);
  }
- if(!selected)return false; // Keep the plan, await a new frontline or permissions.
+ return front.sort((a,b)=>a-b);
+}
+function planTileCost(s,plan,i){
+ const p=person(s,plan.owner),def=s.owners[i],kind=s.tiles[i];
+ const raw=def?tileDefense(s,def,i%W,(i/W)|0)/(.95+.19*p.tech.war):kind===6?8:kind===3?4:2.8;
+ return raw*(1-.08*p.tech.logistics);
+}
+function estimatePlanFront(s,plan){
+ const cells=planFrontier(s,plan);
+ let total=0,needsTen=false;
+ for(const i of cells){total+=planTileCost(s,plan,i);if(s.tiles[i]===6)needsTen=true;}
+ return {cells:cells.length,required:cells.length?Math.max(needsTen?10:0,Math.ceil(total*1000)/1000):0,
+  committed:Math.floor((person(s,plan.owner)?.troops||0)*plan.percent/100)};
+}
+function advancePlannedWave(s,a,plan){
+ const p=person(s,a.owner),front=planFrontier(s,plan);
+ if(!front.length){finishWave(s,a,p);return;}
+ // Price the whole frontier against one snapshot, then capture all its tiles
+ // as one atomic logical turn. Never accept a partially funded layer.
+ const receipt=front.map(i=>({i,former:s.owners[i],cost:planTileCost(s,plan,i)}));
+ const sum=receipt.reduce((t,c)=>t+c.cost,0);
+ const required=Math.max(receipt.some(c=>s.tiles[c.i]===6)?10:0,Math.ceil(sum*1000)/1000);
+ if(a.strength+1e-7<required){finishWave(s,a,p);return;}
+ a.strength=Math.max(0,a.strength-sum);
+ for(const item of receipt){
+  const x=item.i%W,y=(item.i/W)|0;
+  if(item.former){
+   const defender=person(s,item.former);
+   if(defender)defender.troops=Math.max(0,defender.troops-Math.max(.8,item.cost*.43));
+  }
+  gainTile(s,x,y,p.id);a.captured=(a.captured||0)+1;
+  const b=buildingAt(s,x,y);
+  if(b&&b.owner!==p.id){if(b.kind==='capital'){takeCapital(s,p.id,b.owner);b.kind='city';}b.owner=p.id;b.level=Math.max(1,b.level-1);}
+ }
+ const next=planFrontier(s,plan);
+ a.frontCells=next;a.turns++;a.stuck=0;
+ const center=receipt[(receipt.length/2)|0].i;a.x=center%W;a.y=(center/W)|0;
+ if(!next.length||a.strength<3)finishWave(s,a,p);
+}
+function sendNextPlannedWave(s,plan){
+ const p=person(s,plan.owner);if(!alive(p)||!p.land)return false;
+ const front=planFrontier(s,plan);
+ if(!front.length||s.armies.filter(a=>a.owner===plan.owner).length>=12)return false;
+ const estimated=estimatePlanFront(s,plan);
  const strength=Math.floor(p.troops*plan.percent/100);
- if(strength<35)return false;
- const tx=selected.start%W,ty=(selected.start/W)|0,src=nearestBorderLand(s,plan.owner,tx,ty);
- if(!src)return false;
- const front=initialFront(s,plan.owner,tx,ty,selected.target,selected.allowed);
- if(!front.length)return false;
+ if(strength<Math.max(35,estimated.required))return false;
+ const first=front[(front.length/2)|0],tx=first%W,ty=(first/W)|0;
+ const src=nearestBorderLand(s,plan.owner,tx,ty);if(!src)return false;
  p.troops-=strength;
- s.armies.push({id:'a'+(++s.nonce),owner:plan.owner,x:src.x,y:src.y,ox:src.x,oy:src.y,tx,ty,targetOwner:selected.target,
-  planId:plan.id,zoneCells:plan.zoneCells,frontCells:front,strength,initialStrength:strength,captured:0,turns:0,stuck:0});
+ s.armies.push({id:'a'+(++s.nonce),owner:plan.owner,x:src.x,y:src.y,ox:src.x,oy:src.y,tx,ty,
+  targetOwner:s.owners[first],planId:plan.id,zoneCells:plan.zoneCells,frontCells:front,
+  strength,initialStrength:strength,captured:0,turns:0,stuck:0});
  plan.waves++;plan.nextWaveTick=s.tick+4;
- log(s,'Reinforcements launched for '+p.name+' offensive plan.');
+ log(s,'Full-front reinforcements launched for '+p.name+' offensive.');
  return true;
 }
 // Existing v56 solo saves stored painted zones only on their current army.
@@ -543,8 +577,7 @@ function advance(s,a){
  const p=person(s,a.owner);if(!alive(p)){a.strength=0;a.frontCells=[];attackFronts.delete(a);return;}
  const f=waveFront(s,a);
  const plan=(s.attackPlans||[]).find(v=>v.id===a.planId);
- if(plan&&!(plan.targets??[plan.targetOwner]).includes(a.targetOwner)){finishWave(s,a,p);return;}
- if(a.targetOwner&&plan&&!(s.wars||[]).includes(warKey(a.owner,a.targetOwner))){finishWave(s,a,p);return;}
+ if(plan){advancePlannedWave(s,a,plan);return;}
  // Alliances or a completed conquest can invalidate a target while in flight.
  if(f.targetOwner&&p.allies.includes(f.targetOwner)){finishWave(s,a,p);return;}
  const layer=[...f.candidates].filter(i=>s.tiles[i]&&s.owners[i]===f.targetOwner&&(!f.allowed||f.allowed.has(i)));
@@ -637,5 +670,5 @@ function tick(s){if(s.phase!=='playing')return;s.tick++;
  checkWin(s);
 }
 
-return{W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,lobby,addPlayer,start,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });
