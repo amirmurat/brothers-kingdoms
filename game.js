@@ -848,7 +848,7 @@ $('startButton').onclick=startGame;$('copyLink').onclick=inviteFriends;$('copyCo
 $('hudFronts').onclick=()=>$('armiesToggle').click();$('hudFronts').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('armiesToggle').click();}};
 function openResearch(){openPanel();updateUI();}
 $('scienceButton').onclick=openResearch;
-$('closeSession').onclick=hideAux;$('openLeaderboard').onclick=()=>showAux('quickLeadersPanel');
+$('closeSession').onclick=hideAux;$('openLeaderboard').onclick=()=>showAux('quickLeadersPanel');$('closeQuickLeaders').onclick=hideAux;
 $('sessionPause').onclick=()=>{menuPausedSolo=false;pauseSolo=false;hideAux();};
 $('sessionReconnect').onclick=()=>{reconnectTries=0;retryUpstream();toast('Trying to reconnect');};
 $('exitMatch').onclick=requestExit;$('cancelExit').onclick=openSession;
