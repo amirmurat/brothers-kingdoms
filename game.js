@@ -392,26 +392,10 @@ function updateUI(){const p=mine();if(!p)return;
  patchHtml('leaderboard',top.slice(0,9).map((v,i)=>`<div class="leader-row"><span>${i+1}.</span><i class="player-dot" style="background:${v.color}"></i><span class="leader-name" title="${esc(v.name)}">${esc(v.name)}${v.bot?' · Bot':''}</span><div class="bar"><i style="width:${Math.max(3,v.land/Math.max(1,top[0].land)*100)}%;background:${v.color}"></i></div><div>${number(v.land)}</div></div>`).join(''));
  if(currentTab==='build'){
   patchHtml('buildResourceSummary',resourceStrip(p));
-  const counts=E.counts(state,myId);
-  patchHtml('buildingsPanel',Object.entries(E.KINDS).map(([id,k])=>{
-   const info=buildingInfo[id],ok=canPay(p,k.cost),count=counts[id]||0;
-   const countBuildings=state.buildings.filter(b=>b.owner===myId&&b.kind===id).length;
-   return `<button data-build="${id}" class="build-btn build-detail ${buildMode===id?'active':''}" ${!ok||p.eliminated?'disabled':''}>
-    <span class="build-icon">${uiIcon(id)}</span><span class="build-copy"><strong>${esc(k.name)}</strong><small>${esc(info.short)}</small></span>
-    <span class="build-gain">${esc(buildingBenefit(id,p,1))}</span>
-    <span class="build-meta">${esc(info.place)} · Построено: ${countBuildings}${count?` (уровней: ${count})`:''}</span>
-    <span class="build-price">${briefCost(k.cost)}</span>
-    ${!ok?`<span class="build-short">Не хватает: ${deficit(p,k.cost)}</span>`:''}
-   </button>`;}).join(''));
+  updateBuildCards(p);
  }else if(currentTab==='tech'){
   patchHtml('techResourceSummary',resourceStrip(p));
-  patchHtml('techPanel',Object.entries(E.TECH).map(([id,t])=>{
-   const l=p.tech[id],cost=E.costTech(id,l),ok=canPay(p,cost);
-   return `<div class="tech-item tech-detail"><div class="tech-heading">${uiIcon(id)}<strong>${esc(t.name)}</strong><span>Уровень ${l}/3</span></div>
-     <p>${esc(techBenefit(id,l))}</p><div class="tech-next">${l<3?`После исследования: ${esc(techBenefit(id,l+1))}`:'Максимальный уровень'}</div>
-     ${l<3?`<small>Цена: ${briefCost(cost)}</small>`:''}
-     <button data-research="${id}" ${l>=3||!ok||p.eliminated?'disabled':''}>${l>=3?'Исследовано':ok?'Исследовать':'Не хватает: '+deficit(p,cost)}</button>
-    </div>`;}).join(''));
+  updateTechCards(p);
  }else if(currentTab==='diplomacy'){
   patchHtml('diplomacyPanel',state.players.filter(v=>v.id!==myId&&!v.eliminated).map(v=>`<div class="dip-item"><div class="dip-heading"><i class="dip-color" style="background:${v.color}"></i><strong>${esc(v.name)}</strong></div><p>${number(v.land)} клеток · ${p.allies.includes(v.id)?'Союзник':p.offers.includes(v.id)?'Предложение отправлено':v.offers.includes(myId)?'Предлагает союз':'Нейтральный'}</p><div class="dip-actions"><button class="${p.allies.includes(v.id)?'dip-danger':'dip-accept'}" data-ally="${v.id}">${p.allies.includes(v.id)?'Разорвать союз':v.offers.includes(myId)?'Принять союз':'Предложить союз'}</button>${p.allies.includes(v.id)?`<button data-donate="${v.id}">Подарить 100 золота</button>`:''}</div></div>`).join(''));
  }else{
@@ -421,6 +405,65 @@ function updateUI(){const p=mine();if(!p)return;
  patchHtml('accessibleObjects',state.buildings.filter(b=>b.owner===myId).slice(0,30).map(b=>'<li>'+esc(E.KINDS[b.kind]?.name||'Столица')+' '+b.x+','+b.y+'</li>').join('')+state.armies.filter(a=>a.owner===myId).map(a=>'<li>Армия '+number(a.strength)+' солдат, '+a.x+','+a.y+'</li>').join(''));
  if(state.log?.[0]&&state.tick>3&&state.log[0]!==lastAnnounced){const message=state.log[0];lastAnnounced=message;if(/захватил столицу|разгром|победил|союз/.test(message.toLowerCase()))toast(message);}
  updateSelection();refreshQuickBuild();
+}
+
+/* v24: keep live research buttons mounted when resource totals change.
+   Rebuilding a button each tick changes layout and drops an in-flight touch. */
+function updateTechCards(p){
+ const panel=$('techPanel'),entries=Object.entries(E.TECH);
+ const key=entries.map(([id])=>id+':'+(p.tech[id]||0)).join('|');
+ if(panel.dataset.structure!==key){
+  panel.innerHTML=entries.map(([id,t])=>{
+   const level=p.tech[id]||0,cost=E.costTech(id,level);
+   return `<div class="tech-item tech-detail" data-tech-card="${esc(id)}">
+     <div class="tech-heading">${uiIcon(id)}<strong>${esc(t.name)}</strong><span>Уровень ${level}/3</span></div>
+     <p>${esc(techBenefit(id,level))}</p>
+     <div class="tech-next">${level<3?'После исследования: '+esc(techBenefit(id,level+1)):'Максимальный уровень'}</div>
+     <small class="tech-cost">${level<3?'Цена: '+briefCost(cost):'Все исследования завершены'}</small>
+     <div class="tech-availability" data-tech-status="${esc(id)}"></div>
+     <button type="button" data-research="${esc(id)}">${level<3?'Исследовать':'Исследовано'}</button>
+   </div>`;
+  }).join('');
+  panel.dataset.structure=key;
+ }
+ for(const [id] of entries){
+  const level=p.tech[id]||0,cost=E.costTech(id,level);
+  const affordable=level<3&&!p.eliminated&&canPay(p,cost);
+  const button=panel.querySelector('[data-research="'+id+'"]'),status=panel.querySelector('[data-tech-status="'+id+'"]');
+  if(!button||!status)continue;
+  button.disabled=!affordable;
+  const message=level>=3?'Максимальный уровень':p.eliminated?'Королевство разгромлено':affordable?'Доступно для исследования':'Не хватает: '+deficit(p,cost);
+  if(status.textContent!==message)status.textContent=message;
+  status.title=message;
+  status.classList.toggle('can-research',affordable);
+ }
+}
+function updateBuildCards(p){
+ const panel=$('buildingsPanel'),entries=Object.entries(E.KINDS),counts=E.counts(state,myId);
+ const signature=JSON.stringify([p.tech,entries.map(([id])=>[id,counts[id]||0,state.buildings.filter(b=>b.owner===myId&&b.kind===id).length])]);
+ if(panel.dataset.structure!==signature){
+  panel.innerHTML=entries.map(([id,k])=>{
+   const info=buildingInfo[id],count=counts[id]||0,quantity=state.buildings.filter(b=>b.owner===myId&&b.kind===id).length;
+   return `<button type="button" data-build="${esc(id)}" class="build-btn build-detail">
+     <span class="build-icon">${uiIcon(id)}</span><span class="build-copy"><strong>${esc(k.name)}</strong><small>${esc(info.short)}</small></span>
+     <span class="build-gain">${esc(buildingBenefit(id,p,1))}</span>
+     <span class="build-meta">${esc(info.place)} · Построено: ${quantity}${count?' (уровней: '+count+')':''}</span>
+     <span class="build-price">${briefCost(k.cost)}</span>
+     <span class="build-short" data-build-status="${esc(id)}"></span>
+    </button>`;
+  }).join('');
+  panel.dataset.structure=signature;
+ }
+ for(const [id,k] of entries){
+  const button=panel.querySelector('[data-build="'+id+'"]'),status=panel.querySelector('[data-build-status="'+id+'"]');
+  if(!button||!status)continue;
+  const ok=canPay(p,k.cost);
+  button.disabled=!ok||!!p.eliminated;
+  button.classList.toggle('active',buildMode===id);
+  const message=ok?'':'Не хватает: '+deficit(p,k.cost);
+  if(status.textContent!==message)status.textContent=message;
+  status.title=message;
+ }
 }
 function updateSelection(){const item=selected?.kind==='army'?state.armies.find(a=>a.id===selected.id):selected?.kind==='building'?state.buildings.find(b=>b.id===selected.id):null;contextual(item);const box=$('selectedPanel');if(!item){box.textContent='Коснись объекта на карте. Для атаки выбери цель и подтверди приказ.';return;}box.textContent=(item.kind?E.KINDS[item.kind]?.name||'Столица':'Армия')+' · '+(E.person(state,item.owner)?.name||'')+' · '+(item.strength?number(item.strength)+' войск':'уровень '+item.level);}
 // Fast-build selection: choosing a building does not spend resources.

@@ -311,3 +311,19 @@ body :is(button,input,select,summary){font-family:var(--ui-font)!important}
 @media(max-height:480px) and (orientation:landscape){
  #game #minimapWrap.minimized{bottom:calc(71px + env(safe-area-inset-bottom))!important}
 }
+
+/* v24: fixed-size research controls and availability rows across every tick. */
+#game #techPanel .tech-item.tech-detail{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:8px!important;align-content:start!important}
+#game #techPanel .tech-heading{min-height:30px!important}
+#game #techPanel .tech-detail>p{min-height:34px!important;margin:0!important}
+#game #techPanel .tech-next{box-sizing:border-box!important;min-height:48px!important}
+#game #techPanel .tech-cost{display:block!important;min-height:25px!important;line-height:25px!important}
+#game #techPanel .tech-availability{
+ box-sizing:border-box!important;min-width:0!important;
+ height:22px!important;min-height:22px!important;max-height:22px!important;
+ font-size:12px!important;line-height:22px!important;color:#865c49!important;
+ overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+#game #techPanel .tech-availability.can-research{color:#426b43!important}
+#game #techPanel [data-research]{box-sizing:border-box!important;width:100%!important;height:48px!important;min-height:48px!important;max-height:48px!important;padding:0 12px!important;margin:0!important;text-align:left!important}
+#game #buildingsPanel .build-short{display:block!important;box-sizing:border-box!important;height:19px!important;min-height:19px!important;max-height:19px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#game #buildingsPanel .build-detail{align-content:start!important}
