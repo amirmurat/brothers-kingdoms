@@ -278,14 +278,15 @@ function resetAttackPlanner(){
  attackPlanner=null;planCancelArmy=null;
  $('game').classList.remove('plan-drawing','plan-reviewing');
  $('planGuide').classList.add('hidden');$('planReview').classList.add('hidden');$('planCancelDialog').classList.add('hidden');
+ pressed.clear();gesture=null;pointerStart=null;
  $('planAttackButton').setAttribute('aria-pressed','false');queueDraw();
 }
 function beginAttackPlanner(){
  if(!state||state.phase!=='playing'||mine()?.eliminated)return;
  hideAux();toggleQuickBuild(false);setPreview(null);buildMode=null;redirectArmy=null;selected=null;moveCursor=null;
  $('warPanel').classList.add('hidden');$('warChip').setAttribute('aria-expanded','false');
- pointerStart=null;pressed.clear();
- attackPlanner={mode:'paint',cells:new Set(),targetOwner:null,pointerId:null,lastPoint:null,brushPoint:null,zoneCells:null,brushRadius:2};
+ pointerStart=null;gesture=null;pressed.clear();
+ attackPlanner={mode:'paint',cells:new Set(),targetOwner:null,pointerId:null,lastPoint:null,brushPoint:null,zoneCells:null,brushRadius:2,touchLocked:false,strokeStart:null,strokeOrigin:null};
  $('planTroopsPercent').value=String(percent);$('planBrushSize').value='2';
  $('game').classList.add('plan-drawing');$('game').classList.remove('plan-reviewing');
  $('planGuide').classList.remove('hidden');$('planReview').classList.add('hidden');
@@ -348,11 +349,11 @@ function refreshPaintGuide(){
  const check=checkPaintZone(plan),count=plan.cells.size;
  $('planPaintCount').textContent=number(count)+' cells';
  $('planPaintClear').disabled=count===0;
- $('planReviewButton').disabled=!!check.error||Math.floor((mine()?.troops||0)*percent/100)<35||(state.armies||[]).filter(a=>a.owner===myId).length>=12;
+ $('planReviewButton').disabled=!!check.error||pressed.size>0||Math.floor((mine()?.troops||0)*percent/100)<35||(state.armies||[]).filter(a=>a.owner===myId).length>=12;
  $('planBrushValue').textContent=String(plan.brushRadius)+' tiles';
  $('planTroopsValue').textContent=percent+'% · '+number(Math.floor((mine()?.troops||0)*percent/100));
  const lowTroops=Math.floor((mine()?.troops||0)*percent/100)<35;
- $('planGuideHint').textContent=check.error||(lowTroops?'At least 35 troops required.':'Ready to start the offensive.');
+ $('planGuideHint').textContent=!count?'One finger paints · Two fingers move or zoom':check.error||(lowTroops?'At least 35 troops required.':'Ready to start the offensive.');
 }
 function clearPaintedZone(){
  const plan=attackPlanner;if(plan?.mode!=='paint')return;
@@ -834,13 +835,55 @@ function selectMap(clientX,clientY){
 }
 function updateMapStatus(x,y){inspectCell(x,y);}
 // Normal mode pans and inspects the map. Attack mode exclusively paints.
+
+// A pending first touch is not painted until it moves or is released as a tap.
+// Two touches anchor the world position under their midpoint for pan + pinch zoom.
+function beginPaintNavigation(){
+ const [a,b]=[...pressed.values()];
+ if(!a||!b){gesture=null;return;}
+ const r=canvas.getBoundingClientRect();
+ const cx=(a.x+b.x)/2-r.left,cy=(a.y+b.y)/2-r.top;
+ gesture={dist:Math.hypot(a.x-b.x,a.y-b.y),zoom,worldX:(cx-camX)/(TILE*zoom),worldY:(cy-camY)/(TILE*zoom)};
+}
+function updatePaintNavigation(){
+ if(!gesture||pressed.size<2)return;
+ const [a,b]=[...pressed.values()],r=canvas.getBoundingClientRect();
+ const cx=(a.x+b.x)/2-r.left,cy=(a.y+b.y)/2-r.top;
+ zoom=Math.max(.2,Math.min(5,gesture.zoom*Math.hypot(a.x-b.x,a.y-b.y)/Math.max(1,gesture.dist)));
+ camX=cx-gesture.worldX*TILE*zoom;camY=cy-gesture.worldY*TILE*zoom;
+ clampCamera();$('zoomText').textContent=Math.round(zoom*100)+'%';queueDraw();
+}
+function finishPaintPointer(e,cancelled=false){
+ const plan=attackPlanner;if(!plan)return;
+ if(!cancelled&&pressed.size===1&&pressed.has(e.pointerId)&&!plan.touchLocked&&plan.pointerId===e.pointerId){
+  if(!plan.lastPoint&&plan.strokeStart)paintAtPointer(plan.strokeStart);
+  else if(plan.lastPoint)paintAtPointer(gridAt(e.clientX,e.clientY));
+ }
+ pressed.delete(e.pointerId);
+ plan.pointerId=null;plan.lastPoint=null;plan.strokeStart=null;plan.strokeOrigin=null;plan.brushPoint=null;
+ if(pressed.size>=2){plan.touchLocked=true;beginPaintNavigation();}
+ else if(pressed.size===1){plan.touchLocked=true;gesture=null;}
+ else{plan.touchLocked=false;gesture=null;}
+ refreshPaintGuide();queueDraw();
+}
 function onPointerDown(e){
  if(!state)return;
  if(attackPlanner){
-  const plan=attackPlanner;if(plan.mode!=='paint'||plan.pointerId!==null)return;
-  const pt=gridAt(e.clientX,e.clientY);if(!E.inside(pt.x,pt.y))return;
-  canvas.setPointerCapture(e.pointerId);plan.pointerId=e.pointerId;plan.lastPoint=null;
-  paintAtPointer(pt);queueDraw();return;
+  const plan=attackPlanner;if(plan.mode!=='paint')return;
+  canvas.setPointerCapture(e.pointerId);
+  pressed.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pressed.size>=2){
+   plan.touchLocked=true;plan.pointerId=null;plan.lastPoint=null;
+   plan.strokeStart=null;plan.strokeOrigin=null;plan.brushPoint=null;
+   if(pressed.size===2)beginPaintNavigation();
+  }else if(!plan.touchLocked){
+   const pt=gridAt(e.clientX,e.clientY);
+   plan.pointerId=e.pointerId;plan.lastPoint=null;
+   plan.strokeStart=E.inside(pt.x,pt.y)?pt:null;
+   plan.strokeOrigin={x:e.clientX,y:e.clientY};
+   plan.brushPoint=plan.strokeStart;
+  }
+  refreshPaintGuide();queueDraw();return;
  }
  canvas.setPointerCapture(e.pointerId);
  pressed.set(e.pointerId,{x:e.clientX,y:e.clientY});
@@ -854,10 +897,13 @@ function onPointerDown(e){
 }
 function onPointerMove(e){
  if(attackPlanner){
-  const plan=attackPlanner;if(plan.mode==='paint'&&plan.pointerId===e.pointerId){
-   paintAtPointer(gridAt(e.clientX,e.clientY));queueDraw();
-  }
-  return;
+  const plan=attackPlanner;if(!pressed.has(e.pointerId))return;
+  pressed.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pressed.size>=2){updatePaintNavigation();return;}
+  if(plan.touchLocked||plan.pointerId!==e.pointerId)return;
+  if(!plan.lastPoint&&plan.strokeOrigin&&Math.hypot(e.clientX-plan.strokeOrigin.x,e.clientY-plan.strokeOrigin.y)<6)return;
+  if(!plan.lastPoint&&plan.strokeStart)paintAtPointer(plan.strokeStart);
+  paintAtPointer(gridAt(e.clientX,e.clientY));queueDraw();return;
  }
  if(buildMode&&state?.phase==='playing'){
   const cell=gridAt(e.clientX,e.clientY);
@@ -881,13 +927,7 @@ function onPointerMove(e){
  }
 }
 function onPointerUp(e){
- if(attackPlanner){
-  const plan=attackPlanner;if(plan.mode==='paint'&&plan.pointerId===e.pointerId){
-   paintAtPointer(gridAt(e.clientX,e.clientY));plan.pointerId=null;plan.lastPoint=null;
-   refreshPaintGuide();queueDraw();
-  }
-  return;
- }
+ if(attackPlanner){finishPaintPointer(e);return;}
  const was=pointerStart,touch=pressed.size;
  pressed.delete(e.pointerId);
  if(touch===1){
@@ -902,7 +942,7 @@ document.addEventListener('selectstart',e=>{
 canvas.addEventListener('pointerdown',onPointerDown);
 canvas.addEventListener('pointermove',onPointerMove);
 canvas.addEventListener('pointerup',onPointerUp);
-canvas.addEventListener('pointercancel',e=>{if(attackPlanner?.pointerId===e.pointerId){attackPlanner.pointerId=null;attackPlanner.lastPoint=null;refreshPaintGuide();queueDraw();}pressed.delete(e.pointerId);pointerStart=null;gesture=null;});
+canvas.addEventListener('pointercancel',e=>{if(attackPlanner){finishPaintPointer(e,true);return;}pressed.delete(e.pointerId);pointerStart=null;gesture=null;});
 canvas.addEventListener('wheel',e=>{e.preventDefault();const p=pixelAt(e.clientX,e.clientY);zoomAt(e.deltaY<0?1.13:.885,p.x,p.y);},{passive:false});canvas.addEventListener('contextmenu',e=>e.preventDefault());
 $('zoomIn').onclick=()=>zoomAt(1.24,canvas.clientWidth/2,canvas.clientHeight/2);$('zoomOut').onclick=()=>zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);function fitWorld(){hideAux();zoom=Math.min((canvas.clientWidth-16)/(E.W*TILE),(canvas.clientHeight-16)/(E.H*TILE));camX=(canvas.clientWidth-E.W*TILE*zoom)/2;camY=(canvas.clientHeight-E.H*TILE*zoom)/2;$('zoomText').textContent=Math.round(zoom*100)+'%';queueDraw();}
 mini.addEventListener('pointerdown',e=>{const r=mini.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*E.W,y=(e.clientY-r.top)/r.height*E.H;camX=canvas.clientWidth/2-x*TILE*zoom;camY=canvas.clientHeight/2-y*TILE*zoom;clampCamera();queueDraw();});mini.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();fitWorld();}});
