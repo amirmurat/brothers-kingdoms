@@ -247,8 +247,10 @@ const server=http.createServer((req,res)=>{
    assert.equal(armyFlat.radius,'0px',label+' army rows have no card corners');
    assert.equal(armyFlat.left,'0px',label+' army rows have no outer card frame');
    assert.equal(armyFlat.bottom,'1px',label+' army rows use a flat separator');
-   const armyBox=await page.locator('#armiesPanel').boundingBox();
-   assert(armyBox.x>=0&&armyBox.x+armyBox.width<=viewport.width+1,label+' army overview fits the screen');
+   assert(await page.locator('#warPanel').isVisible(),label+' Reserve opens unified Military sheet');
+   assert.equal(await page.locator('#warTabArmy').getAttribute('aria-selected'),'true',label+' Reserve selects My army tab');
+   const armyBox=await page.locator('#warPanel').boundingBox();
+   assert(armyBox.x>=0&&armyBox.x+armyBox.width<=viewport.width+1,label+' unified Military overview fits the screen');
    await page.evaluate(()=>window.__layout.hideAux());
    await page.evaluate(()=>window.__layout.openPanel());
    assert.equal(await page.locator('#planToolSwitch').isVisible(),false,label+' tools do not cover Research');
@@ -268,6 +270,13 @@ const server=http.createServer((req,res)=>{
    assert.equal(techFlat.bottom,'1px',label+' research items share HUD separators');
    await page.evaluate(()=>window.__layout.closePanel());
    await page.locator('#warChip').click();
+   assert.equal(await page.locator('#warTabNations').getAttribute('aria-selected'),'true',label+' Nations opens Military in Nations tab');
+   await page.locator('#warTabThreats').click();
+   assert.equal(await page.locator('#warTabThreats').getAttribute('aria-selected'),'true',label+' Attacks tab is operable');
+   assert(await page.locator('#warThreatEmpty').isVisible(),label+' no attacks gives an explicit empty state');
+   await page.locator('#warTabArmy').click();
+   assert(await page.locator('[data-front-row="home-army"]').isVisible(),label+' Army tab preserves the live reserve');
+   await page.locator('#warTabNations').click();
    const nations=await sheetStyle('#warPanel','.war-panel-title strong');
    for(const [kind,sheet] of [['Research',research],['Nations',nations]]){
     assert.equal(sheet.width,match.width,label+' '+kind+' shares sheet width');
