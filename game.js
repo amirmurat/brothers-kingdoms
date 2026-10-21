@@ -876,7 +876,7 @@ function render(){if(!state)return;
   const duration=Math.floor(state.tick/60)+'m '+String(state.tick%60).padStart(2,'0')+'s';
   $('victoryName').textContent=outcome==='win'?'Victory!':outcome==='loss'?'Defeat':'Draw';
   $('victoryEyebrow').textContent=outcome==='win'?'YOUR KINGDOM':outcome==='loss'?'MATCH ENDED':'MATCH ENDED';
-  $('resultEmblem').textContent=outcome==='win'?'★':outcome==='loss'?'⚔':'◈';
+  $('resultEmblem').textContent=outcome==='win'?'◆':outcome==='loss'?'✕':'◇';
   $('resultSheet').dataset.outcome=outcome;
   $('victoryDesc').textContent=outcome==='win'?'Your kingdom has won.':outcome==='loss'?`Winner: ${w?.name||'opponent'}.`:'No winner determined.';
   $('victoryReason').textContent=reason;
