@@ -27,6 +27,20 @@ const server=http.createServer((req,res)=>{
    assert(Object.values(entryFlat).every(v=>v.radius==='0px'),label+' lobby controls share flat HUD corners');
    assert(Math.abs(entryFlat.primary.x-entryFlat.friends.x)<1&&Math.abs(entryFlat.primary.right-entryFlat.friends.right)<1,label+' lobby buttons align');
    assert(Math.abs(entryFlat.name.x-entryFlat.code.x)<1&&Math.abs(entryFlat.name.right-entryFlat.settings.right)<1,label+' lobby fields align');
+   const lobbyIcons=await page.evaluate(()=>{
+    const solo=document.querySelector('#demoButton .choice-symbol svg');
+    const path=solo.querySelector('path'),soloSvgStyle=getComputedStyle(solo);
+    const btn=document.querySelector('#demoButton'),btnBg=getComputedStyle(btn).backgroundColor;
+    const resume=document.querySelector('#resumeButton');
+    const hasResumePlay=resume.querySelector('use[href$="#play"]')!==null;
+    const hasResumeArrow=resume.querySelector('.choice-arrow use[href$="#arrow-right"]')!==null;
+    return {soloPath:!!path,soloArea:path?.getBBox().width*path?.getBBox().height,soloColor:soloSvgStyle.color,
+      soloFill:soloSvgStyle.fill,btnBg,hasResumePlay,hasResumeArrow,
+      soloHeight:btn.getBoundingClientRect().height,friendsHeight:document.getElementById('hostButton').getBoundingClientRect().height};
+   });
+   assert(lobbyIcons.soloPath&&lobbyIcons.soloArea>3000,label+' solo controller icon is visible geometry, not an absent external reference');
+   assert(lobbyIcons.hasResumePlay&&lobbyIcons.hasResumeArrow,label+' resume uses matched action icon family');
+   assert.equal(lobbyIcons.soloHeight,lobbyIcons.friendsHeight,label+' Play solo and Friends share button height');
    await page.evaluate(()=>window.__layout.setRoom());
    const roomFlat=await page.evaluate(()=>{
     const read=id=>{const el=document.querySelector(id),s=getComputedStyle(el),r=el.getBoundingClientRect();return {radius:s.borderRadius,border:s.borderLeftWidth,x:r.x,right:r.right};};
@@ -36,6 +50,16 @@ const server=http.createServer((req,res)=>{
    assert(Math.abs(roomFlat.invite.x-roomFlat.spawn.x)<1&&Math.abs(roomFlat.invite.right-roomFlat.spawn.right)<1&&Math.abs(roomFlat.rules.x-roomFlat.spawn.x)<1,label+' Room sections share edges');
    assert(await page.locator('#waiting').isVisible(),label+' room is visible');
    assert(await page.locator('#startButton').isVisible(),label+' room Start visible');
+   const roomIcons=await page.evaluate(()=>{
+    const ids=['startButton','leaveRoom'];
+    return ids.map(id=>{const el=document.getElementById(id),s=getComputedStyle(el),r=el.getBoundingClientRect();
+      return {id,radius:s.borderRadius,fill:el.querySelector('use')?.getAttribute('href'),height:r.height};
+    });
+   });
+   assert(roomIcons.every(v=>v.radius==='0px'&&v.height>=48),label+' room buttons match flat action system');
+   assert(roomIcons.some(v=>v.id==='leaveRoom'&&v.fill?.endsWith('#arrow-left')),label+' Main menu has coherent back-direction icon');
+   assert(roomIcons.some(v=>v.id==='startButton'&&v.fill?.endsWith('#arrow-right')),label+' Start match uses standardized icon instead of text arrow');
+
    const spawn=page.locator('#spawnMap'),bounds=await spawn.boundingBox();
    assert(bounds.width>180&&bounds.height>100,label+' spawn map visible with usable size');
    const chosen=await page.evaluate(()=>{const s=window.__layout.getState(),E=window.BKEngine;for(let y=10;y<E.H-10;y++)for(let x=10;x<E.W-10;x++)if(!E.spawnError(s,1,x,y))return {x,y};});
@@ -158,6 +182,19 @@ const server=http.createServer((req,res)=>{
    assert.equal(contextFlat.border,'0px',label+' building effect no frame');
    assert(contextFlat.costs.every(c=>c.radius==='0px'&&c.fill==='rgba(0, 0, 0, 0)'),label+' costs have no pills');
    await page.evaluate(()=>window.__layout.hideAux());
+
+   await page.locator('#planToolErase').click();
+   const eraseHud=await page.evaluate(()=>{
+    const h=document.getElementById('planEraseHint'),m=document.getElementById('mapView'),r=h.getBoundingClientRect(),mr=m.getBoundingClientRect(),s=getComputedStyle(h);
+    return {visible:!h.classList.contains('hidden'),radius:s.borderRadius,background:s.backgroundColor,
+      right:mr.right-r.right,left:r.left-mr.left,bottom:mr.bottom-r.bottom,display:s.display,
+      title:h.querySelector('strong')?.textContent,detail:h.querySelector('span')?.textContent};
+   });
+   assert(eraseHud.visible&&eraseHud.display==='flex',label+' eraser appears as a permanent HUD status, not a floating toast');
+   assert.equal(eraseHud.radius,'0px',label+' eraser HUD has square panel geometry');
+   assert(Math.abs(eraseHud.left)<1&&Math.abs(eraseHud.right)<1&&Math.abs(eraseHud.bottom)<1,label+' eraser strip fills map width at bottom');
+   assert.equal(eraseHud.title,'ERASER',label+' eraser has distinct mode title');
+   await page.locator('#planToolErase').click();
    const bottomBefore=await page.locator('#buildDock').boundingBox();
    const toolBefore=await page.locator('#planToolPaint').boundingBox();
    await page.locator('#planToolPaint').click();
@@ -345,6 +382,22 @@ const server=http.createServer((req,res)=>{
     return {move:Math.abs(before.x-after.x),left:style.borderLeftWidth};
    });
    assert(nationFocus.move<1&&nationFocus.left==='0px',label+' chosen nation remains aligned with other rows');
+   const selectedSpacing=await page.evaluate(()=>{
+     const row=document.querySelector('#warPanelList .nation-row'),measures=()=>{
+       const b=row.getBoundingClientRect(),a=row.querySelector('.nation-actions').getBoundingClientRect();
+       const identity=row.querySelector('.nation-identity').getBoundingClientRect();
+       const buttons=[...row.querySelectorAll('.nation-actions button')].map(el=>el.getBoundingClientRect());
+       return {left:a.left-b.left,right:b.right-a.right,identityLeft:identity.left-b.left,
+         widths:buttons.map(x=>x.width),gap:buttons[1].left-buttons[0].right};
+     };
+     const baseline=measures();row.classList.add('focused');const focused=measures();row.classList.remove('focused');
+     return {baseline,focused};
+   });
+   assert(selectedSpacing.focused.left>=7&&selectedSpacing.focused.right>=7,label+' selected diplomacy buttons have space from both card edges');
+   assert(Math.abs(selectedSpacing.focused.left-selectedSpacing.focused.right)<1,label+' diplomacy card left/right gutters match');
+   assert(Math.abs(selectedSpacing.baseline.left-selectedSpacing.focused.left)<1,label+' selected card preserves other rows internal alignment');
+   assert(selectedSpacing.focused.gap>=7,label+' diplomacy buttons have a real gap');
+
 
    await page.locator('#warTabThreats').click();
    assert.equal(await page.locator('#warTabThreats').getAttribute('aria-selected'),'true',label+' Attacks tab is operable');
