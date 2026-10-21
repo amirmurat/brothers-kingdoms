@@ -191,6 +191,16 @@ const server=http.createServer((req,res)=>{
    assert(focusBounds,label+' focus content fits bottom surface');
    await page.screenshot({path:'/tmp/bk-v102-focus-'+name+'-'+viewport.width+'.png'});
    if(viewport.height>480){const point=await page.evaluate(()=>window.__layout.focusCandidate());assert(point,label+' invalid neutral point available');await page.mouse.click(point.x,point.y);assert.equal(await page.locator('#armyFocusGuide').getAttribute('data-valid'),'false',label+' focus outside land/plans reports invalid');await page.screenshot({path:'/tmp/bk-v102-invalid-focus-'+name+'-'+viewport.width+'.png'});await page.locator('#clearArmyFocus').click();}
+   // Switching directly between tools must never leave the old tool highlighted.
+   const focusSurface=await page.locator('#armyFocusGuide').evaluate(e=>getComputedStyle(e).backgroundColor);
+   await page.locator('#planToolErase').click();
+   assert.equal(await page.locator('#planToolFocus').getAttribute('aria-pressed'),'false',label+' eraser releases focus button');
+   assert.equal(await page.locator('#planToolErase').getAttribute('aria-pressed'),'true',label+' eraser is the only active paint tool');
+   assert(await page.locator('#armyFocusGuide').evaluate(e=>e.classList.contains('hidden')),label+' eraser closes focus panel');
+   assert.equal(await page.locator('#planEraseHint').evaluate(e=>getComputedStyle(e).backgroundColor),focusSurface,label+' focus and eraser share the same panel surface');
+   await page.locator('#planToolFocus').click();
+   assert.equal(await page.locator('#planToolErase').getAttribute('aria-pressed'),'false',label+' focus releases eraser button');
+   assert.equal(await page.locator('#planToolFocus').getAttribute('aria-pressed'),'true',label+' focus is the only selected tool');
    await page.locator('#exitArmyFocus').click();
    assert.equal(await page.locator('#buildDock').evaluate(e=>getComputedStyle(e).visibility),'visible',label+' exiting focus restores construction');
    await page.locator('#planToolPaint').click();
