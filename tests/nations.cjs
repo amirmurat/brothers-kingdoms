@@ -53,4 +53,17 @@ function world(){
  assert.deepEqual(attackerPlan.targets,[0]);
  assert.equal(t.s.wars.length,1);
 }
+{
+ const s=E.lobby(76544),human=E.addPlayer(s,'Human'),bot=E.addPlayer(s,'Bot negotiator',true);
+ assert(E.start(s,0).ok);
+ const p=E.person(s,human),ai=E.person(s,bot);
+ p.troops=2200;ai.troops=150;
+ assert(E.action(s,human,{type:'diplomacy',target:bot}).ok,'Bots evaluate alliance offers');
+ assert(p.allies.includes(bot)&&ai.allies.includes(human),'Alliance with a bot is possible');
+ assert(E.action(s,human,{type:'diplomacy',target:bot}).ok,'An alliance can be ended normally');
+ assert(E.action(s,human,{type:'setNationTarget',target:bot,enabled:true}).ok);
+ assert(E.action(s,human,{type:'peace',target:bot}).peace,'Bot should sign peace with a stronger neighbor');
+ assert(!s.wars.length,'Peace must actually end the war');
+ assert(!p.attackTargets.includes(bot),'Peace revokes offensive authorization');
+}
 console.log('PASS: Nations is sole attack authority, no surprise war, peace, alliances and synced plans');
