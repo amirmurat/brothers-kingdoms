@@ -1,6 +1,6 @@
 # Brothers Kingdoms — браузерная стратегия для игры с братьями
 
-**Текущая версия рабочей ветки:** v81 (21.10.2026). Мобильная real-time стратегия с приватными комнатами на Cloudflare Workers/Durable Objects.
+**Текущая версия рабочей ветки:** v82 (21.10.2026). Мобильная real-time стратегия с приватными комнатами на Cloudflare Workers/Durable Objects.
 
 **Играть:** https://brothers-kingdoms.murat-amir-olzhasuly.workers.dev/
 

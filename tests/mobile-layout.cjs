@@ -8,7 +8,7 @@ const server=http.createServer((req,res)=>{
  try{
   let body=fs.readFileSync(file);
   if(name==='/'||name==='/index.html')body=body.toString().split('\n').filter(line=>!line.includes('unpkg.com/peerjs')).join('\n');
-  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={contextual,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
+  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
   res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream'});res.end(body);
  }catch(_){res.writeHead(404);res.end();}
 });
@@ -48,6 +48,17 @@ const server=http.createServer((req,res)=>{
    assert(performanceChecks.opened>0,label+' opening army panel still renders live estimates');
    assert(performanceChecks.first>0,label+' initial planned geometry is drawn');
    assert.equal(performanceChecks.second,performanceChecks.first,label+' repeated frames reuse plan geometry');
+   const mapWork=await page.evaluate(()=>{
+    const L=window.__layout,s=L.getState();L.repaintWorld();const i=s.owners.findIndex(v=>v===1),old=s.owners[i];
+    s.owners[i]=0;s.territoryRevision++;const changed=L.repaintWorld(),unchanged=L.repaintWorld();
+    s.owners[i]=old;s.territoryRevision++;L.repaintWorld();
+    const original=window.requestAnimationFrame;let frames=0;window.requestAnimationFrame=()=>{frames++;return 0;};
+    try{L.simulatePacket();L.draw();}finally{window.requestAnimationFrame=original;}
+    return {changed,unchanged,frames};
+   });
+   assert(mapWork.changed>0&&mapWork.changed<=5,label+' one capture repaints at most five terrain cells');
+   assert.equal(mapWork.unchanged,0,label+' unchanged ownership repaints nothing');
+   assert.equal(mapWork.frames,0,label+' static cell display does not run a perpetual animation loop');
    const visualBudget=await page.evaluate(()=>{
     const L=window.__layout,E=window.BKEngine,s=L.getState(),id=s.players.find(p=>!p.bot).id;
     const saved=s.armies,owned=s.owners.flatMap((v,i)=>v===id?[i]:[]);

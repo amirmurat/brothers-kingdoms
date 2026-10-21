@@ -32,3 +32,13 @@ const moving=F.restoreNetworkState(JSON.parse(JSON.stringify(F.networkState(s)))
 assert.equal(F.localAttackStrength(moving.armies[0],F.idx(80,30)),0,'A moving column cannot appear as arrived after route stripping');
 assert(s.armies[0].columns[0].route.length,'Full routes remain in authoritative state/saves');
 console.log('PASS army performance: bounded pathfinding, real movement, compact exact snapshots, reused geometry and correct arrived/marching presence');
+// Large path buffers belong to the simulation, not each A* request.
+{
+ let allocations=0;const mod={exports:{}};
+ class CountedDistances extends Float64Array{constructor(...a){super(...a);allocations++;}}
+ new Function('module','Float64Array',fs.readFileSync('engine.js','utf8'))(mod,CountedDistances);
+ const R=mod.exports,t=R.lobby(1),id=R.addPlayer(t,'Routes');R.start(t,0);t.tiles.fill(1);t.owners.fill(id);t.roads=[];
+ for(let n=0;n<30;n++){const route=R.roadRoute(t,id,R.idx(20,20),R.idx(25+n%5,25));assert(route?.length,'Independent queries find real friendly routes');}
+ assert.equal(allocations,1,'Repeated road queries reuse the same full-map distance buffer');
+ t.owners[R.idx(29,25)]=0;assert.equal(R.roadRoute(t,id,R.idx(20,20),R.idx(29,25)),null,'Scratch reuse cannot leak an earlier reachable result');
+}

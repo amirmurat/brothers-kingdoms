@@ -572,3 +572,6 @@ Resource buttons now call setWorkPriority instead of beginWorkPlanner; #workBala
 
 ### v81 bottom placement and capacity
 #buildDock inside #mapView offers [data-place-building] city/barracks/fort buttons; #developButton/#quickBuild are hidden compatibility remnants. #placingBuild and minimap are raised above the dock. Sheets, Nations and paint mode hide the dock. Match menu now contains #productionPriority, #workforceSummary and #storageSummary. resourceCapacity derives storage from land*50; planCellLimit derives silent brush/API capacity from total military/10 and preserves existing oversized drawings. New starts no longer create a farm.
+
+### v82 performance
+repaintWorld returns the number of painted terrain cells and retains mapPaintOwners for incremental ownership updates; one capture affects at most five cells. Main draw no longer self-schedules for obsolete arrow interpolation. drawMini skips minimized minimap. Cloudflare snapshot(includeTerrain) includes static terrain for welcome/resync/map changes only; broadcasts omit unchanged terrain. localRoute memoizes bounded road queries and roadRoute reuses typed search buffers per simulation. Simulation and snapshot frequencies are unchanged.

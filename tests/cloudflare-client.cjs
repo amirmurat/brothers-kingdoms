@@ -10,7 +10,7 @@ function el(id=''){
 }
 const context=new Proxy({createImageData(w,h){return {data:new Uint8ClampedArray(w*h*4)}},measureText(){return {width:30}}},{get(t,k){return t[k]||(()=>{})}});
 const document={getElementById:el,querySelectorAll(){return []},querySelector(){return null},createElement(){return el('created')},addEventListener(){},activeElement:el('body'),body:el('body'),hidden:false};
-const sandbox={btoa,atob,console,window:{BKEngine:E,innerWidth:390,addEventListener(){}},document,localStorage:{getItem(k){return saved.get(k)||null},setItem(k,v){saved.set(k,v)},removeItem(k){saved.delete(k)}},location:{hash:'',origin:'https://test',pathname:'/index.html',search:''},history:{replaceState(){}},navigator:{},Path2D:class{},requestAnimationFrame(){},setTimeout(){return 1},clearTimeout(){},setInterval(){},performance:{now(){return 0}},devicePixelRatio:1,crypto:require('crypto').webcrypto,Uint8Array,Uint8ClampedArray,Blob};
+const sandbox={btoa,atob,console,window:{BKEngine:E,innerWidth:390,addEventListener(){}},document,localStorage:{getItem(k){return saved.get(k)||null},setItem(k,v){saved.set(k,v)},removeItem(k){saved.delete(k)}},location:{hash:'',origin:'https://test',pathname:'/index.html',search:''},history:{replaceState(){}},navigator:{},Path2D:class{moveTo(){}lineTo(){}rect(){}},requestAnimationFrame(){},setTimeout(){return 1},clearTimeout(){},setInterval(){},performance:{now(){return 0}},devicePixelRatio:1,crypto:require('crypto').webcrypto,Uint8Array,Uint8ClampedArray,Blob};
 el('soloBots').value='2';el('nickname').value='Test';
 
 const sent=[],timers=[];

@@ -45,6 +45,10 @@ async function checkRoom(E,source,assert,btoa){
  const reboot=new KingdomRoom(ctx,{});await ctx.ready;
  assert.equal(reboot.s.tick,room.s.tick);assert.equal(reboot.s.wars.length,1);assert.equal(reboot.tokens['session-a-123456789'],1);
  assert([...data.values()].filter(x=>typeof x==='string').every(x=>x.length<=50000),'snapshot chunks below storage value limit');
+ room.broadcast();const small=a.sent.at(-1).state;
+ assert.equal(small.tiles,null,'Repeated broadcasts omit immutable terrain');
+ const fullSnapshot=room.snapshot();assert(fullSnapshot.tiles,'Welcome/resync snapshots retain full terrain');
+ assert(JSON.stringify(small).length<JSON.stringify(fullSnapshot).length,'Live packets are smaller than full snapshots');
  const packed=room.snapshot();
  assert.equal(atob(packed.tiles).length,E.W*E.H);
  for(const id of [...timers.keys()])timers.delete(id);

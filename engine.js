@@ -549,20 +549,24 @@ function paintWorkZone(s,p,a){
 }
 // A* favours existing roads (cost 1) over open terrain (cost 3).
 // Called only when a group gets a new destination or loses its friendly path.
+const roadSearchMemory=new WeakMap();
 function roadRoute(s,id,source,destination){
  if(source===destination)return [];
  if(s.owners[source]!==id||s.owners[destination]!==id)return null;
- const roads=roadSet(s),dist=new Float64Array(W*H).fill(Infinity),prev=new Int32Array(W*H).fill(-1),heap=[];
+ let memory=roadSearchMemory.get(s);
+ if(!memory){memory={dist:new Float64Array(W*H),prev:new Int32Array(W*H),seen:new Uint32Array(W*H),stamp:0,heap:[]};roadSearchMemory.set(s,memory);}
+ const roads=roadSet(s),{dist,prev,seen,heap}=memory,stamp=++memory.stamp;heap.length=0;
+ if(stamp>=4294967295){seen.fill(0);memory.stamp=0;return roadRoute(s,id,source,destination);}
  const h=i=>Math.abs(i%W-destination%W)+Math.abs(((i/W)|0)-((destination/W)|0));
  const push=(i,g)=>{const v={i,g,f:g+h(i)};let k=heap.length;heap.push(v);while(k){const p=(k-1)>>1;if(heap[p].f<=v.f)break;heap[k]=heap[p];k=p;}heap[k]=v;};
  const pop=()=>{const v=heap[0],last=heap.pop();if(heap.length){let k=0;while(k*2+1<heap.length){let c=k*2+1;if(c+1<heap.length&&heap[c+1].f<heap[c].f)c++;if(heap[c].f>=last.f)break;heap[k]=heap[c];k=c;}heap[k]=last;}return v;};
- dist[source]=0;push(source,0);
+ dist[source]=0;seen[source]=stamp;prev[source]=-1;push(source,0);
  while(heap.length){const v=pop();if(v.g!==dist[v.i])continue;if(v.i===destination)break;
   for(const j of adjacentCells(v.i))if(s.tiles[j]&&s.owners[j]===id){const g=v.g+(roads.has(j)?1:3);
-   if(g<dist[j]){dist[j]=g;prev[j]=v.i;push(j,g);}
+   if(seen[j]!==stamp||g<dist[j]){seen[j]=stamp;dist[j]=g;prev[j]=v.i;push(j,g);}
   }
  }
- if(prev[destination]<0)return null;
+ if(seen[destination]!==stamp||prev[destination]<0)return null;
  const route=[];for(let i=destination;i!==source;i=prev[i])route.push(i);return route.reverse();
 }
 function moveOnRoute(s,id,g){
@@ -824,8 +828,18 @@ function frontSectors(s,id,front){
  }
  return result;
 }
+const localRouteCache=new WeakMap();
 function localRoute(s,id,source,destination){
- if((s.roads?.length||0)>=4)return roadRoute(s,id,source,destination);
+ if(source===destination)return [];
+ const distance=Math.abs(source%W-destination%W)+Math.abs(((source/W)|0)-((destination/W)|0));
+ if(distance===1&&s.owners[source]===id&&s.owners[destination]===id&&s.tiles[destination])return [destination];
+ if((s.roads?.length||0)>=4){
+  let cache=localRouteCache.get(s);
+  if(!cache||cache.revision!==s.territoryRevision||cache.roads!==s.roads||cache.count!==s.roads.length){cache={revision:s.territoryRevision,roads:s.roads,count:s.roads.length,paths:new Map()};localRouteCache.set(s,cache);}
+  const key=id+':'+source+':'+destination;
+  if(!cache.paths.has(key)){if(cache.paths.size>=256)cache.paths.clear();cache.paths.set(key,roadRoute(s,id,source,destination));}
+  const route=cache.paths.get(key);return route?route.slice():null;
+ }
  // Most front movement is a few friendly cells; avoid a whole-map flood for it.
  for(const horizontalFirst of [true,false]){
   let x=source%W,y=(source/W)|0;const tx=destination%W,ty=(destination/W)|0,route=[];let valid=true;
@@ -1411,5 +1425,5 @@ function restoreNetworkState(s){
  delete s.armyPacked;return s;
 }
 
-return{BUILD:'v81',TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v82',TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });

@@ -44,9 +44,11 @@ export class KingdomRoom {
   const parts=[];for(let i=0;i<data.length;i+=50000)parts.push(data.slice(i,i+50000));
   await this.ctx.storage.transaction(async tx=>{await tx.put('chunks',parts.length);for(let i=0;i<parts.length;i++)await tx.put('state:'+i,parts[i]);});
  }
- snapshot(){return {...pack(this.s),serverBuild:E.BUILD,serverAdmin:this.admin};}
+ snapshot(includeTerrain=true){return {...pack(this.s,includeTerrain),serverBuild:E.BUILD,serverAdmin:this.admin};}
  broadcast(){
-  const text=JSON.stringify({t:'state',state:this.snapshot()});
+  const key=this.s?.seed+':'+(this.s?.tiles?.length||0),terrain=this.terrainKey!==key;
+  this.terrainKey=key;
+  const text=JSON.stringify({t:'state',state:this.snapshot(terrain)});
   for(const ws of this.sockets())try{ws.send(text);}catch(_){}
  }
  run(){

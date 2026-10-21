@@ -1260,47 +1260,47 @@ mini.addEventListener('pointerdown',e=>{const r=mini.getBoundingClientRect(),x=(
 // It is updated only when a territory changes, NOT once per animation frame.
 const TERRAIN_RGB=[[8,17,27],[87,122,67],[25,99,55],[134,143,151],[128,166,65],[104,83,46],[162,169,174]];
 let minimapCached=null,pixelLayer=null;
+let mapPaintOwners=null;
 function repaintWorld(){
- if(!state?.owners?.length||!state?.tiles?.length)return;
+ if(!state?.owners?.length||!state?.tiles?.length)return 0;
  const revision=state.territoryRevision??state.tick;
- if(worldLayer&&paintedRevision===revision&&terrainSeed===state.seed)return;
+ if(worldLayer&&paintedRevision===revision&&terrainSeed===state.seed)return 0;
+ const full=!worldLayer||terrainSeed!==state.seed||!mapPaintOwners||paintedRevision<0;
  if(!worldLayer){worldLayer=document.createElement('canvas');worldLayer.width=E.W*6;worldLayer.height=E.H*6;}
- if(!pixelLayer){pixelLayer=document.createElement('canvas');pixelLayer.width=E.W;pixelLayer.height=E.H;}
- const c=pixelLayer.getContext('2d',{alpha:false});const img=c.createImageData(E.W,E.H);
- const colors=Object.fromEntries(state.players.map(p=>{const x=parseInt(p.color.slice(1),16);return[p.id,[(x>>>16)&255,(x>>>8)&255,x&255]];}));
- const owners=state.owners,tiles=state.tiles,d=img.data;
- for(let i=0;i<owners.length;i++){
-  const terr=TERRAIN_RGB[tiles[i]]||TERRAIN_RGB[1],id=owners[i],col=id?colors[id]:null;
-  const p=i*4;
-  const k=col ? (tiles[i]===1?.32:.12) : 0;
-  let h=Math.imul(i% E.W+state.seed*3,374761393)^Math.imul((i/E.W)|0,668265263);h=Math.imul(h^(h>>>13),1274126177);const noise=((h>>>24)&15)-7;
-  const shade=tiles[i]===0?noise*.08:noise*.20;
-  d[p]=Math.max(0,Math.min(255,Math.round(terr[0]*(1-k)+(col?.[0]||0)*k+shade)));
-  d[p+1]=Math.max(0,Math.min(255,Math.round(terr[1]*(1-k)+(col?.[1]||0)*k+shade)));
-  d[p+2]=Math.max(0,Math.min(255,Math.round(terr[2]*(1-k)+(col?.[2]||0)*k+shade)));
-  d[p+3]=255;
+ const owners=state.owners,tiles=state.tiles,dirty=new Set();
+ if(full)for(let i=0;i<owners.length;i++)dirty.add(i);
+ else for(let i=0;i<owners.length;i++)if(owners[i]!==mapPaintOwners[i]){
+  dirty.add(i);const x=i%E.W,y=(i/E.W)|0;
+  if(x)dirty.add(i-1);if(x<E.W-1)dirty.add(i+1);if(y)dirty.add(i-E.W);if(y<E.H-1)dirty.add(i+E.W);
  }
- c.putImageData(img,0,0);const wc=worldLayer.getContext('2d',{alpha:false});wc.imageSmoothingEnabled=false;wc.drawImage(pixelLayer,0,0,worldLayer.width,worldLayer.height);
- // Painted terrain marks: cached in world bitmap, not recreated every frame.
- for(let y=1;y<E.H-1;y++)for(let x=1;x<E.W-1;x++){
-  const i=y*E.W+x,t=tiles[i];if(!t||((x*41+y*73+state.seed*13)%5))continue;
+ const wc=worldLayer.getContext('2d',{alpha:false}),colors=Object.fromEntries(state.players.map(p=>{const v=parseInt(p.color.slice(1),16);return[p.id,[(v>>>16)&255,(v>>>8)&255,v&255]];}));
+ // Paint only changed ownership cells and adjacent boundary cells. The resource
+ // pattern is deterministic, so overwriting a cell restores its exact terrain.
+ for(const i of dirty){const x=i%E.W,y=(i/E.W)|0,t=tiles[i],terr=TERRAIN_RGB[t]||TERRAIN_RGB[1],col=colors[owners[i]],k=col?(t===1?.32:.12):0;
+  let h=Math.imul(x+state.seed*3,374761393)^Math.imul(y,668265263);h=Math.imul(h^(h>>>13),1274126177);
+  const shade=(((h>>>24)&15)-7)*(t===0?.08:.20);
+  wc.fillStyle='rgb('+terr.map((v,j)=>Math.max(0,Math.min(255,Math.round(v*(1-k)+(col?.[j]||0)*k+shade)))).join(',')+')';wc.fillRect(x*6,y*6,6,6);
+  if(!t||x===0||y===0||x===E.W-1||y===E.H-1||((x*41+y*73+state.seed*13)%5))continue;
   const px=x*6+3,py=y*6+3;
-  if(t===2){wc.fillStyle='#58b86c';wc.fillRect(px-2,py-1,2,3);wc.fillRect(px+1,py-2,2,4);wc.fillStyle='#58b86c';wc.fillRect(px,py+1,2,1);}
+  if(t===2){wc.fillStyle='#58b86c';wc.fillRect(px-2,py-1,2,3);wc.fillRect(px+1,py-2,2,4);wc.fillRect(px,py+1,2,1);}
   else if(t===3||t===6){wc.strokeStyle='#eef0df';wc.lineWidth=.9;wc.beginPath();wc.moveTo(px-2,py+1);wc.lineTo(px,py-2);wc.lineTo(px+2,py+1);wc.stroke();}
   else if(t===4){wc.fillStyle='#e9c96e';wc.fillRect(px-2,py,4,1);}
   else if(t===5){wc.fillStyle='#ffd54a';wc.fillRect(px-1,py-2,2,2);}
  }
- // Owner-colored rims preserve political readability without tinting deposits.
- wc.lineWidth=.55;
- for(let y=0;y<E.H;y++)for(let x=0;x<E.W;x++){const i=y*E.W+x,id=owners[i];if(!id)continue;
-  wc.strokeStyle=color(id);wc.beginPath();
-  if(x===0||owners[i-1]!==id){wc.moveTo(x*6,y*6);wc.lineTo(x*6,(y+1)*6);}
-  if(y===0||owners[i-E.W]!==id){wc.moveTo(x*6,y*6);wc.lineTo((x+1)*6,y*6);}
-  if(x===E.W-1||owners[i+1]!==id){wc.moveTo((x+1)*6,y*6);wc.lineTo((x+1)*6,(y+1)*6);}
-  if(y===E.H-1||owners[i+E.W]!==id){wc.moveTo(x*6,(y+1)*6);wc.lineTo((x+1)*6,(y+1)*6);}wc.stroke();
+ // Batch actual boundaries by owner; never issue an empty stroke per land cell.
+ const rims=new Map();
+ for(const i of dirty){const id=owners[i];if(!id)continue;const x=i%E.W,y=(i/E.W)|0;
+  let p=rims.get(id);if(!p){p=new Path2D();rims.set(id,p);}
+  if(x===0||owners[i-1]!==id){p.moveTo(x*6,y*6+.3);p.lineTo(x*6,(y+1)*6-.3);}
+  if(y===0||owners[i-E.W]!==id){p.moveTo(x*6+.3,y*6);p.lineTo((x+1)*6-.3,y*6);}
+  if(x===E.W-1||owners[i+1]!==id){p.moveTo((x+1)*6,y*6+.3);p.lineTo((x+1)*6,(y+1)*6-.3);}
+  if(y===E.H-1||owners[i+E.W]!==id){p.moveTo(x*6+.3,(y+1)*6);p.lineTo((x+1)*6-.3,(y+1)*6);}
  }
- terrainSeed=state.seed;paintedRevision=revision;miniRevision=-1;
+ wc.lineWidth=.55;for(const [id,path] of rims){wc.strokeStyle=color(id);wc.stroke(path);}
+ mapPaintOwners=Uint8Array.from(owners);terrainSeed=state.seed;paintedRevision=revision;if(dirty.size)miniRevision=-1;
+ return dirty.size;
 }
+
 function hexAlpha(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;}
 function drawFortRange(x,y,preview){
  const t=TILE,r=4;
@@ -1494,9 +1494,9 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   if(b?.kind==='fort')drawFortRange(b.x,b.y,false);
  }
  if(moveCursor){ctx.strokeStyle='#2c3139';ctx.lineWidth=1.5/Math.max(.5,zoom);ctx.strokeRect(moveCursor.x*TILE,moveCursor.y*TILE,TILE,TILE);}
- ctx.restore();drawMini();if(movementStart&&performance.now()-movementStart<280)queueDraw();}
+ ctx.restore();drawMini();}
 function drawMini(){
- if(!state?.owners?.length||!worldLayer)return;
+ if(!state?.owners?.length||!worldLayer||$('minimapWrap').classList.contains('minimized'))return;
  const revision=state.territoryRevision??state.tick;
  if(miniRevision!==revision){
   if(!minimapCached){minimapCached=document.createElement('canvas');minimapCached.width=E.W;minimapCached.height=E.H;}

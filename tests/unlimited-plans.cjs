@@ -13,5 +13,5 @@ assert.equal(plan.zoneCells.length,45,'Casualties do not erase an existing drawi
 p.troops=2000;assert(E.action(s,id,{type:'updatePlan',id:plan.id,zone:cells}).ok);assert.equal(plan.zoneCells.length,200,'Army growth permits a larger plan');
 const erased=E.action(s,id,{type:'erasePlanCells',cells:plan.zoneCells.slice(0,50)});assert.equal(erased.erased,50);
 p.troops=0;const before=s.attackPlans.length;assert(order(cells.slice(600)).ok);assert.equal(s.attackPlans.length,before,'Zero troops quietly paints nothing');
-assert.equal(E.BUILD,'v81');
+assert.equal(E.BUILD,'v82');
 console.log('PASS army-sized painting: reserve+deployed, quiet cap, growth, casualty preservation, erasing and zero-force no-op');
