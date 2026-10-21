@@ -429,11 +429,12 @@ function setPaintTool(tool){
 function syncPaintEligibility(plan){
  if(!plan||plan.mode!=='paint'||plan.workResource)return;
  const sources=[...(state.attackPlans||[]),...(state.recoveryPlans||[])].filter(p=>p.owner===myId&&p.id!==plan.editId);
- const same=plan.eligibilityRevision===state.territoryRevision&&plan.eligibilitySources?.length===sources.length&&sources.every((p,i)=>p.zoneCells===plan.eligibilitySources[i]);
+ const allies=(mine()?.allies||[]).join(',');
+ const same=plan.eligibilityAllies===allies&&plan.eligibilityRevision===state.territoryRevision&&plan.eligibilitySources?.length===sources.length&&sources.every((p,i)=>p.zoneCells===plan.eligibilitySources[i]);
  if(same)return;
  plan.blocked=new Set();for(const p of sources)for(const i of p.zoneCells||[])plan.blocked.add(i);
  for(const cells of [plan.cells,plan.originalCells])for(const i of cells)if(!state.tiles[i]||state.owners[i]===myId||(mine()?.allies||[]).includes(state.owners[i])||plan.blocked.has(i))cells.delete(i);
- plan.eligibilityRevision=state.territoryRevision;plan.eligibilitySources=sources.map(p=>p.zoneCells);
+ plan.eligibilityAllies=allies;plan.eligibilityRevision=state.territoryRevision;plan.eligibilitySources=sources.map(p=>p.zoneCells);
 }
 function brushAt(pt){
  const plan=attackPlanner;if(!plan||!['paint','erase'].includes(plan.mode))return;
@@ -561,7 +562,7 @@ function drawAttackPlanning(){
  // Union all saved and in-progress zones before tracing boundaries. A newly
  // painted stroke above an old plan has exactly one contour, never two seams.
  const sources=[...(state.attackPlans||[]),...(state.recoveryPlans||[]),...state.armies.filter(a=>a.strength>0&&!a.planId&&Array.isArray(a.zoneCells))].filter(p=>p.owner===myId);
- const visualKey=(attackPlanner?.editId||'')+'|'+state.territoryRevision+'|'+sources.map(p=>p.id+':'+(p.targets||[p.targetOwner]).join(',')+':'+state.armies.some(a=>a.planId===p.id)).join('|');
+ const visualKey=(attackPlanner?.editId||'')+'|'+(mine()?.allies||[]).join(',')+'|'+state.territoryRevision+'|'+sources.map(p=>p.id+':'+(p.targets||[p.targetOwner]).join(',')+':'+state.armies.some(a=>a.planId===p.id)).join('|');
  if(planningVisualCache&&(planningVisualCache.visualKey!==visualKey||sources.length!==planningVisualCache.sources.length||sources.some((p,i)=>p.zoneCells!==planningVisualCache.sources[i])))
   planningVisualCache=null;
  const visual=planningVisualCache||new Map(),editId=attackPlanner?.mode==='paint'?attackPlanner.editId:null;
@@ -569,7 +570,7 @@ function drawAttackPlanning(){
  const collect=(plan,preview=false,recovery=false)=>{
   const eligible=new Set(plan.targets??[plan.targetOwner]);
   for(const i of plan.zoneCells||[]){
-   if(!state.tiles[i]||state.owners[i]===myId&&!preview)continue;
+   if(!state.tiles[i]||(mine()?.allies||[]).includes(state.owners[i])||state.owners[i]===myId&&!preview)continue;
    let cell=visual.get(i);
    if(!cell){cell={targets:new Set(),preview:false,recovery:false,waiting:true};visual.set(i,cell);}
    for(const target of eligible)cell.targets.add(target);
