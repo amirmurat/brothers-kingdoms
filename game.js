@@ -1530,7 +1530,7 @@ function nationLabelAnchors(snapshot=state){
     if(d<best){best=d;index=i;}
    }
   }
-  anchors.push({id:p.id,name:p.name,color:p.color,x:(index%E.W+.5)*TILE,y:(((index/E.W)|0)+.5)*TILE});
+  anchors.push({id:p.id,name:p.name,color:p.color,cell:index,x:(index%E.W+.5)*TILE,y:(((index/E.W)|0)+.5)*TILE});
  }
  nationLabelCache={state:snapshot,owners,revision:snapshot.territoryRevision,players:snapshot.players.length,anchors};
  return anchors;
