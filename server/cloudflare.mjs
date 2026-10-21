@@ -3,7 +3,13 @@ const E = globalThis.BKEngine;
 function compress(arr){let chunks=[];for(let i=0;i<arr.length;i+=8192)chunks.push(String.fromCharCode(...arr.slice(i,i+8192)));return btoa(chunks.join(''));}
 function expand(str){const raw=atob(str),out=new Array(raw.length);for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);return out;}
 function rlePack(arr){const b=[];for(let i=0;i<arr.length;){const id=arr[i];let n=1;while(i+n<arr.length&&arr[i+n]===id&&n<65535)n++;b.push(id,n&255,n>>8);i+=n;}return compress(b);}
-function pack(s,includeTerrain=true){if(!s||!s.owners?.length)return s;return {...E.networkState(s),tiles:includeTerrain?compress(s.tiles):null,owners:rlePack(s.owners),ownerRle:true,packed:true};}
+const ownerPacketCache=new WeakMap();
+function pack(s,includeTerrain=true){
+ if(!s||!s.owners?.length)return s;
+ let cache=ownerPacketCache.get(s);
+ if(!cache||cache.revision!==s.territoryRevision||cache.owners!==s.owners){cache={revision:s.territoryRevision,owners:s.owners,encoded:rlePack(s.owners)};ownerPacketCache.set(s,cache);}
+ return {...E.networkState(s),tiles:includeTerrain?compress(s.tiles):null,owners:cache.encoded,ownerRle:true,packed:true};
+}
 
 const json = (data, status = 200) => Response.json(data, {status});
 export default {

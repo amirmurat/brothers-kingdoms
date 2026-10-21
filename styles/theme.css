@@ -3149,3 +3149,10 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
 @media(max-height:480px) and (orientation:landscape){
  #game#game#game#game #planEraseHint:not(.hidden){min-height:40px!important;padding:6px 12px!important}
 }
+
+/* v100 strategic controls share the existing Military surface. */
+#game#game#game #warHubArmy #armiesList .army-line { grid-template-columns:repeat(2,minmax(0,1fr))!important; gap:8px!important; }
+#armiesList .army-line > div:first-child { flex:1 1 100%; }
+#armiesList select, #armiesList input { min-width:0; width:100%; max-width:100%; min-height:44px; background:#171d26; color:#edf2fa; border:0; padding:8px; border-radius:0; }
+#armiesList button { min-height:44px; }
+#armiesList input[hidden] { display:none; }

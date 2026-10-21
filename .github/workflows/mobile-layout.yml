@@ -11,11 +11,16 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - name: Engine and server regressions
         run: |
+          node tests/strategic-priorities.cjs
+          node tests/economy-v100.cjs
+          node tests/performance-v100.cjs
           node tests/land-storage.cjs
           node tests/workforce.cjs
           node tests/army-command.cjs
@@ -39,3 +44,12 @@ jobs:
       - run: npx playwright install --with-deps chromium webkit
       - run: node tests/mobile-layout.cjs
       - run: node tests/network-lobby.cjs
+
+      - run: node tests/performance-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v100-performance
+          path: |
+            test-results/
+            /tmp/bk-v100-*.png

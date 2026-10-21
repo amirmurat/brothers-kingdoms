@@ -602,3 +602,9 @@ syncPaintEligibility prunes invalid draft cells when ownership or saved-plan geo
 
 ### v91 flat controls / Reserve navigation
 #hudTroops now has button semantics and opens #armiesPanel on click/Enter/Space. #hudFronts stays hidden compatibility DOM; topbar has three columns. Final theme component rules flatten match buttons, sheets, minimap and brush surfaces; fixed-size side controls preserve position and hit targets.
+
+
+## v100 — strategic priorities and retained rendering
+- `#armiesList` in Military → My army retains all control ownership. Delegated `[data-focus-priority]`, `[data-plan-budget]`, `[data-plan-value]` send authoritative `planStrategy`; `[data-defense-pick]` arms the next owned-map tap; `[data-defense-clear]` removes it. No new persistent toolbar button or parallel command system.
+- `player.defendPriority` is one coordinate; `attackPlan.focus/allocationMode/allocationValue` survive existing network/save mechanisms. Army rows show actual assigned/moving troops and capacity-constrained target. Defense row shows assigned/en route/in-position. Map square marks own defense point. Other tools cancel pending point selection.
+- `worldBorderPaths` caches Canvas paths by seed/territory revision/wars; `nationLabelAnchors` caches across identical decoded snapshot revisions. Terrain paint, independent front sectors and event-driven draw remain.

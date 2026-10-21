@@ -170,9 +170,12 @@ function buildingCount(s,id,kind){return s.buildings.filter(b=>b.owner===id&&b.k
 function costBuilding(s,id,kind){
  const base=KINDS[kind]?.cost;if(!base)return null;
  const count=buildingCount(s,id,kind)+(s.buildJobs||[]).filter(j=>j.owner===id&&j.kind===kind).length;
- return Object.fromEntries(Object.entries(base).map(([resource,value])=>[resource,Math.ceil(value*(100+20*count)/100)]));
+ return Object.fromEntries(Object.entries(base).map(([resource,value])=>[resource,Math.ceil(value*(100+5*count)/100)]));
 }
-function costUpgrade(b){return {wood:50*b.level+25,stone:50*b.level+20,gold:35*b.level};}
+function costUpgrade(b){
+ const base=KINDS[b.kind]?.cost||KINDS.city.cost,factor=1.2+.6*(b.level-1);
+ return Object.fromEntries(Object.entries(base).map(([k,v])=>[k,Math.ceil(v*factor)]));
+}
 function costTech(key,l){const base=TECH[key].base;return Object.fromEntries(Object.entries(base).map(([k,v])=>[k,Math.round(v*(l+1)*1.4)]));}
 function isCoast(s,x,y){return [[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>tile(s,x+dx,y+dy)===0);}
 function canBuild(s,id,kind,x,y){if(!KINDS[kind])return 'Unknown building.';if(!inside(x,y)||owner(s,x,y)!==id)return 'Build on your own territory.';
@@ -190,7 +193,7 @@ const borderCache=new WeakMap();
 const attackFronts=new WeakMap();
 function borders(s,id){
  let cache=borderCache.get(s);
- if(!cache||cache.tick!==s.tick||cache.revision!==s.territoryRevision){cache={tick:s.tick,revision:s.territoryRevision,lists:new Map()};borderCache.set(s,cache);}
+ if(!cache||cache.revision!==s.territoryRevision){cache={tick:s.tick,revision:s.territoryRevision,lists:new Map()};borderCache.set(s,cache);}
  if(cache.lists.has(id))return cache.lists.get(id);
  const list=[];
  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
@@ -347,6 +350,31 @@ function changePaintedPlan(s,id,a){
 }
 function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is not active.'};const p=person(s,id);
  if(!alive(p)||!a||typeof a!=='object')return {ok:false,error:'Command unavailable.'};
+ if(a.type==='planStrategy'){
+  const q=(s.attackPlans||[]).find(q=>q.id===a.id&&q.owner===id);
+  if(!q)return {ok:false,error:'Offensive plan not found.'};
+  const mode=a.mode??q.allocationMode??'auto';
+  if(!['auto','troops','percent'].includes(mode))return {ok:false,error:'Choose Auto, troops or percent.'};
+  const value=Number(a.value??q.allocationValue??0);
+  if(mode!=='auto'&&(!Number.isFinite(value)||value<0||value>(mode==='percent'?100:1e9)))return {ok:false,error:'Invalid allocation.'};
+  q.allocationMode=mode;q.allocationValue=value;
+  if(a.focus!==undefined)q.focus=a.focus===true;
+  autoDemandCache.delete(s);
+  // A reduced manual budget releases surplus at its real position. Returning
+  // troops remain unavailable until they physically reach a friendly base.
+  if(a.mode!==undefined){let keep=automaticAllocation(s,q).target;
+   for(const wave of s.armies.filter(w=>w.planId===q.id))for(const c of wave.columns||[]){
+    const retained=Math.min(keep,c.strength),released=c.strength-retained;keep-=retained;
+    if(released>1e-7){reserveSquad(s,p,c.x,c.y,released,true);p.troops+=released;c.strength=retained;wave.strength=Math.max(0,wave.strength-released);localStrengthCache.delete(wave);}
+   }
+  }
+  return {ok:true};
+ }
+ if(a.type==='defendPriority'){
+  if(a.clear){p.defendPriority=null;return {ok:true};}
+  if(!inside(a.x,a.y)||owner(s,a.x,a.y)!==id)return {ok:false,error:'Choose your own territory.'};
+  p.defendPriority={x:a.x,y:a.y};return {ok:true};
+ }
  if(a.type==='setWorkPriority'){const priority=String(a.priority);if(!['balanced',...Object.keys(WORK_RESOURCES)].includes(priority))return {ok:false,error:'Choose a production priority.'};p.workPriority=priority;for(const g of p.workers||[])if(g.resource){g.resource=null;g.route=null;g.progress=0;}return {ok:true};}
  if(a.type==='workZone')return paintWorkZone(s,p,a);
  if(a.type==='queueBuild'){
@@ -356,7 +384,7 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
   s.buildJobs??=[];if(s.buildJobs.some(j=>j.x===x&&j.y===y))return {ok:false,error:'Construction already queued here.'};
   if(s.buildJobs.filter(j=>j.owner===id).length>=24)return {ok:false,error:'Finish queued construction first.'};
   const count=s.buildJobs.filter(j=>j.owner===id&&j.kind===kind).length;
-  const cost=Object.fromEntries(Object.entries(KINDS[kind].cost).map(([k,v])=>[k,Math.ceil(v*(1+.2*(buildingCount(s,id,kind)+count)))]));
+  const cost=Object.fromEntries(Object.entries(KINDS[kind].cost).map(([k,v])=>[k,Math.ceil(v*(1+.05*(buildingCount(s,id,kind)+count)))]));
   if(!available(p,cost))return {ok:false,error:'Not enough resources.'};
   charge(p,cost);s.buildJobs.push({id:'j'+(++s.nonce),owner:id,kind,x,y,cost,progress:0});return {ok:true};
  }
@@ -587,14 +615,20 @@ function roadRoute(s,id,source,destination){
  const roads=roadSet(s),{dist,prev,seen,heap}=memory,stamp=++memory.stamp;heap.length=0;
  if(stamp>=4294967295){seen.fill(0);memory.stamp=0;return roadRoute(s,id,source,destination);}
  const h=i=>Math.abs(i%W-destination%W)+Math.abs(((i/W)|0)-((destination/W)|0));
- const push=(i,g)=>{const v={i,g,f:g+h(i)};let k=heap.length;heap.push(v);while(k){const p=(k-1)>>1;if(heap[p].f<=v.f)break;heap[k]=heap[p];k=p;}heap[k]=v;};
- const pop=()=>{const v=heap[0],last=heap.pop();if(heap.length){let k=0;while(k*2+1<heap.length){let c=k*2+1;if(c+1<heap.length&&heap[c+1].f<heap[c].f)c++;if(heap[c].f>=last.f)break;heap[k]=heap[c];k=c;}heap[k]=last;}return v;};
+ // Interleaved numeric heap avoids an object allocation per visited tile.
+ const push=(i,g)=>{const f=g+h(i);let k=heap.length/3;heap.push(i,g,f);while(k){const p=(k-1)>>1;if(heap[p*3+2]<=f)break;heap[k*3]=heap[p*3];heap[k*3+1]=heap[p*3+1];heap[k*3+2]=heap[p*3+2];k=p;}heap[k*3]=i;heap[k*3+1]=g;heap[k*3+2]=f;};
+ let poppedI=0,poppedG=0;
+ const pop=()=>{poppedI=heap[0];poppedG=heap[1];const f=heap.pop(),g=heap.pop(),i=heap.pop();if(heap.length){let k=0;while(k*2+1<heap.length/3){let c=k*2+1;if(c+1<heap.length/3&&heap[(c+1)*3+2]<heap[c*3+2])c++;if(heap[c*3+2]>=f)break;heap[k*3]=heap[c*3];heap[k*3+1]=heap[c*3+1];heap[k*3+2]=heap[c*3+2];k=c;}heap[k*3]=i;heap[k*3+1]=g;heap[k*3+2]=f;}};
  dist[source]=0;seen[source]=stamp;prev[source]=-1;push(source,0);
- while(heap.length){const v=pop();if(v.g!==dist[v.i])continue;if(v.i===destination)break;
-  for(const j of adjacentCells(v.i))if(s.tiles[j]&&s.owners[j]===id){const g=v.g+(roads.has(j)?1:3);
-   if(seen[j]!==stamp||g<dist[j]){seen[j]=stamp;dist[j]=g;prev[j]=v.i;push(j,g);}
+ while(heap.length){pop();const v=poppedI,vg=poppedG;if(vg!==dist[v])continue;if(v===destination)break;
+  const x=v%W;
+  for(let d=0;d<4;d++){const j=d===0?(x<W-1?v+1:-1):d===1?(x?v-1:-1):d===2?v+W:v-W;
+   if(j<0||j>=W*H||!s.tiles[j]||s.owners[j]!==id)continue;
+   const g=vg+(roads.has(j)?1:3);
+   if(seen[j]!==stamp||g<dist[j]){seen[j]=stamp;dist[j]=g;prev[j]=v;push(j,g);}
   }
  }
+
  if(seen[destination]!==stamp||prev[destination]<0)return null;
  const route=[];for(let i=destination;i!==source;i=prev[i])route.push(i);return route.reverse();
 }
@@ -713,9 +747,13 @@ function syncGarrisons(s,p){
  else if(delta< -1e-7){const factor=Math.max(0,p.troops)/Math.max(1e-7,sum);for(const g of p.garrisons)g.strength*=factor;}
 }
 function loseReserve(s,p,amount,x,y){
- syncGarrisons(s,p);let left=Math.min(p.troops,amount);
+ syncGarrisons(s,p);let left=Math.max(0,amount);
  const squads=p.garrisons.filter(g=>near(g,{x,y})<7).sort((a,b)=>near(a,{x,y})-near(b,{x,y}));
  for(const g of squads){const n=Math.min(left,g.strength);g.strength-=n;p.troops-=n;left-=n;if(left<=1e-7)break;}
+ for(const a of s.armies)if(a.owner===p.id&&left>1e-7){
+  for(const c of (a.columns||[]).filter(c=>near(c,{x,y})<7).sort((a,b)=>near(a,{x,y})-near(b,{x,y}))){const n=Math.min(left,c.strength);c.strength-=n;a.strength-=n;left-=n;if(left<=1e-7)break;}
+  localStrengthCache.delete(a);
+ }
  p.troops=Math.max(0,p.troops);
 }
 function adjacentCells(i){
@@ -744,6 +782,7 @@ function defensePosts(s,p){
  // Keep a real home reserve even during war. Safe neighbours are not threats.
  if(bases[0])posts.push({x:bases[0].x,y:bases[0].y,weight:3,role:'Reserve'});
  const candidates=[];
+ if(p.defendPriority&&owner(s,p.defendPriority.x,p.defendPriority.y)===p.id)posts.push({...p.defendPriority,weight:8,role:'Priority defense'});
  // A painted wave's midpoint may be on the other side of the country.
  // Track physical hostile columns once per deployment update instead.
  const threats=[];
@@ -764,8 +803,8 @@ function defensePosts(s,p){
   candidates.push({...b,weight,role:'Guard'});
  }
  if(candidates.length&&bases.length){
-  const distance=b=>Math.min(...candidates.map(t=>near(b,t)));
-  const safe=[...bases].sort((a,b)=>distance(b)-distance(a)||a.y-b.y||a.x-b.x)[0];
+  const distances=new Map(bases.map(b=>[b,candidates.reduce((n,t)=>Math.min(n,near(b,t)),Infinity)]));
+  const safe=[...bases].sort((a,b)=>distances.get(b)-distances.get(a)||a.y-b.y||a.x-b.x)[0];
   posts[0]={x:safe.x,y:safe.y,weight:3,role:'Reserve'};
  }
  candidates.sort((a,b)=>b.weight-a.weight||a.y-b.y||a.x-b.x);
@@ -829,15 +868,19 @@ const sectorMaps=new WeakMap();
 const armyComponents=new WeakMap();
 function ownedComponents(s,id){
  let cache=armyComponents.get(s);
- if(!cache||cache.revision!==s.territoryRevision){cache={revision:s.territoryRevision,owners:new Map()};armyComponents.set(s,cache);}
- if(cache.owners.has(id))return cache.owners.get(id);
- const labels=new Int32Array(W*H);let component=0;
- for(let i=0;i<labels.length;i++)if(!labels[i]&&s.tiles[i]&&s.owners[i]===id){
-  const queue=[i];labels[i]=++component;
-  for(let k=0;k<queue.length;k++)for(const j of adjacentCells(queue[k]))if(!labels[j]&&s.tiles[j]&&s.owners[j]===id){labels[j]=component;queue.push(j);}
+ if(cache?.revision===s.territoryRevision)return cache.labels;
+ const labels=new Int32Array(W*H),queue=new Int32Array(W*H);let component=0;
+ for(let i=0;i<labels.length;i++)if(!labels[i]&&s.tiles[i]&&s.owners[i]){
+  let head=0,tail=1;queue[0]=i;labels[i]=++component;const nation=s.owners[i];
+  while(head<tail){const v=queue[head++],x=v%W;
+   for(let d=0;d<4;d++){const j=d===0?(x?v-1:-1):d===1?(x<W-1?v+1:-1):d===2?v-W:v+W;
+    if(j>=0&&j<W*H&&!labels[j]&&s.tiles[j]&&s.owners[j]===nation){labels[j]=component;queue[tail++]=j;}
+   }
+  }
  }
- cache.owners.set(id,labels);return labels;
+ armyComponents.set(s,{revision:s.territoryRevision,labels});return labels;
 }
+
 function frontSectors(s,id,front){
  const components=ownedComponents(s,id),groups=new Map();
  for(const i of front){
@@ -924,7 +967,8 @@ function positionAttack(s,a,front,partial=false){
  for(const c of units){const key=idx(c.x,c.y),g=combined.get(key);if(g)g.strength+=c.strength;else combined.set(key,{x:c.x,y:c.y,strength:c.strength});}
  units=[...combined.values()];
  const sectors=frontSectors(s,a.owner,front),components=ownedComponents(s,a.owner);
- const distance=t=>Math.min(...units.filter(c=>components[idx(c.x,c.y)]===components[t.anchor]).map(c=>near(c,{x:t.anchor%W,y:(t.anchor/W)|0})));
+ const distances=new Map();
+ const distance=t=>{if(!distances.has(t)){let best=Infinity;for(const c of units)if(components[idx(c.x,c.y)]===components[t.anchor])best=Math.min(best,Math.abs(c.x-t.anchor%W)+Math.abs(c.y-((t.anchor/W)|0)));distances.set(t,best);}return distances.get(t);};
  const reachable=sectors.filter(t=>units.some(c=>components[idx(c.x,c.y)]&&components[idx(c.x,c.y)]===components[t.anchor]))
   .sort((a,b)=>distance(a)+Math.log2(1+a.required)*2-distance(b)-Math.log2(1+b.required)*2);
  if(!reachable.length||!partial&&reachable.length!==sectors.length)return false;
@@ -998,7 +1042,8 @@ function marchWave(s,a,p,front,partial=false){
 function tileDefense(s,id,x,y){let n=3;const defender=person(s,id);if(!defender)return n;
  // Defence comes from soldiers actually nearby, including moving reserves.
  const local=(defender.garrisons||[]).reduce((n,g)=>n+g.strength*Math.max(0,1-near(g,{x,y})/7),0);
- n+=local/25;
+ const deployed=s.armies.filter(a=>a.owner===id).reduce((n,a)=>n+(a.columns||[]).reduce((m,c)=>m+c.strength*Math.max(0,1-near(c,{x,y})/7),0),0);
+ n+=(local+deployed)/25;
  n+=defender.tech.war*1.9;
  for(const b of s.buildings){if(b.owner!==id)continue;const d=Math.abs(b.x-x)+Math.abs(b.y-y);
   if(b.kind==='capital'&&d<=3)n+=(d===0?90:11)*Math.sqrt(b.level);
@@ -1037,17 +1082,11 @@ function validateZone(s,id,targetOwner,request){
  return {cells:[...zone].sort((a,b)=>a-b)};
 }
 function borderCandidates(s,id,targetOwner){
- const found=[];
- for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
-  const i=idx(x,y);
-  if(s.owners[i]!==id)continue;
-  for(const d of SIDE){
-   const j=i+d;
-   if(s.tiles[j]!==0&&s.owners[j]===targetOwner)found.push(j);
-  }
- }
- return [...new Set(found)];
+ const found=new Set();
+ for(const b of borders(s,id))for(const j of adjacentCells(idx(b.x,b.y)))if(s.tiles[j]&&s.owners[j]===targetOwner)found.add(j);
+ return [...found];
 }
+
 function initialFront(s,id,tx,ty,targetOwner,allowed=null){
  const border=borderCandidates(s,id,targetOwner).filter(i=>!allowed||allowed.has(i));
  if(!border.length)return [];
@@ -1117,7 +1156,7 @@ function automaticAllocation(s,plan){
  const plans=[...(s.attackPlans||[]),...(s.recoveryPlans||[])].filter(q=>q.owner===plan.owner);
  if(!plans.some(q=>q.id===plan.id))plans.push(plan);
  const home=(p?.garrisons||[]).filter(g=>!g.returning&&g.strength>0);
- const metadata=plans.map(q=>q.id+':'+!!q.autoRecovery+':'+(q.targets??[q.targetOwner]).join(',')).join('|')+'@'+(s.wars||[]).join(',')+'@'+(p?.allies||[]).join(',')+'@'+p?.tech.war+':'+p?.tech.logistics;
+ const metadata=plans.map(q=>q.id+':'+!!q.autoRecovery+':'+!!q.focus+':'+q.allocationMode+':'+q.allocationValue+':'+(q.targets??[q.targetOwner]).join(',')).join('|')+'@'+(s.wars||[]).join(',')+'@'+(p?.allies||[]).join(',')+'@'+p?.tech.war+':'+p?.tech.logistics;
  let cache=autoDemandCache.get(s);if(!cache){cache=new Map();autoDemandCache.set(s,cache);}
  const saved=cache.get(plan.owner),valid=saved&&saved.tick===s.tick&&saved.revision===s.territoryRevision&&saved.home===p?.garrisons&&saved.metadata===metadata&&saved.zones.length===plans.length&&plans.every((q,i)=>q.zoneCells===saved.zones[i]);
  const demands=valid?saved.demands:[];
@@ -1126,8 +1165,8 @@ function automaticAllocation(s,plan){
   const sectors=frontSectors(s,q.owner,front),required=sectors.reduce((n,t)=>n+t.required,0);
   let distance=80;
   for(const g of home)for(const t of sectors)distance=Math.min(distance,near(g,{x:t.anchor%W,y:(t.anchor/W)|0}));
-  const demand=Math.max(80,required*(6+Math.min(12,distance/3)));
-  demands.push({plan:q,required,distance,demand,weight:Math.sqrt(Math.max(1,required))*(q.autoRecovery?1:1.5)/(1+distance/60)});
+  const demand=q.allocationMode==='troops'?q.allocationValue:q.allocationMode==='percent'?force.total*q.allocationValue/100:Math.max(80,required*(6+Math.min(12,distance/3)))*(q.focus?3:1);
+  demands.push({plan:q,required,distance,demand,weight:q.allocationMode&&q.allocationMode!=='auto'?demand:Math.sqrt(Math.max(1,required))*(q.autoRecovery?1:1.5)*(q.focus?3:1)/(1+distance/60)});
  }
  if(!valid)cache.set(plan.owner,{tick:s.tick,revision:s.territoryRevision,home:p?.garrisons,metadata,zones:plans.map(q=>q.zoneCells),demands});
  const item=demands.find(d=>d.plan.id===plan.id);
@@ -1139,8 +1178,15 @@ function automaticAllocation(s,plan){
  // Separate recovery shares prevent many painted orders starving defense.
  const pool=Math.max(0,force.total-(plan.autoRecovery?Math.min(reserveGoal,force.total*.1):reserveGoal));
  const competing=plan.autoRecovery?demands.filter(d=>d.plan.autoRecovery):demands;
- const totalDemand=competing.reduce((n,d)=>n+d.demand,0),weights=competing.reduce((n,d)=>n+d.weight,0);
- const target=Math.min(item.demand,totalDemand<=pool?item.demand:pool*item.weight/Math.max(1e-7,weights));
+ // Capped weighted sharing redistributes unused small-front shares. Explicit
+ // requests use requested strength as weight, so oversubscription scales fairly.
+ let remaining=pool,pending=competing.slice();const targets=new Map();
+ while(pending.length){const weights=pending.reduce((n,d)=>n+d.weight,0),satisfied=pending.filter(d=>d.demand<=remaining*d.weight/Math.max(1e-7,weights));
+  if(!satisfied.length){for(const d of pending)targets.set(d.plan.id,remaining*d.weight/Math.max(1e-7,weights));break;}
+  for(const d of satisfied){targets.set(d.plan.id,d.demand);remaining=Math.max(0,remaining-d.demand);}
+  pending=pending.filter(d=>!targets.has(d.plan.id));
+ }
+ const target=targets.get(plan.id)||0;
  const assigned=s.armies.reduce((n,a)=>n+(a.planId===plan.id?Math.max(0,a.strength):0),0);
  const squads=p?.garrisons||[],stationed=squads.reduce((n,g)=>n+g.strength,0),returning=squads.filter(g=>g.returning).reduce((n,g)=>n+g.strength,0);
  const available=force.reserve*(stationed?1-returning/stationed:1);
@@ -1347,8 +1393,8 @@ function income(s,p){const c=counts(s,p.id),l=p.land,e=1+p.tech.economy*.25;
  const income={food:Math.round((2+l/100+c.farm*8+c.city*5+(p.workIncome?.food||0))*e),wood:Math.round((1+l/180+c.lumber*7+(p.workIncome?.wood||0))*e),stone:Math.round((1+l/200+c.quarry*7+(p.workIncome?.stone||0))*e),gold:Math.round((1+l/220+c.mine*7+c.city*5+(p.workIncome?.gold||0))*e)};
  for(const k of Object.keys(income))p.res[k]=Math.min(resourceCapacity(s,p.id),p.res[k]+income[k]);
  p.troopCap=Math.floor(900+l*2.4+c.barracks*430+c.city*260);
- const newTroops=Math.max(0,Math.min(p.troopCap-militaryStrength(s,p.id).total,Math.round(4+l/100+p.troops*.018+c.barracks*5+c.city*3+p.tech.war*2)));const supply=Math.max(0,Math.min(newTroops,Math.floor(p.res.food/0.20)));
- p.troopIncome=supply;p.troops+=supply;p.res.food=Math.max(0,p.res.food-Math.ceil(supply*.20));p.income=income;
+ const newTroops=Math.max(0,Math.min(p.troopCap-militaryStrength(s,p.id).total,Math.round(4+l/100+c.barracks*5+c.city*3+p.tech.war*2)));const supply=Math.max(0,Math.min(newTroops,Math.floor(p.res.food/0.20)));
+ p.recruitment={potential:newTroops,actual:supply,reason:militaryStrength(s,p.id).total>=p.troopCap?'Army capacity reached':supply<newTroops?'Food limits recruitment':'Recruiting',foodPerTroop:.2};p.troopIncome=supply;p.troops+=supply;p.res.food=Math.max(0,p.res.food-Math.ceil(supply*.20));p.income=income;
 }
 function bot(s,id){const p=person(s,id);if(!alive(p)||s.phase!=='playing')return;
  if(s.tick%4===id%4){
@@ -1420,7 +1466,7 @@ function tick(s){if(s.phase!=='playing')return;s.tick++;
 
 // Only public simulation data is sent to displays. Path arrays and duplicate
 // planned geometry remain in authoritative saves, not every network frame.
-const zoneRunCache=new WeakMap(),displayZoneCache=new Map();
+const zoneRunCache=new WeakMap(),displayZoneCache=new Map(),displayRoadCache=new Map();
 function zoneRuns(cells){
  let cached=zoneRunCache.get(cells);if(cached?.length===cells.length)return cached.runs;
  const sorted=[...cells].sort((a,b)=>a-b),runs=[];
@@ -1442,7 +1488,7 @@ function networkState(s){
 }
 function restoreNetworkState(s){
  if(!s?.armyPacked)return s;const active=new Set();
- if(s.roadRuns){const roads=[];for(let n=0;n<s.roadRuns.length;n+=2)for(let k=0;k<s.roadRuns[n+1];k++)roads.push(s.roadRuns[n]+k);s.roads=roads;delete s.roadRuns;}
+ if(s.roadRuns){const signature=s.roadRuns.join(','),cached=displayRoadCache.get(s.seed);if(cached?.signature===signature)s.roads=cached.roads;else{const roads=[];for(let n=0;n<s.roadRuns.length;n+=2)for(let k=0;k<s.roadRuns[n+1];k++)roads.push(s.roadRuns[n]+k);s.roads=roads;if(displayRoadCache.size>8)displayRoadCache.clear();displayRoadCache.set(s.seed,{signature,roads});}delete s.roadRuns;}
  for(const p of [...(s.attackPlans||[]),...(s.recoveryPlans||[]),...(s.armies||[]),...(s.workZones||[])]){
   if(!p.zoneRuns)continue;active.add(p.id);
   const signature=p.zoneRuns.join(','),cached=displayZoneCache.get(p.id);
@@ -1459,5 +1505,5 @@ function restoreNetworkState(s){
  delete s.armyPacked;return s;
 }
 
-return{BUILD:'v99',TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v100',TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });

@@ -32,6 +32,18 @@ async function checkRoom(E,source,assert,btoa){
  a.attachment.last=0;
  await msg(a,{t:'action',id:1,action:{type:'setNationTarget',target:2,enabled:true}});
  assert(room.s.wars.length===1,'server accepts legal Nations order');
+ a.attachment.last=0;
+ await msg(a,{t:'action',id:101,action:{type:'defendPriority',...chosen}});
+ assert.deepEqual(E.person(room.s,1).defendPriority,chosen,'Priority is authoritative over WebSocket');
+ const target=room.s.owners.findIndex((owner,i)=>owner!==1&&room.s.tiles[i]&&[i-1,i+1,i-E.W,i+E.W].some(j=>room.s.owners[j]===1));
+ a.attachment.last=0;await msg(a,{t:'action',id:102,action:{type:'send',x:target%E.W,y:Math.floor(target/E.W),zone:[target]}});
+ const plan=room.s.attackPlans.find(p=>p.owner===1);assert(plan,'Network creates an existing independent plan');
+ a.attachment.last=0;await msg(a,{t:'action',id:103,action:{type:'planStrategy',id:plan.id,mode:'percent',value:25,focus:true}});
+ assert.equal(plan.allocationValue,25);assert(plan.focus);
+ const packet=a.sent.filter(m=>m.t==='state').at(-1);assert.equal(packet.state.attackPlans.find(p=>p.id===plan.id).allocationValue,25,'Strategy is synchronized');
+ b.attachment.last=0;await msg(b,{t:'action',id:104,action:{type:'planStrategy',id:plan.id,mode:'troops',value:99999}});
+ assert.equal(plan.allocationValue,25,'Another nation cannot change the budget');
+
  b.attachment.last=0;
  await msg(b,{t:'action',id:2,action:{type:'cancelPlan',id:'foreign'}});
  assert(b.sent.some(m=>m.t==='ack'&&m.id===2&&!m.ok),'reject invalid orders');

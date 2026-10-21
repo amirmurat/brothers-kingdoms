@@ -43,7 +43,7 @@ function resourceRates(p){
   gold:Math.round((1+land/220+c.mine*7+c.city*5)*m)
  };
  const cap=p.troopCap||Math.floor(900+land*2.4+c.barracks*430+c.city*260);
- const expected=Math.max(0,Math.min(cap-E.militaryStrength(state,p.id).total,Math.round(4+land/100+p.troops*.018+c.barracks*5+c.city*3+p.tech.war*2)));
+ const expected=Math.max(0,Math.min(cap-E.militaryStrength(state,p.id).total,Math.round(4+land/100+c.barracks*5+c.city*3+p.tech.war*2)));
  const recruited=p.troopIncome===undefined?Math.min(expected,Math.floor(((p.res.food||0)+gross.food)/.2)):p.troopIncome;
  const foodNet=Math.floor(gross.food||0)-Math.ceil(Math.max(0,recruited||0)*.2);
  return {gross,recruited,foodNet};
@@ -103,7 +103,7 @@ function chooseMilitaryTab(tab){
  if(militaryTab==='army')renderArmies();
  if(militaryTab==='threats')syncMilitaryThreats();
 }
-function openMilitary(tab='nations'){
+function openMilitary(tab='nations'){defensePicking=false;
  if($('warPanel').classList.contains('hidden')){
   hideAux();closePanelIfOpen();toggleQuickBuild(false);
   selected=null;setPreview(null);buildMode=null;refreshQuickBuild();suspendMapGesture();
@@ -269,7 +269,7 @@ $('hudAlert').onclick=()=>{
 };
 function updateHudSignals(p){
  const pendingIncome=p.troopIncome===undefined,counts=E.counts(state,myId),estimatedCap=Math.floor(900+p.land*2.4+counts.barracks*430+counts.city*260),cap=pendingIncome?estimatedCap:p.troopCap;
- const projected=Math.max(0,Math.min(cap-E.militaryStrength(state,p.id).total,Math.round(4+p.land/100+p.troops*.018+counts.barracks*5+counts.city*3+p.tech.war*2)));
+ const projected=Math.max(0,Math.min(cap-E.militaryStrength(state,p.id).total,Math.round(4+p.land/100+counts.barracks*5+counts.city*3+p.tech.war*2)));
  const growth=pendingIncome?Math.min(projected,Math.floor((p.res.food||0)/.20)):Math.floor(p.troopIncome||0),full=E.militaryStrength(state,p.id).total>=cap-.5,lowFood=Number(p.res.food||0)<1;
  let reason='';if(growth===0){reason=full?'FULL':lowFood?'NO FOOD':'NO RECRUITS';}
  if(pendingIncome){$('troopGrowth').textContent='≈+'+number(growth)+'/s';$('troopCap').textContent='/ '+number(cap);}
@@ -372,7 +372,7 @@ function selectedPlanIsland(cells,start){
  }
  return selected;
 }
-function beginAttackPlanner(existing=null,resetCell=null){
+function beginAttackPlanner(existing=null,resetCell=null){defensePicking=false;
  if(!state||state.phase!=='playing'||mine()?.eliminated)return;
  hideAux();toggleQuickBuild(false);setPreview(null);buildMode=null;redirectArmy=null;selected=null;moveCursor=null;
  $('warPanel').classList.add('hidden');$('warChip').setAttribute('aria-expanded','false');
@@ -976,7 +976,7 @@ function toggleQuickBuild(force){
  refreshQuickBuild();queueDraw();
 }
 function closePanelIfOpen(){if(panelOpen)closePanel();}
-function setBuildingMode(kind){
+function setBuildingMode(kind){defensePicking=false;
  if(E.KINDS[kind]?.income){if(attackPlanner)resetAttackPlanner();buildMode=null;command({type:'setWorkPriority',priority:E.KINDS[kind].income});refreshQuickBuild();queueDraw();return;}
  if(kind&&attackPlanner)resetAttackPlanner();
  buildMode=kind||null;selected=null;setPreview(null);moveCursor=null;
@@ -1100,14 +1100,14 @@ function renderArmies(){
   const left=p.zoneCells.filter(i=>state.tiles[i]&&state.owners[i]!==myId).length;
   const choices=selectedNationTargets(),label=choices.map(id=>E.person(state,id)?.name||'Neutral land').join(', ');
   const capturable=p.zoneCells.some(i=>state.tiles[i]&&state.owners[i]!==myId&&choices.includes(state.owners[i]));
-  const estimate=E.estimatePlanFront(state,p);
+  const estimate=E.estimatePlanFront(state,p),allocation=E.automaticAllocation(state,p),moving=(active?.columns||[]).filter(c=>c.x!==c.tx||c.y!==c.ty).reduce((n,c)=>n+c.strength,0);
   rows.push({key:'plan-'+p.id,
    title:label+' · '+number(left)+' cells left',
    status:active?(active.waitingForRoute?'Waiting for friendly route · ':active.awaitingReinforcements?'Reinforcements requested · ':active.marching?'Local advance · troops moving · ':'Local advance · ')+number(p.waves)+' · '+number(active.strength)+' troops · '+estimate.cells+' frontier cells':
     estimate.cells&&estimate.committed<Math.max(35,estimate.required)?'Automatic deployment · '+number(estimate.committed)+' troops available now':
     !capturable?'Choose opponents in Nations':'Waiting for route / troops',
-   detail:active?E.frontDeployment(active).ready+'/'+E.frontDeployment(active).sectors+' sectors ready · advancing independently':'Automatic deployment · local sectors advance independently',
-   buttons:'<button data-edit-plan="'+esc(p.id)+'" aria-label="Edit offensive region">Edit</button><button data-cancel-plan="'+esc(p.id)+'" aria-label="Cancel offensive plan">Cancel</button>'});
+   detail:(p.focus?'Focused · ':'')+(p.allocationMode==='troops'?number(p.allocationValue)+' requested':p.allocationMode==='percent'?p.allocationValue+'% requested':'Auto')+' · '+number(active?.strength||0)+' assigned · '+number(moving)+' en route · '+number(allocation.target)+' target',
+   buttons:'<select data-plan-budget="'+esc(p.id)+'" aria-label="Troop allocation"><option value="auto"'+(!p.allocationMode||p.allocationMode==='auto'?' selected':'')+'>Auto</option><option value="percent"'+(p.allocationMode==='percent'?' selected':'')+'>Percent</option><option value="troops"'+(p.allocationMode==='troops'?' selected':'')+'>Troops</option></select><input data-plan-value="'+esc(p.id)+'" aria-label="Requested troops or percent" type="number" min="0" max="'+(p.allocationMode==='percent'?100:1e9)+'" value="'+(p.allocationValue||0)+'" '+(!p.allocationMode||p.allocationMode==='auto'?'hidden':'')+'><button data-focus-priority="'+esc(p.id)+'">'+(p.focus?'Unfocus':'Focus attack')+'</button><button data-edit-plan="'+esc(p.id)+'" aria-label="Edit offensive region">Edit</button><button data-cancel-plan="'+esc(p.id)+'" aria-label="Cancel offensive plan">Cancel</button>'});
  }
  for(const p of recovery){
   const active=state.armies.find(a=>a.planId===p.id&&a.strength>0);
@@ -1128,11 +1128,15 @@ function renderArmies(){
  const strength=E.militaryStrength(state,myId);
  // Reserve is a permanent section. A garrison snapshot may temporarily be empty.
  rows.unshift({key:'home-army',title:'Home army · '+number(strength.reserve)+' troops',
-  status:guards.length?(guards.some(g=>g.role==='Guard')?'Guarding war fronts · reserve held behind the line':'Garrisoned near barracks and cities'):
-   strength.reserve?'Reserve not yet positioned on the map':strength.deployed?'Troops assigned to active fronts':'No home troops available',
+  status:(mine()?.recruitment?.reason||'Recruiting')+' · +'+number(mine()?.troopIncome||0)+'/s · '+(guards.length?(guards.some(g=>g.role==='Guard')?'Guarding war fronts · reserve held behind the line':'Garrisoned near barracks and cities'):
+   strength.reserve?'Reserve not yet positioned on the map':strength.deployed?'Troops assigned to active fronts':'No home troops available'),
   detail:guards.length?number(guards.length)+' squads · '+number(returning)+' returning · nearby troops provide defense':
-   '0 squads · '+number(strength.deployed)+' deployed',buttons:''});
- const container=$('armiesList'),structure=rows.map(row=>row.key).join('|');
+   '0 squads · '+number(strength.deployed)+' deployed',buttons:'<button data-defense-pick>Defend here</button>'+(mine()?.defendPriority?'<button data-defense-clear>Clear defense</button>':'')});
+ const defense=mine()?.defendPriority;
+ if(defense){const assigned=guards.filter(g=>!g.returning&&g.role==='Priority defense'&&g.tx===defense.x&&g.ty===defense.y),total=assigned.reduce((n,g)=>n+g.strength,0),moving=assigned.filter(g=>g.x!==g.tx||g.y!==g.ty).reduce((n,g)=>n+g.strength,0);
+  rows.splice(1,0,{key:'defense-priority',title:'Defend here · '+defense.x+', '+defense.y,status:E.owner(state,defense.x,defense.y)!==myId?'Position lost · automatic recovery remains active':total?'Reinforcing priority · other guards and reserve retained':'Waiting for reachable home troops',detail:number(total)+' assigned · '+number(moving)+' en route · '+number(total-moving)+' in position',buttons:''});
+ }
+ const container=$('armiesList'),structure=rows.map(row=>row.key).join('|')+plans.map(p=>[p.focus,p.allocationMode,p.allocationValue].join(':')).join('|')+JSON.stringify(mine()?.defendPriority);
  if(container.dataset.structure!==structure){
   container.innerHTML=rows.length?rows.map(row=>'<div class="army-line" data-front-row="'+esc(row.key)+'"><div><strong data-front-title></strong><small data-front-status></small><small class="army-stats" data-front-detail></small></div>'+row.buttons+'</div>').join(''):
    '<div class="empty-armies"><strong>No offensives yet</strong><p>Tap the brush to paint a zone.</p></div>';
@@ -1145,7 +1149,16 @@ function renderArmies(){
 }
 $('armiesToggle').onclick=()=>openMilitary('army');
 $('closeArmies').onclick=hideAux;
+$('armiesList').onchange=e=>{
+ const mode=e.target.closest('[data-plan-budget]'),value=e.target.closest('[data-plan-value]');
+ if(mode)command({type:'planStrategy',id:mode.dataset.planBudget,mode:mode.value,value:mode.value==='percent'?25:mode.value==='troops'?1000:0});
+ if(value){const p=state.attackPlans.find(p=>p.id===value.dataset.planValue);if(p)command({type:'planStrategy',id:p.id,mode:p.allocationMode,value:Number(value.value)});}
+};
 $('armiesList').onclick=e=>{
+ if(e.target.closest('[data-defense-pick]')){closeNations();defensePicking=true;toast('Tap your territory to defend');return;}
+ if(e.target.closest('[data-defense-clear]')){command({type:'defendPriority',clear:true});return;}
+ const priority=e.target.closest('[data-focus-priority]');if(priority){const p=state.attackPlans.find(p=>p.id===priority.dataset.focusPriority);if(p)command({type:'planStrategy',id:p.id,focus:!p.focus});return;}
+
  const cancel=e.target.closest('[data-cancel-plan]'),edit=e.target.closest('[data-edit-plan]'),focus=e.target.closest('[data-focus-plan]');
  const recall=e.target.closest('[data-recall-army]'),armyFocus=e.target.closest('[data-focus-army]');
  if(cancel){const plan=(state.attackPlans||[]).find(p=>p.id===cancel.dataset.cancelPlan);if(plan){hideAux();openCancelPlan(plan);}return;}
@@ -1178,11 +1191,13 @@ function zoomAt(factor,cx,cy){const old=zoom;zoom=Math.max(.14,Math.min(5,zoom*f
 function pixelAt(clientX,clientY){const r=canvas.getBoundingClientRect();return {x:clientX-r.left,y:clientY-r.top};}
 function gridAt(clientX,clientY){const p=pixelAt(clientX,clientY);return {x:Math.floor((p.x-camX)/(TILE*zoom)),y:Math.floor((p.y-camY)/(TILE*zoom))};}
 function nearestObject(px,py,kind){const arr=kind==='army'?state.armies:state.buildings,worldX=(px-camX)/(TILE*zoom),worldY=(py-camY)/(TILE*zoom);let nearest=null,best=Infinity;for(const v of arr){const d=Math.hypot(v.x+.5-worldX,v.y+.5-worldY)*TILE*zoom;if(d<best&&d<(kind==='army'?23:25)){best=d;nearest=v;}}return nearest;}
+let defensePicking=false;
 function selectMap(clientX,clientY){
  if(mapInputBlocked())return;
  if(state?.phase!=='playing'||mine()?.eliminated)return;
  const pt=pixelAt(clientX,clientY),p=gridAt(clientX,clientY);
  if(!E.inside(p.x,p.y))return;
+ if(defensePicking){if(E.owner(state,p.x,p.y)!==myId)return toast('Choose your own territory','error');defensePicking=false;command({type:'defendPriority',x:p.x,y:p.y});toast('Defense priority set');queueDraw();return;}
  if(attackPlanner)return;
  const regionIndex=p.y*E.W+p.x;
  const savedPlan=(state.attackPlans||[]).find(p=>p.owner===myId&&state.owners[regionIndex]!==myId&&p.zoneCells.includes(regionIndex));
@@ -1508,8 +1523,8 @@ function drawArmyDisplay(w,h){
 // Labels follow the country's remaining owned land after its capital falls.
 let nationLabelCache=null;
 function nationLabelAnchors(snapshot=state){
- if(nationLabelCache?.state===snapshot&&nationLabelCache.owners===snapshot.owners&&
-  nationLabelCache.revision===snapshot.territoryRevision&&nationLabelCache.players===snapshot.players.length)return nationLabelCache.anchors;
+ const roster=snapshot.players.map(p=>[p.id,p.name,p.color,p.eliminated,p.capital?.x,p.capital?.y].join(':')).join('|');
+ if(nationLabelCache?.seed===snapshot.seed&&nationLabelCache.revision===snapshot.territoryRevision&&nationLabelCache.roster===roster)return nationLabelCache.anchors;
  const owners=snapshot.owners,seen=new Uint8Array(owners.length),regions=new Map(),anchors=[];
  for(let start=0;start<owners.length;start++){
   const id=owners[start];if(!id||seen[start])continue;
@@ -1535,47 +1550,46 @@ function nationLabelAnchors(snapshot=state){
   }
   anchors.push({id:p.id,name:p.name,color:p.color,cell:index,x:(index%E.W+.5)*TILE,y:(((index/E.W)|0)+.5)*TILE});
  }
- nationLabelCache={state:snapshot,owners,revision:snapshot.territoryRevision,players:snapshot.players.length,anchors};
+ nationLabelCache={seed:snapshot.seed,roster,revision:snapshot.territoryRevision,anchors};
  return anchors;
+}
+let worldBordersCache=null;
+function worldBorderPaths(){
+ const warKey=(state.wars||[]).join(',');
+ if(worldBordersCache?.seed===state.seed&&worldBordersCache.revision===state.territoryRevision&&worldBordersCache.warKey===warKey)return worldBordersCache;
+ const owners=new Path2D(),wars=new Path2D(),coast=worldBordersCache?.seed===state.seed?worldBordersCache.coast:new Path2D(),buildCoast=worldBordersCache?.seed!==state.seed;
+ const edge=(path,x1,y1,x2,y2)=>{path.moveTo(x1*TILE,y1*TILE);path.lineTo(x2*TILE,y2*TILE);};
+ const atWar=(a,b)=>a&&b&&a!==b&&(state.wars||[]).includes(Math.min(a,b)+':'+Math.max(a,b));
+ for(let y=0;y<E.H;y++)for(let x=0;x<E.W;x++){
+  const i=y*E.W+x,id=state.owners[i],tile=state.tiles[i];
+  if(id){
+   if(x===0||state.owners[i-1]!==id)edge(owners,x,y,x,y+1);
+   if(y===0||state.owners[i-E.W]!==id)edge(owners,x,y,x+1,y);
+   if(x===E.W-1||state.owners[i+1]!==id)edge(owners,x+1,y,x+1,y+1);
+   if(y===E.H-1||state.owners[i+E.W]!==id)edge(owners,x,y+1,x+1,y+1);
+   if(x<E.W-1&&atWar(id,state.owners[i+1]))edge(wars,x+1,y,x+1,y+1);
+   if(y<E.H-1&&atWar(id,state.owners[i+E.W]))edge(wars,x,y+1,x+1,y+1);
+  }
+  if(tile&&buildCoast){
+   if(x===0||!state.tiles[i-1])edge(coast,x,y,x,y+1);
+   if(x===E.W-1||!state.tiles[i+1])edge(coast,x+1,y,x+1,y+1);
+   if(y===0||!state.tiles[i-E.W])edge(coast,x,y,x+1,y);
+   if(y===E.H-1||!state.tiles[i+E.W])edge(coast,x,y+1,x+1,y+1);
+  }
+ }
+ worldBordersCache={seed:state.seed,revision:state.territoryRevision,warKey,owners,wars,coast};return worldBordersCache;
 }
 function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr=canvas.width/Math.max(1,canvas.clientWidth);const w=canvas.clientWidth,h=canvas.clientHeight;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#080a0e';ctx.fillRect(0,0,w,h);
  ctx.save();ctx.translate(camX,camY);ctx.scale(zoom,zoom);ctx.imageSmoothingEnabled=true;ctx.drawImage(worldLayer,0,0,worldLayer.width,worldLayer.height,0,0,E.W*TILE,E.H*TILE);
- // Draw vector borders only when zoomed in sufficiently; avoid per-tile work otherwise.
- if(zoom>=0.28){
-  const minX=Math.max(0,Math.floor(-camX/(TILE*zoom))-1),maxX=Math.min(E.W-1,Math.ceil((w-camX)/(TILE*zoom))+1);
-  const minY=Math.max(0,Math.floor(-camY/(TILE*zoom))-1),maxY=Math.min(E.H-1,Math.ceil((h-camY)/(TILE*zoom))+1);
-  ctx.lineWidth=Math.max(.55,1.65/zoom);ctx.strokeStyle='#e6f3ffb0';ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();
-  const o=state.owners;
-  for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
-   const i=y*E.W+x,id=o[i];if(!id)continue;
-   if(x===0||o[i-1]!==id){ctx.moveTo(x*TILE,y*TILE);ctx.lineTo(x*TILE,(y+1)*TILE);}
-   if(y===0||o[i-E.W]!==id){ctx.moveTo(x*TILE,y*TILE);ctx.lineTo((x+1)*TILE,y*TILE);}if(x===E.W-1||o[i+1]!==id){ctx.moveTo((x+1)*TILE,y*TILE);ctx.lineTo((x+1)*TILE,(y+1)*TILE);}if(y===E.H-1||o[i+E.W]!==id){ctx.moveTo(x*TILE,(y+1)*TILE);ctx.lineTo((x+1)*TILE,(y+1)*TILE);}
-  }
-  ctx.stroke();
-  // Dashed red shared borders identify active wars, without changing ownership.
-  if(state.wars?.length){
-   const wars=new Set(state.wars),atWar=(a,b)=>a&&b&&a!==b&&wars.has(Math.min(a,b)+':'+Math.max(a,b));
-   ctx.beginPath();ctx.strokeStyle='#ff7488e6';ctx.lineWidth=Math.max(1.2,2.3/zoom);
-   ctx.setLineDash([3/zoom,2/zoom]);ctx.lineCap='butt';
-   for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
-    const i=y*E.W+x,id=o[i];if(!id)continue;
-    if(x<E.W-1&&atWar(id,o[i+1])){ctx.moveTo((x+1)*TILE,y*TILE);ctx.lineTo((x+1)*TILE,(y+1)*TILE);}
-    if(y<E.H-1&&atWar(id,o[i+E.W])){ctx.moveTo(x*TILE,(y+1)*TILE);ctx.lineTo((x+1)*TILE,(y+1)*TILE);}
-   }
-   ctx.stroke();ctx.setLineDash([]);ctx.lineCap='round';
-  }
-  // Thin coast outline separates land and sea without heavy biome gridlines.
-  ctx.beginPath();ctx.strokeStyle='#7b849355';ctx.lineWidth=Math.max(.55,1.2/zoom);
-  const tiles=state.tiles;
-  for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
-   const i=y*E.W+x;if(!tiles[i])continue;
-   if(x===0||!tiles[i-1]){ctx.moveTo(x*TILE,y*TILE);ctx.lineTo(x*TILE,(y+1)*TILE);}
-   if(x===E.W-1||!tiles[i+1]){ctx.moveTo((x+1)*TILE,y*TILE);ctx.lineTo((x+1)*TILE,(y+1)*TILE);}
-   if(y===0||!tiles[i-E.W]){ctx.moveTo(x*TILE,y*TILE);ctx.lineTo((x+1)*TILE,y*TILE);}
-   if(y===E.H-1||!tiles[i+E.W]){ctx.moveTo(x*TILE,(y+1)*TILE);ctx.lineTo((x+1)*TILE,(y+1)*TILE);}
-  }
-  ctx.stroke();
+ if(zoom>=.28){
+  const paths=worldBorderPaths();
+  ctx.lineWidth=Math.max(.55,1.65/zoom);ctx.strokeStyle='#e6f3ffb0';ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke(paths.owners);
+  ctx.strokeStyle='#ff7488e6';ctx.lineWidth=Math.max(1.2,2.3/zoom);ctx.setLineDash([3/zoom,2/zoom]);ctx.lineCap='butt';ctx.stroke(paths.wars);ctx.setLineDash([]);
+  ctx.strokeStyle='#7b849355';ctx.lineWidth=Math.max(.55,1.2/zoom);ctx.stroke(paths.coast);
  }
+ const defense=mine()?.defendPriority;
+ if(defense&&E.owner(state,defense.x,defense.y)===myId){ctx.strokeStyle='#39d5ff';ctx.lineWidth=2/zoom;ctx.strokeRect((defense.x-1)*TILE,(defense.y-1)*TILE,TILE*3,TILE*3);}
+
  drawInfrastructure();drawAttackPlanning();drawArmyDisplay(w,h);drawHarvestSites(w,h);
  // One-cell geometric landmarks; catalogue and map use identical silhouettes.
  ctx.textAlign='center';ctx.textBaseline='middle';
@@ -1661,7 +1675,7 @@ document.addEventListener('dblclick',e=>{
 },{passive:false});
 window.addEventListener('resize',()=>{resize();clampCamera();queueDraw();});document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeNations();toggleQuickBuild(false);if(attackPlanner)resetAttackPlanner();setThreatList(false);hideAux();setPreview(null);redirectArmy=null;if(panelOpen)closePanel();else cancelMode();$('tutorial').classList.add('hidden');return;}if(panelOpen&&window.innerWidth<851&&e.key==='Tab'){const items=[...$('sidebar').querySelectorAll('button:not([disabled]), select:not([disabled])')].filter(el=>el.offsetParent!==null);if(items.length){const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}}
  if(!state||state.phase!=='playing'||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;if(e.key==='+'||e.key==='=')zoomAt(1.2,canvas.clientWidth/2,canvas.clientHeight/2);if(e.key==='-')zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);if(document.activeElement===canvas){if(!moveCursor)moveCursor=mine()?.capital?{...mine().capital}:{x:80,y:52};if(e.key.startsWith('Arrow')){e.preventDefault();const d={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[e.key];moveCursor.x=Math.max(0,Math.min(E.W-1,moveCursor.x+d[0]));moveCursor.y=Math.max(0,Math.min(E.H-1,moveCursor.y+d[1]));camX=canvas.clientWidth/2-(moveCursor.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(moveCursor.y+.5)*TILE*zoom;clampCamera();inspectCell(moveCursor.x,moveCursor.y);$('keyboardPosition').textContent=$('mapStatus').textContent;queueDraw();}if(e.key==='Enter'){e.preventDefault();const x=moveCursor.x,y=moveCursor.y;const r=canvas.getBoundingClientRect();selectMap(r.left+camX+(x+.5)*TILE*zoom,r.top+camY+(y+.5)*TILE*zoom);}}});
-function goHome(){
+function goHome(){defensePicking=false;
  planningVisualCache=null;armyDisplayCache=null;
  if(serverActive||serverSocket)leaveServer();
  if(attackPlanner)resetAttackPlanner();
