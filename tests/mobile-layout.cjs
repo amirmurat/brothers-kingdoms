@@ -140,6 +140,11 @@ const server=http.createServer((req,res)=>{
    assert.equal(await page.evaluate(()=>window.__layout.getState().players.find(p=>!p.bot).workPriority),'balanced',label+' second resource tap restores balance');
    await page.locator('#resourceSummary [data-resource="food"]').press('Enter');
    assert.equal(await page.evaluate(()=>window.__layout.getState().players.find(p=>!p.bot).workPriority),'food',label+' resource priority supports keyboard');
+   const flatMapTools=await page.evaluate(()=>{
+    const ids=['planToolPaint','planToolErase','minimapWrap','menuToggle','warChip'];
+    return ids.map(id=>{const s=getComputedStyle(document.getElementById(id));return {id,radius:s.borderRadius,border:s.borderLeftWidth};});
+   });
+   assert(flatMapTools.every(v=>v.radius==='0px'&&v.border==='0px'),label+' minimap and map tools share flat geometry '+JSON.stringify(flatMapTools));
    const navigation=await page.evaluate(()=>{const m=document.getElementById('minimapToggle').getBoundingClientRect(),n=document.getElementById('warChip').getBoundingClientRect(),menu=document.getElementById('menuToggle').getBoundingClientRect(),map=document.getElementById('mapView').getBoundingClientRect();return {sameParent:document.getElementById('warChip').parentElement.id==='mapNavigation',separate:n.left>=m.right,menuTop:menu.top,mapTop:map.top};});
    assert(navigation.sameParent&&navigation.separate,label+' map and Nations sit together');
    assert.equal(navigation.menuTop,navigation.mapTop+10,label+' menu occupies former Nations corner');
@@ -217,6 +222,10 @@ const server=http.createServer((req,res)=>{
     }finally{player.garrisons=saved;L.render();}
    });
    assert(emptyGarrison.visible&&emptyGarrison.text.includes('0 squads'),label+' Reserve persists across a transient empty garrison snapshot');
+   const armyFlat=await page.locator('#armiesList .army-line').first().evaluate(el=>{const s=getComputedStyle(el);return {radius:s.borderRadius,left:s.borderLeftWidth,bottom:s.borderBottomWidth};});
+   assert.equal(armyFlat.radius,'0px',label+' army rows have no card corners');
+   assert.equal(armyFlat.left,'0px',label+' army rows have no outer card frame');
+   assert.equal(armyFlat.bottom,'1px',label+' army rows use a flat separator');
    const armyBox=await page.locator('#armiesPanel').boundingBox();
    assert(armyBox.x>=0&&armyBox.x+armyBox.width<=viewport.width+1,label+' army overview fits the screen');
    await page.evaluate(()=>window.__layout.hideAux());
@@ -232,6 +241,10 @@ const server=http.createServer((req,res)=>{
    assert.equal(match.radius,'0px',label+' flat rectangular sheets');
    await page.evaluate(()=>{window.__layout.hideAux();window.__layout.openPanel();});
    const research=await sheetStyle('#sidebar','.sidebar-heading strong');
+   const techFlat=await page.locator('#techPanel .tech-item.tech-detail').first().evaluate(el=>{const s=getComputedStyle(el);return {radius:s.borderRadius,left:s.borderLeftWidth,bottom:s.borderBottomWidth};});
+   assert.equal(techFlat.radius,'0px',label+' research items have no card corners');
+   assert.equal(techFlat.left,'0px',label+' research items have no outer card frame');
+   assert.equal(techFlat.bottom,'1px',label+' research items share HUD separators');
    await page.evaluate(()=>window.__layout.closePanel());
    await page.locator('#warChip').click();
    const nations=await sheetStyle('#warPanel','.war-panel-title strong');
@@ -246,6 +259,11 @@ const server=http.createServer((req,res)=>{
    assert.notEqual(await page.locator('#nationsBackdrop').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)',label+' Nations backdrop actually dims the map');
    assert.equal(await page.locator('#buildDock').isVisible(),false,label+' Nations hides placement tools');
    await page.locator('#warPanelClose').click();
+   await page.evaluate(()=>window.__layout.showAux('quickLeadersPanel'));
+   const leaderFlat=await page.locator('#quickLeadersPanel .quick-row.is-me').evaluate(el=>{const s=getComputedStyle(el);return {radius:s.borderRadius,left:s.borderLeftWidth};});
+   assert.equal(leaderFlat.radius,'0px',label+' highlighted leaderboard row fills the flat surface');
+   assert.equal(leaderFlat.left,'0px',label+' leaderboard has no inset card frame');
+   await page.evaluate(()=>window.__layout.hideAux());
    assert.equal(await page.locator('#nationsBackdrop').isVisible(),false,label+' closing Nations removes its backdrop');
    await page.evaluate(()=>window.__layout.showAux('sessionPanel'));
    assert.equal(await page.locator('#productionPriority').isVisible(),false,label+' resource priority is removed from Match menu');
