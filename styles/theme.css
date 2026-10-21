@@ -3003,7 +3003,7 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
 #lobby#lobby#lobby#lobby .start-choice{
  display:grid!important;grid-template-columns:44px minmax(0,1fr) 24px!important;
  align-items:center!important;justify-items:stretch!important;
- width:100%!important;min-width:0!important;min-height:76px!important;
+ width:100%!important;min-width:0!important;height:96px!important;min-height:96px!important;
  gap:12px!important;padding:12px!important;
  border:0!important;border-bottom:1px solid var(--control-line)!important;
  border-radius:0!important;box-shadow:none!important;
