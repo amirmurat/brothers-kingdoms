@@ -1,4 +1,23 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
+
+## START HERE — v103: WorldBox-inspired readable map and mutually exclusive tools (22.10.2026)
+
+**Working branch:** `design/visual-review-v26`; current executable HEAD `1f2bd0a14aa4a1ee245d0c1b8fed709400932a82`. `main` was not modified. The last fully verified code commit at documentation time is `4873fabb776191f59344b11837c1ad776f890c2d`, GitHub Actions `39689868353 SUCCESS` (engine/server + Chromium/WebKit mobile layout and network/performance checks). Additional exact-mode regression `58b7b7a` and visual road/cache commits `ff6e9e1` / `1f2bd0a` are queued/running in Actions; check their final status before calling v103 verified. Actual Cloudflare deployment and physical iPhone Safari **not independently verified** in this turn; latest **previously verified** production build was v102.
+
+**Latest owner screenshots/problems:** paint/focus/eraser have inconsistent bottom styles; focus button stays selected after using a different tool; structures are tiny and four income buildings appear as near-invisible flat tiles; permanent fort scouting circles cover the map; terrain is turquoise/grey and ocean almost black; roads overprint the terrain. Owner now prefers a more readable, lively WorldBox-inspired **pixel-art map**, while the HUD remains a consistent flat dark UI. Do not copy WorldBox artwork or license-protected files.
+
+**v103 changes:**
+- `game.js`: entering paint, eraser, build, research or Nations clears `defensePicking`, pressed/chosen focus styling and its bottom guide; persistent strategic `armyFocus` orders remain in the engine, but focus crosshairs render only while focus tool is open. Escape also exits focus. One chosen map tool at a time.
+- Fort scouting circles are **not** rendered globally. Engine sight, allied/intel rules and radius are unchanged; a radius circle appears for the selected owned fort or a fort-placement preview.
+- `TERRAIN_RGB` uses blue sea and more natural land tones; lower ownership tint permits terrain readability, tiny ocean wave glints, brighter coast and blue off-map background.
+- All eight building kinds (including farm/lumber/quarry/mine) now draw bigger Kenney Tiny Town CC0 48px composite sprites from existing committed tiles, with colored ownership foot markers, level indicators and low-zoom LOD dots. Former 512px licensed vector glyphs remain fallback until sprites load. Guard Image creation for non-browser Node VM tests.
+- Roads reduced in geometry width and faded at macro zoom for map clarity; paths/army routing unchanged.
+- `styles/theme.css` gives Attack Plan the same flat full-width lower editing panel, typography, actions, and spacing used by Army Focus/Eraser. `index.html` references `103-pixel-map-r2` for Safari cache-busting.
+- `tests/mobile-layout.cjs` covers direct Focus→Eraser→Focus switching, pressed states, guide visibility and matching panel backgrounds.
+- This is **the first map-art pass**, not a full imitation of WorldBox terrain transitions / coast tiles / sprite animation or proof of balanced gameplay/performance on the user's device.
+
+**QA and deployment next:** verify final GitHub Actions workflow for executable SHA `1f2bd0a`, ensure Cloudflare serves the new `game.js` and stylesheet and `/api/health` build, and inspect actual iPhone screenshots. The previously seen early v103 workflow failures `39689659554`, `39689726362`, `39689748676` were caused by browser-only `Image` being undefined in the Node test VM; fixed in `4873fabb` and that run passed. Do not misreport those historical errors as still open.
+
 _Обновлено: 22 октября 2026 года. Рабочий код v102; итог проверки и публикации — в последней записи START HERE._
 
 ## START HERE — v102 VERIFIED: player screenshot fixes, scouting and progression (22.10.2026)
