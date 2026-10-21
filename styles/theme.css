@@ -1996,3 +1996,8 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
 }
 #game#game#game :is(#hudTroops,#hudWorkers) .reserve-label>span{display:block!important;height:18px!important;font:600 9px/18px system-ui!important;margin:0!important;padding:0!important}
 #game#game#game #planToolSwitch,#game#game#game.plan-drawing #planToolSwitch,#game#game#game #planControls{max-height:calc(100% - var(--bottom-hud-size) - 64px)!important}
+#game#game#game #notificationStack #gameFeedback #hudAlert #hudAlertIcon{display:grid!important;place-items:center!important;flex:0 0 20px!important;width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important;margin:0!important;padding:0!important;background:transparent!important;border:0!important;border-radius:0!important;font:700 12px/20px system-ui!important}
+#game#game#game #notificationStack #gameFeedback #hudAlert #hudAlertText{display:block!important;min-width:0!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;-webkit-line-clamp:unset!important;font:500 12px/16px system-ui!important}
+#game#game#game #notificationStack #threatItems{padding:0!important;gap:0!important}
+#game#game#game #notificationStack .threat-item,#game#game#game #notificationStack .threat-item strong,#game#game#game #notificationStack #threatClose{color:#edf2f8!important}
+#game#game#game #notificationStack .threat-item small{color:#acb8c8!important}
