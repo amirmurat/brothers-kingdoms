@@ -281,6 +281,23 @@ const server=http.createServer((req,res)=>{
    await page.evaluate(()=>window.__layout.warnHud('Capital threatened','danger'));
    assert.equal(await page.locator('#hudAlert').isVisible(),true,label+' danger takes priority');
    assert.equal(await page.locator('#gameToast').isVisible(),false,label+' toast hidden behind danger');
+   const noticeControls=await page.evaluate(()=>{
+    document.getElementById('gameToast').classList.add('hidden');
+    const L=window.__layout,alert=document.getElementById('hudAlert');
+    L.warnHud('An offensive has ended','notice',null);
+    const info={disabled:alert.disabled,arrow:getComputedStyle(alert.querySelector('.hud-alert-arrow')).display,
+      actionable:alert.dataset.actionable};
+    const E=window.BKEngine,s=L.getState(),p=s.players.find(v=>v.land>0&&!v.eliminated);
+    L.warnHud('Lost 1 cells','danger',{x:p.capital.x,y:p.capital.y});
+    const active={disabled:alert.disabled,arrow:getComputedStyle(alert.querySelector('.hud-alert-arrow')).display,
+      actionable:alert.dataset.actionable};
+    const rect=el=>{const r=el.getBoundingClientRect();return r.y+r.height/2;};
+    const centers=[alert.querySelector('#hudAlertIcon'),alert.querySelector('#hudAlertText'),alert.querySelector('.hud-alert-arrow')].map(rect);
+    alert.classList.add('hidden');return {info,active,centers};
+   });
+   assert(noticeControls.info.disabled&&noticeControls.info.arrow==='none'&&noticeControls.info.actionable==='false',label+' informational notification has no fake arrow or button action');
+   assert(!noticeControls.active.disabled&&noticeControls.active.arrow!=='none'&&noticeControls.active.actionable==='true',label+' locatable notification exposes its real action');
+   assert(Math.max(...noticeControls.centers)-Math.min(...noticeControls.centers)<2,label+' notification icons, text and action are vertically centered');
    assert.equal(await page.locator('#hudFronts').isVisible(),false,label+' separate offensives HUD removed');
    await page.locator('#hudTroops').click();
    assert(await page.locator('[data-front-row="home-army"]').isVisible(),label+' home squads are visible in army overview');
@@ -347,7 +364,13 @@ const server=http.createServer((req,res)=>{
    assert.notEqual(await page.locator('#nationsBackdrop').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)',label+' Nations backdrop actually dims the map');
    assert.equal(await page.locator('#buildDock').isVisible(),false,label+' Nations hides placement tools');
    await page.locator('#warPanelClose').click();
-   await page.evaluate(()=>window.__layout.showAux('quickLeadersPanel'));
+   await page.locator('#hudLand').click();
+   assert.equal(await page.locator('#quickLeadersPanel').isVisible(),true,label+' tapping the LAND percentage opens leaderboard');
+   assert.equal(await page.locator('#hudLand').getAttribute('aria-controls'),'quickLeadersPanel',label+' LAND shortcut announces its target');
+   await page.locator('#closeQuickLeaders').click();
+   await page.locator('#hudLand').focus();
+   await page.keyboard.press('Enter');
+   assert(await page.locator('#quickLeadersPanel').isVisible(),label+' keyboard Enter opens LAND leaderboard');
    const leaderFlat=await page.locator('#quickLeadersPanel .quick-row.is-me').evaluate(el=>{const s=getComputedStyle(el);return {radius:s.borderRadius,left:s.borderLeftWidth};});
    assert.equal(leaderFlat.radius,'0px',label+' highlighted leaderboard row fills the flat surface');
    assert.equal(leaderFlat.left,'0px',label+' leaderboard has no inset card frame');
@@ -356,6 +379,23 @@ const server=http.createServer((req,res)=>{
    await page.evaluate(()=>window.__layout.showAux('sessionPanel'));
    assert.equal(await page.locator('#productionPriority').isVisible(),false,label+' resource priority is removed from Match menu');
    const close=page.locator('#closeSession');await close.click();
+   await page.evaluate(()=>{
+    const L=window.__layout,s=L.getState();s.phase='ended';s.winner=s.players[0].id;
+    L.render();
+   });
+   assert(await page.locator('#victory').isVisible(),label+' match result opens at end');
+   const outcomeLayout=await page.evaluate(()=>{
+    const sheet=document.getElementById('resultSheet'),stats=[...document.querySelectorAll('#victoryStats .result-stat')];
+    const geometry=()=>{const r=sheet.getBoundingClientRect(),s=getComputedStyle(sheet);return {x:r.x,width:r.width,right:r.right,bottom:r.bottom,radius:s.borderRadius,background:s.backgroundColor,shadow:s.boxShadow};};
+    const win=geometry(),buttons=['restart','resultExit'].map(id=>{const el=document.getElementById(id),r=el.getBoundingClientRect();return {id,width:r.width,height:r.height,left:r.left};});
+    const first=getComputedStyle(stats[0]);sheet.dataset.outcome='loss';const loss=geometry();
+    return {win,loss,buttons,flatStats:first.borderLeftWidth==='0px'&&first.borderTopWidth==='0px'&&first.borderRadius==='0px',header:!!sheet.querySelector('.result-header')};
+   });
+   assert(outcomeLayout.header&&outcomeLayout.flatStats,label+' result uses flat HUD sections');
+   assert(outcomeLayout.win.radius==='0px'&&outcomeLayout.win.shadow==='none',label+' victory screen has no card corners or shadow');
+   assert.equal(outcomeLayout.win.background,outcomeLayout.loss.background,label+' win/loss share one design system');
+   assert(outcomeLayout.win.x>=0&&outcomeLayout.win.right<=viewport.width+1,label+' result sheet fits horizontal viewport');
+   assert(outcomeLayout.buttons.every(b=>b.height>=44&&Math.abs(b.width-outcomeLayout.buttons[0].width)<1&&Math.abs(b.left-outcomeLayout.buttons[0].left)<1),label+' result actions share geometry');
    await page.evaluate(()=>window.__layout.goHome());
    assert(await page.locator('#lobby').isVisible(),label+' home visible');
    console.log('PASS '+label);await page.close();
