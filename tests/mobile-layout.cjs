@@ -193,11 +193,17 @@ const server=http.createServer((req,res)=>{
    if(viewport.height>480){const point=await page.evaluate(()=>window.__layout.focusCandidate());assert(point,label+' invalid neutral point available');await page.mouse.click(point.x,point.y);assert.equal(await page.locator('#armyFocusGuide').getAttribute('data-valid'),'false',label+' focus outside land/plans reports invalid');await page.screenshot({path:'/tmp/bk-v102-invalid-focus-'+name+'-'+viewport.width+'.png'});await page.locator('#clearArmyFocus').click();}
    // Switching directly between tools must never leave the old tool highlighted.
    const focusSurface=await page.locator('#armyFocusGuide').evaluate(e=>getComputedStyle(e).backgroundColor);
+   const focusRect=await page.locator('#armyFocusGuide').boundingBox();
+   const focusButton=await page.locator('#exitArmyFocus').boundingBox();
    await page.locator('#planToolErase').click();
    assert.equal(await page.locator('#planToolFocus').getAttribute('aria-pressed'),'false',label+' eraser releases focus button');
    assert.equal(await page.locator('#planToolErase').getAttribute('aria-pressed'),'true',label+' eraser is the only active paint tool');
    assert(await page.locator('#armyFocusGuide').evaluate(e=>e.classList.contains('hidden')),label+' eraser closes focus panel');
    assert.equal(await page.locator('#planEraseHint').evaluate(e=>getComputedStyle(e).backgroundColor),focusSurface,label+' focus and eraser share the same panel surface');
+   const eraserRect=await page.locator('#planEraseHint').boundingBox();
+   const eraserButton=await page.locator('#eraseExit').boundingBox();
+   assert(Math.abs(eraserRect.y-focusRect.y)<1&&Math.abs(eraserRect.height-focusRect.height)<1,label+' focus/eraser same exact bounding box');
+   assert(Math.abs(eraserButton.height-focusButton.height)<1,label+' focus/eraser action sizes match');
    await page.locator('#planToolFocus').click();
    assert.equal(await page.locator('#planToolErase').getAttribute('aria-pressed'),'false',label+' focus releases eraser button');
    assert.equal(await page.locator('#planToolFocus').getAttribute('aria-pressed'),'true',label+' focus is the only selected tool');
@@ -227,6 +233,10 @@ const server=http.createServer((req,res)=>{
    const bottomAfter=await page.locator('#planGuide').boundingBox();
    assert.equal(bottomAfter.height,bottomBefore.height,label+' normal and planning HUD have identical height');
    assert.equal(bottomAfter.y,bottomBefore.y,label+' switching mode never grows the bottom panel');
+   assert(Math.abs(bottomAfter.y-focusRect.y)<1&&Math.abs(bottomAfter.height-focusRect.height)<1,label+' attack/focus/eraser share exactly one panel geometry');
+   assert.equal(await page.locator('#planGuide').evaluate(e=>getComputedStyle(e).display),'grid',label+' attack panel uses same CSS grid as focus/eraser');
+   const attackButton=await page.locator('#planGuideExit').boundingBox();
+   assert(Math.abs(attackButton.height-focusButton.height)<1,label+' all editing action rows share one height');
    const controls=await page.evaluate(()=>{const map=document.getElementById('mapView').getBoundingClientRect(),bottom=document.getElementById('planGuide').getBoundingClientRect(),tools=document.getElementById('planToolSwitch').getBoundingClientRect(),brush=document.getElementById('planControls').getBoundingClientRect();return {expected:map.y+(64+map.height-bottom.height)/2,tools:tools.y+tools.height/2,brush:brush.y+brush.height/2};});
    assert(Math.abs(controls.tools-controls.expected)<1&&Math.abs(controls.brush-controls.expected)<1,label+' both side controls are centered in usable map space');
 
