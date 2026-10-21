@@ -212,14 +212,19 @@ const server=http.createServer((req,res)=>{
    assert(statusRects.separate,label+' feedback does not overlap diplomacy');
    const noticeLayout=await page.evaluate(()=>{
     const toast=document.getElementById('gameToast'),rail=document.getElementById('threatRail'),expand=document.getElementById('threatExpand');
-    const a=toast.getBoundingClientRect(),radius=getComputedStyle(toast).borderRadius,saved=[rail.className,expand.className];
+    const alert=document.getElementById('hudAlert'),feedback=document.getElementById('gameFeedback');
+    const a=toast.getBoundingClientRect(),radius=getComputedStyle(toast).borderRadius;
+    const saved=[rail.className,expand.className,toast.className,alert.className];
     rail.classList.remove('hidden');expand.classList.remove('hidden');
+    const yieldsToToast=getComputedStyle(rail).display==='none'&&getComputedStyle(toast).display!=='none';
+    toast.classList.add('hidden');alert.classList.add('hidden');
     const b=rail.getBoundingClientRect(),map=document.getElementById('mapView').getBoundingClientRect();
-    const hidden=getComputedStyle(document.getElementById('gameFeedback')).display==='none';
-    const result={x:a.x,y:a.y,width:a.width,height:a.height,threatX:b.x,threatY:b.y,threatWidth:b.width,threatHeight:b.height,mapTop:map.top,radius,threatRadius:getComputedStyle(rail).borderRadius,hidden};
-    [rail.className,expand.className]=saved;return result;
+    const otherHidden=getComputedStyle(feedback).display==='none';
+    [rail.className,expand.className,toast.className,alert.className]=saved;
+    return {x:a.x,y:a.y,width:a.width,height:a.height,threatX:b.x,threatY:b.y,threatWidth:b.width,threatHeight:b.height,mapTop:map.top,radius,threatRadius:getComputedStyle(rail).borderRadius,otherHidden,yieldsToToast};
    });
-   assert(noticeLayout.hidden,label+' attack suppresses other notification cards');
+   assert(noticeLayout.yieldsToToast,label+' new toast can temporarily replace incoming-attack banner');
+   assert(noticeLayout.otherHidden,label+' only one notification occupies the slot');
    assert.equal(noticeLayout.x,noticeLayout.threatX,label+' notifications use the same corner');
    assert.equal(noticeLayout.y,noticeLayout.threatY,label+' notification switches in place');
    assert.equal(noticeLayout.width,noticeLayout.threatWidth,label+' notifications have identical widths');
