@@ -358,7 +358,14 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
  if(!alive(p)||!a||typeof a!=='object')return {ok:false,error:'Command unavailable.'};
  if(a.type==='armyPosture'){
   if(!['aggressive','balanced','defensive'].includes(a.value))return {ok:false,error:'Choose an army posture.'};
-  p.armyPosture=a.value;autoDemandCache.delete(s);return {ok:true};
+  p.armyPosture=a.value;
+  const force=militaryStrength(s,id),surplus=Math.max(0,force.deployed-force.total*(1-reserveShare(p))),fraction=force.deployed?surplus/force.deployed:0;
+  if(fraction)for(const wave of s.armies.filter(w=>w.owner===id)){
+   const columns=wave.columns?.length?wave.columns:[{x:wave.x,y:wave.y,strength:wave.strength}];
+   for(const c of columns){const released=c.strength*fraction;if(released>1e-7){reserveSquad(s,p,c.x,c.y,released,true);p.troops+=released;c.strength-=released;wave.strength=Math.max(0,wave.strength-released);}}
+   wave.columns=columns;localStrengthCache.delete(wave);
+  }
+  autoDemandCache.delete(s);return {ok:true};
  }
  if(a.type==='armyFocus'){
   if(a.clear){p.armyFocus=null;autoDemandCache.delete(s);return {ok:true};}

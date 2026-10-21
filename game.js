@@ -1130,7 +1130,7 @@ function renderArmies(){
    status:active?(active.waitingForRoute?'Waiting for friendly route · ':active.awaitingReinforcements?'Reinforcements requested · ':active.marching?'Local advance · troops moving · ':'Local advance · ')+number(p.waves)+' · '+number(active.strength)+' troops · '+estimate.cells+' frontier cells':
     estimate.cells&&estimate.committed<Math.max(35,estimate.required)?'Automatic deployment · '+number(estimate.committed)+' troops available now':
     !capturable?'Choose opponents in Nations':'Waiting for route / troops',
-   detail:(p.focus?'Focused · ':'')+(p.allocationMode==='troops'?number(p.allocationValue)+' requested':p.allocationMode==='percent'?p.allocationValue+'% requested':'Auto')+' · '+number(active?.strength||0)+' assigned · '+number(moving)+' en route · '+number(allocation.target)+' target',
+   detail:(p.allocationMode==='troops'?number(p.allocationValue)+' requested':p.allocationMode==='percent'?p.allocationValue+'% requested':'Auto')+' · '+number(active?.strength||0)+' assigned · '+number(moving)+' en route · '+number(allocation.target)+' target',
    buttons:'<button data-cancel-plan="'+esc(p.id)+'">Cancel</button>'});
  }
  for(const p of recovery){
@@ -1156,10 +1156,6 @@ function renderArmies(){
    strength.reserve?'Reserve not yet positioned on the map':strength.deployed?'Troops assigned to active fronts':'No home troops available'),
   detail:guards.length?number(guards.length)+' squads · '+number(returning)+' returning · nearby troops provide defense':
    '0 squads · '+number(strength.deployed)+' deployed',buttons:'<select data-army-posture aria-label="Army posture">'+['aggressive','balanced','defensive'].map(v=>'<option value="'+v+'"'+((mine()?.armyPosture||'balanced')===v?' selected':'')+'>'+v[0].toUpperCase()+v.slice(1)+'</option>').join('')+'</select>'});
- const defense=mine()?.armyFocus;
- if(defense){const assigned=guards.filter(g=>!g.returning&&g.role==='Priority defense'&&g.tx===defense.x&&g.ty===defense.y),total=assigned.reduce((n,g)=>n+g.strength,0),moving=assigned.filter(g=>g.x!==g.tx||g.y!==g.ty).reduce((n,g)=>n+g.strength,0);
-  rows.splice(1,0,{key:'defense-priority',title:'Defend here · '+defense.x+', '+defense.y,status:E.owner(state,defense.x,defense.y)!==myId?'Position lost · automatic recovery remains active':total?'Reinforcing priority · other guards and reserve retained':'Waiting for reachable home troops',detail:number(total)+' assigned · '+number(moving)+' en route · '+number(total-moving)+' in position',buttons:''});
- }
  const container=$('armiesList'),structure=rows.map(row=>row.key).join('|')+plans.map(p=>[p.focus,p.allocationMode,p.allocationValue].join(':')).join('|')+JSON.stringify(mine()?.armyFocus)+mine()?.armyPosture;
  if(container.dataset.structure!==structure){
   container.innerHTML=rows.length?rows.map(row=>'<div class="army-line" data-front-row="'+esc(row.key)+'"><div><strong data-front-title></strong><small data-front-status></small><small class="army-stats" data-front-detail></small></div>'+row.buttons+'</div>').join(''):
@@ -1175,15 +1171,9 @@ $('armiesToggle').onclick=()=>openMilitary('army');
 $('closeArmies').onclick=hideAux;
 $('armiesList').onchange=e=>{
  if(e.target.closest('[data-army-posture]')){command({type:'armyPosture',value:e.target.value});return;}
- const mode=e.target.closest('[data-plan-budget]'),value=e.target.closest('[data-plan-value]');
- if(mode)command({type:'planStrategy',id:mode.dataset.planBudget,mode:mode.value,value:mode.value==='percent'?25:mode.value==='troops'?1000:0});
- if(value){const p=state.attackPlans.find(p=>p.id===value.dataset.planValue);if(p)command({type:'planStrategy',id:p.id,mode:p.allocationMode,value:Number(value.value)});}
+
 };
 $('armiesList').onclick=e=>{
- if(e.target.closest('[data-defense-pick]')){closeNations();defensePicking=true;toast('Tap your territory to defend');return;}
- if(e.target.closest('[data-defense-clear]')){command({type:'defendPriority',clear:true});return;}
- const priority=e.target.closest('[data-focus-priority]');if(priority){const p=state.attackPlans.find(p=>p.id===priority.dataset.focusPriority);if(p)command({type:'planStrategy',id:p.id,focus:!p.focus});return;}
-
  const cancel=e.target.closest('[data-cancel-plan]'),edit=e.target.closest('[data-edit-plan]'),focus=e.target.closest('[data-focus-plan]');
  const recall=e.target.closest('[data-recall-army]'),armyFocus=e.target.closest('[data-focus-army]');
  if(cancel){const plan=(state.attackPlans||[]).find(p=>p.id===cancel.dataset.cancelPlan);if(plan){hideAux();openCancelPlan(plan);}return;}

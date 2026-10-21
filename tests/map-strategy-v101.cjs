@@ -22,6 +22,12 @@ function fixture(){const s=E.lobby(19),id=E.addPlayer(s,'A'),foe=E.addPlayer(s,'
  E.spatialArmyStep(s,false);assert.equal(E.militaryStrength(s,id).total,total);assert(p.garrisons.some(g=>g.camp===E.idx(60,40)));
  for(let i=0;i<25;i++){s.tick++;E.spatialArmyStep(s,true);}
  const guard=p.garrisons.find(g=>g.camp===E.idx(60,40));assert(guard&&guard.x===60&&guard.y===40,'Camp guard walks to its barracks');
- assert(E.action(s,id,{type:'armyFocus',x:68,y:40}).ok);E.spatialArmyStep(s,false);assert(p.garrisons.some(g=>g.role==='Priority defense'));assert(p.garrisons.some(g=>g.camp!==undefined&&g.strength>0));assert.equal(E.militaryStrength(s,id).total,total);
+ assert(E.action(s,id,{type:'armyFocus',x:68,y:40}).ok);E.spatialArmyStep(s,false);assert(p.garrisons.filter(g=>g.role==='Priority defense').reduce((n,g)=>n+g.strength,0)>p.troops/2,'Own focus takes the majority of reachable reserve while keeping other posts');assert(p.garrisons.some(g=>g.camp!==undefined&&g.strength>0));assert.equal(E.militaryStrength(s,id).total,total);
 }
 console.log('PASS v101: fort intelligence, hidden AI knowledge, cluster weight, posture, independent focus, allies, recovery eraser and physical camp guard');
+
+{
+ const {s,id,p}=fixture();p.troops=2000;p.garrisons=[{id:'home',x:30,y:40,strength:2000}];s.armies=[{id:'deployed',owner:id,strength:8000,columns:[{x:68,y:40,strength:8000}]}];
+ assert(E.action(s,id,{type:'armyPosture',value:'defensive'}).ok);assert.equal(E.militaryStrength(s,id).total,10000);assert.equal(s.armies[0].strength,4000);
+ assert(p.garrisons.some(g=>g.returning&&g.x===68&&g.y===40&&g.strength===4000),'Defensive posture withdraws surplus physically from the front');
+}
