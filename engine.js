@@ -63,7 +63,7 @@ function person(s,id){return s.players.find(p=>p.id===id);}
 const available=(p,c)=>Object.entries(c||{}).every(([k,v])=>(p.res[k]||0)>=v);
 const charge=(p,c)=>Object.entries(c).forEach(([k,v])=>p.res[k]-=v);
 function log(s,msg){s.log.unshift(msg);if(s.log.length>8)s.log.length=8;}
-function lobby(seed=57283){return {version:14,settings:{bots:0},phase:'lobby',seed:Math.floor(seed),tick:0,tiles:[],owners:[],players:[],buildings:[],armies:[],attackPlans:[],recoveryPlans:[],log:['Conquer land, develop your economy, and defend your capital.'],winner:null,mode:'conquest',duration:null,nonce:0,landTotal:0,territoryRevision:0,wars:[],peaceOffers:[]};}
+function lobby(seed=57283){return {version:14,settings:{bots:0},phase:'lobby',seed:Math.floor(seed),tick:0,tiles:[],owners:[],players:[],buildings:[],armies:[],attackPlans:[],recoveryPlans:[],workZones:[],buildJobs:[],roads:[],workRevision:0,roadRevision:0,log:['Conquer land, develop your economy, and defend your capital.'],winner:null,mode:'conquest',duration:null,nonce:0,landTotal:0,territoryRevision:0,wars:[],peaceOffers:[]};}
 function addPlayer(s,name,isBot=false){if(s.phase!=='lobby'||s.players.filter(p=>!p.bot).length>=MAX&&!isBot||s.players.length>=COLORS.length)return null;
  let id=1;while(s.players.some(p=>p.id===id))id++;let safe=String(name||('Kingdom '+id)).trim().slice(0,18)||('Player '+id);
  s.players.push({id,name:safe,bot:!!isBot,color:COLORS[(id-1)%COLORS.length],res:{food:650,wood:390,stone:310,gold:260},troops:450,troopCap:1700,land:0,ready:!!isBot,connected:true,spawnPreference:'auto',eliminated:false,attackTargets:[],tech:{economy:0,war:0,logistics:0},offers:[],allies:[],capital:null,kills:0});
@@ -165,7 +165,7 @@ function start(s,bots=0){if(s.phase!=='lobby'||!s.players.length)return {ok:fals
 function buildingCount(s,id,kind){return s.buildings.filter(b=>b.owner===id&&b.kind===kind).length;}
 function costBuilding(s,id,kind){
  const base=KINDS[kind]?.cost;if(!base)return null;
- const count=buildingCount(s,id,kind);
+ const count=buildingCount(s,id,kind)+(s.buildJobs||[]).filter(j=>j.owner===id&&j.kind===kind).length;
  return Object.fromEntries(Object.entries(base).map(([resource,value])=>[resource,Math.ceil(value*(100+20*count)/100)]));
 }
 function costUpgrade(b){return {wood:50*b.level+25,stone:50*b.level+20,gold:35*b.level};}
@@ -173,6 +173,7 @@ function costTech(key,l){const base=TECH[key].base;return Object.fromEntries(Obj
 function isCoast(s,x,y){return [[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>tile(s,x+dx,y+dy)===0);}
 function canBuild(s,id,kind,x,y){if(!KINDS[kind])return 'Unknown building.';if(!inside(x,y)||owner(s,x,y)!==id)return 'Build on your own territory.';
  if(buildingAt(s,x,y))return 'Tile already has a building.';
+ if((s.buildJobs||[]).some(j=>j.x===x&&j.y===y))return 'Construction already queued here.';
  if(kind==='lumber'&&tile(s,x,y)!==2)return 'Lumber mills require forests.';
  if(kind==='quarry'&&![3,6].includes(tile(s,x,y)))return 'Quarries require hills or mountains.';
  if(kind==='mine'&&![3,5,6].includes(tile(s,x,y)))return 'Mines require mountains, hills, or ore deposits.';
@@ -325,6 +326,18 @@ function changePaintedPlan(s,id,a){
 }
 function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is not active.'};const p=person(s,id);
  if(!alive(p)||!a||typeof a!=='object')return {ok:false,error:'Command unavailable.'};
+ if(a.type==='workZone')return paintWorkZone(s,p,a);
+ if(a.type==='queueBuild'){
+  const kind=String(a.kind),x=Math.floor(a.x),y=Math.floor(a.y),fail=canBuild(s,id,kind,x,y);
+  if(fail)return {ok:false,error:fail};
+  if(!['city','barracks','fort'].includes(kind))return {ok:false,error:'Use a resource zone for production.'};
+  s.buildJobs??=[];if(s.buildJobs.some(j=>j.x===x&&j.y===y))return {ok:false,error:'Construction already queued here.'};
+  if(s.buildJobs.filter(j=>j.owner===id).length>=24)return {ok:false,error:'Finish queued construction first.'};
+  const count=s.buildJobs.filter(j=>j.owner===id&&j.kind===kind).length;
+  const cost=Object.fromEntries(Object.entries(KINDS[kind].cost).map(([k,v])=>[k,Math.ceil(v*(1+.2*(buildingCount(s,id,kind)+count)))]));
+  if(!available(p,cost))return {ok:false,error:'Not enough resources.'};
+  charge(p,cost);s.buildJobs.push({id:'j'+(++s.nonce),owner:id,kind,x,y,cost,progress:0});return {ok:true};
+ }
  if(a.type==='send'){
   let tx=Math.floor(a.x),ty=Math.floor(a.y);const percent=clamp(Number(a.percent)||30,5,95);
   if(!inside(tx,ty))return {ok:false,error:'Choose a target on the map.'};
@@ -484,6 +497,146 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
 }
 // Spatial home army. p.troops remains the authoritative sum for old saves and
 // the HUD; squads represent those same soldiers, never an additional resource.
+// Civilian work is simulated in bounded groups, never one agent per person.
+const WORK_RESOURCES={food:[1,4],wood:[2],stone:[3,6],gold:[3,5,6]};
+const roadSets=new WeakMap();
+function roadSet(s){
+ const roads=s.roads||[];let c=roadSets.get(s);
+ if(!c||c.roads!==roads||c.length!==roads.length){c={roads,length:roads.length,set:new Set(roads)};roadSets.set(s,c);}
+ return c.set;
+}
+function layRoad(s,p,i){
+ const roads=roadSet(s);if(roads.has(i)||p.res.wood<1)return;
+ p.res.wood--;s.roads.push(i);roads.add(i);roadSets.get(s).length=s.roads.length;s.roadRevision=(s.roadRevision||0)+1;
+}
+function workSuitable(s,id,resource,i){return Number.isInteger(i)&&i>=0&&i<W*H&&s.owners[i]===id&&WORK_RESOURCES[resource]?.includes(s.tiles[i]);}
+function workforceStats(s,id){
+ const bases=s.buildings.filter(b=>b.owner===id&&['capital','city'].includes(b.kind));
+ const capacity=bases.reduce((n,b)=>n+24*b.level,0),groups=person(s,id)?.workers||[];
+ const working=groups.filter(g=>g.resource&&g.progress>=3&&g.x===g.tx&&g.y===g.ty);
+ return {capacity,groups:groups.length,working:working.reduce((n,g)=>n+g.count,0),
+  building:(s.buildJobs||[]).filter(j=>j.owner===id).length};
+}
+function paintWorkZone(s,p,a){
+ const resource=String(a.resource);if(!WORK_RESOURCES[resource])return {ok:false,error:'Choose a resource.'};
+ if(!Array.isArray(a.cells)||a.cells.length>W*H||a.cells.some(i=>!Number.isInteger(i)||i<0||i>=W*H))return {ok:false,error:'Paint cells within the map.'};
+ // Filter foreign land and unsuitable terrain rather than rejecting the brush.
+ const built=new Set([...s.buildings,...(s.buildJobs||[])].map(b=>idx(b.x,b.y)));
+ const cells=[...new Set(a.cells.filter(i=>workSuitable(s,p.id,resource,i)&&!built.has(i)))].sort((a,b)=>a-b);
+ s.workZones??=[];
+ const old=s.workZones.find(z=>z.owner===p.id&&z.resource===resource);
+ const selected=new Set(cells);
+ s.workZones=s.workZones.filter(z=>z!==old).map(z=>z.owner===p.id?{...z,zoneCells:z.zoneCells.filter(i=>!selected.has(i))}:z).filter(z=>z.zoneCells.length);
+ if(cells.length)s.workZones.push({id:old?.id||'w'+(++s.nonce),owner:p.id,resource,zoneCells:cells});
+ s.workRevision=(s.workRevision||0)+1;
+ return {ok:true,cells:cells.length};
+}
+// A* favours existing roads (cost 1) over open terrain (cost 3).
+// Called only when a group gets a new destination or loses its friendly path.
+function roadRoute(s,id,source,destination){
+ if(source===destination)return [];
+ if(s.owners[source]!==id||s.owners[destination]!==id)return null;
+ const roads=roadSet(s),dist=new Float64Array(W*H).fill(Infinity),prev=new Int32Array(W*H).fill(-1),heap=[];
+ const h=i=>Math.abs(i%W-destination%W)+Math.abs(((i/W)|0)-((destination/W)|0));
+ const push=(i,g)=>{const v={i,g,f:g+h(i)};let k=heap.length;heap.push(v);while(k){const p=(k-1)>>1;if(heap[p].f<=v.f)break;heap[k]=heap[p];k=p;}heap[k]=v;};
+ const pop=()=>{const v=heap[0],last=heap.pop();if(heap.length){let k=0;while(k*2+1<heap.length){let c=k*2+1;if(c+1<heap.length&&heap[c+1].f<heap[c].f)c++;if(heap[c].f>=last.f)break;heap[k]=heap[c];k=c;}heap[k]=last;}return v;};
+ dist[source]=0;push(source,0);
+ while(heap.length){const v=pop();if(v.g!==dist[v.i])continue;if(v.i===destination)break;
+  for(const j of adjacentCells(v.i))if(s.tiles[j]&&s.owners[j]===id){const g=v.g+(roads.has(j)?1:3);
+   if(g<dist[j]){dist[j]=g;prev[j]=v.i;push(j,g);}
+  }
+ }
+ if(prev[destination]<0)return null;
+ const route=[];for(let i=destination;i!==source;i=prev[i])route.push(i);return route.reverse();
+}
+function moveOnRoute(s,id,g){
+ const next=g.route?.[0];if(next===undefined)return false;
+ if(s.owners[idx(g.x,g.y)]!==id||s.owners[next]!==id||near(g,{x:next%W,y:(next/W)|0})!==1){g.route=null;return false;}
+ // One road cell per combat pulse; open land takes three pulses.
+ g.moveCredit=(g.moveCredit||0)+1;const cost=roadSet(s).has(next)?1:3;
+ if(g.moveCredit<cost)return false;g.moveCredit=0;g.route.shift();g.x=next%W;g.y=(next/W)|0;return true;
+}
+function workforceStep(s){
+ s.workZones??=[];s.buildJobs??=[];s.roads??=[];
+ // Paid sites lost to an enemy are cancelled once; refund unspent materials.
+ for(const j of [...s.buildJobs])if(s.owners[idx(j.x,j.y)]!==j.owner||buildingAt(s,j.x,j.y)){
+  const p=person(s,j.owner);if(p)for(const [k,n] of Object.entries(j.cost))p.res[k]=Math.min(250000,p.res[k]+n);
+  s.buildJobs=s.buildJobs.filter(q=>q!==j);
+ }
+ for(const p of s.players){if(!alive(p))continue;
+  const bases=s.buildings.filter(b=>b.owner===p.id&&['capital','city'].includes(b.kind)),capacity=bases.reduce((n,b)=>n+b.level*24,0);
+  p.workers??=[];
+  // Overrun civilians retreat locally; they never cross enemy land.
+  p.workers=p.workers.filter(g=>{if(s.owners[idx(g.x,g.y)]===p.id)return true;
+   const exit=adjacentCells(idx(g.x,g.y)).find(i=>s.owners[i]===p.id&&s.tiles[i]);
+   if(exit===undefined)return false;g.x=exit%W;g.y=(exit/W)|0;g.route=null;g.job=null;g.resource=null;return true;});
+  const count=Math.min(24,Math.ceil(capacity/6));
+  while(p.workers.length<count){const b=bases[p.workers.length%bases.length];p.workers.push({id:'c'+(++s.nonce),x:b.x,y:b.y,count:6,progress:0});}
+  if(p.workers.length>count)p.workers.length=count;
+  for(const g of p.workers)g.count=capacity/Math.max(1,count);
+  p.workIncome={food:0,wood:0,stone:0,gold:0};
+  if(!count)continue;
+  const components=ownedComponents(s,p.id),occupied=new Set(),roads=roadSet(s);
+  const sites=[],built=new Set([...s.buildings,...s.buildJobs].map(b=>idx(b.x,b.y)));
+  for(const z of s.workZones)if(z.owner===p.id)for(const i of z.zoneCells)if(workSuitable(s,p.id,z.resource,i)&&!built.has(i))sites.push({i,resource:z.resource});
+  for(const g of p.workers)if(g.resource)occupied.add(idx(g.tx,g.ty));
+  const roadEnds=[...s.buildings.filter(b=>b.owner===p.id&&['city','barracks','capital'].includes(b.kind)),
+   ...s.armies.filter(a=>a.owner===p.id).flatMap(a=>(a.columns||[]).map(c=>({x:c.tx,y:c.ty})))];
+  let routes=0;
+  for(let n=0;n<p.workers.length;n++){
+   const g=p.workers[n],current=idx(g.x,g.y),component=components[current];
+   let job=s.buildJobs.find(j=>j.id===g.job&&j.owner===p.id);
+   if(g.resource&&!sites.some(t=>t.i===idx(g.tx,g.ty)&&t.resource===g.resource)){occupied.delete(idx(g.tx,g.ty));g.resource=null;g.route=null;}
+   if(g.job&&!job){g.job=null;g.route=null;}
+   // Construction gets priority, but only one group can occupy a job.
+   if(!job){const reserved=new Set(p.workers.filter(w=>w!==g).map(w=>w.job));
+    job=s.buildJobs.filter(j=>j.owner===p.id&&!reserved.has(j.id)&&components[idx(j.x,j.y)]===component).sort((a,b)=>near(g,a)-near(g,b))[0];
+    if(job){occupied.delete(idx(g.tx,g.ty));g.resource=null;g.job=job.id;g.tx=job.x;g.ty=job.y;g.route=null;g.progress=0;}
+   }
+   if(n===0&&!job&&!g.roadTask&&roadEnds.some(b=>inside(b.x,b.y)&&components[idx(b.x,b.y)]===component&&!roads.has(idx(b.x,b.y))&&near(g,b)>0)){
+    occupied.delete(idx(g.tx,g.ty));g.resource=null;g.route=null;
+   }
+   if(!job&&!g.resource&&!(g.roadTask&&current!==idx(g.tx,g.ty))&&routes<2){
+    g.roadTask=false;
+    // One group connects bases and active front supply endpoints. Other groups
+    // keep producing; road tasks cannot take over the whole workforce.
+    const ends=n===0?roadEnds:[];
+    const end=ends.filter(b=>inside(b.x,b.y)&&components[idx(b.x,b.y)]===component&&!roads.has(idx(b.x,b.y))&&near(g,b)>0).sort((a,b)=>near(g,a)-near(g,b))[0];
+    if(end){g.tx=end.x;g.ty=end.y;g.roadTask=true;g.progress=0;g.route=null;}
+    else{
+     let best=null,score=Infinity;
+     for(const t of sites)if(!occupied.has(t.i)&&components[t.i]===component){
+      const d=Math.abs(g.x-t.i%W)+Math.abs(g.y-((t.i/W)|0));
+      // A scarce resource gets preference; distance still favours local jobs.
+      const value=d+Math.min(30,(p.res[t.resource]||0)/200);
+      if(value<score){score=value;best=t;}
+     }
+     if(best){g.tx=best.i%W;g.ty=(best.i/W)|0;g.resource=best.resource;g.progress=0;g.route=null;occupied.add(best.i);}
+     else{const home=[...bases].filter(b=>components[idx(b.x,b.y)]===component).sort((a,b)=>near(g,a)-near(g,b))[0];if(home){g.tx=home.x;g.ty=home.y;}g.progress=0;}
+    }
+   }
+   if(!inside(g.tx,g.ty)){g.status='Idle';continue;}
+   const destination=idx(g.tx,g.ty);
+   if(current!==destination){
+    if(!g.route?.length||g.route[g.route.length-1]!==destination||s.owners[g.route[0]]!==p.id){
+     if(routes>=2){g.status='Planning';continue;}routes++;g.route=localRoute(s,p.id,current,destination);
+    }
+    // Workers lay a cheap road where they physically walk, reusing routes.
+    layRoad(s,p,current);
+    const next=g.route?.[0];if(next===undefined){g.status='No route';continue;}
+    g.moveCredit=(g.moveCredit||0)+1;
+    if(g.moveCredit>=(roads.has(next)?1:2)){g.moveCredit=0;g.route.shift();g.x=next%W;g.y=(next/W)|0;}
+    g.status=g.job?'Building route':g.roadTask?'Road work':'Travelling';continue;
+   }
+   g.route=[];
+   layRoad(s,p,current);
+   if(job){job.progress=(job.progress||0)+1;g.status='Building';if(job.progress>=5){building(s,p.id,job.kind,job.x,job.y);s.buildJobs=s.buildJobs.filter(j=>j!==job);g.job=null;g.progress=0;}}
+   else if(g.resource){g.progress=Math.min(3,(g.progress||0)+1);g.status=g.progress<3?'Preparing':'Harvesting';if(g.progress>=3)p.workIncome[g.resource]+=g.count*.8;}
+   else{g.status=g.roadTask?'Road complete':'Home';g.roadTask=false;}
+  }
+ }
+}
+
 function homeSites(s,id){
  const bases=s.buildings.filter(b=>b.owner===id&&owner(s,b.x,b.y)===id&&['barracks','capital','city'].includes(b.kind));
  if(bases.length)return bases.sort((a,b)=>(a.kind==='barracks'?0:1)-(b.kind==='barracks'?0:1)||a.y-b.y||a.x-b.x);
@@ -647,6 +800,7 @@ function frontSectors(s,id,front){
  return result;
 }
 function localRoute(s,id,source,destination){
+ if((s.roads?.length||0)>=4)return roadRoute(s,id,source,destination);
  // Most front movement is a few friendly cells; avoid a whole-map flood for it.
  for(const horizontalFirst of [true,false]){
   let x=source%W,y=(source/W)|0;const tx=destination%W,ty=(destination/W)|0,route=[];let valid=true;
@@ -768,7 +922,7 @@ function marchWave(s,a,p,front,partial=false){
   }
   if(!c.route){c.blocked=true;a.waitingForRoute=true;moving=true;continue;}
   c.blocked=false;
-  const next=c.route.shift();c.x=next%W;c.y=(next/W)|0;moving=true;
+  moveOnRoute(s,a.owner,c);moving=true;
  }
  const lead=a.columns.find(c=>c.strength>0);if(lead){a.x=lead.x;a.y=lead.y;}
  a.marching=moving;return moving&&!partial;
@@ -1120,7 +1274,7 @@ function advance(s,a){
 }
 function counts(s,id){const stats={farm:0,lumber:0,quarry:0,mine:0,barracks:0,fort:0,city:0};for(const b of s.buildings)if(b.owner===id&&stats[b.kind]!==undefined)stats[b.kind]+=b.level;return stats;}
 function income(s,p){const c=counts(s,p.id),l=p.land,e=1+p.tech.economy*.25;
- const income={food:Math.round((2+l/100+c.farm*8+c.city*5)*e),wood:Math.round((1+l/180+c.lumber*7)*e),stone:Math.round((1+l/200+c.quarry*7)*e),gold:Math.round((1+l/220+c.mine*7+c.city*5)*e)};
+ const income={food:Math.round((2+l/100+c.farm*8+c.city*5+(p.workIncome?.food||0))*e),wood:Math.round((1+l/180+c.lumber*7+(p.workIncome?.wood||0))*e),stone:Math.round((1+l/200+c.quarry*7+(p.workIncome?.stone||0))*e),gold:Math.round((1+l/220+c.mine*7+c.city*5+(p.workIncome?.gold||0))*e)};
  for(const k of Object.keys(income))p.res[k]=Math.min(250000,p.res[k]+income[k]);
  p.troopCap=Math.floor(900+l*2.4+c.barracks*430+c.city*260);
  const newTroops=Math.max(0,Math.min(p.troopCap-militaryStrength(s,p.id).total,Math.round(4+l/100+p.troops*.018+c.barracks*5+c.city*3+p.tech.war*2)));const supply=Math.max(0,Math.min(newTroops,Math.floor(p.res.food/0.20)));
@@ -1130,9 +1284,10 @@ function bot(s,id){const p=person(s,id);if(!alive(p)||s.phase!=='playing')return
  if(s.tick%4===id%4){
   const bases=s.buildings.filter(b=>b.owner===id);if(bases.length<14){
     const preferences=['farm','lumber','quarry','mine','barracks','farm','city','fort'];const kind=preferences[Math.floor((s.tick/4+id)%preferences.length)];
+    if(KINDS[kind].income){const resource=KINDS[kind].income,cells=[];for(let i=0;i<W*H&&cells.length<300;i++)if(workSuitable(s,id,resource,i))cells.push(i);paintWorkZone(s,p,{resource,cells});}
     const cx=p.capital.x,cy=p.capital.y;for(let n=0;n<35;n++){
       const x=clamp(cx+Math.round((hash(n,s.tick,id)-.5)*30),0,W-1),y=clamp(cy+Math.round((hash(s.tick,n,id)-.5)*27),0,H-1);
-      if(!canBuild(s,id,kind,x,y)){action(s,id,{type:'build',kind,x,y});break;}
+      if(!KINDS[kind].income&&!canBuild(s,id,kind,x,y)){action(s,id,{type:'queueBuild',kind,x,y});break;}
     }
   }
   if(p.troops>130&&s.armies.filter(a=>a.owner===id).length<5){
@@ -1169,10 +1324,7 @@ function combatStep(s){if(s.phase!=='playing')return;
  // Reserves travel on the same combat clock as attacking columns. Reuse
  // routes computed by spatialArmyStep; no new pathfinding in substeps.
  for(const p of s.players)for(const g of p.garrisons||[]){
-  const next=g.route?.[0];
-  if(next!==undefined&&s.owners[idx(g.x,g.y)]===p.id&&s.owners[next]===p.id&&near(g,{x:next%W,y:(next/W)|0})===1){
-   g.route.shift();g.x=next%W;g.y=(next/W)|0;
-  }
+  moveOnRoute(s,p.id,g);
  }
 
  for(const p of s.players)if(alive(p))syncGarrisons(s,p);
@@ -1181,6 +1333,7 @@ function combatStep(s){if(s.phase!=='playing')return;
 }
 function tick(s){if(s.phase!=='playing')return;s.tick++;
  adoptLegacyOffensives(s);
+ workforceStep(s);
  for(const p of s.players){if(!alive(p))continue;income(s,p);}
  spatialArmyStep(s,false);
  combatStep(s);
@@ -1202,9 +1355,11 @@ function zoneRuns(cells){
 }
 function networkState(s){
  const geometry=p=>{const {zoneCells,...rest}=p;return {...rest,...(zoneCells?{zoneRuns:zoneRuns(zoneCells)}:{})};};
- return {...s,armyPacked:true,
+ const {roads,...base}=s;
+ return {...base,roadRuns:zoneRuns(roads||[]),armyPacked:true,
+  workZones:s.workZones?.map(geometry),
   attackPlans:s.attackPlans?.map(geometry),recoveryPlans:s.recoveryPlans?.map(geometry),
-  players:s.players.map(p=>({...p,garrisons:p.garrisons?.map(({route,...g})=>g)})),
+  players:s.players.map(p=>({...p,garrisons:p.garrisons?.map(({route,...g})=>g),workers:p.workers?.map(({route,...g})=>g)})),
   armies:s.armies.map(a=>{
    const {frontSignature,zoneCells,...wave}=a;
    return {...wave,...(!a.planId&&zoneCells?{zoneRuns:zoneRuns(zoneCells)}:{}),
@@ -1213,7 +1368,8 @@ function networkState(s){
 }
 function restoreNetworkState(s){
  if(!s?.armyPacked)return s;const active=new Set();
- for(const p of [...(s.attackPlans||[]),...(s.recoveryPlans||[]),...(s.armies||[])]){
+ if(s.roadRuns){const roads=[];for(let n=0;n<s.roadRuns.length;n+=2)for(let k=0;k<s.roadRuns[n+1];k++)roads.push(s.roadRuns[n]+k);s.roads=roads;delete s.roadRuns;}
+ for(const p of [...(s.attackPlans||[]),...(s.recoveryPlans||[]),...(s.armies||[]),...(s.workZones||[])]){
   if(!p.zoneRuns)continue;active.add(p.id);
   const signature=p.zoneRuns.join(','),cached=displayZoneCache.get(p.id);
   if(cached?.signature===signature)p.zoneCells=cached.cells;
@@ -1229,5 +1385,5 @@ function restoreNetworkState(s){
  delete s.armyPacked;return s;
 }
 
-return{BUILD:'v78',automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v79',WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });

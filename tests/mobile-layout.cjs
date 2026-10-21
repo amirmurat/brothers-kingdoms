@@ -56,17 +56,19 @@ const server=http.createServer((req,res)=>{
     const columns=Array.from({length:1000},(_,n)=>{const pos=n%20===0?anchor:owned[n%owned.length];return {x:pos%E.W,y:(pos/E.W)|0,tx,ty,strength:100,sector:'test',route:[]};});
     s.armies=[{id:'visual-stress',owner:id,strength:100000,frontCells:[i],columns,sectors:[{key:'test',anchor,cells:[i],required:3}]}];
     const first=L.getArmyDisplay(),same=first===L.getArmyDisplay(),canvas=document.getElementById('mapCanvas'),c=canvas.getContext('2d');
-    const originals={fill:c.fill,fillText:c.fillText,arc:c.arc};let fills=0,labels=0,circles=0;
+    const originals={fill:c.fill,fillText:c.fillText,arc:c.arc,fillRect:c.fillRect};let fills=0,labels=0,circles=0,rects=0;
     c.fill=function(...a){fills++;return originals.fill.apply(this,a);};
+    c.fillRect=function(...a){rects++;return originals.fillRect.apply(this,a);};
     c.fillText=function(...a){labels++;return originals.fillText.apply(this,a);};
     c.arc=function(...a){circles++;return originals.arc.apply(this,a);};
     try{L.drawArmyDisplay(canvas.clientWidth,canvas.clientHeight);}
     finally{for(const [key,value]of Object.entries(originals))c[key]=value;s.armies=saved;}
-    return {same,paths:first.paths.length,fills,labels,circles,players:s.players.length};
+    return {same,paths:first.paths.length,fills,labels,circles,rects,players:s.players.length};
    });
    assert(visualBudget.same,label+' army display geometry is reused between frames');
    assert(visualBudget.paths<=visualBudget.players*4,label+' concentration lines are batched');
-   assert(visualBudget.fills<=8,label+' at most eight transfer arrows even for 1000 columns');
+   assert.equal(visualBudget.fills,0,label+' troop display has no arrow glyphs');
+   assert(visualBudget.rects>0&&visualBudget.rects<1000,label+' overlapping troops share shaded cells');
    assert.equal(visualBudget.labels,0,label+' no troop number labels on the map');
    assert.equal(visualBudget.circles,0,label+' no per-squad circles');
    await page.evaluate(()=>{const L=window.__layout,s=L.getState();L.contextual(s.buildings.find(b=>b.kind==='capital'&&!s.players.find(p=>p.id===b.owner).bot));});
@@ -76,7 +78,14 @@ const server=http.createServer((req,res)=>{
    assert.equal(await page.locator('#planTroopsControl').isVisible(),false,label+' no troop percentage slider');
    assert.equal(await page.locator('#planBrushSize').isVisible(),true,label+' brush sizing remains available');
    await page.evaluate(()=>{window.__layout.showAux('armiesPanel');window.__layout.hideAux();});
-   await page.evaluate(()=>window.__layout.setBuildingMode('lumber'));
+   await page.evaluate(()=>{const L=window.__layout,s=L.getState(),id=s.players.find(p=>!p.bot).id;const i=s.owners.findIndex((v,i)=>v===id&&!s.buildings.some(b=>b.x===i%160&&b.y===(i/160|0)));s.tiles[i]=2;L.setBuildingMode('lumber');});
+   assert.equal(await page.locator('#planHeading').textContent(),'WOOD ZONE',label+' resource chooses a zone brush');
+   assert.equal(await page.locator('#planReviewButton').textContent(),'Save zone');
+   assert.equal(await page.locator('#placingBuild').isVisible(),false,label+' extraction does not use individual placement');
+   const zoneBox=await page.locator('#planGuide').boundingBox();
+   assert(zoneBox.x>=0&&zoneBox.x+zoneBox.width<=viewport.width+1,label+' resource controls fit');
+   await page.locator('#planGuideExit').click();
+   await page.evaluate(()=>window.__layout.setBuildingMode('barracks'));
    const geometry=await page.locator('#placingBuild').evaluate(bar=>{
     const r=bar.getBoundingClientRect(),name=document.getElementById('placingBuildName').getBoundingClientRect(),cost=document.getElementById('placingBuildCost').getBoundingClientRect();
     return {width:r.width,height:r.height,left:r.left,right:r.right,nameWidth:name.width,nameHeight:name.height,costHeight:cost.height,screen:innerWidth};

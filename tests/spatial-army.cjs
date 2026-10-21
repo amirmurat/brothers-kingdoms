@@ -91,7 +91,7 @@ console.log('PASS spatial army: bases, wartime guards, rear reserve, local defen
  E.spatialArmyStep(t.s);
  const g=t.p.garrisons.find(g=>g.role==='Guard'&&g.route?.length>3);
  assert(g,'A real guard route is available');const before={x:g.x,y:g.y},length=g.route.length;
- E.combatStep(t.s);
+ for(let n=0;n<3;n++)E.combatStep(t.s);
  assert.equal(Math.abs(before.x-g.x)+Math.abs(before.y-g.y),1,'Reserve travels during combat substeps too');
  assert.equal(g.route.length,length-1,'Combat movement reuses the friendly route');
  const blocked=g.route[0];t.s.owners[blocked]=t.enemy;

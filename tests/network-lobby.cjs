@@ -74,6 +74,14 @@ server.on('upgrade',(req,socket,head)=>{
    await a.click('#startButton');await a.waitForSelector('#game:not(.hidden)');await b.waitForSelector('#game:not(.hidden)');
    assert.deepEqual(await a.evaluate(()=>window.__net.get().state.players.find(p=>p.name==='Creator').capital),chosen,name+' chosen point becomes actual capital');
    for(const page of [a,b])assert(await page.evaluate(()=>window.__net.get().state.players.every(p=>Array.isArray(p.garrisons)&&Math.abs(p.garrisons.reduce((n,g)=>n+g.strength,0)-p.troops)<.001)),name+' both clients receive consistent spatial army');
+   for(const page of [a,b])await page.waitForFunction(()=>window.__net.get().state.players.every(p=>Array.isArray(p.workers)&&p.workers.length<=24));
+   const entry=rooms.get(code),creator=entry.room.s.players.find(p=>p.name==='Creator'),E=globalThis.BKEngine;
+   const site=entry.room.s.owners.findIndex((v,i)=>v===creator.id&&E.WORK_RESOURCES.food.includes(entry.room.s.tiles[i])&&!E.buildingAt(entry.room.s,i%E.W,(i/E.W)|0));
+   assert(site>=0,name+' a natural food site exists near the selected capital');
+   assert(E.action(entry.room.s,creator.id,{type:'workZone',resource:'food',cells:[site]}).ok);
+   entry.room.broadcast();
+   for(const page of [a,b])await page.waitForFunction(i=>(window.__net.get().state.workZones||[]).some(z=>z.zoneCells.includes(i)),site);
+   for(const page of [a,b])assert(await page.evaluate(()=>!JSON.stringify(window.__net.get().state.players).includes('"route"')),name+' route internals remain off the wire');
    console.log('PASS '+name+' two-client lobby: owner, reconnect, touch spawn, shared state, rejoin and actual capital');
    await owner.close();await guest.close();
   }finally{await browser.close();}

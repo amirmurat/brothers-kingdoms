@@ -16,6 +16,7 @@ jobs:
           node-version: '22'
       - name: Engine and server regressions
         run: |
+          node tests/workforce.cjs
           node tests/army-command.cjs
           node tests/army-performance.cjs
           node tests/front-distribution.cjs

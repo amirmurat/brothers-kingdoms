@@ -28,7 +28,7 @@ const buildingInfo={
 };
 const nameResource={food:'Food',wood:'Wood',stone:'Stone',gold:'Gold'};
 const briefCost=c=>Object.entries(c||{}).map(([k,v])=>`<span class="cost-unit">${uiIcon(k)}${number(v)}</span>`).join(' ');
-function buildingBenefit(id,p,level=1){const b=buildingInfo[id];if(!b)return '';if(b.resource)return `+${Math.round(b.perLevel*level*(1+.25*(p?.tech?.economy||0)))}/s ${({food:'food',wood:'wood',stone:'stone',gold:'gold'})[b.resource]}`;if(id==='city')return `+${Math.round(5*level*(1+.25*(p?.tech?.economy||0)))}/s food and gold · +${260*level} capacity · +${3*level} recruitment/s`;if(id==='barracks')return `+${430*level} capacity · +${5*level} recruitment/s`;if(id==='fort')return `up to +${(18.5*level).toFixed(1)} defense within radius 4`;return b.detail;}
+function buildingBenefit(id,p,level=1){const b=buildingInfo[id];if(!b)return '';if(b.resource)return `+${Math.round(b.perLevel*level*(1+.25*(p?.tech?.economy||0)))}/s ${({food:'food',wood:'wood',stone:'stone',gold:'gold'})[b.resource]}`;if(id==='city')return `+${24*level} workers · +${Math.round(5*level*(1+.25*(p?.tech?.economy||0)))}/s food and gold · +${260*level} capacity · +${3*level} recruitment/s`;if(id==='barracks')return `+${430*level} capacity · +${5*level} recruitment/s`;if(id==='fort')return `up to +${(18.5*level).toFixed(1)} defense within radius 4`;return b.detail;}
 function techBenefit(id,level){if(id==='economy')return `Income multiplier ×${(1+level*.25).toFixed(2)}`;if(id==='war')return `Stronger attacks · defense +${(1.9*level).toFixed(1)} · recruitment +${2*level} troops/s`;if(id==='logistics')return `Conquest troop losses −${8*level}%`;return '';}
 function resourceRates(p){
  const c=E.counts(state,p.id),land=p.land||0,m=1+(p.tech.economy||0)*.25;
@@ -336,9 +336,18 @@ function beginAttackPlanner(existing=null){
  $('planPaintClear').textContent=existing?'Reset':'Clear';
  setPaintTool('paint');
  $('planHeading').textContent=existing?'EDIT PLAN':'ATTACK PLAN';
+ $('planGuide').setAttribute('aria-label','Attack plan controls');
  $('mapHint').classList.add('hidden');refreshPaintGuide();queueDraw();
 }
 // A brush paints cross-shaped five-tile stamps, keeping exactly one target owner.
+function beginWorkPlanner(resource){
+ beginAttackPlanner();if(!attackPlanner)return;
+ const zone=(state.workZones||[]).find(z=>z.owner===myId&&z.resource===resource);
+ attackPlanner.workResource=resource;attackPlanner.cells=new Set(zone?.zoneCells||[]);
+ $('planHeading').textContent=nameResource[resource].toUpperCase()+' ZONE';
+ $('planReviewButton').textContent='Save zone';
+ $('planGuide').setAttribute('aria-label','Resource zone controls');refreshPaintGuide();queueDraw();
+}
 function beginGlobalEraser(){
  if(!state||state.phase!=='playing'||mine()?.eliminated)return;
  hideAux();toggleQuickBuild(false);setPreview(null);setBuildingMode(null);
@@ -373,6 +382,7 @@ function brushAt(pt){
   if(dx*dx+dy*dy>radius*radius)continue;
   const x=pt.x+dx,y=pt.y+dy;if(!E.inside(x,y)||!E.tile(state,x,y))continue;
   const cell=y*E.W+x;
+  if(plan.workResource&&!E.workSuitable(state,myId,plan.workResource,cell))continue;
   if(plan.mode==='erase'){if(plan.erasable.has(cell))plan.cells.add(cell);continue;}
   if(plan.tool==='erase'){plan.cells.delete(cell);continue;}
   if(plan.cells.size>=E.W*E.H)continue;
@@ -409,6 +419,13 @@ function refreshPaintGuide(){
  planningVisualCache=null;
  const plan=attackPlanner;if(plan?.mode!=='paint')return;
  const checked=checkPaintZone(plan),count=plan.cells.size;
+ if(plan.workResource){
+  const stats=E.workforceStats(state,myId);
+  $('planPaintCount').textContent=number(count)+' cells';$('planPaintClear').disabled=pressed.size>0||!count;
+  $('planReviewButton').disabled=pressed.size>0;$('planBrushValue').textContent=String(plan.brushRadius);
+  $('planGuideHint').textContent=number(stats.capacity)+' workers · Paint suitable own land · Eraser removes · Two fingers move';
+  return;
+ }
  refreshPaintTargets(plan);
  const selected=selectedNationTargets(),permitted=[...plan.cells].filter(i=>selected.includes(state.owners[i])).length;
  const protectedCount=[...plan.cells].filter(i=>state.owners[i]!==myId&&!selected.includes(state.owners[i])).length;
@@ -433,6 +450,7 @@ function clearPaintedZone(){
 }
 function reviewPaintedZone(){
  const plan=attackPlanner;if(plan?.mode!=='paint'||pressed.size>0)return;
+ if(plan.workResource){if(command({type:'workZone',resource:plan.workResource,cells:[...plan.cells]})){resetAttackPlanner();toast('Work zone saved');}return;}
  const checked=checkPaintZone(plan);if(checked.error){refreshPaintGuide();toast(checked.error,'error');return;}
  const targets=selectedNationTargets();
  const foreign=checked.cells.find(i=>state.owners[i]!==myId)??checked.cells[0];
@@ -507,7 +525,7 @@ function drawAttackPlanning(){
   collect(army);
  if(attackPlanner?.mode==='review'&&attackPlanner.zoneCells)
   collect({zoneCells:attackPlanner.zoneCells,targets:[attackPlanner.targetOwner]},true);
- if(attackPlanner?.mode==='paint'&&attackPlanner.cells.size)
+ if(attackPlanner?.mode==='paint'&&!attackPlanner.workResource&&attackPlanner.cells.size)
   collect({zoneCells:attackPlanner.cells,targets:[...attackPlanner.targets]},true);
  visual.visualKey=visualKey;visual.sources=sources.map(p=>p.zoneCells);planningVisualCache=visual;
  }
@@ -542,6 +560,7 @@ function drawAttackPlanning(){
    if(x>=left&&x<=right&&y>=top&&y<=bottom)ctx.fillRect(x*T,y*T,T,T);}
   ctx.restore();
  }
+ if(attackPlanner?.workResource){ctx.save();ctx.fillStyle='#e9d6a044';for(const i of attackPlanner.cells)ctx.fillRect(i%E.W*TILE,((i/E.W)|0)*TILE,TILE,TILE);ctx.restore();}
  const brush=(attackPlanner?.mode==='paint'||attackPlanner?.mode==='erase')&&attackPlanner.brushPoint;
  if(brush&&E.inside(brush.x,brush.y)){
   ctx.save();ctx.beginPath();ctx.arc((brush.x+.5)*T,(brush.y+.5)*T,T*(attackPlanner.brushRadius+.5),0,Math.PI*2);
@@ -867,7 +886,7 @@ function refreshQuickBuild(){
  if(container.dataset.structure!==structure){
   container.innerHTML=Object.entries(E.KINDS).map(([id,item])=>
    '<button type="button" class="quick-build-item" data-fast-build="'+id+'" aria-pressed="false">'+
-   buildingArt(id)+'<span class="building-name">'+esc(item.name)+'<small class="building-owned" data-build-owned="'+id+'"></small></span>'+
+   buildingArt(id)+'<span class="building-name">'+esc(item.income?nameResource[item.income]+' zone':item.name)+'<small class="building-owned" data-build-owned="'+id+'"></small></span>'+
    '<small class="building-cost" data-build-price="'+id+'"></small>'+
    (described?'<small class="quick-description" data-build-description="'+id+'"></small>':'')+'</button>').join('');
   container.dataset.structure=structure;
@@ -877,18 +896,20 @@ function refreshQuickBuild(){
   const button=container.querySelector('[data-fast-build="'+id+'"]');
   if(!button)continue;
   button.classList.toggle('chosen',buildMode===id);
-  button.classList.toggle('unaffordable',!canPay(p,price));
+  button.classList.toggle('unaffordable',!item.income&&!canPay(p,price));
   button.setAttribute('aria-pressed',String(buildMode===id));
-  button.title=item.name+' · '+owned+' owned · +20% base cost per owned '+item.name;
-  const label=container.querySelector('[data-build-owned="'+id+'"]');if(label)label.textContent=owned+' owned';
+  button.title=item.income?'Paint '+nameResource[item.income]+' zones on suitable own land':item.name+' · '+owned+' owned · workers build after arrival';
+  const label=container.querySelector('[data-build-owned="'+id+'"]');if(label)label.textContent=item.income?'Paint extraction area':owned+' owned';
   const costs=container.querySelector('[data-build-price="'+id+'"]');
-  const html=Object.entries(price).map(([r,n])=>'<span class="cost-unit '+((p.res[r]||0)<n?'cost-missing':'')+'" title="'+nameResource[r]+': '+n+'">'+uiIcon(r)+hudNumber(n)+'</span>').join('');
+  const html=item.income?'<span>Brush zone</span>':Object.entries(price).map(([r,n])=>'<span class="cost-unit '+((p.res[r]||0)<n?'cost-missing':'')+'" title="'+nameResource[r]+': '+n+'">'+uiIcon(r)+hudNumber(n)+'</span>').join('');
   if(costs&&costs.__last!==html){costs.innerHTML=html;costs.__last=html;}
   const description=container.querySelector('[data-build-description="'+id+'"]');
-  if(description)description.textContent=(buildingInfo[id]?.short||'')+' '+buildingBenefit(id,p,1);
+  if(description)description.textContent=item.income?'Paint suitable own land. Cities supply workers; production starts after arrival.':(buildingInfo[id]?.short||'')+' '+buildingBenefit(id,p,1);
  }
  const description=buildMode?E.KINDS[buildMode].name+': green — valid, red — blocked. '+(buildMode==='fort'?'Yellow diamond — defense radius.':''):
-  'Each owned building adds 20% of its base cost to the next of the same type.';
+  'Paint resource zones. Cities provide workers; roads are built along work and supply routes.';
+ const workers=E.workforceStats(state,myId);
+ $('workforceSummary').textContent=number(workers.working)+' / '+number(workers.capacity)+' working · '+workers.building+' construction queued';
  $('quickBuildHelp').textContent=description;
  $('placingBuild').classList.toggle('hidden',!buildMode||quickBuildOpen);
  if(buildMode){
@@ -909,6 +930,7 @@ function toggleQuickBuild(force){
 }
 function closePanelIfOpen(){if(panelOpen)closePanel();}
 function setBuildingMode(kind){
+ if(E.KINDS[kind]?.income){beginWorkPlanner(E.KINDS[kind].income);return;}
  if(kind&&attackPlanner)resetAttackPlanner();
  buildMode=kind||null;selected=null;setPreview(null);moveCursor=null;
  $('developButton').classList.toggle('chosen',!!buildMode||quickBuildOpen);$('developButton').setAttribute('aria-pressed',String(!!buildMode||quickBuildOpen));
@@ -1114,7 +1136,7 @@ function selectMap(clientX,clientY){
  if(buildMode){
   moveCursor=p;if(E.owner(state,p.x,p.y)!==myId)return toast('Must be your territory','error');
   const fail=E.canBuild(state,myId,buildMode,p.x,p.y);if(fail)return toast(fail,'error');
-  command({type:'build',kind:buildMode,x:p.x,y:p.y});queueDraw();return;
+  if(command({type:'queueBuild',kind:buildMode,x:p.x,y:p.y}))toast('Construction queued · workers are on their way');queueDraw();return;
  }
  if(redirectArmy){setPreview({type:'redirect',id:redirectArmy,x:p.x,y:p.y,valid:true});return;}
  // In a conquest game, tap ownership wins over enlarged decorative hitboxes.
@@ -1363,20 +1385,45 @@ function getArmyDisplay(){
  armyDisplayCache={state,armies:current,count:current.length,home,tick:state.tick,revision:state.territoryRevision,paths:[...paths.values()],arrows,createdAt:performance.now()};
  return armyDisplayCache;
 }
-function drawArmyDisplay(w,h){
- const display=getArmyDisplay();
- ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
- for(const group of display.paths){ctx.strokeStyle=color(group.owner);ctx.lineWidth=(1+group.level)/zoom;ctx.stroke(group.path);}
- const progress=Math.min(1,(performance.now()-display.createdAt)/250);let visible=0;
- for(const a of display.arrows){
-  const gx=a.fromX+(a.x-a.fromX)*progress,gy=a.fromY+(a.y-a.fromY)*progress,x=(gx+.5)*TILE,y=(gy+.5)*TILE;
-  if(x*zoom+camX<0||x*zoom+camX>w||y*zoom+camY<0||y*zoom+camY>h)continue;
-  if(visible++>=8)break;
-  ctx.save();ctx.translate(x,y);ctx.rotate(Math.atan2(a.ty-gy,a.tx-gx));ctx.fillStyle=color(a.owner);
-  ctx.beginPath();ctx.moveTo(7/zoom,0);ctx.lineTo(-5/zoom,-4/zoom);ctx.lineTo(-2/zoom,0);ctx.lineTo(-5/zoom,4/zoom);ctx.closePath();ctx.fill();ctx.restore();
+let infrastructureCache=null,unitCellCache=null;
+function drawInfrastructure(){
+ const zones=state.workZones,roads=state.roads||[];
+ if(!infrastructureCache||infrastructureCache.seed!==state.seed||infrastructureCache.myId!==myId||infrastructureCache.length!==roads.length||infrastructureCache.roadRevision!==state.roadRevision||infrastructureCache.revision!==state.workRevision||(zones||[]).length!==infrastructureCache.zoneCells.length||(zones||[]).some((z,i)=>z.zoneCells!==infrastructureCache.zoneCells[i])){
+  const paths=new Map(),roadPath=new Path2D();
+  for(const z of zones||[]){let path=paths.get(z.resource);if(!path){path=new Path2D();paths.set(z.resource,path);}if(z.owner===myId)for(const i of z.zoneCells)path.rect(i%E.W*TILE,((i/E.W)|0)*TILE,TILE,TILE);}
+  const connected=new Set(roads);
+  for(const i of roads){const x=i%E.W,y=(i/E.W)|0;roadPath.rect((x+.3)*TILE,(y+.3)*TILE,TILE*.4,TILE*.4);
+   if(x<E.W-1&&connected.has(i+1))roadPath.rect((x+.5)*TILE,(y+.36)*TILE,TILE,TILE*.28);
+   if(y<E.H-1&&connected.has(i+E.W))roadPath.rect((x+.36)*TILE,(y+.5)*TILE,TILE*.28,TILE);
+  }
+  infrastructureCache={seed:state.seed,myId,zoneCells:(zones||[]).map(z=>z.zoneCells),length:roads.length,roadRevision:state.roadRevision,revision:state.workRevision,paths,roadPath};
  }
+ ctx.save();ctx.globalAlpha=.18;
+ const shades={food:'#a7cf78',wood:'#54bc94',stone:'#c7cfdb',gold:'#e8ca70'};
+ for(const [r,path] of infrastructureCache.paths){ctx.fillStyle=shades[r];ctx.fill(path);}
+ ctx.globalAlpha=.65;ctx.fillStyle='#bdad92';ctx.fill(infrastructureCache.roadPath);ctx.restore();
+}
+function drawArmyDisplay(w,h){
+ // Shade occupied cells. One draw per group/cell; no icons or animated arrows.
+ ctx.save();
+ let cells=unitCellCache?.cells;
+ if(!unitCellCache||unitCellCache.state!==state||unitCellCache.armies!==state.armies||unitCellCache.tick!==state.tick){
+ cells=new Map();
+ const add=(owner,g,civilian)=>{if((g.strength??g.count??0)<=0)return;const key=owner+':'+g.x+':'+g.y+':'+civilian;
+  const old=cells.get(key);if(old)old.strength+=g.strength||g.count;else cells.set(key,{owner,x:g.x,y:g.y,civilian,strength:g.strength||g.count});};
+ for(const p of state.players){for(const g of p.garrisons||[])add(p.id,g,false);for(const g of p.workers||[])add(p.id,g,true);}
+ for(const a of state.armies)for(const c of a.columns||[])add(a.owner,c,false);
+ unitCellCache={state,armies:state.armies,tick:state.tick,cells};
+ }
+ for(const c of cells.values()){
+  const x=c.x*TILE,y=c.y*TILE;if(x*zoom+camX>w||y*zoom+camY>h||(x+TILE)*zoom+camX<0||(y+TILE)*zoom+camY<0)continue;
+  ctx.fillStyle=c.civilian?'#e9d6a0':color(c.owner);ctx.globalAlpha=c.civilian?.85:Math.min(.95,.4+Math.log2(1+c.strength)/24);
+  const inset=c.civilian?.28:.08;ctx.fillRect(x+TILE*inset,y+TILE*inset,TILE*(1-2*inset),TILE*(1-2*inset));
+ }
+ for(const j of state.buildJobs||[])if(j.owner===myId){ctx.globalAlpha=.8;ctx.strokeStyle='#e9d6a0';ctx.lineWidth=1/zoom;ctx.strokeRect(j.x*TILE,j.y*TILE,TILE,TILE);}
  ctx.restore();
 }
+
 function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr=canvas.width/Math.max(1,canvas.clientWidth);const w=canvas.clientWidth,h=canvas.clientHeight;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#080a0e';ctx.fillRect(0,0,w,h);
  ctx.save();ctx.translate(camX,camY);ctx.scale(zoom,zoom);ctx.imageSmoothingEnabled=true;ctx.drawImage(worldLayer,0,0,worldLayer.width,worldLayer.height,0,0,E.W*TILE,E.H*TILE);
  // Draw vector borders only when zoomed in sufficiently; avoid per-tile work otherwise.
@@ -1403,6 +1450,7 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   }
   ctx.stroke();
  }
+ drawInfrastructure();
  // One-cell geometric landmarks; catalogue and map use identical silhouettes.
  ctx.textAlign='center';ctx.textBaseline='middle';
  const capitalLabels=[];
@@ -1410,6 +1458,7 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   const x=(b.x+.5)*TILE,y=(b.y+.5)*TILE;
   if(x*zoom+camX<-55||x*zoom+camX>w+55||y*zoom+camY<-55||y*zoom+camY>h+55)continue;
   const ownerColor=color(b.owner);
+  if(E.KINDS[b.kind]?.income){ctx.fillStyle=BUILDING_PALETTE[b.kind];ctx.globalAlpha=.7;ctx.fillRect(b.x*TILE+2,b.y*TILE+2,TILE-4,TILE-4);ctx.globalAlpha=1;continue;}
   const spriteH=TILE*.95,footY=y+TILE*.41;
   ctx.save();ctx.translate(x-spriteH/2,y-spriteH/2);const iconUnit=b.kind==='capital'?64:512;ctx.scale(spriteH/iconUnit,spriteH/iconUnit);
   ctx.fillStyle=BUILDING_PALETTE[b.kind]||'#f1f5fa';ctx.fill(buildingPaths[b.kind]||buildingPaths.city,'evenodd');
