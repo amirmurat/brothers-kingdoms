@@ -1,6 +1,11 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 _Обновлено: 22 октября 2026 года. Рабочий код v100; итог проверки и публикации — в последней записи START HERE._
 
+## v100 dense late-game renderer follow-up
+- Code a184b38a7ab1f16b70f0643130bae508bd0c5eca passed full CI 39675483644 including actual defense map tap in Chromium and WebKit. Public `/api/health` = v100; HTML/loaded browser script tags r2; public engine.js and game.js SHA-256 matched local files byte-for-byte. Two actual public Cloudflare WebSockets joined, started and synchronized a defense priority. Main remains untouched.
+- Additional audit found detailed licensed building paths were still filled/stroked for every visible structure on every camera frame. `buildingGlyph` now renders those exact paths/colors once into bounded 128px Canvas glyphs; per-frame structures use one drawImage. Type/level/background marks/appearance remain; cache <=32 entries (~2 MiB). No external/generated artwork.
+- Stress fixture now has 1,440 level-4 friendly structures (360 per country), enough capacity for actual 450k armies, rather than the initial sparse 32-structure post-loss/over-capacity fixture. Both CPU and mobile-size browser benchmarks now use this dense scenario; old timing figures below are historical, not final dense results. Full final rerun pending on newest HEAD. Cache tag r3.
+
 ## v100 final verification follow-up
 - Game-code follow-up `bd511a2cee8abff46e96e2bb0945ab6c666e8061`: priority defender protection, capped recruitment reason, conserved split budgets/focus. Engine and mobile/network regressions passed in Actions 39674896936. Its new end-to-end defense map tap assertion failed because the benchmark hook changed zoom *after* centering, placing the selected capital outside the viewport; actual game coordinates/commands were not implicated. Hook now sets zoom before centering; re-run required and do not hide the failed check.
 - Final cache tag `100-strategy-r2` ensures intermediate v100 assets cannot remain selected by Safari. Current final CI/deploy result must be checked against the newest branch HEAD.

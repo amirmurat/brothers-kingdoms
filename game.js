@@ -1553,6 +1553,17 @@ function nationLabelAnchors(snapshot=state){
  nationLabelCache={seed:snapshot.seed,roster,revision:snapshot.territoryRevision,anchors};
  return anchors;
 }
+// Reuse exact licensed vector silhouettes as raster glyphs. Dense cities no
+// longer tessellate/stroke the same long SVG paths on every pan frame.
+const buildingGlyphs=new Map();
+function buildingGlyph(b){
+ const key=b.kind+':'+buildingLevelColor(b);let glyph=buildingGlyphs.get(key);
+ if(glyph)return glyph;
+ glyph=document.createElement('canvas');glyph.width=glyph.height=128;
+ const c=glyph.getContext('2d'),unit=b.kind==='capital'?64:512;c.scale(128/unit,128/unit);
+ const path=buildingPaths[b.kind]||buildingPaths.city;c.fillStyle=buildingLevelColor(b);c.fill(path,'evenodd');c.strokeStyle='#101923';c.lineWidth=b.kind==='capital'?3:8;c.stroke(path);
+ buildingGlyphs.set(key,glyph);return glyph;
+}
 let worldBordersCache=null;
 function worldBorderPaths(){
  const warKey=(state.wars||[]).join(',');
@@ -1600,11 +1611,7 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   if(E.KINDS[b.kind]?.income){ctx.fillStyle=buildingLevelColor(b);ctx.globalAlpha=.7;ctx.fillRect(b.x*TILE+2,b.y*TILE+2,TILE-4,TILE-4);ctx.globalAlpha=1;continue;}
   ctx.fillStyle=buildingLevelColor(b);ctx.globalAlpha=.3;ctx.fillRect(b.x*TILE+1,b.y*TILE+1,TILE-2,TILE-2);ctx.globalAlpha=1;
   const spriteH=TILE*.95,footY=y+TILE*.41;
-  ctx.save();ctx.translate(x-spriteH/2,y-spriteH/2);const iconUnit=b.kind==='capital'?64:512;ctx.scale(spriteH/iconUnit,spriteH/iconUnit);
-  ctx.fillStyle=buildingLevelColor(b);ctx.fill(buildingPaths[b.kind]||buildingPaths.city,'evenodd');
-  // Licensed silhouettes keep thin white outlines proportional to zoom.
-  const licensedIcon=b.kind!=='capital';
-  ctx.strokeStyle='#101923';ctx.lineWidth=licensedIcon?8:3;ctx.stroke(buildingPaths[b.kind]||buildingPaths.city);ctx.restore();
+  ctx.drawImage(buildingGlyph(b),x-spriteH/2,y-spriteH/2,spriteH,spriteH);
   if(b.level>1){ctx.fillStyle='#fff0b5';for(let n=0;n<Math.min(5,b.level);n++)ctx.fillRect(b.x*TILE+1+n*(TILE-2)/5,b.y*TILE+TILE-2,(TILE-2)/6,1.4);}
  }
  // Draw one name per surviving country, even after the capital becomes a city.
