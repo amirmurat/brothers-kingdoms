@@ -358,19 +358,30 @@ function resetAttackPlanner(){
  $('planToolPaint').setAttribute('aria-pressed','false');$('planToolErase').setAttribute('aria-pressed','false');
  $('planToolPaint').classList.remove('chosen');$('planToolErase').classList.remove('chosen');queueDraw();
 }
-function beginAttackPlanner(existing=null){
+function selectedPlanIsland(cells,start){
+ const pending=new Set(cells.filter(i=>state.tiles[i]&&state.owners[i]!==myId));
+ if(!pending.has(start))return new Set(cells);
+ const selected=new Set([start]),queue=[start];pending.delete(start);
+ while(queue.length){
+  const i=queue.pop(),x=i%E.W,y=(i/E.W)|0;
+  for(const j of [x>0?i-1:-1,x<E.W-1?i+1:-1,y>0?i-E.W:-1,y<E.H-1?i+E.W:-1])
+   if(pending.delete(j)){selected.add(j);queue.push(j);}
+ }
+ return selected;
+}
+function beginAttackPlanner(existing=null,resetCell=null){
  if(!state||state.phase!=='playing'||mine()?.eliminated)return;
  hideAux();toggleQuickBuild(false);setPreview(null);buildMode=null;redirectArmy=null;selected=null;moveCursor=null;
  $('warPanel').classList.add('hidden');$('warChip').setAttribute('aria-expanded','false');
  pointerStart=null;gesture=null;pressed.clear();
- attackPlanner={mode:'paint',cells:new Set(existing?.zoneCells||[]),targets:new Set(selectedNationTargets()),editId:existing?.id||null,optionsKey:'',pointerId:null,lastPoint:null,brushPoint:null,zoneCells:null,brushRadius:2,tool:'paint',removedTargets:new Set(),originalCells:new Set(existing?.zoneCells||[]),originalTargets:new Set(selectedNationTargets()),originalPercent:existing?.percent??percent,touchLocked:false,strokeStart:null,strokeOrigin:null};
+ attackPlanner={mode:'paint',cells:new Set(existing?.zoneCells||[]),resetCells:existing?(resetCell===null?new Set(existing.zoneCells):selectedPlanIsland(existing.zoneCells,resetCell)):null,targets:new Set(selectedNationTargets()),editId:existing?.id||null,optionsKey:'',pointerId:null,lastPoint:null,brushPoint:null,zoneCells:null,brushRadius:2,tool:'paint',removedTargets:new Set(),originalCells:new Set(existing?.zoneCells||[]),originalTargets:new Set(selectedNationTargets()),originalPercent:existing?.percent??percent,touchLocked:false,strokeStart:null,strokeOrigin:null};
  if(existing){percent=existing.percent;$('attackPercent').value=String(percent);$('percentLabel').textContent=percent+'%';}
  $('planTroopsPercent').value=String(percent);$('planBrushSize').value='2';
  $('game').classList.add('plan-drawing');$('game').classList.remove('plan-reviewing');
  $('planGuide').classList.remove('hidden');$('planReview').classList.add('hidden');
  $('planControls').classList.remove('hidden');$('planControls').classList.remove('erase-only');$('planEraseHint').classList.add('hidden');
  $('planReviewButton').textContent=existing?'Save changes':'Start offensive';
- $('planPaintClear').textContent=existing?'Reset plan':'Clear';
+ $('planPaintClear').textContent=existing?(resetCell===null?'Reset plan':'Reset region'):'Clear';
  setPaintTool('paint');
  $('planHeading').textContent=existing?'EDIT PLAN':'ATTACK PLAN';
  $('planGuide').setAttribute('aria-label','Attack plan controls');
@@ -489,7 +500,7 @@ function refreshPaintGuide(){
 function clearPaintedZone(){
  const plan=attackPlanner;if(plan?.mode!=='paint'||pressed.size>0)return;
  if(plan.editId&&!plan.workResource){
-  if(command({type:'cancelPlan',id:plan.editId})){resetAttackPlanner();toast('Selected offensive zone removed');}
+  if(command({type:'erasePlanCells',cells:[...plan.resetCells]})){resetAttackPlanner();toast('Selected offensive region removed');}
   return;
  }
  plan.cells.clear();
@@ -1172,7 +1183,7 @@ function selectMap(clientX,clientY){
  if(attackPlanner)return;
  const regionIndex=p.y*E.W+p.x;
  const savedPlan=(state.attackPlans||[]).find(p=>p.owner===myId&&state.owners[regionIndex]!==myId&&p.zoneCells.includes(regionIndex));
- if(savedPlan){beginAttackPlanner(savedPlan);return;}
+ if(savedPlan){beginAttackPlanner(savedPlan,regionIndex);return;}
  const activePlan=state.armies.find(a=>a.owner===myId&&a.strength>0&&Array.isArray(a.zoneCells)&&!a.planId&&a.zoneCells.includes(regionIndex));
  if(activePlan){openCancelPlan(activePlan);return;}
  inspectCell(p.x,p.y);$('mapHint').classList.add('hidden');
