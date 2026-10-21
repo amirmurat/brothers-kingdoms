@@ -8,7 +8,7 @@ const server=http.createServer((req,res)=>{
  try{
   let body=fs.readFileSync(file);
   if(name==='/'||name==='/index.html')body=body.toString().split('\n').filter(line=>!line.includes('unpkg.com/peerjs')).join('\n');
-  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
+  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={contextual,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
   res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream'});res.end(body);
  }catch(_){res.writeHead(404);res.end();}
 });
@@ -48,6 +48,30 @@ const server=http.createServer((req,res)=>{
    assert(performanceChecks.opened>0,label+' opening army panel still renders live estimates');
    assert(performanceChecks.first>0,label+' initial planned geometry is drawn');
    assert.equal(performanceChecks.second,performanceChecks.first,label+' repeated frames reuse plan geometry');
+   const visualBudget=await page.evaluate(()=>{
+    const L=window.__layout,E=window.BKEngine,s=L.getState(),id=s.players.find(p=>!p.bot).id;
+    const saved=s.armies,owned=s.owners.flatMap((v,i)=>v===id?[i]:[]);
+    const i=s.tiles.findIndex((v,i)=>v&&s.owners[i]!==id&&[i-1,i+1,i-E.W,i+E.W].some(j=>s.owners[j]===id));
+    const anchor=[i-1,i+1,i-E.W,i+E.W].find(j=>s.owners[j]===id),tx=anchor%E.W,ty=(anchor/E.W)|0;
+    const columns=Array.from({length:1000},(_,n)=>{const pos=n%20===0?anchor:owned[n%owned.length];return {x:pos%E.W,y:(pos/E.W)|0,tx,ty,strength:100,sector:'test',route:[]};});
+    s.armies=[{id:'visual-stress',owner:id,strength:100000,frontCells:[i],columns,sectors:[{key:'test',anchor,cells:[i],required:3}]}];
+    const first=L.getArmyDisplay(),same=first===L.getArmyDisplay(),canvas=document.getElementById('mapCanvas'),c=canvas.getContext('2d');
+    const originals={fill:c.fill,fillText:c.fillText,arc:c.arc};let fills=0,labels=0,circles=0;
+    c.fill=function(...a){fills++;return originals.fill.apply(this,a);};
+    c.fillText=function(...a){labels++;return originals.fillText.apply(this,a);};
+    c.arc=function(...a){circles++;return originals.arc.apply(this,a);};
+    try{L.drawArmyDisplay(canvas.clientWidth,canvas.clientHeight);}
+    finally{for(const [key,value]of Object.entries(originals))c[key]=value;s.armies=saved;}
+    return {same,paths:first.paths.length,fills,labels,circles,players:s.players.length};
+   });
+   assert(visualBudget.same,label+' army display geometry is reused between frames');
+   assert(visualBudget.paths<=visualBudget.players*4,label+' concentration lines are batched');
+   assert(visualBudget.fills<=8,label+' at most eight transfer arrows even for 1000 columns');
+   assert.equal(visualBudget.labels,0,label+' no troop number labels on the map');
+   assert.equal(visualBudget.circles,0,label+' no per-squad circles');
+   await page.evaluate(()=>{const L=window.__layout,s=L.getState();L.contextual(s.buildings.find(b=>b.kind==='capital'&&!s.players.find(p=>p.id===b.owner).bot));});
+   assert((await page.locator('#contextBody').textContent()).includes('Garrison nearby'),label+' base tap reveals stationed troops');
+   await page.evaluate(()=>window.__layout.hideAux());
    await page.evaluate(()=>window.__layout.setBuildingMode('lumber'));
    const geometry=await page.locator('#placingBuild').evaluate(bar=>{
     const r=bar.getBoundingClientRect(),name=document.getElementById('placingBuildName').getBoundingClientRect(),cost=document.getElementById('placingBuildCost').getBoundingClientRect();

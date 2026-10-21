@@ -549,3 +549,9 @@ _Актуальный реестр, извлечённый из `index.html` н�
 - Home squads reuse valid routes and component reachability, instead of whole-map path floods every tick. Local arrived sector strengths are cached and invalidated on movement/payment.
 - renderArmies skips hidden #armiesPanel; showAux refreshes it upon opening. drawAttackPlanning caches contour union through animation/panning, invalidating on real geometry/ownership/target/draft changes.
 - networkState/restoreNetworkState provide compact display snapshots for server and PeerJS. Wire geometry uses exact zoneRuns, reused as shared zoneCells arrays after decode. Internal routes/front keys remain only in authoritative state/saves. Arrival derives from coordinates/destination, not missing wire routes.
+
+### v75 army command and display
+- Existing waves receive physical support via reinforcePlannedWave within planAllocation. Underfunded waves hold position; local weak sectors can rebalance from nearby front troops. Manual plans retain simultaneous full-front expansion, locally arrived funding and Nations authority.
+- Mobilization chooses nearby garrisons. Updated fronts allocate minimums locally and retain surplus near prior positions, instead of proportionally reshuffling every soldier each layer. Explicit orders have 2:1 allocation weight versus automatic recovery.
+- getArmyDisplay caches owner/concentration Path2D boundaries and grouped transfer arrows. drawArmyDisplay shows at most 8 on-screen arrows and no individual troop circles/numbers; minimap reuses cached lines. Existing base contextCard reports stationary nearby garrison strength.
+- My army statuses expose waitingForRoute/awaitingReinforcements rather than silently cycling troops home. No new IDs or stacking layers.
