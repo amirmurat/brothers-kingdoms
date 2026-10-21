@@ -3191,3 +3191,63 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
 
 #game#game#game#game #armyFocusGuide>.plan-guide-actions{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 #game#game#game#game #planEraseHint>.plan-guide-actions{grid-template-columns:1fr 1fr 2fr!important}
+
+
+/* v103 — one editing language for attack, focus and eraser on the map. */
+#game#game#game#game #planGuide:not(.hidden){
+ position:absolute!important;inset:auto 0 0!important;transform:none!important;
+ width:100%!important;max-width:none!important;max-height:44%!important;
+ min-height:var(--bottom-hud-size)!important;
+ display:flex!important;flex-direction:column!important;justify-content:space-between!important;
+ gap:4px!important;margin:0!important;padding:8px 12px!important;
+ background:var(--sheet-flat,#151c26)!important;color:var(--flat-ink,#edf2f8)!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+ backdrop-filter:none!important;box-sizing:border-box!important;
+ z-index:var(--layer-map-plan)!important;overflow:hidden!important;
+}
+#game#game#game#game #planGuide .paint-heading{
+ min-height:16px!important;line-height:16px!important;padding:0!important;
+}
+#game#game#game#game #planHeading{
+ font:750 11px/16px system-ui!important;color:#86ddf5!important;
+ letter-spacing:.065em!important;
+}
+#game#game#game#game #planPaintCount{
+ font:700 11px/16px system-ui!important;color:var(--flat-ink,#edf2f8)!important;
+}
+#game#game#game#game #planGuideHint{
+ height:auto!important;min-height:16px!important;line-height:16px!important;
+ font:500 11px/16px system-ui!important;color:var(--flat-muted,#acb8c8)!important;
+ overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;
+}
+#game#game#game#game #planGuide .plan-guide-actions{
+ grid-template-columns:1fr 1fr 2fr!important;gap:8px!important;
+ width:100%!important;margin:0!important;
+}
+#game#game#game#game #planGuide .plan-guide-actions button{
+ height:44px!important;min-height:44px!important;max-height:none!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+ background:#263242!important;color:#f0f4f8!important;
+ font:700 12px/1.2 system-ui!important;padding:6px!important;
+}
+#game#game#game#game #planGuide #planReviewButton{
+ background:#315a51!important;color:#ecfff6!important;border:0!important;
+}
+#game#game#game#game #planGuide .plan-guide-actions button:disabled{
+ opacity:.4!important;
+}
+#game#game#game#game :is(#planGuide,#armyFocusGuide,#planEraseHint) .paint-heading strong{
+ color:#86ddf5!important;letter-spacing:.065em!important;
+ font:750 11px/16px system-ui!important;
+}
+#game#game#game#game #planToolSwitch button[aria-pressed="true"]{
+ background:var(--row-active,#203e49)!important;color:#8ae8ff!important;
+}
+@media(max-height:480px) and (orientation:landscape){
+ #game#game#game#game #planGuide:not(.hidden){
+  min-height:0!important;max-height:80%!important;padding:5px 12px!important;
+ }
+ #game#game#game#game #planGuide .plan-guide-actions button{
+  min-height:40px!important;height:40px!important;
+ }
+}
