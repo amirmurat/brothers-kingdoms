@@ -2001,3 +2001,6 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
 #game#game#game #notificationStack #threatItems{padding:0!important;gap:0!important}
 #game#game#game #notificationStack .threat-item,#game#game#game #notificationStack .threat-item strong,#game#game#game #notificationStack #threatClose{color:#edf2f8!important}
 #game#game#game #notificationStack .threat-item small{color:#acb8c8!important}
+#game#game#game #resourceSummary.resource-hud>[data-resource]>.resource-heading{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:center!important;justify-self:stretch!important;width:100%!important;min-width:0!important;max-width:none!important;position:static!important;grid-column:1!important;grid-row:1!important;text-align:center!important}
+#game#game#game #resourceSummary.resource-hud>[data-resource]>.resource-heading>span{display:block!important;flex:0 0 auto!important;width:auto!important;min-width:0!important;max-width:none!important;position:static!important;margin:0!important;text-align:center!important}
+#game#game#game #resourceSummary.resource-hud>[data-resource]>.resource-heading>.res-icon{position:static!important;flex:0 0 14px!important;width:14px!important;height:14px!important;margin:0!important;transform:none!important}

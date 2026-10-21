@@ -157,6 +157,9 @@ const server=http.createServer((req,res)=>{
    });
    assert.deepEqual(hudStability.short,hudStability.long,label+' changing numbers never shifts HUD geometry');
    assert(hudStability.flush,label+' resource backgrounds fill their complete grid cells');
+   const headingCenters=await page.locator('#resourceSummary > [data-resource]').evaluateAll(cells=>cells.map(el=>{const r=el.getBoundingClientRect(),h=el.querySelector('.resource-heading'),i=h.firstElementChild.getBoundingClientRect(),t=h.lastElementChild.getBoundingClientRect();return Math.abs((i.left+t.right)/2-(r.left+r.right)/2);}));
+   assert(headingCenters.every(error=>error<1),label+' resource icon and label groups are centered '+JSON.stringify(headingCenters));
+
    const dock=await page.locator('#buildDock').boundingBox();
    assert(dock&&dock.width<=viewport.width&&dock.x>=0&&dock.y+dock.height<=viewport.height+1,label+' strategic dock fits');
    assert.equal(await page.locator('#developButton').isVisible(),false,label+' no construction catalogue toggle');
