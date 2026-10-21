@@ -68,5 +68,19 @@ function testConsentAndOverlap(){
  assert.deepEqual(t.s.attackPlans[0].targets,[0],'Merge must use nation-wide attack preferences');
  assert.equal(E.estimatePlanFront(t.s,t.s.attackPlans[0]).cells,1,'Front must ignore protected enemy tile');
 }
+function testIndependentRegions(){
+ const t=setup(),left=tiles(span(55,57),[42]),right=tiles(span(65,68),[42]);
+ const result=attack(t,[...left,...right]);
+ assert(result.ok,result.error);assert.equal(result.separated,2,'Independent islands must not share an order');
+ assert.equal(t.s.attackPlans.length,2);
+ assert.equal(new Set(t.s.attackPlans.flatMap(p=>p.zoneCells)).size,7);
+ assert.equal(new Set(t.s.attackPlans.map(p=>p.id)).size,2);
+ const other=setup(),zone=tiles(span(55,62),[42]);
+ assert(attack(other,zone).ok);
+ const cut=E.action(other.s,other.id,{type:'erasePlanCells',cells:[E.idx(59,42)]});
+ assert(cut.ok,cut.error);assert.equal(other.s.attackPlans.length,2,'Removing connecting cells splits an active plan into two independent orders');
+ assert(other.s.attackPlans.every(p=>p.zoneCells.every(i=>i!==E.idx(59,42))));
+}
+testIndependentRegions();
 testFullFront();testNoTroops();testMergingAndEraser();testConsentAndOverlap();
 console.log('PASS: autonomous local sectors, overlap union, partial eraser, no troops and Nations consent');
