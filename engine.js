@@ -81,7 +81,7 @@ function gainTile(s,x,y,id){if(!inside(x,y)||tile(s,x,y)===0)return false;const 
  if(s.phase==='playing'&&old&&id&&(s.wars||[]).includes(warKey(old,id))){
   s.recoveryPlans??=[];
   let recovery=s.recoveryPlans.find(q=>q.owner===old&&q.targetOwner===id);
-  if(!recovery){recovery={id:'r'+(++s.nonce),owner:old,targetOwner:id,targets:[id],autoRecovery:true,zoneCells:[],percent:30,waves:0,initialStrength:35,nextWaveTick:s.tick+5};s.recoveryPlans.push(recovery);}
+  if(!recovery){recovery={id:'r'+(++s.nonce),owner:old,targetOwner:id,targets:[id],autoRecovery:true,zoneCells:[],percent:30,waves:0,initialStrength:35,nextWaveTick:s.tick+1};s.recoveryPlans.push(recovery);}
   if(!recovery.zoneCells.includes(i))recovery.zoneCells.push(i);
  }
  return true;
@@ -866,7 +866,7 @@ function cancelOffensivePlan(s,plan){
 
 function planFrontier(s,plan){
  const p=person(s,plan.owner);if(!p)return [];
- const enabled=new Set((plan.targets??[plan.targetOwner]).filter(t=>t===0||!p.allies.includes(t)&&(s.wars||[]).includes(warKey(plan.owner,t))));
+ const enabled=new Set((plan.autoRecovery?[plan.targetOwner]:(plan.targets??[plan.targetOwner])).filter(t=>t===0||!p.allies.includes(t)&&(s.wars||[]).includes(warKey(plan.owner,t))));
  if(!enabled.size)return [];
  const front=[];
  for(const i of plan.zoneCells){
@@ -912,7 +912,12 @@ function automaticAllocation(s,plan){
  if(!item)return {available:0,target:0,required:0};
  const incoming=s.armies.filter(a=>a.owner!==plan.owner&&(s.wars||[]).includes(warKey(plan.owner,a.owner))&&a.targetOwner===plan.owner).reduce((n,a)=>n+a.strength,0);
  const reserveGoal=Math.min(force.total*.4,Math.max(force.total*.25,incoming*.6));
- const pool=Math.max(0,force.total-reserveGoal),totalDemand=demands.reduce((n,d)=>n+d.demand,0),weights=demands.reduce((n,d)=>n+d.weight,0);
+ // Home reserve exists to answer an invasion. Ordinary offensives cannot
+ // spend it, but recovery of recorded lost cells may use it, keeping 10% home.
+ // Separate recovery shares prevent many painted orders starving defense.
+ const pool=Math.max(0,force.total-(plan.autoRecovery?Math.min(reserveGoal,force.total*.1):reserveGoal));
+ const competing=plan.autoRecovery?demands.filter(d=>d.plan.autoRecovery):demands;
+ const totalDemand=competing.reduce((n,d)=>n+d.demand,0),weights=competing.reduce((n,d)=>n+d.weight,0);
  const target=Math.min(item.demand,totalDemand<=pool?item.demand:pool*item.weight/Math.max(1e-7,weights));
  const assigned=s.armies.reduce((n,a)=>n+(a.planId===plan.id?Math.max(0,a.strength):0),0);
  const squads=p?.garrisons||[],stationed=squads.reduce((n,g)=>n+g.strength,0),returning=squads.filter(g=>g.returning).reduce((n,g)=>n+g.strength,0);
@@ -1224,5 +1229,5 @@ function restoreNetworkState(s){
  delete s.armyPacked;return s;
 }
 
-return{BUILD:'v77',automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v78',automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });
