@@ -106,7 +106,7 @@ function chooseMilitaryTab(tab){
 }
 function openMilitary(tab='nations'){
  $('warPanelList').querySelectorAll('.focused').forEach(el=>el.classList.remove('focused'));
-defensePicking=false;$('armyFocusGuide').classList.add('hidden');$('planToolFocus').classList.remove('chosen');
+exitArmyFocus();
  if($('warPanel').classList.contains('hidden')){
   hideAux();closePanelIfOpen();toggleQuickBuild(false);
   selected=null;setPreview(null);buildMode=null;refreshQuickBuild();suspendMapGesture();
@@ -359,7 +359,7 @@ function selectedPlanIsland(cells,start){
  }
  return selected;
 }
-function beginAttackPlanner(existing=null,resetCell=null){defensePicking=false;$('armyFocusGuide').classList.add('hidden');$('planToolFocus').classList.remove('chosen');
+function beginAttackPlanner(existing=null,resetCell=null){exitArmyFocus();
  if(!state||state.phase!=='playing'||mine()?.eliminated)return;
  hideAux();toggleQuickBuild(false);setPreview(null);buildMode=null;redirectArmy=null;selected=null;moveCursor=null;
  $('warPanel').classList.add('hidden');$('warChip').setAttribute('aria-expanded','false');
@@ -387,7 +387,7 @@ function beginWorkPlanner(resource){
  $('planGuide').setAttribute('aria-label','Resource zone controls');refreshPaintGuide();queueDraw();
 }
 function beginGlobalEraser(){
- defensePicking=false;$('armyFocusGuide').classList.add('hidden');$('planToolFocus').classList.remove('chosen');
+ exitArmyFocus();
  if(!state||state.phase!=='playing'||mine()?.eliminated)return;
  hideAux();toggleQuickBuild(false);setPreview(null);setBuildingMode(null);
  pointerStart=null;gesture=null;pressed.clear();
@@ -956,6 +956,7 @@ function refreshQuickBuild(){
 
 function toggleQuickBuild(force){
  const opening=typeof force==='boolean'?force:!quickBuildOpen;
+ if(opening&&defensePicking)exitArmyFocus();
  if(opening){if(attackPlanner)resetAttackPlanner();hideAux();closeNations();setThreatList(false);}
  quickBuildOpen=opening;
  $('quickBuild').classList.toggle('hidden',!quickBuildOpen);
@@ -965,7 +966,7 @@ function toggleQuickBuild(force){
  refreshQuickBuild();queueDraw();
 }
 function closePanelIfOpen(){if(panelOpen)closePanel();}
-function setBuildingMode(kind){defensePicking=false;$('armyFocusGuide').classList.add('hidden');$('planToolFocus').classList.remove('chosen');
+function setBuildingMode(kind){exitArmyFocus();
  if(E.KINDS[kind]?.income){if(attackPlanner)resetAttackPlanner();buildMode=null;command({type:'setWorkPriority',priority:E.KINDS[kind].income});refreshQuickBuild();queueDraw();return;}
  if(kind&&attackPlanner)resetAttackPlanner();
  buildMode=kind||null;selected=null;setPreview(null);moveCursor=null;
@@ -1028,6 +1029,7 @@ function refreshArmyFocus(){
  $('armyFocusDetail').textContent=(own?'Defend':'Attack')+' · '+number(assigned)+' assigned · '+number(moving)+' en route'+(assigned?'':own?' · waiting for reserve':' · waiting for a reachable front');
 }
 function exitArmyFocus(){defensePicking=false;focusHover=null;$('planToolFocus').classList.remove('chosen');$('planToolFocus').setAttribute('aria-pressed','false');refreshArmyFocus();queueDraw();}
+$('planToolSwitch').addEventListener('click',e=>{const button=e.target.closest('button');if(button&&button.id!=='planToolFocus'&&defensePicking)exitArmyFocus();},true);
 $('planToolFocus').onclick=()=>{const wasPicking=defensePicking;if(attackPlanner)resetAttackPlanner();closeNations();hideAux();setBuildingMode(null);defensePicking=!wasPicking;focusHover=null;$('planToolFocus').classList.toggle('chosen',defensePicking);$('planToolFocus').setAttribute('aria-pressed',String(defensePicking));refreshArmyFocus();queueDraw();};
 $('exitArmyFocus').onclick=exitArmyFocus;
 $('clearArmyFocus').onclick=()=>{command({type:'armyFocus',clear:true});focusHover=null;refreshArmyFocus();queueDraw();};
@@ -1360,7 +1362,7 @@ $('zoomIn').onclick=()=>zoomAt(1.24,canvas.clientWidth/2,canvas.clientHeight/2);
 mini.addEventListener('pointerdown',e=>{const r=mini.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*E.W,y=(e.clientY-r.top)/r.height*E.H;camX=canvas.clientWidth/2-x*TILE*zoom;camY=canvas.clientHeight/2-y*TILE*zoom;clampCamera();queueDraw();});mini.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();fitWorld();}});
 // Low-resolution territory bitmap: one pixel per world tile. The GPU enlarges it.
 // It is updated only when a territory changes, NOT once per animation frame.
-const TERRAIN_RGB=[[8,17,27],[87,122,67],[25,99,55],[134,143,151],[128,166,65],[104,83,46],[162,169,174]];
+const TERRAIN_RGB=[[28,102,139],[102,139,79],[39,111,65],[143,148,151],[147,176,78],[121,96,57],[176,179,175]];
 let minimapCached=null,pixelLayer=null;
 let mapPaintOwners=null;
 function repaintWorld(){
@@ -1378,11 +1380,12 @@ function repaintWorld(){
  const wc=worldLayer.getContext('2d',{alpha:false}),colors=Object.fromEntries(state.players.map(p=>{const v=parseInt(p.color.slice(1),16);return[p.id,[(v>>>16)&255,(v>>>8)&255,v&255]];}));
  // Paint only changed ownership cells and adjacent boundary cells. The resource
  // pattern is deterministic, so overwriting a cell restores its exact terrain.
- for(const i of dirty){const x=i%E.W,y=(i/E.W)|0,t=tiles[i],terr=TERRAIN_RGB[t]||TERRAIN_RGB[1],col=colors[owners[i]],k=col?(t===1?.52:.32):0;
+ for(const i of dirty){const x=i%E.W,y=(i/E.W)|0,t=tiles[i],terr=TERRAIN_RGB[t]||TERRAIN_RGB[1],col=colors[owners[i]],k=col?(t===1?.38:.25):0;
   let h=Math.imul(x+state.seed*3,374761393)^Math.imul(y,668265263);h=Math.imul(h^(h>>>13),1274126177);
-  const shade=(((h>>>24)&15)-7)*(t===0?.08:.20);
+  const shade=(((h>>>24)&15)-7)*(t===0?.66:.27);
   wc.fillStyle='rgb('+terr.map((v,j)=>Math.max(0,Math.min(255,Math.round(v*(1-k)+(col?.[j]||0)*k+shade)))).join(',')+')';wc.fillRect(x*6,y*6,6,6);
-  if(!t||x===0||y===0||x===E.W-1||y===E.H-1||((x*41+y*73+state.seed*13)%5))continue;
+  if(!t){if((x*41+y*73+state.seed*13)%19===0){wc.fillStyle='#8ad7e95e';wc.fillRect(x*6+2,y*6+2,2,1);}continue;}
+  if(x===0||y===0||x===E.W-1||y===E.H-1||((x*41+y*73+state.seed*13)%5))continue;
   const px=x*6+3,py=y*6+3;
   if(t===2){wc.fillStyle='#58b86c';wc.fillRect(px-2,py-1,2,3);wc.fillRect(px+1,py-2,2,4);wc.fillRect(px,py+1,2,1);}
   else if(t===3||t===6){wc.strokeStyle='#eef0df';wc.lineWidth=.9;wc.beginPath();wc.moveTo(px-2,py+1);wc.lineTo(px,py-2);wc.lineTo(px+2,py+1);wc.stroke();}
@@ -1404,12 +1407,6 @@ function repaintWorld(){
 }
 
 function hexAlpha(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;}
-let fortCoverage=null;
-function drawOwnedFortRanges(){
- const forts=state.buildings.filter(b=>b.owner===myId&&b.kind==='fort'),key=state.seed+':'+myId+':'+forts.map(b=>b.x+','+b.y+','+E.fortRadius(b,state)).join(';');
- if(fortCoverage?.key!==key){const path=new Path2D();for(const b of forts){const x=(b.x+.5)*TILE,y=(b.y+.5)*TILE,r=E.fortRadius(b,state)*TILE;path.moveTo(x+r,y);path.arc(x,y,r,0,Math.PI*2);}fortCoverage={key,path};}
- if(!forts.length)return;ctx.save();ctx.lineWidth=1/zoom;ctx.strokeStyle='#77c4df77';ctx.fillStyle='#64c9e508';ctx.fill(fortCoverage.path);ctx.stroke(fortCoverage.path);ctx.restore();
-}
 function drawFortRange(x,y,preview){
  const b=state.buildings.find(b=>b.kind==='fort'&&b.x===x&&b.y===y)||{x,y,level:1};
  ctx.save();ctx.strokeStyle=preview?'#93e3f0':'#77c4df88';ctx.lineWidth=1/zoom;ctx.fillStyle=preview?'#64c9e51c':'#64c9e508';
@@ -1557,6 +1554,35 @@ function nationLabelAnchors(snapshot=state){
  nationLabelCache={seed:snapshot.seed,roster,revision:snapshot.territoryRevision,anchors};
  return anchors;
 }
+// Existing Kenney Tiny Town CC0 tiles form original, readable pixel buildings.
+// The shared vector glyph remains a fallback until its sprite finishes loading.
+const townRecipes={
+ farm:{parts:[52,53,54,64,65,66,72,74,75],deco:94},
+ lumber:{parts:[48,49,50,60,61,62,72,74,75],deco:106},
+ quarry:{parts:[96,97,98,108,109,110,120,121,122],deco:104},
+ mine:{parts:[48,49,50,60,61,62,76,78,79],deco:57},
+ barracks:{parts:[52,53,54,64,65,66,76,78,79],deco:119},
+ fort:{parts:[96,97,98,108,109,110,120,121,122],deco:92},
+ city:{parts:[48,49,50,60,61,62,76,78,79],deco:83},
+ capital:{parts:[52,53,54,64,65,66,76,78,79],deco:92}
+};
+const townTiles=Object.create(null),townSprites=Object.create(null);
+function assembleTownSprites(){
+ let changed=false;
+ for(const [kind,recipe] of Object.entries(townRecipes)){
+  if(townSprites[kind]||![...recipe.parts,recipe.deco].every(id=>townTiles[id]?.naturalWidth))continue;
+  const sprite=document.createElement('canvas');sprite.width=48;sprite.height=48;
+  const brush=sprite.getContext('2d');brush.imageSmoothingEnabled=false;
+  recipe.parts.forEach((id,i)=>brush.drawImage(townTiles[id],(i%3)*16,Math.floor(i/3)*16,16,16));
+  brush.drawImage(townTiles[recipe.deco],31,31,15,15);
+  townSprites[kind]=sprite;changed=true;
+ }
+ if(changed)queueDraw();
+}
+for(const id of new Set(Object.values(townRecipes).flatMap(r=>[...r.parts,r.deco]))){
+ const tile=new Image();townTiles[id]=tile;tile.onload=assembleTownSprites;
+ tile.src='assets/tiny-town/tile_'+String(id).padStart(4,'0')+'.png';
+}
 // Reuse exact licensed vector silhouettes as raster glyphs. Dense cities no
 // longer tessellate/stroke the same long SVG paths on every pan frame.
 const buildingGlyphs=new Map();
@@ -1594,18 +1620,18 @@ function worldBorderPaths(){
  }
  worldBordersCache={seed:state.seed,revision:state.territoryRevision,warKey,owners,wars,coast};return worldBordersCache;
 }
-function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr=canvas.width/Math.max(1,canvas.clientWidth);const w=canvas.clientWidth,h=canvas.clientHeight;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#080a0e';ctx.fillRect(0,0,w,h);
+function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr=canvas.width/Math.max(1,canvas.clientWidth);const w=canvas.clientWidth,h=canvas.clientHeight;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#195775';ctx.fillRect(0,0,w,h);
  ctx.save();ctx.translate(camX,camY);ctx.scale(zoom,zoom);ctx.imageSmoothingEnabled=true;ctx.drawImage(worldLayer,0,0,worldLayer.width,worldLayer.height,0,0,E.W*TILE,E.H*TILE);
  if(zoom>=.28){
   const paths=worldBorderPaths();
   ctx.lineWidth=Math.max(.55,1.65/zoom);ctx.strokeStyle='#e6f3ffb0';ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke(paths.owners);
   ctx.strokeStyle='#ff7488e6';ctx.lineWidth=Math.max(1.2,2.3/zoom);ctx.setLineDash([3/zoom,2/zoom]);ctx.lineCap='butt';ctx.stroke(paths.wars);ctx.setLineDash([]);
-  ctx.strokeStyle='#7b849355';ctx.lineWidth=Math.max(.55,1.2/zoom);ctx.stroke(paths.coast);
+  ctx.strokeStyle='#b0e4d9a0';ctx.lineWidth=Math.max(.7,1.15/zoom);ctx.stroke(paths.coast);
  }
- const defense=defensePicking&&focusHover&&E.inside(focusHover.x,focusHover.y)?focusHover:mine()?.armyFocus;
+ const defense=defensePicking?(focusHover&&E.inside(focusHover.x,focusHover.y)?focusHover:mine()?.armyFocus):null;
  if(defense){ctx.strokeStyle=E.focusStatus(state,myId,defense)==='invalid'?'#ff617b':'#39d5ff';ctx.lineWidth=2/zoom;ctx.beginPath();ctx.arc((defense.x+.5)*TILE,(defense.y+.5)*TILE,TILE*1.5,0,Math.PI*2);ctx.moveTo((defense.x-2)*TILE,(defense.y+.5)*TILE);ctx.lineTo((defense.x+3)*TILE,(defense.y+.5)*TILE);ctx.moveTo((defense.x+.5)*TILE,(defense.y-2)*TILE);ctx.lineTo((defense.x+.5)*TILE,(defense.y+3)*TILE);ctx.stroke();}
 
- drawOwnedFortRanges();
+ // Fort scouting still works; range rings appear only while inspecting a fort or positioning one.
  drawInfrastructure();drawAttackPlanning();drawArmyDisplay(w,h);drawHarvestSites(w,h);
  // One-cell geometric landmarks; catalogue and map use identical silhouettes.
  ctx.textAlign='center';ctx.textBaseline='middle';
@@ -1613,12 +1639,19 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   if(!E.visibleBuilding(state,myId,b))continue;
   const x=(b.x+.5)*TILE,y=(b.y+.5)*TILE;
   if(x*zoom+camX<-55||x*zoom+camX>w+55||y*zoom+camY<-55||y*zoom+camY>h+55)continue;
-  const ownerColor=color(b.owner);
-  if(E.KINDS[b.kind]?.income){ctx.fillStyle=buildingLevelColor(b);ctx.globalAlpha=.7;ctx.fillRect(b.x*TILE+2,b.y*TILE+2,TILE-4,TILE-4);ctx.globalAlpha=1;continue;}
-  ctx.fillStyle=buildingLevelColor(b);ctx.globalAlpha=.3;ctx.fillRect(b.x*TILE+1,b.y*TILE+1,TILE-2,TILE-2);ctx.globalAlpha=1;
-  const spriteH=TILE*.95,footY=y+TILE*.41;
-  ctx.drawImage(buildingGlyph(b),x-spriteH/2,y-spriteH/2,spriteH,spriteH);
-  if(b.level>1){ctx.fillStyle='#fff0b5';for(let n=0;n<Math.min(5,b.level);n++)ctx.fillRect(b.x*TILE+1+n*(TILE-2)/5,b.y*TILE+TILE-2,(TILE-2)/6,1.4);}
+  const ownerColor=color(b.owner),footY=y+TILE*.43;
+  if(zoom<1.4){
+   // Overview markers stay legible without turning the entire map into icons.
+   ctx.fillStyle='#0b2438';ctx.fillRect(x-TILE*.23,y-TILE*.23,TILE*.46,TILE*.46);
+   ctx.fillStyle=buildingLevelColor(b);ctx.fillRect(x-TILE*.16,y-TILE*.16,TILE*.32,TILE*.32);
+   continue;
+  }
+  ctx.fillStyle='#0b243899';ctx.beginPath();ctx.ellipse(x,footY,TILE*.64,TILE*.19,0,0,Math.PI*2);ctx.fill();
+  const spriteH=TILE*1.58,sprite=townSprites[b.kind];
+  if(sprite){ctx.imageSmoothingEnabled=false;ctx.drawImage(sprite,x-spriteH/2,footY-spriteH,spriteH,spriteH);ctx.imageSmoothingEnabled=true;}
+  else ctx.drawImage(buildingGlyph(b),x-spriteH/2,footY-spriteH,spriteH,spriteH);
+  ctx.fillStyle=ownerColor;ctx.fillRect(x-TILE*.28,footY+TILE*.01,TILE*.56,TILE*.10);
+  if(b.level>1){ctx.fillStyle='#ffe5a0';for(let n=0;n<Math.min(4,b.level-1);n++)ctx.fillRect(x-TILE*.3+n*TILE*.16,footY+TILE*.15,TILE*.12,TILE*.1);}
  }
  // Draw one name per surviving country, even after the capital becomes a city.
  // Full territorial flood-fill runs only when the territory revision changes.
@@ -1661,7 +1694,7 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
  // Display the selected existing fort's real defence range without entering build mode.
  if(selected?.kind==='building'){
   const b=state.buildings.find(v=>v.id===selected.id);
-
+  if(b?.owner===myId&&b.kind==='fort')drawFortRange(b.x,b.y,false);
  }
  if(moveCursor){ctx.strokeStyle='#2c3139';ctx.lineWidth=1.5/Math.max(.5,zoom);ctx.strokeRect(moveCursor.x*TILE,moveCursor.y*TILE,TILE,TILE);}
  ctx.restore();drawMini();}
@@ -1686,9 +1719,9 @@ function drawMini(){
 document.addEventListener('dblclick',e=>{
  if(!e.target.closest('input,textarea,[contenteditable="true"]'))e.preventDefault();
 },{passive:false});
-window.addEventListener('resize',()=>{resize();clampCamera();queueDraw();});document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeNations();toggleQuickBuild(false);if(attackPlanner)resetAttackPlanner();setThreatList(false);hideAux();setPreview(null);redirectArmy=null;if(panelOpen)closePanel();else cancelMode();$('tutorial').classList.add('hidden');return;}if(panelOpen&&window.innerWidth<851&&e.key==='Tab'){const items=[...$('sidebar').querySelectorAll('button:not([disabled]), select:not([disabled])')].filter(el=>el.offsetParent!==null);if(items.length){const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}}
+window.addEventListener('resize',()=>{resize();clampCamera();queueDraw();});document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(defensePicking)exitArmyFocus();closeNations();toggleQuickBuild(false);if(attackPlanner)resetAttackPlanner();setThreatList(false);hideAux();setPreview(null);redirectArmy=null;if(panelOpen)closePanel();else cancelMode();$('tutorial').classList.add('hidden');return;}if(panelOpen&&window.innerWidth<851&&e.key==='Tab'){const items=[...$('sidebar').querySelectorAll('button:not([disabled]), select:not([disabled])')].filter(el=>el.offsetParent!==null);if(items.length){const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}}
  if(!state||state.phase!=='playing'||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;if(e.key==='+'||e.key==='=')zoomAt(1.2,canvas.clientWidth/2,canvas.clientHeight/2);if(e.key==='-')zoomAt(.8,canvas.clientWidth/2,canvas.clientHeight/2);if(document.activeElement===canvas){if(!moveCursor)moveCursor=mine()?.capital?{...mine().capital}:{x:80,y:52};if(e.key.startsWith('Arrow')){e.preventDefault();const d={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[e.key];moveCursor.x=Math.max(0,Math.min(E.W-1,moveCursor.x+d[0]));moveCursor.y=Math.max(0,Math.min(E.H-1,moveCursor.y+d[1]));camX=canvas.clientWidth/2-(moveCursor.x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(moveCursor.y+.5)*TILE*zoom;clampCamera();inspectCell(moveCursor.x,moveCursor.y);$('keyboardPosition').textContent=$('mapStatus').textContent;queueDraw();}if(e.key==='Enter'){e.preventDefault();const x=moveCursor.x,y=moveCursor.y;const r=canvas.getBoundingClientRect();selectMap(r.left+camX+(x+.5)*TILE*zoom,r.top+camY+(y+.5)*TILE*zoom);}}});
-function goHome(){defensePicking=false;$('armyFocusGuide').classList.add('hidden');$('planToolFocus').classList.remove('chosen');
+function goHome(){exitArmyFocus();
  planningVisualCache=null;armyDisplayCache=null;
  if(serverActive||serverSocket)leaveServer();
  if(attackPlanner)resetAttackPlanner();
