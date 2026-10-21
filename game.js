@@ -62,7 +62,7 @@ function toast(msg,kind){
  const inGame=!$('game').classList.contains('hidden');
  const t=inGame?$('gameToast'):$('toast');
  const severity=kind||(/missing|rejected|error|no connection|cannot|failed|unavailable|disconnected|outdated/i.test(String(msg))?'error':/ready|completed|victor|started|researched/i.test(String(msg))?'success':'info');
- t.dataset.kind=severity;t.textContent=msg;$('gameError').textContent=severity==='error'?msg:'';
+ t.dataset.kind=severity;t.textContent=msg;t.title=msg;if(inGame)t.innerHTML='<span class="notification-text">'+esc(msg)+'</span>';$('gameError').textContent=severity==='error'?msg:'';
  $('toast').classList.add('hidden');
  t.classList.remove('hidden');
  clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.classList.add('hidden'),2450);
@@ -883,9 +883,9 @@ function updateSelection(){const item=selected?.kind==='army'?state.armies.find(
 function refreshQuickBuild(){
  const p=mine();if(!p||!state)return;
  const dock=$('buildDock');
- if(!dock.dataset.ready){dock.innerHTML=['city','barracks','fort'].map(id=>'<button type="button" data-place-building="'+id+'" aria-label="Place '+E.KINDS[id].name+'" aria-pressed="false">'+uiIcon(id)+'<span>'+E.KINDS[id].name+'</span></button>').join('');dock.dataset.ready='yes';}
- for(const id of ['city','barracks','fort']){const b=dock.querySelector('[data-place-building="'+id+'"]');b.classList.toggle('chosen',buildMode===id);b.setAttribute('aria-pressed',String(buildMode===id));b.title=E.KINDS[id].name+' · '+costText(E.costBuilding(state,myId,id));}
- $('placingBuild').classList.toggle('hidden',!buildMode);
+ if(!dock.dataset.ready){dock.innerHTML=['city','barracks','fort'].map(id=>'<button type="button" data-place-building="'+id+'" aria-label="Place '+E.KINDS[id].name+'" aria-pressed="false">'+uiIcon(id)+'<span>'+E.KINDS[id].name+'</span><small class="dock-cost"></small></button>').join('');dock.dataset.ready='yes';}
+ for(const id of ['city','barracks','fort']){const b=dock.querySelector('[data-place-building="'+id+'"]');b.classList.toggle('chosen',buildMode===id);b.setAttribute('aria-pressed',String(buildMode===id));const cost=E.costBuilding(state,myId,id);b.title=E.KINDS[id].name+' · '+costText(cost);const price=b.querySelector('.dock-cost'),key=JSON.stringify(cost);if(price.dataset.cost!==key){price.innerHTML=briefCost(cost);price.dataset.cost=key;}}
+ $('placingBuild').classList.add('hidden');
  if(buildMode){$('placingBuildName').textContent=E.KINDS[buildMode].name;$('placingBuildCost').textContent=costText(E.costBuilding(state,myId,buildMode));$('placingBuildIcon').innerHTML=uiIcon(buildMode);}
  const workers=E.workforceStats(state,myId);
  $('workforceSummary').textContent=number(workers.working)+' / '+number(workers.capacity)+' working · '+workers.building+' queued';
@@ -1113,7 +1113,7 @@ function selectMap(clientX,clientY){
  if(buildMode){
   moveCursor=p;if(E.owner(state,p.x,p.y)!==myId)return toast('Must be your territory','error');
   const fail=E.canBuild(state,myId,buildMode,p.x,p.y);if(fail)return toast(fail,'error');
-  if(command({type:'queueBuild',kind:buildMode,x:p.x,y:p.y}))toast('Construction queued · workers are on their way');queueDraw();return;
+  if(command({type:'queueBuild',kind:buildMode,x:p.x,y:p.y}))toast('Construction queued');queueDraw();return;
  }
  if(redirectArmy){setPreview({type:'redirect',id:redirectArmy,x:p.x,y:p.y,valid:true});return;}
  // In a conquest game, tap ownership wins over enlarged decorative hitboxes.

@@ -1825,3 +1825,39 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
 #game#game#game #notificationStack #gameFeedback:has(#hudAlert.hidden):has(#gameToast.hidden){display:none!important}
 #game#game#game #notificationStack #threatList{grid-column:1/-1;left:0!important;right:auto!important;top:calc(100% + 8px)!important;width:100%!important;box-sizing:border-box!important;pointer-events:auto!important}
 #game#game#game .building-level-swatch{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:7px;border:1px solid #fff5;vertical-align:baseline}
+
+/* One visible notification and one shared tool size. */
+#game#game#game #notificationStack{top:10px!important;left:12px!important}
+#game#game#game #notificationStack:has(#threatRail:not(.hidden)) #gameFeedback{display:none!important}
+#game#game#game #notificationStack :is(#hudAlert,#gameToast,#incomingAttack){height:48px!important;min-height:48px!important;max-height:48px!important;padding:8px 10px!important;overflow:hidden!important}
+#game#game#game #notificationStack #threatRail{height:48px!important;min-height:48px!important;max-height:48px!important}
+#game#game#game #notificationStack #incomingAttack{height:46px!important;min-height:46px!important;max-height:46px!important}
+#game#game#game #notificationStack #threatExpand{height:46px!important;min-height:46px!important;max-height:46px!important}
+#game#game#game #notificationStack :is(#hudAlertText,.incoming-body strong){display:block!important;overflow:hidden!important;white-space:nowrap!important;text-overflow:ellipsis!important}
+#game#game#game #notificationStack #gameToast{white-space:nowrap!important;text-overflow:ellipsis!important}
+#game#game#game :is(#warChip,#minimapToggle){height:48px!important;min-height:48px!important;max-height:48px!important;display:grid!important;place-items:center!important;padding:11px!important;box-sizing:border-box!important}
+#game#game#game .map-toolbar{height:48px!important}
+#game#game#game #warChip .nation-flag{display:block!important;margin:0!important}
+#game#game#game #placingBuild{display:none!important}
+/* Bottom actions are part of the HUD, without a floating frame or chooser sheet. */
+#game#game#game #buildDock{
+ left:0!important;right:0!important;bottom:0!important;transform:none!important;
+ width:100%!important;height:auto!important;min-height:82px!important;box-sizing:border-box!important;
+ justify-content:center!important;gap:8px!important;padding:5px 8px calc(5px + env(safe-area-inset-bottom,0px))!important;
+ border:0!important;border-top:1px solid #293342!important;border-radius:0!important;background:#10141c!important;box-shadow:none!important;
+}
+#game#game#game #buildDock button{
+ flex:1 1 0!important;max-width:120px!important;width:0!important;min-width:0!important;
+ height:72px!important;min-height:72px!important;padding:4px!important;gap:3px!important;
+ border:1px solid transparent!important;border-radius:10px!important;background:transparent!important;
+ display:flex!important;align-items:center!important;justify-content:center!important;box-shadow:none!important;
+}
+#game#game#game #buildDock button.chosen{background:#203c49!important;border-color:#74dbf5!important;color:#74dbf5!important}
+#game#game#game #buildDock .dock-cost{display:flex!important;align-items:center!important;justify-content:center!important;gap:3px!important;max-width:100%!important;color:#aebccc!important;font:500 9px/12px system-ui!important;white-space:nowrap!important}
+#game#game#game #buildDock .dock-cost .cost-unit{display:inline-flex!important;align-items:center!important;gap:1px!important;padding:0!important;margin:0!important;font:inherit!important}
+#game#game#game #buildDock .dock-cost .ui-icon{width:10px!important;height:10px!important;min-width:10px!important;flex:0 0 10px!important}
+#game#game#game #minimapWrap{bottom:calc(94px + env(safe-area-inset-bottom,0px))!important}
+
+#game#game#game #notificationStack .notification-text{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#game#game#game #minimapToggle{display:flex!important;align-items:center!important;justify-content:center!important;gap:8px!important}
+#game#game#game #notificationStack :is(.hud-alert-arrow,.incoming-action){display:grid!important;place-items:center!important;flex:0 0 20px!important;width:20px!important;height:20px!important;padding:0!important;font:500 20px/20px system-ui!important}

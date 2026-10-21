@@ -587,3 +587,6 @@ buildingLevelColor supplies the shared map/detail level palette. drawHarvestSite
 
 ### v86 unified alerts (replaces v85)
 #notificationStack is an absolute top-left flex column in .map-shell, containing #threatRail then #gameFeedback. All messages use one card geometry. #threatExpand is an integrated chevron; #threatCount remains screen-reader text. Existing handlers/IDs remain. Flow layout replaces hard-coded alert offsets and bottom positioning.
+
+### v87 single-slot HUD
+#notificationStack:has(#threatRail:not(.hidden)) hides #gameFeedback; only one notice is visible. All variants occupy the same fixed-height corner slot. #buildDock is a full-width bottom HUD with equal buttons and .dock-cost live prices. #placingBuild always stays hidden; [data-place-building] existing toggle behavior is the sole selection control. Compatibility placement nodes/handlers remain.
