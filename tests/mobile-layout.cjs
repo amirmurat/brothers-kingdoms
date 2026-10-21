@@ -8,7 +8,7 @@ const server=http.createServer((req,res)=>{
  try{
   let body=fs.readFileSync(file);
   if(name==='/'||name==='/index.html')body=body.toString().split('\n').filter(line=>!line.includes('unpkg.com/peerjs')).join('\n');
-  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
+  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={buildingLevelColor,repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
   res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream'});res.end(body);
  }catch(_){res.writeHead(404);res.end();}
 });
@@ -93,6 +93,8 @@ const server=http.createServer((req,res)=>{
    assert.equal(await page.locator('#planGuide').isVisible(),false,label+' resource priority does not open paint');
    await page.evaluate(()=>window.__layout.render());
    assert.equal(await page.evaluate(()=>window.__layout.getState().players.find(p=>!p.bot).workPriority),'wood',label+' extraction priority selected');
+   const levelColors=await page.evaluate(()=>[1,2,3,4,5].map(level=>window.__layout.buildingLevelColor({level})));
+   assert.equal(new Set(levelColors).size,5,label+' building upgrades have distinct level colors');
    const dock=await page.locator('#buildDock').boundingBox();
    assert(dock&&dock.width<=viewport.width&&dock.x>=0&&dock.y+dock.height<=viewport.height+1,label+' strategic dock fits');
    assert.equal(await page.locator('#developButton').isVisible(),false,label+' no construction catalogue toggle');
@@ -113,6 +115,10 @@ const server=http.createServer((req,res)=>{
    await page.evaluate(()=>{window.__layout.warnHud('Offensive ended');window.__layout.toast('Order completed','success');});
    assert.equal(await page.locator('#hudAlert').isVisible(),false,label+' ordinary notice hidden behind toast');
    assert.equal(await page.locator('#gameToast').isVisible(),true,label+' toast visible');
+   const statusRects=await page.evaluate(()=>{const a=document.getElementById('gameToast').getBoundingClientRect(),b=document.getElementById('warChip').getBoundingClientRect();return {right:a.right,left:b.left,nationWidth:b.width,nationHeight:b.height};});
+   assert(statusRects.right<=statusRects.left,label+' feedback does not overlap diplomacy');
+   assert.equal(statusRects.nationWidth,48,label+' diplomacy is a compact icon action');
+   assert(statusRects.nationHeight>=44,label+' diplomacy keeps a touch target');
    await page.evaluate(()=>window.__layout.warnHud('Capital threatened','danger'));
    assert.equal(await page.locator('#hudAlert').isVisible(),true,label+' danger takes priority');
    assert.equal(await page.locator('#gameToast').isVisible(),false,label+' toast hidden behind danger');

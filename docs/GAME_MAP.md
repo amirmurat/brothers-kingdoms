@@ -578,3 +578,6 @@ repaintWorld returns the number of painted terrain cells and retains mapPaintOwn
 
 ### v83 interface components
 #warPanel is now a dialog next to #sidebar (outside map stacking context), with #nationsBackdrop dismissing via closeNations. #sidebar/#sessionPanel/#warPanel and auxiliary dialogs share sheet geometry in the final component section of theme.css. #planToolPaint keeps its paint-zone handler but presents a sword/Plan attack action. #buildDock and #placingBuildIcon use uiIcon instead of colored buildingArt; placement icon is a span containing SVG. #closeQuickLeaders/#closeTutorial live in common title rows. Feedback has a full readable row below Nations; visible feedback shifts #threatRail down. Existing performance caches and draw scheduling are unchanged.
+
+### v84 production readability
+buildingLevelColor supplies the shared map/detail level palette. drawHarvestSites runs after unit shading; reads only actual own harvesting positions, culls offscreen/overlapping labels and caps at 12; no scheduling or simulation change. Nations label stays in DOM but is visually hidden; flag square retains aria-label/dynamic wars. Feedback and Nations occupy one top row, threats the next.

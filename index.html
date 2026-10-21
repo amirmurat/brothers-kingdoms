@@ -9,7 +9,7 @@
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
 <link rel="stylesheet" href="styles/legacy.css?v=49-visible-camp"/>
-<link rel="stylesheet" href="styles/theme.css?v=83-unified-interface-r2"/>
+<link rel="stylesheet" href="styles/theme.css?v=84-production-cues"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -87,7 +87,7 @@
 <div class="map-hint" id="mapHint">Tap the brush to paint a conquest area</div>
 <!-- Lucide paintbrush / eraser icons, ISC. License: assets/icons/LUCIDE_LICENSE.txt -->
 <div id="buildDock" role="group" aria-label="Place strategic buildings"></div>
-<div class="plan-tool-switch" id="planToolSwitch" role="group" aria-label="Paint and eraser tools">
+<div class="plan-tool-switch" id="planToolSwitch" role="group" aria-label="Attack and eraser tools">
   <button type="button" id="planToolPaint" aria-label="Plan attack" title="Plan attack" aria-pressed="false"><svg class="plan-icon ui-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/game.svg#sword"></use></svg></button>
   <button type="button" id="planToolErase" aria-label="Erase attack zone" title="Eraser" aria-pressed="false"><svg class="plan-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.829 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21"/><path d="m5.082 11.09 8.828 8.828"/></svg></button>
  <button type="button" id="developButton" class="plan-side-action" aria-label="Build" title="Build" aria-pressed="false"><svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/game.svg#hammer"></use></svg></button>
@@ -184,8 +184,8 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="server-config.js?v=83-unified-interface-r2"></script>
-<script src="engine.js?v=83-unified-interface-r2"></script>
+<script src="server-config.js?v=84-production-cues"></script>
+<script src="engine.js?v=84-production-cues"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=83-unified-interface-r2"></script>
+<script src="game.js?v=84-production-cues"></script>
 </body></html>
