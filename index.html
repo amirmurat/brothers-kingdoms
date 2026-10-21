@@ -9,7 +9,7 @@
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
 <link rel="stylesheet" href="styles/legacy.css?v=49-visible-camp"/>
-<link rel="stylesheet" href="styles/theme.css?v=87-single-notice-hud"/>
+<link rel="stylesheet" href="styles/theme.css?v=88-resource-priority-hud"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -50,16 +50,16 @@
 <div class="game-screen hidden" id="game">
 <header class="topbar">
 <div class="brand"><div class="brand-symbol"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M4 19V9l5 3 3-7 3 7 5-3v10H4Z"></path></svg></div><div class="brand-name">BROTHERS <b>KINGDOMS</b></div></div>
-<div class="top-stat troop-stat" id="hudTroops" title="Troops in reserve"><span class="reserve-label"><img class="reserve-army-icon" src="assets/shapes/reserve.svg" alt="" aria-hidden="true"/><span>RESERVE</span></span><b id="troopCount">0</b><div class="stat-meta"><small id="troopGrowth">+0/s</small><small class="stat-aux" id="troopCap">/0</small><small class="troop-reason hidden" id="troopReason"></small></div></div>
-<div class="top-stat land-stat" title="Conquered land percentage"><span>LAND</span><b id="landCount">0%</b><small id="landShare">goal 100%</small><div aria-hidden="true" class="land-progress"><i id="landProgress"></i></div></div>
+<div class="top-stat troop-stat" id="hudTroops" title="Troops in reserve"><span class="reserve-label"><svg class="reserve-army-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/game.svg#sword"></use><use href="assets/icons/game.svg#sword" transform="translate(256 0) scale(-1 1)"></use></svg><span>RESERVE</span></span><b id="troopCount">0</b><div class="stat-meta"><small id="troopGrowth">+0/s</small><small class="stat-aux" id="troopCap">/0</small><small class="troop-reason hidden" id="troopReason"></small></div></div>
+<div class="top-stat" id="hudWorkers" title="Civilian builders and harvesters"><span class="reserve-label"><svg class="reserve-army-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/game.svg#hammer"></use></svg><span>BUILDERS</span></span><b id="workerCount">0</b><small id="workerStatus">0 working</small></div><div class="top-stat land-stat" title="Conquered land percentage"><span>LAND</span><b id="landCount">0%</b><small id="landShare">goal 100%</small><div aria-hidden="true" class="land-progress"><i id="landProgress"></i></div></div>
 <div class="top-stat clock-stat" id="hudFronts" role="button" tabindex="0" aria-label="Open my offensives"><span>OFFENSIVES</span><b id="frontCount">0</b><small id="networkStatus">ONLINE</small></div>
-<button aria-label="Match menu" class="square-button mobile-menu" id="menuToggle"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#list"></use></svg></button>
+
 </header>
 <div aria-label="Resources and income" class="top-resources resource-hud" id="resourceSummary" role="group">
-<div data-resource="food"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#grains"></use></svg><span>FOOD</span><b id="resFood">0</b><small aria-label="Change per second" id="incFood">+0</small></div>
-<div data-resource="wood"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#tree"></use></svg><span>WOOD</span><b id="resWood">0</b><small aria-label="Change per second" id="incWood">+0</small></div>
-<div data-resource="stone"><img class="ui-icon res-icon" src="assets/shapes/stone.svg" alt="" aria-hidden="true"/><span>STONE</span><b id="resStone">0</b><small aria-label="Change per second" id="incStone">+0</small></div>
-<div data-resource="gold"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#coins"></use></svg><span>GOLD</span><b id="resGold">0</b><small aria-label="Change per second" id="incGold">+0</small></div>
+<div data-resource="food" role="button" tabindex="0" aria-pressed="false" aria-label="Prioritize food production"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#grains"></use></svg><span>FOOD</span><b id="resFood">0</b><small aria-label="Change per second" id="incFood">+0</small></div>
+<div data-resource="wood" role="button" tabindex="0" aria-pressed="false" aria-label="Prioritize wood production"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#tree"></use></svg><span>WOOD</span><b id="resWood">0</b><small aria-label="Change per second" id="incWood">+0</small></div>
+<div data-resource="stone" role="button" tabindex="0" aria-pressed="false" aria-label="Prioritize stone production"><img class="ui-icon res-icon" src="assets/shapes/stone.svg" alt="" aria-hidden="true"/><span>STONE</span><b id="resStone">0</b><small aria-label="Change per second" id="incStone">+0</small></div>
+<div data-resource="gold" role="button" tabindex="0" aria-pressed="false" aria-label="Prioritize gold production"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#coins"></use></svg><span>GOLD</span><b id="resGold">0</b><small aria-label="Change per second" id="incGold">+0</small></div>
 </div>
 
 <div aria-live="assertive" class="sr-only" id="incomingAnnouncement" role="alert"></div>
@@ -80,7 +80,7 @@
 </div>
 </div>
 <div class="map-toolbar">
-<div class="map-location"><span class="location-dot"></span><strong id="myKingdom" title="Kingdom name">Kingdom</strong><span aria-live="polite" id="mapStatus">Tap Attack to plan an offensive</span></div><button class="war-chip" id="warChip" type="button" aria-controls="warPanel" aria-expanded="false" aria-label="Nations and diplomacy"><svg class="ui-icon nation-flag" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/controls.svg#flag-banner"></use></svg><span id="warChipLabel">NATIONS</span><span id="nationWarCount" class="nation-war-count hidden"></span></button>
+<div class="map-location"><span class="location-dot"></span><strong id="myKingdom" title="Kingdom name">Kingdom</strong><span aria-live="polite" id="mapStatus">Tap Attack to plan an offensive</span></div><button aria-label="Match menu" class="square-button mobile-menu" id="menuToggle"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#list"></use></svg></button>
 
 </div>
 <div class="map-view" id="mapView">
@@ -133,7 +133,7 @@
 </div>
 
 <div class="map-tooltip hidden" id="mapTooltip"></div><div aria-live="polite" class="map-status-mobile hidden" id="mapStatusMobile"></div><ul aria-label="Available map objects" class="sr-only" id="accessibleObjects"></ul>
-<div class="minimap-wrap" id="minimapWrap"><button aria-expanded="true" aria-label="Hide minimap" id="minimapToggle"><svg class="ui-icon minimap-symbol" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#map-trifold"></use></svg><span class="minimap-label">World</span> <span class="minimap-chevron">−</span></button><canvas aria-label="Minimap, press Enter to recenter" height="104" id="minimap" role="button" tabindex="0" width="160"></canvas></div>
+<div id="mapNavigation" role="group" aria-label="Map and nations"><div class="minimap-wrap" id="minimapWrap"><button aria-expanded="true" aria-label="Hide minimap" id="minimapToggle"><svg class="ui-icon minimap-symbol" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#map-trifold"></use></svg><span class="minimap-label">World</span> <span class="minimap-chevron">−</span></button><canvas aria-label="Minimap, press Enter to recenter" height="104" id="minimap" role="button" tabindex="0" width="160"></canvas></div><button class="war-chip" id="warChip" type="button" aria-controls="warPanel" aria-expanded="false" aria-label="Nations and diplomacy"><svg class="ui-icon nation-flag" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/controls.svg#flag-banner"></use></svg><span id="warChipLabel">NATIONS</span><span id="nationWarCount" class="nation-war-count hidden"></span></button></div>
 <div aria-live="polite" class="target-preview hidden" id="targetPreview"><div class="target-info"><strong id="targetTitle">Target</strong><span id="targetDetail">Choose territory</span><span id="targetForecast">—</span></div><div aria-label="Army size" class="target-quick-percents" id="targetQuickPercents" role="group"><button data-target-percent="15">15%</button><button class="active" data-target-percent="30">30%</button><button data-target-percent="50">50%</button><button data-target-percent="75">75%</button><button data-target-percent="95">95%</button></div><div class="target-actions"><button class="secondary" id="cancelTarget">Cancel</button><button class="primary" id="confirmTarget">Send troops</button></div><button class="target-diplomacy hidden" id="targetDiplomacy" type="button">Offer alliance</button><button class="target-peace hidden" id="targetPeace" type="button">Propose peace</button></div><div class="quick-build hidden" id="quickBuild" role="region" aria-label="Quick construction">
   <div class="quick-build-head"><strong>Construction</strong><button type="button" id="quickBuildInfo" aria-label="Show building descriptions" aria-expanded="false">Descriptions</button><button type="button" id="quickBuildClose" aria-label="Close quick build"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button></div>
   <button type="button" id="workBalanced" aria-pressed="true">Balanced production</button>
@@ -185,8 +185,8 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="server-config.js?v=87-single-notice-hud"></script>
-<script src="engine.js?v=87-single-notice-hud"></script>
+<script src="server-config.js?v=88-resource-priority-hud"></script>
+<script src="engine.js?v=88-resource-priority-hud"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=87-single-notice-hud"></script>
+<script src="game.js?v=88-resource-priority-hud"></script>
 </body></html>

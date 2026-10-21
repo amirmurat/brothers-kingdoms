@@ -17,7 +17,10 @@ const BUILDING_PATHS={"farm":"M256 23.38L89.844 89.845l-64.9 162.254 14.85 5.943
 const buildingPaths=Object.fromEntries(Object.entries(BUILDING_PATHS).map(([id,d])=>[id,new Path2D(d)]));
 const BUILDING_PALETTE={farm:'#F0AD6D',lumber:'#69D9A4',quarry:'#B6BFCF',mine:'#F5D45A',barracks:'#85B4FF',fort:'#FF8188',city:'#C49BFF',capital:'#f1f5fa'};
 const BUILDING_LEVEL_COLORS=['#bdc9d6','#72d8b0','#70caff','#c49bff','#ffd477'];
-const buildingLevelColor=b=>BUILDING_LEVEL_COLORS[Math.min(BUILDING_LEVEL_COLORS.length-1,Math.max(0,(b.level||1)-1))];
+const buildingLevelColor=b=>{
+ const base=BUILDING_PALETTE[b.kind]||'#6e93b4',mix=Math.min(.44,Math.max(0,(b.level||1)-1)*.11);
+ const rgb=[1,3,5].map(i=>{const c=parseInt(base.slice(i,i+2),16);return Math.round(c+(255-c)*mix);});return 'rgb('+rgb.join(',')+')';
+};
 const buildingArt=kind=>`<img class="building-art" src="assets/shapes/${kind}.svg" alt="" aria-hidden="true"/>`;
 const buildingInfo={
  farm:{short:'Feeds your army.',detail:'+8 food/s per level',place:'Your land, excluding mountain summits',resource:'food',perLevel:8},
@@ -883,11 +886,13 @@ function updateSelection(){const item=selected?.kind==='army'?state.armies.find(
 function refreshQuickBuild(){
  const p=mine();if(!p||!state)return;
  const dock=$('buildDock');
- if(!dock.dataset.ready){dock.innerHTML=['city','barracks','fort'].map(id=>'<button type="button" data-place-building="'+id+'" aria-label="Place '+E.KINDS[id].name+'" aria-pressed="false">'+uiIcon(id)+'<span>'+E.KINDS[id].name+'</span><small class="dock-cost"></small></button>').join('');dock.dataset.ready='yes';}
+ if(!dock.dataset.ready){dock.innerHTML=['city','barracks','fort'].map(id=>'<button type="button" data-place-building="'+id+'" aria-label="Place '+E.KINDS[id].name+'" aria-pressed="false">'+buildingArt(id)+'<span>'+E.KINDS[id].name+'</span><small class="dock-cost"></small></button>').join('');dock.dataset.ready='yes';}
  for(const id of ['city','barracks','fort']){const b=dock.querySelector('[data-place-building="'+id+'"]');b.classList.toggle('chosen',buildMode===id);b.setAttribute('aria-pressed',String(buildMode===id));const cost=E.costBuilding(state,myId,id);b.title=E.KINDS[id].name+' · '+costText(cost);const price=b.querySelector('.dock-cost'),key=JSON.stringify(cost);if(price.dataset.cost!==key){price.innerHTML=briefCost(cost);price.dataset.cost=key;}}
  $('placingBuild').classList.add('hidden');
  if(buildMode){$('placingBuildName').textContent=E.KINDS[buildMode].name;$('placingBuildCost').textContent=costText(E.costBuilding(state,myId,buildMode));$('placingBuildIcon').innerHTML=uiIcon(buildMode);}
  const workers=E.workforceStats(state,myId);
+ $('workerCount').textContent=hudNumber(workers.capacity);$('workerStatus').textContent=number(workers.working)+' working';
+ for(const r of ['food','wood','stone','gold']){const node=$('resourceSummary').querySelector('[data-resource="'+r+'"]'),active=p.workPriority===r;node.setAttribute('aria-pressed',String(active));node.classList.toggle('priority-selected',active);}
  $('workforceSummary').textContent=number(workers.working)+' / '+number(workers.capacity)+' working · '+workers.building+' queued';
  $('productionPriority').value=p.workPriority||'balanced';
  $('storageSummary').textContent='Storage: '+number(E.resourceCapacity(state,myId))+' per resource · '+number(p.land)+' land cells';
@@ -915,6 +920,9 @@ function setBuildingMode(kind){
  if(buildMode)toggleQuickBuild(false);
  refreshQuickBuild();updateUI();queueDraw();
 }
+const chooseResource=r=>{const p=mine();if(p&&['food','wood','stone','gold'].includes(r)){command({type:'setWorkPriority',priority:p.workPriority===r?'balanced':r});refreshQuickBuild();}};
+$('resourceSummary').addEventListener('click',e=>{const item=e.target.closest('[data-resource]');if(item)chooseResource(item.dataset.resource);});
+$('resourceSummary').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const item=e.target.closest('[data-resource]');if(item){e.preventDefault();chooseResource(item.dataset.resource);}}});
 $('productionPriority').onchange=e=>command({type:'setWorkPriority',priority:e.target.value});
 $('buildDock').addEventListener('click',e=>{const b=e.target.closest('[data-place-building]');if(b)setBuildingMode(buildMode===b.dataset.placeBuilding?null:b.dataset.placeBuilding);});
 $('quickBuildChoices').addEventListener('click',e=>{const b=e.target.closest('[data-fast-build]');if(b)setBuildingMode(b.dataset.fastBuild);});
@@ -1466,12 +1474,13 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   if(x*zoom+camX<-55||x*zoom+camX>w+55||y*zoom+camY<-55||y*zoom+camY>h+55)continue;
   const ownerColor=color(b.owner);
   if(E.KINDS[b.kind]?.income){ctx.fillStyle=buildingLevelColor(b);ctx.globalAlpha=.7;ctx.fillRect(b.x*TILE+2,b.y*TILE+2,TILE-4,TILE-4);ctx.globalAlpha=1;continue;}
+  ctx.fillStyle=buildingLevelColor(b);ctx.globalAlpha=.3;ctx.fillRect(b.x*TILE+1,b.y*TILE+1,TILE-2,TILE-2);ctx.globalAlpha=1;
   const spriteH=TILE*.95,footY=y+TILE*.41;
   ctx.save();ctx.translate(x-spriteH/2,y-spriteH/2);const iconUnit=b.kind==='capital'?64:512;ctx.scale(spriteH/iconUnit,spriteH/iconUnit);
   ctx.fillStyle=buildingLevelColor(b);ctx.fill(buildingPaths[b.kind]||buildingPaths.city,'evenodd');
   // Licensed silhouettes keep thin white outlines proportional to zoom.
   const licensedIcon=b.kind!=='capital';
-  ctx.strokeStyle=licensedIcon?'#ffffff':'#080a0e';ctx.lineWidth=licensedIcon?12:3;ctx.stroke(buildingPaths[b.kind]||buildingPaths.city);ctx.restore();
+  ctx.strokeStyle='#101923';ctx.lineWidth=licensedIcon?8:3;ctx.stroke(buildingPaths[b.kind]||buildingPaths.city);ctx.restore();
   if(b.kind==='capital'&&zoom>.39){
    capitalLabels.push({b,x,footY,spriteH,ownerColor});
   }

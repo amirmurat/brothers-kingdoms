@@ -590,3 +590,6 @@ buildingLevelColor supplies the shared map/detail level palette. drawHarvestSite
 
 ### v87 single-slot HUD
 #notificationStack:has(#threatRail:not(.hidden)) hides #gameFeedback; only one notice is visible. All variants occupy the same fixed-height corner slot. #buildDock is a full-width bottom HUD with equal buttons and .dock-cost live prices. #placingBuild always stays hidden; [data-place-building] existing toggle behavior is the sole selection control. Compatibility placement nodes/handlers remain.
+
+### v88 HUD navigation and production
+#hudWorkers/#workerCount/#workerStatus show workforce capacity/active harvesters; Reserve uses crossed swords. #menuToggle lives inside .map-toolbar; #warChip moves into #mapNavigation beside #minimapWrap. Resource [data-resource] controls call chooseResource with setWorkPriority, toggling active resource back to balanced. refreshQuickBuild updates pressed styles/counts. Bottom buttons use buildingArt; buildingLevelColor now derives from building type plus level shade and feeds both map and details.
