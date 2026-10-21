@@ -1646,3 +1646,5 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
 
 /* Workforce status shares the construction palette; no additional overlay. */
 #game .workforce-summary{margin:0;padding:0 14px 10px;color:#b5becb;font-size:12px;line-height:1.5;}
+#game #workBalanced{margin:0 14px 10px;min-height:44px;border:1px solid #536176;border-radius:10px;background:#202936;color:#edf3fa;font:inherit;font-size:12px;padding:8px 14px;}
+#game #workBalanced[aria-pressed="true"]{border-color:#62d8f5;background:#203d49;}

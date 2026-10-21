@@ -886,7 +886,7 @@ function refreshQuickBuild(){
  if(container.dataset.structure!==structure){
   container.innerHTML=Object.entries(E.KINDS).map(([id,item])=>
    '<button type="button" class="quick-build-item" data-fast-build="'+id+'" aria-pressed="false">'+
-   buildingArt(id)+'<span class="building-name">'+esc(item.income?nameResource[item.income]+' zone':item.name)+'<small class="building-owned" data-build-owned="'+id+'"></small></span>'+
+   buildingArt(id)+'<span class="building-name">'+esc(item.income?nameResource[item.income]+' priority':item.name)+'<small class="building-owned" data-build-owned="'+id+'"></small></span>'+
    '<small class="building-cost" data-build-price="'+id+'"></small>'+
    (described?'<small class="quick-description" data-build-description="'+id+'"></small>':'')+'</button>').join('');
   container.dataset.structure=structure;
@@ -895,20 +895,21 @@ function refreshQuickBuild(){
   const price=E.costBuilding(state,myId,id),owned=E.buildingCount(state,myId,id);
   const button=container.querySelector('[data-fast-build="'+id+'"]');
   if(!button)continue;
-  button.classList.toggle('chosen',buildMode===id);
+  button.classList.toggle('chosen',item.income?p.workPriority===item.income:buildMode===id);
   button.classList.toggle('unaffordable',!item.income&&!canPay(p,price));
-  button.setAttribute('aria-pressed',String(buildMode===id));
-  button.title=item.income?'Paint '+nameResource[item.income]+' zones on suitable own land':item.name+' · '+owned+' owned · workers build after arrival';
-  const label=container.querySelector('[data-build-owned="'+id+'"]');if(label)label.textContent=item.income?'Paint extraction area':owned+' owned';
+  button.setAttribute('aria-pressed',String(item.income?p.workPriority===item.income:buildMode===id));
+  button.title=item.income?'Prioritize '+nameResource[item.income]+' extraction automatically':item.name+' · '+owned+' owned · workers build after arrival';
+  const label=container.querySelector('[data-build-owned="'+id+'"]');if(label)label.textContent=item.income?(p.workPriority===item.income?'Priority active':'Automatic extraction'):owned+' owned';
   const costs=container.querySelector('[data-build-price="'+id+'"]');
-  const html=item.income?'<span>Brush zone</span>':Object.entries(price).map(([r,n])=>'<span class="cost-unit '+((p.res[r]||0)<n?'cost-missing':'')+'" title="'+nameResource[r]+': '+n+'">'+uiIcon(r)+hudNumber(n)+'</span>').join('');
+  const html=item.income?'<span>'+({food:'Fertile fields',wood:'Forest',stone:'Rock deposits',gold:'Gold veins'}[item.income])+'</span>':Object.entries(price).map(([r,n])=>'<span class="cost-unit '+((p.res[r]||0)<n?'cost-missing':'')+'" title="'+nameResource[r]+': '+n+'">'+uiIcon(r)+hudNumber(n)+'</span>').join('');
   if(costs&&costs.__last!==html){costs.innerHTML=html;costs.__last=html;}
   const description=container.querySelector('[data-build-description="'+id+'"]');
-  if(description)description.textContent=item.income?'Paint suitable own land. Cities supply workers; production starts after arrival.':(buildingInfo[id]?.short||'')+' '+buildingBenefit(id,p,1);
+  if(description)description.textContent=item.income?'Workers automatically use conquered deposits. Select a production priority.':(buildingInfo[id]?.short||'')+' '+buildingBenefit(id,p,1);
  }
  const description=buildMode?E.KINDS[buildMode].name+': green — valid, red — blocked. '+(buildMode==='fort'?'Yellow diamond — defense radius.':''):
-  'Paint resource zones. Cities provide workers; roads are built along work and supply routes.';
+  'Workers automatically use conquered deposits. Choose a priority or Balanced. Cities provide workers.';
  const workers=E.workforceStats(state,myId);
+ $('workBalanced').setAttribute('aria-pressed',String(!p.workPriority||p.workPriority==='balanced'));
  $('workforceSummary').textContent=number(workers.working)+' / '+number(workers.capacity)+' working · '+workers.building+' construction queued';
  $('quickBuildHelp').textContent=description;
  $('placingBuild').classList.toggle('hidden',!buildMode||quickBuildOpen);
@@ -930,7 +931,7 @@ function toggleQuickBuild(force){
 }
 function closePanelIfOpen(){if(panelOpen)closePanel();}
 function setBuildingMode(kind){
- if(E.KINDS[kind]?.income){beginWorkPlanner(E.KINDS[kind].income);return;}
+ if(E.KINDS[kind]?.income){if(attackPlanner)resetAttackPlanner();buildMode=null;command({type:'setWorkPriority',priority:E.KINDS[kind].income});refreshQuickBuild();queueDraw();return;}
  if(kind&&attackPlanner)resetAttackPlanner();
  buildMode=kind||null;selected=null;setPreview(null);moveCursor=null;
  $('developButton').classList.toggle('chosen',!!buildMode||quickBuildOpen);$('developButton').setAttribute('aria-pressed',String(!!buildMode||quickBuildOpen));
@@ -940,6 +941,7 @@ function setBuildingMode(kind){
  if(buildMode)toggleQuickBuild(false);
  refreshQuickBuild();updateUI();queueDraw();
 }
+$('workBalanced').onclick=()=>command({type:'setWorkPriority',priority:'balanced'});
 $('quickBuildChoices').addEventListener('click',e=>{const b=e.target.closest('[data-fast-build]');if(b)setBuildingMode(b.dataset.fastBuild);});
 $('quickBuildClose').onclick=()=>toggleQuickBuild(false);
 $('quickBuildInfo').onclick=()=>{const expanded=$('quickBuild').classList.toggle('with-descriptions');$('quickBuildInfo').setAttribute('aria-expanded',String(expanded));refreshQuickBuild();};
@@ -1283,7 +1285,7 @@ $('zoomIn').onclick=()=>zoomAt(1.24,canvas.clientWidth/2,canvas.clientHeight/2);
 mini.addEventListener('pointerdown',e=>{const r=mini.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*E.W,y=(e.clientY-r.top)/r.height*E.H;camX=canvas.clientWidth/2-x*TILE*zoom;camY=canvas.clientHeight/2-y*TILE*zoom;clampCamera();queueDraw();});mini.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();fitWorld();}});
 // Low-resolution territory bitmap: one pixel per world tile. The GPU enlarges it.
 // It is updated only when a territory changes, NOT once per animation frame.
-const TERRAIN_RGB=[[8,10,14],[36,40,48],[25,34,39],[53,55,64],[47,53,54],[65,66,78],[79,81,91]];
+const TERRAIN_RGB=[[8,17,27],[87,122,67],[25,99,55],[134,143,151],[128,166,65],[104,83,46],[162,169,174]];
 let minimapCached=null,pixelLayer=null;
 function repaintWorld(){
  if(!state?.owners?.length||!state?.tiles?.length)return;
@@ -1297,7 +1299,7 @@ function repaintWorld(){
  for(let i=0;i<owners.length;i++){
   const terr=TERRAIN_RGB[tiles[i]]||TERRAIN_RGB[1],id=owners[i],col=id?colors[id]:null;
   const p=i*4;
-  const k=col ? 0.48 : 0;
+  const k=col ? (tiles[i]===1?.32:.12) : 0;
   let h=Math.imul(i% E.W+state.seed*3,374761393)^Math.imul((i/E.W)|0,668265263);h=Math.imul(h^(h>>>13),1274126177);const noise=((h>>>24)&15)-7;
   const shade=tiles[i]===0?noise*.08:noise*.20;
   d[p]=Math.max(0,Math.min(255,Math.round(terr[0]*(1-k)+(col?.[0]||0)*k+shade)));
@@ -1308,12 +1310,21 @@ function repaintWorld(){
  c.putImageData(img,0,0);const wc=worldLayer.getContext('2d',{alpha:false});wc.imageSmoothingEnabled=false;wc.drawImage(pixelLayer,0,0,worldLayer.width,worldLayer.height);
  // Painted terrain marks: cached in world bitmap, not recreated every frame.
  for(let y=1;y<E.H-1;y++)for(let x=1;x<E.W-1;x++){
-  const i=y*E.W+x,t=tiles[i];if(owners[i]||!t||((x*41+y*73+state.seed*13)%17))continue;
+  const i=y*E.W+x,t=tiles[i];if(!t||((x*41+y*73+state.seed*13)%5))continue;
   const px=x*6+3,py=y*6+3;
-  if(t===2){wc.fillStyle='#a5b5bd55';wc.fillRect(px-2,py-1,2,3);wc.fillRect(px+1,py-2,2,4);wc.fillStyle='#a5b5bd55';wc.fillRect(px,py+1,2,1);}
-  else if(t===3||t===6){wc.strokeStyle='#d7dce066';wc.lineWidth=.9;wc.beginPath();wc.moveTo(px-2,py+1);wc.lineTo(px,py-2);wc.lineTo(px+2,py+1);wc.stroke();}
-  else if(t===4){wc.fillStyle='#d7dce044';wc.fillRect(px-2,py,4,1);}
-  else if(t===5){wc.fillStyle='#e7ddff88';wc.fillRect(px-1,py-2,2,2);}
+  if(t===2){wc.fillStyle='#58b86c';wc.fillRect(px-2,py-1,2,3);wc.fillRect(px+1,py-2,2,4);wc.fillStyle='#58b86c';wc.fillRect(px,py+1,2,1);}
+  else if(t===3||t===6){wc.strokeStyle='#eef0df';wc.lineWidth=.9;wc.beginPath();wc.moveTo(px-2,py+1);wc.lineTo(px,py-2);wc.lineTo(px+2,py+1);wc.stroke();}
+  else if(t===4){wc.fillStyle='#e9c96e';wc.fillRect(px-2,py,4,1);}
+  else if(t===5){wc.fillStyle='#ffd54a';wc.fillRect(px-1,py-2,2,2);}
+ }
+ // Owner-colored rims preserve political readability without tinting deposits.
+ wc.lineWidth=.55;
+ for(let y=0;y<E.H;y++)for(let x=0;x<E.W;x++){const i=y*E.W+x,id=owners[i];if(!id)continue;
+  wc.strokeStyle=color(id);wc.beginPath();
+  if(x===0||owners[i-1]!==id){wc.moveTo(x*6,y*6);wc.lineTo(x*6,(y+1)*6);}
+  if(y===0||owners[i-E.W]!==id){wc.moveTo(x*6,y*6);wc.lineTo((x+1)*6,y*6);}
+  if(x===E.W-1||owners[i+1]!==id){wc.moveTo((x+1)*6,y*6);wc.lineTo((x+1)*6,(y+1)*6);}
+  if(y===E.H-1||owners[i+E.W]!==id){wc.moveTo(x*6,(y+1)*6);wc.lineTo((x+1)*6,(y+1)*6);}wc.stroke();
  }
  terrainSeed=state.seed;paintedRevision=revision;miniRevision=-1;
 }
@@ -1387,7 +1398,7 @@ function getArmyDisplay(){
 }
 let infrastructureCache=null,unitCellCache=null;
 function drawInfrastructure(){
- const zones=state.workZones,roads=state.roads||[];
+ const zones=[],roads=state.roads||[];
  if(!infrastructureCache||infrastructureCache.seed!==state.seed||infrastructureCache.myId!==myId||infrastructureCache.length!==roads.length||infrastructureCache.roadRevision!==state.roadRevision||infrastructureCache.revision!==state.workRevision||(zones||[]).length!==infrastructureCache.zoneCells.length||(zones||[]).some((z,i)=>z.zoneCells!==infrastructureCache.zoneCells[i])){
   const paths=new Map(),roadPath=new Path2D();
   for(const z of zones||[]){let path=paths.get(z.resource);if(!path){path=new Path2D();paths.set(z.resource,path);}if(z.owner===myId)for(const i of z.zoneCells)path.rect(i%E.W*TILE,((i/E.W)|0)*TILE,TILE,TILE);}

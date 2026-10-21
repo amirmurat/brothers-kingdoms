@@ -8,7 +8,7 @@ function fixture(){const s=E.lobby(41),id=E.addPlayer(s,'Builder'),enemy=E.addPl
  s.buildings=[{id:'capital',owner:id,kind:'capital',x:10,y:20,level:1}];return {s,id,enemy,p,q};}
 {
  const {s,id,enemy,p}=fixture(),wood=E.idx(20,20),food=E.idx(20,21),stone=E.idx(20,22),gold=E.idx(20,23),foreign=E.idx(41,20);
- s.tiles[wood]=2;s.tiles[stone]=3;s.tiles[gold]=5;s.tiles[foreign]=2;
+ s.tiles[wood]=2;s.tiles[food]=4;s.tiles[stone]=3;s.tiles[gold]=5;s.tiles[foreign]=2;
  for(const [resource,i] of Object.entries({wood,food,stone,gold})){
   const result=E.action(s,id,{type:'workZone',resource,cells:[i,i,foreign,E.idx(10,20)]});assert(result.ok);assert.equal(result.cells,1);
  }
@@ -24,7 +24,7 @@ function fixture(){const s=E.lobby(41),id=E.addPlayer(s,'Builder'),enemy=E.addPl
  const before=JSON.stringify(s.workZones.filter(z=>z.resource!=='wood'));
  E.action(s,id,{type:'workZone',resource:'wood',cells:[]});
  assert.equal(JSON.stringify(s.workZones),before,'Clear affects only the selected own resource');
- E.workforceStep(s);assert.equal(p.workIncome.wood,0,'Erased jobs stop producing immediately');
+ E.workforceStep(s);assert(E.automaticWorkSites(s,id).some(t=>t.i===wood),'Legacy paint removal cannot disable automatic extraction');
  // Lost resource land cannot produce for its old owner.
  s.owners[gold]=enemy;s.territoryRevision++;E.workforceStep(s);assert.equal(p.workIncome.gold,0);
  const packet=E.networkState(s);assert(!JSON.stringify(packet.players).includes('"route"'));
@@ -75,5 +75,23 @@ function fixture(){const s=E.lobby(41),id=E.addPlayer(s,'Builder'),enemy=E.addPl
  s.owners[E.idx(40,20)]=enemy;s.territoryRevision++;
  E.workforceStep(s);assert.equal(g.roadTask,false,'A captured road destination releases its workers');
  assert(g.tx!==40||g.ty!==20,'Workers can choose safe work or home after a route is cut');
+}
+{
+ const {s,id,p,enemy}=fixture();const i=E.idx(12,20);s.tiles[i]=5;
+ E.workforceStep(s);assert(E.automaticWorkSites(s,id).some(t=>t.i===i&&t.resource==='gold'),'Owned deposits are jobs without paint');
+ assert(!E.workSuitable(s,id,'stone',i),'Gold veins cannot become quarries');assert(!E.workSuitable(s,id,'food',E.idx(13,20)),'Plains are not farmland');
+ assert(E.action(s,id,{type:'setWorkPriority',priority:'gold'}).ok);
+ for(let k=0;k<35;k++)E.workforceStep(s);assert(p.workIncome.gold>0,'Priority works without a painted zone');
+ s.owners[i]=enemy;s.territoryRevision++;E.workforceStep(s);assert.equal(p.workIncome.gold,0);
+ s.owners[i]=id;s.territoryRevision++;for(let k=0;k<35;k++)E.workforceStep(s);assert(p.workIncome.gold>0,'Reconquest automatically resumes extraction');
+ assert.equal(E.action(s,id,{type:'setWorkPriority',priority:'invalid'}).ok,false);
+}
+{
+ const {s,id,p}=fixture();s.buildings[0].level=6;
+ for(let y=12;y<28;y++)for(const [x,type] of [[20,2],[21,3],[22,4],[23,5]])s.tiles[E.idx(x,y)]=type;
+ assert(E.action(s,id,{type:'setWorkPriority',priority:'gold'}).ok);
+ for(let n=0;n<45;n++)E.workforceStep(s);
+ const assigned=r=>p.workers.filter(g=>g.resource===r).length;
+ assert(assigned('gold')>assigned('stone'),'Priority allocates more groups to gold than comparable stone deposits');
 }
 console.log('PASS workforce: painted resources, terrain/authority, real travel, local harvest, queued construction, city capacity, roads, bounded groups and wire/save migration');

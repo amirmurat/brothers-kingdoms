@@ -78,13 +78,10 @@ const server=http.createServer((req,res)=>{
    assert.equal(await page.locator('#planTroopsControl').isVisible(),false,label+' no troop percentage slider');
    assert.equal(await page.locator('#planBrushSize').isVisible(),true,label+' brush sizing remains available');
    await page.evaluate(()=>{window.__layout.showAux('armiesPanel');window.__layout.hideAux();});
-   await page.evaluate(()=>{const L=window.__layout,s=L.getState(),id=s.players.find(p=>!p.bot).id;const i=s.owners.findIndex((v,i)=>v===id&&!s.buildings.some(b=>b.x===i%160&&b.y===(i/160|0)));s.tiles[i]=2;L.setBuildingMode('lumber');});
-   assert.equal(await page.locator('#planHeading').textContent(),'WOOD ZONE',label+' resource chooses a zone brush');
-   assert.equal(await page.locator('#planReviewButton').textContent(),'Save zone');
-   assert.equal(await page.locator('#placingBuild').isVisible(),false,label+' extraction does not use individual placement');
-   const zoneBox=await page.locator('#planGuide').boundingBox();
-   assert(zoneBox.x>=0&&zoneBox.x+zoneBox.width<=viewport.width+1,label+' resource controls fit');
-   await page.locator('#planGuideExit').click();
+   await page.evaluate(()=>window.__layout.setBuildingMode('lumber'));
+   assert.equal(await page.locator('#planGuide').isVisible(),false,label+' resource priority does not open paint');
+   await page.evaluate(()=>window.__layout.render());
+   assert.equal(await page.evaluate(()=>window.__layout.getState().players.find(p=>!p.bot).workPriority),'wood',label+' extraction priority selected');
    await page.evaluate(()=>window.__layout.setBuildingMode('barracks'));
    const geometry=await page.locator('#placingBuild').evaluate(bar=>{
     const r=bar.getBoundingClientRect(),name=document.getElementById('placingBuildName').getBoundingClientRect(),cost=document.getElementById('placingBuildCost').getBoundingClientRect();

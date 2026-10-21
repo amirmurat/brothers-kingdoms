@@ -9,7 +9,7 @@
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
 <link rel="stylesheet" href="styles/legacy.css?v=49-visible-camp"/>
-<link rel="stylesheet" href="styles/theme.css?v=79-workers-roads"/>
+<link rel="stylesheet" href="styles/theme.css?v=80-auto-resources"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -134,6 +134,7 @@
 <div class="minimap-wrap" id="minimapWrap"><button aria-expanded="true" aria-label="Hide minimap" id="minimapToggle"><svg class="ui-icon minimap-symbol" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#map-trifold"></use></svg><span class="minimap-label">World</span> <span class="minimap-chevron">−</span></button><canvas aria-label="Minimap, press Enter to recenter" height="104" id="minimap" role="button" tabindex="0" width="160"></canvas></div>
 <div aria-live="polite" class="target-preview hidden" id="targetPreview"><div class="target-info"><strong id="targetTitle">Target</strong><span id="targetDetail">Choose territory</span><span id="targetForecast">—</span></div><div aria-label="Army size" class="target-quick-percents" id="targetQuickPercents" role="group"><button data-target-percent="15">15%</button><button class="active" data-target-percent="30">30%</button><button data-target-percent="50">50%</button><button data-target-percent="75">75%</button><button data-target-percent="95">95%</button></div><div class="target-actions"><button class="secondary" id="cancelTarget">Cancel</button><button class="primary" id="confirmTarget">Send troops</button></div><button class="target-diplomacy hidden" id="targetDiplomacy" type="button">Offer alliance</button><button class="target-peace hidden" id="targetPeace" type="button">Propose peace</button></div><div class="quick-build hidden" id="quickBuild" role="region" aria-label="Quick construction">
   <div class="quick-build-head"><strong>Construction</strong><button type="button" id="quickBuildInfo" aria-label="Show building descriptions" aria-expanded="false">Descriptions</button><button type="button" id="quickBuildClose" aria-label="Close quick build"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button></div>
+  <button type="button" id="workBalanced" aria-pressed="true">Balanced production</button>
   <p id="workforceSummary" class="workforce-summary" role="status"></p>
   <div id="quickBuildChoices" class="quick-build-choices" role="group" aria-label="Available buildings"></div>
   <div class="quick-build-help" id="quickBuildHelp">Choose a building to highlight valid and invalid tiles.</div>
@@ -181,8 +182,8 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="server-config.js?v=79-workers-roads"></script>
-<script src="engine.js?v=79-workers-roads"></script>
+<script src="server-config.js?v=80-auto-resources"></script>
+<script src="engine.js?v=80-auto-resources"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=79-workers-roads"></script>
+<script src="game.js?v=80-auto-resources"></script>
 </body></html>
