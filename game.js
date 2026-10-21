@@ -252,8 +252,11 @@ function refreshHudAlert(p){
  }
  if(!text){box.classList.add('hidden');hudAlertAction=null;return;}
  box.classList.remove('hidden');box.classList.toggle('danger',kind==='danger');box.dataset.actionable=String(Boolean(action));
+  // A notice without a destination is not a fake button.
+  box.disabled=!action;box.setAttribute('aria-label',text+(action?' — open related location or panel':''));
+  box.querySelector('.hud-alert-arrow')?.classList.toggle('hidden',!action);
  $('hudAlertIcon').textContent=kind==='danger'?'!':'i';$('hudAlertText').textContent=text;
- hudAlertAction=action;box.title=text+(action?' · tap to locate':'');
+ hudAlertAction=action;box.title=text+(action?' · tap to open':'');
 }
 $('hudAlert').onclick=()=>{
  if(hudAlertAction==='capital'){centerOnCapital();queueDraw();}
@@ -284,7 +287,7 @@ function updateHudSignals(p){
  if(lastHudLand!==null&&p.land<lastHudLand){
   let lost=null;
   if(lastHudOwners){for(let i=0;i<state.owners.length;i++)if(lastHudOwners[i]&&state.owners[i]!==myId){lost={x:i%E.W,y:Math.floor(i/E.W)};break;}}
-  warnHud(`Lost ${number(lastHudLand-p.land)} cells · locate`, 'danger',lost,7);
+  warnHud(`Lost ${number(lastHudLand-p.land)} cells`, 'danger',lost,7);
  }
  if(lastHudLand!==null&&lastHudArmies.size){for(const [id,a] of lastHudArmies)if(!currentArmies.has(id)){
   const taken=Number(a.captured||0);
@@ -1705,6 +1708,9 @@ for(const id of ['hudTroops','hudFronts']){
 function openResearch(){openPanel();$('scienceButton').setAttribute('aria-pressed','true');$('scienceButton').classList.add('chosen');updateUI();}
 $('scienceButton').onclick=openResearch;
 $('closeSession').onclick=hideAux;$('openLeaderboard').onclick=()=>showAux('quickLeadersPanel');$('closeQuickLeaders').onclick=hideAux;
+function openLandLeaderboard(){showAux('quickLeadersPanel');}
+$('hudLand').onclick=openLandLeaderboard;
+$('hudLand').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openLandLeaderboard();}};
 $('sessionPause').onclick=()=>{menuPausedSolo=false;pauseSolo=false;hideAux();};
 $('sessionReconnect').onclick=()=>{reconnectTries=0;retryUpstream();toast('Trying to reconnect');};
 $('exitMatch').onclick=requestExit;$('cancelExit').onclick=openSession;
