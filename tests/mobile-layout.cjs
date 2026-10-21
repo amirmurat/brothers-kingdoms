@@ -82,6 +82,10 @@ const server=http.createServer((req,res)=>{
    assert.equal(await page.locator('#planGuide').isVisible(),false,label+' resource priority does not open paint');
    await page.evaluate(()=>window.__layout.render());
    assert.equal(await page.evaluate(()=>window.__layout.getState().players.find(p=>!p.bot).workPriority),'wood',label+' extraction priority selected');
+   const dock=await page.locator('#buildDock').boundingBox();
+   assert(dock&&dock.width<=viewport.width&&dock.x>=0&&dock.y+dock.height<=viewport.height+1,label+' strategic dock fits');
+   assert.equal(await page.locator('#developButton').isVisible(),false,label+' no construction catalogue toggle');
+   assert.equal(await page.locator('[data-place-building]').count(),3,label+' only three strategic buildings');
    await page.evaluate(()=>window.__layout.setBuildingMode('barracks'));
    const geometry=await page.locator('#placingBuild').evaluate(bar=>{
     const r=bar.getBoundingClientRect(),name=document.getElementById('placingBuildName').getBoundingClientRect(),cost=document.getElementById('placingBuildCost').getBoundingClientRect();

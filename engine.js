@@ -1,6 +1,8 @@
 /* Brothers Kingdoms: original territory strategy engine. Deterministic, host-authoritative. */
 (function(root,factory){const api=factory();if(typeof module!=='undefined'&&module.exports)module.exports=api;root.BKEngine=api;})(typeof window!=='undefined'?window:globalThis,function(){
 'use strict';
+const TROOPS_PER_PLAN_CELL=10,STORAGE_PER_CELL=50;
+function planCellLimit(s,id){return Math.min(W*H,Math.max(0,Math.floor(militaryStrength(s,id).total/TROOPS_PER_PLAN_CELL)));}
 const W=160,H=104,MAX=4,LAND=[1,2,3,4,5,6];
 const COLORS=['#39D5FF','#B6F36A','#FFAE57','#FF5D80','#B38CFF','#59E2C5','#FFE66B','#88A4FF','#EF96E6','#FF885D','#8CE3A1','#C3B5FF','#F8B9CA','#B7CCD9'];
 const KINDS={farm:{name:'Farm',cost:{wood:45,stone:10},income:'food'},lumber:{name:'Lumber Mill',cost:{wood:40,stone:15},income:'wood'},quarry:{name:'Quarry',cost:{wood:45,stone:20},income:'stone'},mine:{name:'Mine',cost:{wood:55,stone:55},income:'gold'},barracks:{name:'Barracks',cost:{wood:100,stone:65,gold:35}},fort:{name:'Fort',cost:{wood:105,stone:130,gold:55}},city:{name:'City',cost:{wood:165,stone:150,gold:100}}};
@@ -79,6 +81,7 @@ function landCount(s){return s.players.filter(p=>!p.eliminated).reduce((n,p)=>n+
 function gainTile(s,x,y,id){if(!inside(x,y)||tile(s,x,y)===0)return false;const i=idx(x,y),old=s.owners[i];if(old===id)return false;
  if(old){const p=person(s,old);if(p)p.land=Math.max(0,p.land-1);}
   s.owners[i]=id;s.territoryRevision=(s.territoryRevision||0)+1;if(id){const p=person(s,id);if(p)p.land++;}
+ if(s.phase==='playing'){if(old&&person(s,old))clampStorage(s,person(s,old));}
  if(s.phase==='playing'&&old&&id&&(s.wars||[]).includes(warKey(old,id))){
   s.recoveryPlans??=[];
   let recovery=s.recoveryPlans.find(q=>q.owner===old&&q.targetOwner===id);
@@ -156,7 +159,7 @@ function start(s,bots=0){if(s.phase!=='lobby'||!s.players.length)return {ok:fals
   else{const pos=safeSpawn(s,positions[best],used);used.push(pos);placement.push(pos);}
  }
  placement.forEach((pos,i)=>{const p=s.players[i];claim(s,pos.x,pos.y,p.id,4);p.capital={x:pos.x,y:pos.y};building(s,p.id,'capital',pos.x,pos.y);
- const farmX=pos.x+2,farmY=pos.y+1;if(owner(s,farmX,farmY)===p.id)building(s,p.id,'farm',farmX,farmY);
+
  });
  for(let i=0;i<2;i++)sealTerritories(s);
  s.landTotal=s.tiles.filter(Boolean).length;s.duration=null;s.rules={victory:100,timeLimit:false,naval:false,continent:true};s.phase='playing';for(const p of s.players)syncGarrisons(s,p);log(s,'Match started. Conquer 100% of the land. There is no time limit.');return {ok:true};
@@ -278,14 +281,15 @@ function upsertPaintedPlan(s,id,request,rawTargets,percent,editId=null,excludeTa
  const own=(s.attackPlans||[]).filter(plan=>plan.owner===id);
  const original=editId?own.find(plan=>plan.id===editId):null;
  if(editId&&!original)return {ok:false,error:'Offensive plan no longer exists.'};
- const selected=new Set(checked.cells),merged=new Set(original?[original]:[]);
+ const limit=Math.max(planCellLimit(s,id),original?.zoneCells.length||0);
+ const selected=new Set(checked.cells.slice(0,limit)),merged=new Set(original?[original]:[]);
  // Transitive union: if this stroke bridges two active plans, absorb both.
  let found=true;
  while(found){
   found=false;
   for(const plan of own){
    if(merged.has(plan))continue;
-   if(plan.zoneCells.some(i=>selected.has(i))){
+   if(plan.zoneCells.some(i=>selected.has(i))&&new Set([...selected,...plan.zoneCells]).size<=limit){
     merged.add(plan);for(const i of plan.zoneCells)selected.add(i);found=true;
    }
   }
@@ -296,7 +300,7 @@ function upsertPaintedPlan(s,id,request,rawTargets,percent,editId=null,excludeTa
   for(const pl of merged)if(pl!==original)for(const i of pl.zoneCells)selected.add(i);
  }
  // Preserve the full union instead of rejecting larger combined plans.
- if(!selected.size)return {ok:false,error:'Keep one cell or cancel this plan from Offensives.'};
+ if(!selected.size)return {ok:true,cells:0};
  // A painted region specifies geography only. Nations manages all hostility.
  const targets=[0,...nationTargets(s,id)];
  const plan=original||[...merged][0]||{id:'p'+(++s.nonce),owner:id,waves:0,initialStrength:Math.max(35,Math.floor(p.troops*percent/100))};
@@ -493,7 +497,7 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
  if(a.type==='donate'){
   const target=person(s,Number(a.target)),resource=String(a.resource),amount=clamp(Math.floor(a.amount||100),1,10000);
   if(!alive(target)||!p.allies.includes(target.id)||!['food','gold','wood','stone'].includes(resource)||p.res[resource]<amount)return {ok:false,error:'You can only donate resources to an ally.'};
-  p.res[resource]-=amount;target.res[resource]+=amount;return {ok:true};
+  const transferred=Math.min(amount,Math.max(0,resourceCapacity(s,target.id)-target.res[resource]));p.res[resource]-=transferred;target.res[resource]+=transferred;return {ok:true};
  }
  return {ok:false,error:'Unknown command.'};
 }
@@ -572,7 +576,7 @@ function workforceStep(s){
  s.workZones??=[];s.buildJobs??=[];s.roads??=[];
  // Paid sites lost to an enemy are cancelled once; refund unspent materials.
  for(const j of [...s.buildJobs])if(s.owners[idx(j.x,j.y)]!==j.owner||buildingAt(s,j.x,j.y)){
-  const p=person(s,j.owner);if(p)for(const [k,n] of Object.entries(j.cost))p.res[k]=Math.min(250000,p.res[k]+n);
+  const p=person(s,j.owner);if(p)for(const [k,n] of Object.entries(j.cost))p.res[k]=Math.min(resourceCapacity(s,p.id),p.res[k]+n);
   s.buildJobs=s.buildJobs.filter(q=>q!==j);
  }
  for(const p of s.players){if(!alive(p))continue;
@@ -1294,9 +1298,11 @@ function advance(s,a){
  if(a.strength<3||a.stuck>=3||a.turns>140||!f.candidates.size)finishWave(s,a,p);
 }
 function counts(s,id){const stats={farm:0,lumber:0,quarry:0,mine:0,barracks:0,fort:0,city:0};for(const b of s.buildings)if(b.owner===id&&stats[b.kind]!==undefined)stats[b.kind]+=b.level;return stats;}
+function resourceCapacity(s,id){return Math.max(0,Math.floor((person(s,id)?.land||0)*STORAGE_PER_CELL));}
+function clampStorage(s,p){const cap=resourceCapacity(s,p.id);for(const k of Object.keys(p.res))p.res[k]=Math.min(cap,p.res[k]);}
 function income(s,p){const c=counts(s,p.id),l=p.land,e=1+p.tech.economy*.25;
  const income={food:Math.round((2+l/100+c.farm*8+c.city*5+(p.workIncome?.food||0))*e),wood:Math.round((1+l/180+c.lumber*7+(p.workIncome?.wood||0))*e),stone:Math.round((1+l/200+c.quarry*7+(p.workIncome?.stone||0))*e),gold:Math.round((1+l/220+c.mine*7+c.city*5+(p.workIncome?.gold||0))*e)};
- for(const k of Object.keys(income))p.res[k]=Math.min(250000,p.res[k]+income[k]);
+ for(const k of Object.keys(income))p.res[k]=Math.min(resourceCapacity(s,p.id),p.res[k]+income[k]);
  p.troopCap=Math.floor(900+l*2.4+c.barracks*430+c.city*260);
  const newTroops=Math.max(0,Math.min(p.troopCap-militaryStrength(s,p.id).total,Math.round(4+l/100+p.troops*.018+c.barracks*5+c.city*3+p.tech.war*2)));const supply=Math.max(0,Math.min(newTroops,Math.floor(p.res.food/0.20)));
  p.troopIncome=supply;p.troops+=supply;p.res.food=Math.max(0,p.res.food-Math.ceil(supply*.20));p.income=income;
@@ -1405,5 +1411,5 @@ function restoreNetworkState(s){
  delete s.armyPacked;return s;
 }
 
-return{BUILD:'v80',automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v81',TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });

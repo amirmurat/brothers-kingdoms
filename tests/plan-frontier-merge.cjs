@@ -30,7 +30,7 @@ function testNoTroops(){
  const order=attack(t,zone);
  assert(order.ok,order.error);
  assert.equal(t.s.armies.length,0);
- assert.equal(t.s.attackPlans.length,1,'No troops cannot erase or reject the plan');
+ assert.equal(t.s.attackPlans.length,0,'No army quietly leaves new painting empty');
 }
 function testMergingAndEraser(){
  const t=setup();

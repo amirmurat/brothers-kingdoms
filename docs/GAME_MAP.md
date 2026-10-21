@@ -569,3 +569,6 @@ automaticAllocation estimates resistance, supply distance, shared capacity and a
 
 ### v80 automatic resource terrain
 Resource buttons now call setWorkPriority instead of beginWorkPlanner; #workBalanced selects balanced production. No civilian paint interaction is offered. automaticWorkSites uses owned terrain, not saved workZones. Food=4, Wood=2, Stone=3/6, Gold=5. Workers reconsider an arrived assignment gradually as new land becomes available. repaintWorld draws saturated terrain with resource patterns on owned and unowned cells, weak ownership tint and cached owner-colored boundaries. Legacy extraction structures and old work-zone metadata remain save-compatible.
+
+### v81 bottom placement and capacity
+#buildDock inside #mapView offers [data-place-building] city/barracks/fort buttons; #developButton/#quickBuild are hidden compatibility remnants. #placingBuild and minimap are raised above the dock. Sheets, Nations and paint mode hide the dock. Match menu now contains #productionPriority, #workforceSummary and #storageSummary. resourceCapacity derives storage from land*50; planCellLimit derives silent brush/API capacity from total military/10 and preserves existing oversized drawings. New starts no longer create a farm.

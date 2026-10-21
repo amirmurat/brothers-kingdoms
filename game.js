@@ -385,7 +385,7 @@ function brushAt(pt){
   if(plan.workResource&&!E.workSuitable(state,myId,plan.workResource,cell))continue;
   if(plan.mode==='erase'){if(plan.erasable.has(cell))plan.cells.add(cell);continue;}
   if(plan.tool==='erase'){plan.cells.delete(cell);continue;}
-  if(plan.cells.size>=E.W*E.H)continue;
+  if(plan.cells.size>=Math.max(E.planCellLimit(state,myId),plan.editId?plan.originalCells.size:0))continue;
   plan.cells.add(cell);
  }
 }
@@ -829,7 +829,7 @@ function updateUI(){const p=mine();if(!p)return;
   setRate(rateNode,rate);
   rateNode.classList.toggle('resource-negative',rate<0);
   item.classList.toggle('resource-low',r==='food'&&amount<Math.max(12,Math.abs(rate)*5));
-  item.setAttribute('title',`${nameResource[r]}: ${number(amount)}. ${r==='food'?'Estimated net growth after recruitment':'Production'}: ${rate>=0?'+':'−'}${number(Math.abs(rate))} per second`);
+  item.setAttribute('title',`${nameResource[r]}: ${number(amount)} / ${number(E.resourceCapacity(state,myId))}. ${r==='food'?'Estimated net growth after recruitment':'Production'}: ${rate>=0?'+':'−'}${number(Math.abs(rate))} per second`);
  }
 
  updateIncomingAttack(p);
@@ -879,46 +879,18 @@ function updateSelection(){const item=selected?.kind==='army'?state.armies.find(
 // Fast-build selection: choosing a building does not spend resources.
 // Placement is performed with a separate map tap after the player sees legal cells.
 function refreshQuickBuild(){
- const p=mine(),container=$('quickBuildChoices');if(!container||!p||!state)return;
- const described=$('quickBuild').classList.contains('with-descriptions');
- const structure=Object.keys(E.KINDS).join('|')+':'+described;
- // Keep button nodes mounted while prices/resources change, including mid-touch.
- if(container.dataset.structure!==structure){
-  container.innerHTML=Object.entries(E.KINDS).map(([id,item])=>
-   '<button type="button" class="quick-build-item" data-fast-build="'+id+'" aria-pressed="false">'+
-   buildingArt(id)+'<span class="building-name">'+esc(item.income?nameResource[item.income]+' priority':item.name)+'<small class="building-owned" data-build-owned="'+id+'"></small></span>'+
-   '<small class="building-cost" data-build-price="'+id+'"></small>'+
-   (described?'<small class="quick-description" data-build-description="'+id+'"></small>':'')+'</button>').join('');
-  container.dataset.structure=structure;
- }
- for(const [id,item] of Object.entries(E.KINDS)){
-  const price=E.costBuilding(state,myId,id),owned=E.buildingCount(state,myId,id);
-  const button=container.querySelector('[data-fast-build="'+id+'"]');
-  if(!button)continue;
-  button.classList.toggle('chosen',item.income?p.workPriority===item.income:buildMode===id);
-  button.classList.toggle('unaffordable',!item.income&&!canPay(p,price));
-  button.setAttribute('aria-pressed',String(item.income?p.workPriority===item.income:buildMode===id));
-  button.title=item.income?'Prioritize '+nameResource[item.income]+' extraction automatically':item.name+' · '+owned+' owned · workers build after arrival';
-  const label=container.querySelector('[data-build-owned="'+id+'"]');if(label)label.textContent=item.income?(p.workPriority===item.income?'Priority active':'Automatic extraction'):owned+' owned';
-  const costs=container.querySelector('[data-build-price="'+id+'"]');
-  const html=item.income?'<span>'+({food:'Fertile fields',wood:'Forest',stone:'Rock deposits',gold:'Gold veins'}[item.income])+'</span>':Object.entries(price).map(([r,n])=>'<span class="cost-unit '+((p.res[r]||0)<n?'cost-missing':'')+'" title="'+nameResource[r]+': '+n+'">'+uiIcon(r)+hudNumber(n)+'</span>').join('');
-  if(costs&&costs.__last!==html){costs.innerHTML=html;costs.__last=html;}
-  const description=container.querySelector('[data-build-description="'+id+'"]');
-  if(description)description.textContent=item.income?'Workers automatically use conquered deposits. Select a production priority.':(buildingInfo[id]?.short||'')+' '+buildingBenefit(id,p,1);
- }
- const description=buildMode?E.KINDS[buildMode].name+': green — valid, red — blocked. '+(buildMode==='fort'?'Yellow diamond — defense radius.':''):
-  'Workers automatically use conquered deposits. Choose a priority or Balanced. Cities provide workers.';
+ const p=mine();if(!p||!state)return;
+ const dock=$('buildDock');
+ if(!dock.dataset.ready){dock.innerHTML=['city','barracks','fort'].map(id=>'<button type="button" data-place-building="'+id+'" aria-label="Place '+E.KINDS[id].name+'" aria-pressed="false">'+buildingArt(id)+'<span>'+E.KINDS[id].name+'</span></button>').join('');dock.dataset.ready='yes';}
+ for(const id of ['city','barracks','fort']){const b=dock.querySelector('[data-place-building="'+id+'"]');b.classList.toggle('chosen',buildMode===id);b.setAttribute('aria-pressed',String(buildMode===id));b.title=E.KINDS[id].name+' · '+costText(E.costBuilding(state,myId,id));}
+ $('placingBuild').classList.toggle('hidden',!buildMode);
+ if(buildMode){$('placingBuildName').textContent=E.KINDS[buildMode].name;$('placingBuildCost').textContent=costText(E.costBuilding(state,myId,buildMode));$('placingBuildIcon').src='assets/shapes/'+buildMode+'.svg';}
  const workers=E.workforceStats(state,myId);
- $('workBalanced').setAttribute('aria-pressed',String(!p.workPriority||p.workPriority==='balanced'));
- $('workforceSummary').textContent=number(workers.working)+' / '+number(workers.capacity)+' working · '+workers.building+' construction queued';
- $('quickBuildHelp').textContent=description;
- $('placingBuild').classList.toggle('hidden',!buildMode||quickBuildOpen);
- if(buildMode){
-  $('placingBuildName').textContent=E.KINDS[buildMode].name;
-  $('placingBuildCost').textContent=Object.entries(E.costBuilding(state,myId,buildMode)).map(([r,n])=>hudNumber(n)+' '+nameResource[r]).join(' · ');
-  $('placingBuildIcon').src='assets/shapes/'+buildMode+'.svg';
- }
+ $('workforceSummary').textContent=number(workers.working)+' / '+number(workers.capacity)+' working · '+workers.building+' queued';
+ $('productionPriority').value=p.workPriority||'balanced';
+ $('storageSummary').textContent='Storage: '+number(E.resourceCapacity(state,myId))+' per resource · '+number(p.land)+' land cells';
 }
+
 function toggleQuickBuild(force){
  const opening=typeof force==='boolean'?force:!quickBuildOpen;
  if(opening){if(attackPlanner)resetAttackPlanner();hideAux();closeNations();setThreatList(false);}
@@ -941,11 +913,12 @@ function setBuildingMode(kind){
  if(buildMode)toggleQuickBuild(false);
  refreshQuickBuild();updateUI();queueDraw();
 }
-$('workBalanced').onclick=()=>command({type:'setWorkPriority',priority:'balanced'});
+$('productionPriority').onchange=e=>command({type:'setWorkPriority',priority:e.target.value});
+$('buildDock').addEventListener('click',e=>{const b=e.target.closest('[data-place-building]');if(b)setBuildingMode(buildMode===b.dataset.placeBuilding?null:b.dataset.placeBuilding);});
 $('quickBuildChoices').addEventListener('click',e=>{const b=e.target.closest('[data-fast-build]');if(b)setBuildingMode(b.dataset.fastBuild);});
 $('quickBuildClose').onclick=()=>toggleQuickBuild(false);
 $('quickBuildInfo').onclick=()=>{const expanded=$('quickBuild').classList.toggle('with-descriptions');$('quickBuildInfo').setAttribute('aria-expanded',String(expanded));refreshQuickBuild();};
-$('changeBuild').onclick=()=>toggleQuickBuild(true);
+$('changeBuild').onclick=()=>setBuildingMode(null);
 $('stopBuild').onclick=cancelMode;
 
 $('techPanel').addEventListener('click',e=>{const b=e.target.closest('[data-research]');if(b)command({type:'research',key:b.dataset.research});});
