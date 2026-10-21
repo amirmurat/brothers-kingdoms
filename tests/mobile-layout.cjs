@@ -208,6 +208,15 @@ const server=http.createServer((req,res)=>{
    assert.equal(await page.locator('#hudFronts').isVisible(),false,label+' separate offensives HUD removed');
    await page.locator('#hudTroops').click();
    assert(await page.locator('[data-front-row="home-army"]').isVisible(),label+' home squads are visible in army overview');
+   const emptyGarrison=await page.evaluate(()=>{
+    const L=window.__layout,s=L.getState(),player=s.players.find(p=>!p.bot),saved=player.garrisons;
+    try{
+     player.garrisons=[];L.render();
+     const row=document.querySelector('[data-front-row="home-army"]');
+     return {visible:!!row&&getComputedStyle(row).display!=='none',text:row?.textContent||''};
+    }finally{player.garrisons=saved;L.render();}
+   });
+   assert(emptyGarrison.visible&&emptyGarrison.text.includes('0 squads'),label+' Reserve persists across a transient empty garrison snapshot');
    const armyBox=await page.locator('#armiesPanel').boundingBox();
    assert(armyBox.x>=0&&armyBox.x+armyBox.width<=viewport.width+1,label+' army overview fits the screen');
    await page.evaluate(()=>window.__layout.hideAux());
