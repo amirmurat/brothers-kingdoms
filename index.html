@@ -8,8 +8,8 @@
 <meta content="Brothers Kingdoms — стратегия за территорию в реальном времени. Играй с братьями или против ботов." name="description"/>
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
-<link rel="stylesheet" href="styles/legacy.css?v=25"/>
-<link rel="stylesheet" href="styles/theme.css?v=25"/>
+<link rel="stylesheet" href="styles/legacy.css?v=26"/>
+<link rel="stylesheet" href="styles/theme.css?v=26"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -55,10 +55,10 @@
 <button aria-label="Меню развития" class="square-button mobile-menu" id="menuToggle"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#list"></use></svg></button>
 </header>
 <div aria-label="Ресурсы королевства" class="top-resources resource-hud" id="resourceSummary" role="group">
-<div data-resource="food"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#grains"></use></svg><span>ЕДА</span><b id="resFood">0</b><small aria-label="Изменение в секунду" id="incFood">+0</small></div>
-<div data-resource="wood"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#tree"></use></svg><span>ДЕРЕВО</span><b id="resWood">0</b><small aria-label="Изменение в секунду" id="incWood">+0</small></div>
-<div data-resource="stone"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#mountains"></use></svg><span>КАМЕНЬ</span><b id="resStone">0</b><small aria-label="Изменение в секунду" id="incStone">+0</small></div>
-<div data-resource="gold"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#coins"></use></svg><span>ЗОЛОТО</span><b id="resGold">0</b><small aria-label="Изменение в секунду" id="incGold">+0</small></div>
+<div data-resource="food"><img class="ui-icon res-icon" alt="" aria-hidden="true" src="assets/tiny-swords-cc0/resources/food.png"/><span>ЕДА</span><b id="resFood">0</b><small aria-label="Изменение в секунду" id="incFood">+0</small></div>
+<div data-resource="wood"><img class="ui-icon res-icon" alt="" aria-hidden="true" src="assets/tiny-swords-cc0/resources/wood.png"/><span>ДЕРЕВО</span><b id="resWood">0</b><small aria-label="Изменение в секунду" id="incWood">+0</small></div>
+<div data-resource="stone"><img class="ui-icon res-icon" alt="" aria-hidden="true" src="assets/tiny-swords-cc0/resources/stone.png"/><span>КАМЕНЬ</span><b id="resStone">0</b><small aria-label="Изменение в секунду" id="incStone">+0</small></div>
+<div data-resource="gold"><img class="ui-icon res-icon" alt="" aria-hidden="true" src="assets/tiny-swords-cc0/resources/gold.png"/><span>ЗОЛОТО</span><b id="resGold">0</b><small aria-label="Изменение в секунду" id="incGold">+0</small></div>
 </div>
 <div class="game-feedback" id="gameFeedback" aria-label="Сообщения матча и состояние соединения">
 <div class="feedback-idle" id="feedbackIdle"><span class="feedback-dot" aria-hidden="true"></span><span id="feedbackStatus">МАТЧ АКТИВЕН</span></div>
@@ -144,7 +144,7 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="engine.js?v=25"></script>
+<script src="engine.js?v=26"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=25"></script>
+<script src="game.js?v=26"></script>
 </body></html>

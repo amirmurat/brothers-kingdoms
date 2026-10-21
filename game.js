@@ -1,50 +1,33 @@
 /* Brothers Kingdoms Frontier — canvas world, realtime multiplayer and responsive command UI. */
 (()=>{
 'use strict';
-const ART_ASSETS={"building-farm.svg":"assets/pixel-ui/building-farm.png","building-lumber.svg":"assets/pixel-ui/building-lumber.png","building-quarry.svg":"assets/pixel-ui/building-quarry.png","building-mine.svg":"assets/pixel-ui/building-mine.png","building-barracks.svg":"assets/pixel-ui/building-barracks.png","building-fort.svg":"assets/pixel-ui/building-fort.png","building-city.svg":"assets/pixel-ui/building-city.png","building-capital.svg":"assets/pixel-ui/building-capital.png","building-port.svg":"assets/pixel-ui/building-city.png","food.svg":"assets/pixel-ui/resource-food.png","wood.svg":"assets/pixel-ui/resource-wood.png","stone.svg":"assets/pixel-ui/resource-stone.png","gold.svg":"assets/pixel-ui/resource-gold.png","army.svg":"assets/pixel-ui/building-barracks.png","hammer.svg":"assets/pixel-ui/action-build.png","swords.svg":"assets/pixel-ui/action-attack.png","crown.svg":"assets/pixel-ui/icon-leaderboardsSimple.png"};const artSrc=name=>ART_ASSETS[name]||'';
+const ART_ASSETS={"building-farm.svg":"assets/tiny-swords-cc0/buildings/farm.png","building-lumber.svg":"assets/tiny-swords-cc0/buildings/lumber.png","building-quarry.svg":"assets/tiny-swords-cc0/buildings/quarry.png","building-mine.svg":"assets/tiny-swords-cc0/buildings/mine.png","building-barracks.svg":"assets/tiny-swords-cc0/buildings/barracks.png","building-fort.svg":"assets/tiny-swords-cc0/buildings/fort.png","building-city.svg":"assets/tiny-swords-cc0/buildings/city.png","building-capital.svg":"assets/tiny-swords-cc0/buildings/capital.png","food.svg":"assets/tiny-swords-cc0/resources/food.png","wood.svg":"assets/tiny-swords-cc0/resources/wood.png","stone.svg":"assets/tiny-swords-cc0/resources/stone.png","gold.svg":"assets/tiny-swords-cc0/resources/gold.png","building-port.svg":"assets/tiny-swords-cc0/buildings/city.png","army.svg":"assets/pixel-ui/action-attack.png","hammer.svg":"assets/pixel-ui/action-build.png","swords.svg":"assets/pixel-ui/action-attack.png","crown.svg":"assets/pixel-ui/icon-leaderboardsSimple.png"};
+const artSrc=name=>ART_ASSETS[name]||'';
 const E=window.BKEngine,$=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // Verified Phosphor MIT icon family for game UI; canvas buildings remain separate assets.
 const UI_ICON_NAMES={food:'grains',wood:'tree',stone:'mountains',gold:'coins',farm:'grains',lumber:'tree',quarry:'mountains',mine:'coins',barracks:'sword',fort:'shield',city:'buildings',capital:'castle-turret',economy:'coins',war:'sword',logistics:'flag-banner'};
+const TINY_BUILDING_KINDS=new Set(["farm","lumber","quarry","mine","barracks","fort","city","capital"]);
+const TINY_RESOURCE_KINDS=new Set(['food','wood','stone','gold']);
 const uiIcon=name=>{
+ if(TINY_BUILDING_KINDS.has(name))return `<img class="ui-icon tiny-building-glyph" src="${artSrc('building-'+name+'.svg')}" alt="" aria-hidden="true">`;
+ if(TINY_RESOURCE_KINDS.has(name))return `<img class="ui-icon tiny-resource-glyph" src="${artSrc(name+'.svg')}" alt="" aria-hidden="true">`;
  const id=UI_ICON_NAMES[name]||name;
  const set=id==='flag-banner'?'controls':'game';
  return `<svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/${set}.svg#${id}"></use></svg>`;
 };
 const view=$('mapView'),canvas=$('mapCanvas'),ctx=canvas.getContext('2d',{alpha:false}),mini=$('minimap'),mctx=mini.getContext('2d');
 const terrainNames=['Море','Равнина','Лес','Холмы','Плодородная земля','Рудное месторождение','Горы'];
-/* v25: assemble complete Tiny Town buildings from original CC0 16px tiles. */
-const iconImages=Object.fromEntries(['capital','farm','lumber','quarry','mine','barracks','fort','city'].map(id=>{const im=new Image();im.src=artSrc('building-'+id+'.svg');im.onload=()=>queueDraw();return [id,im];}));
-const townTileIds=[48,49,50,52,53,54,57,60,61,62,64,65,66,72,74,75,76,78,79,83,92,94,96,97,98,104,105,106,107,108,109,110,115,119,120,121,122];
-const townTiles=Object.create(null),townSprites=Object.create(null);
-const blueRoof=[48,49,50,60,61,62],redRoof=[52,53,54,64,65,66],woodFront=[72,74,75],stoneFront=[76,78,79],stoneTop=[96,97,98,108,109,110],stoneBase=[120,121,122];
-const townRecipes={
- farm:{parts:[...redRoof,...woodFront],deco:94},
- lumber:{parts:[...blueRoof,...woodFront],deco:106},
- quarry:{parts:[...stoneTop,...stoneBase],deco:104},
- mine:{parts:[...blueRoof,...stoneFront],deco:57},
- barracks:{parts:[...redRoof,...stoneFront],deco:119},
- fort:{parts:[...stoneTop,...stoneBase],deco:92},
- city:{parts:[...blueRoof,...stoneFront],deco:83},
- capital:{parts:[...redRoof,...stoneFront],deco:92}
-};
-function assembleTownBuildings(){
- let changed=false;
- for(const [kind,spec] of Object.entries(townRecipes)){
-  if(townSprites[kind]||![...spec.parts,spec.deco].every(id=>townTiles[id]?.naturalWidth))continue;
-  const surface=document.createElement('canvas');surface.width=48;surface.height=48;
-  const brush=surface.getContext('2d');brush.imageSmoothingEnabled=false;
-  spec.parts.forEach((id,i)=>brush.drawImage(townTiles[id],(i%3)*16,Math.floor(i/3)*16,16,16));
-  brush.drawImage(townTiles[spec.deco],31,31,15,15);
-  townSprites[kind]=surface;changed=true;
- }
- if(changed)queueDraw();
-}
-townTileIds.forEach(id=>{
- const img=new Image();townTiles[id]=img;
- img.onload=assembleTownBuildings;
- img.onerror=()=>{console.warn('Tiny Town tile unavailable',id);queueDraw();};
- img.src='assets/tiny-town/tile_'+String(id).padStart(4,'0')+'.png';
-});
+/* Tiny Swords OLD CC0: use the original authored silhouettes directly, never recombine unrelated tile fragments. */
+const iconImages=Object.fromEntries(["farm","lumber","quarry","mine","barracks","fort","city","capital"].map(id=>{
+ const img=new Image();img.src=artSrc('building-'+id+'.svg');img.onload=()=>queueDraw();return [id,img];
+}));
+const terrainImages=Object.fromEntries(['grass','forest','water','foam','tree','rock'].map(id=>{
+ const img=new Image();img.src='assets/tiny-swords-cc0/terrain/'+id+'.png';
+ img.onload=()=>{paintedRevision=-1;waterImageLayer=null;queueDraw();};
+ return [id,img];
+}));
+const buildingGlyphs={farm:'Ф',lumber:'Л',quarry:'К',mine:'Ш',barracks:'Б',fort:'У',city:'Г',capital:'★'};
+const buildingResource={farm:'food',lumber:'wood',quarry:'stone',mine:'gold'};
 const buildingInfo={
  farm:{short:'Обеспечивает армию едой.',detail:'+8 еды/с за каждый уровень',place:'Своя земля, кроме горных вершин',resource:'food',perLevel:8},
  lumber:{short:'Добывает древесину для развития.',detail:'+7 древесины/с за уровень',place:'Только лес',resource:'wood',perLevel:7},
@@ -697,7 +680,28 @@ $('zoomIn').onclick=()=>zoomAt(1.24,canvas.clientWidth/2,canvas.clientHeight/2);
 mini.addEventListener('pointerdown',e=>{const r=mini.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*E.W,y=(e.clientY-r.top)/r.height*E.H;camX=canvas.clientWidth/2-x*TILE*zoom;camY=canvas.clientHeight/2-y*TILE*zoom;clampCamera();queueDraw();});mini.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('viewAll').click();}});
 // Low-resolution territory bitmap: one pixel per world tile. The GPU enlarges it.
 // It is updated only when a territory changes, NOT once per animation frame.
-const TERRAIN_RGB=[[47,111,148],[158,193,108],[71,127,83],[172,159,116],[181,205,113],[143,137,120],[168,164,152]];
+const TERRAIN_RGB=[[60,145,158],[133,174,100],[66,120,81],[153,146,109],[166,188,107],[152,132,93],[119,129,120]];
+let waterImageLayer=null,waterLayerSeed=null;
+function paintSurfaceTexture(wc){
+ const atlas=terrainImages.grass;if(!atlas?.naturalWidth)return;
+ const patch=document.createElement('canvas');patch.width=16;patch.height=16;
+ const pc=patch.getContext('2d');pc.imageSmoothingEnabled=false;
+ pc.drawImage(atlas,64,64,64,64,0,0,16,16);
+ wc.save();wc.globalAlpha=.14;wc.fillStyle=wc.createPattern(patch,'repeat');wc.fillRect(0,0,worldLayer.width,worldLayer.height);wc.restore();
+}
+function getWaterImageLayer(){
+ if(!terrainImages.water?.naturalWidth||!worldLayer||!state)return null;
+ if(waterImageLayer&&waterLayerSeed===state.seed)return waterImageLayer;
+ const surface=document.createElement('canvas');surface.width=worldLayer.width;surface.height=worldLayer.height;
+ const brush=surface.getContext('2d');brush.imageSmoothingEnabled=false;
+ brush.fillStyle=brush.createPattern(terrainImages.water,'repeat');brush.fillRect(0,0,surface.width,surface.height);
+ const mask=document.createElement('canvas');mask.width=E.W;mask.height=E.H;
+ const mc=mask.getContext('2d'),pixels=mc.createImageData(E.W,E.H);
+ for(let i=0;i<state.tiles.length;i++)if(!state.tiles[i]){const k=i*4;pixels.data[k]=255;pixels.data[k+1]=255;pixels.data[k+2]=255;pixels.data[k+3]=255;}
+ mc.putImageData(pixels,0,0);
+ brush.globalCompositeOperation='destination-in';brush.drawImage(mask,0,0,surface.width,surface.height);
+ brush.globalCompositeOperation='source-over';waterImageLayer=surface;waterLayerSeed=state.seed;return surface;
+}
 let minimapCached=null,pixelLayer=null;
 function repaintWorld(){
  if(!state?.owners?.length||!state?.tiles?.length)return;
@@ -720,14 +724,16 @@ function repaintWorld(){
   d[p+3]=255;
  }
  c.putImageData(img,0,0);const wc=worldLayer.getContext('2d',{alpha:false});wc.imageSmoothingEnabled=false;wc.drawImage(pixelLayer,0,0,worldLayer.width,worldLayer.height);
+ paintSurfaceTexture(wc);
+ const waterArtwork=getWaterImageLayer();if(waterArtwork){wc.save();wc.globalAlpha=.86;wc.drawImage(waterArtwork,0,0);wc.restore();}
  // Painted terrain marks: cached in world bitmap, not recreated every frame.
  for(let y=1;y<E.H-1;y++)for(let x=1;x<E.W-1;x++){
-  const i=y*E.W+x,t=tiles[i];if(owners[i]||!t||((x*41+y*73+state.seed*13)%9))continue;
+  const i=y*E.W+x,t=tiles[i];if(!t||((x*41+y*73+state.seed*13)%15))continue;
   const px=x*6+3,py=y*6+3;
-  if(t===2){wc.fillStyle='#315c3f99';wc.fillRect(px-2,py-1,2,3);wc.fillRect(px+1,py-2,2,4);wc.fillStyle='#93bf82aa';wc.fillRect(px,py+1,2,1);}
-  else if(t===3||t===6){wc.strokeStyle='#eee4bd7d';wc.lineWidth=.9;wc.beginPath();wc.moveTo(px-2,py+1);wc.lineTo(px,py-2);wc.lineTo(px+2,py+1);wc.stroke();}
-  else if(t===4){wc.fillStyle='#e4d89088';wc.fillRect(px-2,py,4,1);}
-  else if(t===5){wc.fillStyle='#f2cd6d99';wc.fillRect(px-1,py-2,2,2);}
+  if(t===2&&terrainImages.tree?.naturalWidth){const im=terrainImages.tree;wc.drawImage(im,0,0,Math.min(192,im.naturalWidth),Math.min(256,im.naturalHeight),px-3,py-5,6,8);}
+  else if((t===3||t===6)&&terrainImages.rock?.naturalWidth){const im=terrainImages.rock;wc.drawImage(im,0,0,Math.min(64,im.naturalWidth),Math.min(64,im.naturalHeight),px-3,py-2,6,5);}
+  else if(t===4){wc.fillStyle='#e6d99a88';wc.fillRect(px-2,py,4,1);}
+  else if(t===5){wc.fillStyle='#f9c76d9c';wc.fillRect(px-1,py-2,2,2);}
  }
  terrainSeed=state.seed;paintedRevision=revision;miniRevision=-1;
 }
@@ -741,8 +747,8 @@ function drawFortRange(x,y,preview){
  ctx.fill();ctx.stroke();ctx.restore();
 }
 function queueDraw(){if(renderQueued)return;renderQueued=true;requestAnimationFrame(()=>{renderQueued=false;draw();});}
-function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr=canvas.width/Math.max(1,canvas.clientWidth);const w=canvas.clientWidth,h=canvas.clientHeight;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#2c688e';ctx.fillRect(0,0,w,h);
- ctx.save();ctx.translate(camX,camY);ctx.scale(zoom,zoom);ctx.imageSmoothingEnabled=true;ctx.drawImage(worldLayer,0,0,worldLayer.width,worldLayer.height,0,0,E.W*TILE,E.H*TILE);
+function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr=canvas.width/Math.max(1,canvas.clientWidth);const w=canvas.clientWidth,h=canvas.clientHeight;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#3c919e';ctx.fillRect(0,0,w,h);
+ ctx.save();ctx.translate(camX,camY);ctx.scale(zoom,zoom);ctx.imageSmoothingEnabled=zoom<.35;ctx.drawImage(worldLayer,0,0,worldLayer.width,worldLayer.height,0,0,E.W*TILE,E.H*TILE);
  // Draw vector borders only when zoomed in sufficiently; avoid per-tile work otherwise.
  if(zoom>=0.28){
   const minX=Math.max(0,Math.floor(-camX/(TILE*zoom))-1),maxX=Math.min(E.W-1,Math.ceil((w-camX)/(TILE*zoom))+1);
@@ -767,32 +773,48 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   }
   ctx.stroke();
  }
- // Logical footprint is exactly one cell; 3/4 roofs rise above it uncropped.
+ // Map scale is strategic: unique silhouettes nearby, unmistakable type symbols at far zoom.
+ // Keep one marker per screen-space bucket to avoid overlapping sprites when zoomed out.
  ctx.textAlign='center';ctx.textBaseline='middle';
- for(const b of [...state.buildings].sort((a,b)=>a.y-b.y)){
-  const x=(b.x+.5)*TILE,y=(b.y+.5)*TILE;
-  if(x*zoom+camX<-55||x*zoom+camX>w+55||y*zoom+camY<-55||y*zoom+camY>h+55)continue;
-  const ownerColor=color(b.owner);
-  ctx.save();ctx.globalAlpha=.22;ctx.fillStyle=ownerColor;
-  ctx.fillRect(b.x*TILE+.8,b.y*TILE+.8,TILE-1.6,TILE-1.6);ctx.restore();
-  ctx.strokeStyle=ownerColor;ctx.lineWidth=1.5/Math.max(.7,zoom);
-  ctx.strokeRect(b.x*TILE+.8,b.y*TILE+.8,TILE-1.6,TILE-1.6);
-  const spriteW=Math.min(32/Math.max(.3,zoom),Math.max(TILE*1.22,24/Math.max(.3,zoom)));
-  const spriteH=spriteW*1.08,footY=y+TILE*.49;
-  const sprite=townSprites[b.kind]||iconImages[b.kind];
-  if(sprite?.width&&(!('naturalWidth' in sprite)||sprite.naturalWidth)){
-   const smoothing=ctx.imageSmoothingEnabled;ctx.imageSmoothingEnabled=false;
-   ctx.drawImage(sprite,x-spriteW*.5,footY-spriteH,spriteW,spriteH);
-   ctx.imageSmoothingEnabled=smoothing;
+ const usedMarkers=new Set();
+ const orderedBuildings=[...state.buildings].sort((a,b)=>(b.kind==='capital')-(a.kind==='capital')||a.y-b.y);
+ for(const b of orderedBuildings){
+  const x=(b.x+.5)*TILE,y=(b.y+.5)*TILE,sx=x*zoom+camX,sy=y*zoom+camY;
+  if(sx<-60||sx>w+60||sy<-60||sy>h+60)continue;
+  const far=zoom<.6,spacing=far?21:zoom<1.2?26:15;
+  const cellKey=Math.floor(sx/spacing)+':'+Math.floor(sy/spacing);
+  if(usedMarkers.has(cellKey)&&b.kind!=='capital')continue;
+  usedMarkers.add(cellKey);
+  const ownerColor=color(b.owner),level=Math.max(1,b.level||1),glyph=buildingGlyphs[b.kind]||'?';
+  const badgeX=x,badgeY=y+TILE*.25;
+  ctx.save();
+  if(!far){
+   const sprite=iconImages[b.kind];
+   const screenWidth=Math.max(25,Math.min(50,31+11*Math.log2(zoom+1)));
+   const spriteW=screenWidth/zoom;
+   if(sprite?.naturalWidth){
+    const ratio=sprite.naturalHeight/sprite.naturalWidth;
+    const spriteH=spriteW*Math.max(.65,Math.min(1.27,ratio));
+    ctx.imageSmoothingEnabled=false;
+    ctx.fillStyle='#102c2da8';ctx.beginPath();ctx.ellipse(x,badgeY+4/zoom,spriteW*.39,3.5/zoom,0,0,Math.PI*2);ctx.fill();
+    ctx.drawImage(sprite,x-spriteW*.5,badgeY+3/zoom-spriteH,spriteW,spriteH);
+   }
   }
-  if(b.kind==='capital'&&zoom>.39){
+  // Color communicates ownership; glyph communicates building type independently.
+  const badgeW=(far?19:17)/zoom,badgeH=(far?18:16)/zoom,bx=badgeX-badgeW/2,by=badgeY+(far?-badgeH*.5:0);
+  ctx.fillStyle=far?'#142d32ed':'#203735ee';ctx.strokeStyle=ownerColor;
+  ctx.lineWidth=2/zoom;ctx.beginPath();ctx.roundRect(bx,by,badgeW,badgeH,3.5/zoom);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#ffffff';ctx.font='800 '+(far?12:10)/zoom+'px system-ui';ctx.fillText(glyph,badgeX,by+badgeH*.53);
+  if(!far&&level>1){ctx.fillStyle='#fff2c0';ctx.font='800 '+8/zoom+'px system-ui';ctx.fillText(String(level),bx+badgeW+3/zoom,by+badgeH*.5);}
+  if(b.kind==='capital'&&zoom>.65){
    const p=E.person(state,b.owner),label=(p?.id||'?')+' · '+(p?.name||'');
    ctx.font='750 '+Math.max(9,11/zoom)+'px system-ui';
-   const tw=ctx.measureText(label).width+20/zoom,lh=20/zoom,ly=footY+11/zoom;
-   ctx.fillStyle='#283a31ef';ctx.strokeStyle=ownerColor;ctx.lineWidth=1.2/Math.max(.5,zoom);
-   ctx.beginPath();ctx.roundRect(x-tw/2,ly-lh/2,tw,lh,8/Math.max(.5,zoom));ctx.fill();ctx.stroke();
-   ctx.fillStyle='#f1fff6';ctx.fillText(label,x,ly);
+   const tw=ctx.measureText(label).width+18/zoom,lh=19/zoom,ly=badgeY+30/zoom;
+   ctx.fillStyle='#1e3330f2';ctx.strokeStyle=ownerColor;ctx.lineWidth=1.2/zoom;
+   ctx.beginPath();ctx.roundRect(x-tw/2,ly-lh/2,tw,lh,6/zoom);ctx.fill();ctx.stroke();
+   ctx.fillStyle='#fff8e9';ctx.fillText(label,x,ly);
   }
+  ctx.restore();
  }
  // Incoming hostile fronts are highlighted on the battlefield, not only in the HUD.
  for(const a of activeThreats){
@@ -806,7 +828,13 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
  for(const a of state.armies){const old=oldArmyPositions.get(a.id),t=Math.min(1,(performance.now()-movementStart)/260),x=((old?old.x+(a.x-old.x)*t:a.x)+.5)*TILE,y=((old?old.y+(a.y-old.y)*t:a.y)+.5)*TILE;if(x*zoom+camX<-50||x*zoom+camX>w+50||y*zoom+camY<-50||y*zoom+camY>h+50)continue;
   ctx.fillStyle='#0d2234';ctx.strokeStyle=(a.owner===myId&&a.initialStrength&&a.strength/a.initialStrength<.2)?'#ff968e':color(a.owner);ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(x,y,8.5,0,2*Math.PI);ctx.fill();ctx.stroke();ctx.fillStyle='#ffffff';ctx.font='700 7px system-ui';ctx.fillText('↗',x,y+.5);
   if(zoom>0.27){ctx.font='700 '+Math.max(8,9/Math.max(.8,zoom))+'px system-ui';const n=number(a.strength);ctx.fillStyle='rgba(255,255,255,.95)';ctx.beginPath();ctx.roundRect(x-20,y+9,40,12,5);ctx.fill();ctx.fillStyle='#0f1720';ctx.fillText(n,x,y+15);}
-  if(a.owner===myId&&a.targetOwner){ctx.strokeStyle=hexAlpha(color(a.owner),.55);ctx.setLineDash([2,3]);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo((a.tx+.5)*TILE,(a.ty+.5)*TILE);ctx.stroke();ctx.setLineDash([]);}
+  if(a.owner===myId&&a.targetOwner){
+   // Active troop route: legible as a path, with an outline even on similarly coloured territory.
+   ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo((a.tx+.5)*TILE,(a.ty+.5)*TILE);
+   ctx.strokeStyle='#263b34db';ctx.lineWidth=5/Math.max(.55,zoom);ctx.stroke();
+   ctx.strokeStyle='#f6e1a1';ctx.lineWidth=2.5/Math.max(.55,zoom);
+   ctx.setLineDash([6/Math.max(.55,zoom),3/Math.max(.55,zoom)]);ctx.stroke();ctx.setLineDash([]);
+  }
  }
  if(selected){const b=selected.kind==='building'?state.buildings.find(v=>v.id===selected.id):state.armies.find(v=>v.id===selected.id);if(b){ctx.strokeStyle='#ffffff';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.strokeRect(b.x*TILE-5,b.y*TILE-5,TILE+10,TILE+10);ctx.setLineDash([]);}}
  if(buildMode){
