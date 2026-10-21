@@ -1,5 +1,22 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 
+
+## START HERE — v103 accessible map + real builder upgrades (22.10.2026)
+
+**Current executable branch HEAD:** `a6916cb3dcc78be08c3dc1764ef234ec66755ac8`, `design/visual-review-v26`. **Full GitHub Actions run `39691641841` SUCCESS**, including engine/server regressions, custom upgrade tests, Chromium/WebKit mobile and network tests and rendering stress. This verifies source and CI only; **Cloudflare production and physical iPhone Safari deployment not independently verified**. `main` remains separate; do not claim merged or live until checked. Current client cache is `103-worker-accessibility-r4`.
+
+**Latest owner's additional feedback:** The v103 low-zoom colored squares failed accessibility, especially for color-blind players; even the icons were hard to recognize. A building modal had an artificial timer (`36s remaining`), despite existing physical builders already constructing new buildings.
+
+**Changes to address that:**
+- `game.js`: low/mid zoom no longer uses color-only squares. It renders cached high-contrast type-specific vector silhouettes **with explicit two-letter identifiers** (HQ/CT/BA/FT/FM/WD/ST/AU); high zoom retains Kenney CC0 Tiny Town pixel art, adds a contrasting emblem and a **numeric level**. Income buildings are hidden only at the very far strategic zoom (<0.48) for readability, while strategic buildings remain. Colors are secondary signals. Building detail modal now shows the actual structure icon rather than a meaningless colored square.
+- `game.js`: active upgrades show an `UP` label and a geometric progress bar on the map. The building detail shows `Waiting for builders`, `Builders travelling`, or `Builders working` plus completed/required work units. Button says `Assign builders` rather than promising a fixed-time upgrade.
+- `engine.js`: upgrades are **paid construction jobs** in the existing `buildJobs` queue, with `upgradeOf` and `targetLevel`. They are allocated by the same bounded physical civilian worker groups, path along friendly owned cells, and progress only once a builder reaches the actual building. No more `readyTick` automatic completion. The prior cap of two parallel upgrades and paid-once semantics remain. Existing outputs/level remain in effect until workers finish. Capture/lost ownership cancels work and cannot transfer the upgrade; construction counts/prices exclude upgrade jobs. Legacy v102 pending `readyTick` saves convert to worker jobs preserving earned partial progress, without instant completion.
+- `tests/review-v102.cjs`: new assertions require travel, no upgrade without workers, no automatic completion on clock jumps, capture cancellation, save continuation and legacy migration. Existing `tests/unlimited-plans.cjs` version expectation updated. `styles/theme.css` styles the context building icon; `index.html` cache bumped for Safari.
+
+**Known limitations:** Full WCAG/color-vision accessibility audit, original user match performance and physical iPhone screenshot verification remain undone. Tiny type badges can still become dense at extreme zoom; the pixel tiles are a first art pass, not a WorldBox terrain remake. A full production deploy to Workers has not been proven by the GitHub Actions success. Do not say the user has already seen this build.
+
+---
+
 ## START HERE — v103: WorldBox-inspired readable map and mutually exclusive tools (22.10.2026)
 
 **Working branch:** `design/visual-review-v26`; current executable HEAD `1f2bd0a14aa4a1ee245d0c1b8fed709400932a82`. `main` was not modified. Final executable code `1f2bd0a14aa4a1ee245d0c1b8fed709400932a82` **verified** in GitHub Actions `39690189078 SUCCESS`: engine and server regressions, Chromium/WebKit responsive layout, mobile map-tool exclusivity, live-client network, and rendering benchmark. Earlier `58b7b7a` tool-regression CI `39690051652 SUCCESS` and `ff6e9e1` road-renderer CI `39690164957 SUCCESS` also completed. Actual Cloudflare deployment and physical iPhone Safari **not independently verified** in this turn; latest **previously verified** production build was v102.
