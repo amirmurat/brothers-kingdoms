@@ -236,19 +236,11 @@ function refreshHudAlert(p){
  if(!host&&/RECONNECT|OFFLINE|DELAY|SYNC|SERVICE|CONNECT/.test(net)){text=`Connection unstable · last update ${Math.max(0,Math.floor((Date.now()-lastStateAt)/1000))}s ago. Orders unavailable.`;kind='danger';}
  if(!text&&p.capital&&!activeThreats.length){
   const cap=p.capital;
-  const attackers=state.armies.some(a=>a.owner!==myId&&!p.allies.includes(a.owner)&&Math.hypot(a.x-cap.x,a.y-cap.y)<9);
-  let hostileBorder=false;
-  for(let dy=-5;dy<=5&&!hostileBorder;dy++)for(let dx=-5;dx<=5;dx++){
-   if(Math.abs(dx)+Math.abs(dy)>7)continue;
-   const x=cap.x+dx,y=cap.y+dy;
-   if(!E.inside(x,y))continue;
-   const id=E.owner(state,x,y);
-   if(id!==0&&id!==myId&&!p.allies.includes(id)){hostileBorder=true;break;}
-  }
+  const attackers=state.armies.some(a=>a.owner!==myId&&!p.allies.includes(a.owner)&&fighting(a.owner)&&a.targetOwner===myId&&Math.hypot(a.x-cap.x,a.y-cap.y)<9);
   if(attackers){text='Capital threatened · defend';kind='danger';action='capital';}
  }
  if(!text&&hudNotice&&Date.now()<hudNotice.until){text=hudNotice.text;kind=hudNotice.kind;action=hudNotice.action;}
- if(!text&&p.troopIncome===0&&p.troops<p.troopCap&&p.res.food<1){text='No food — recruitment stopped';kind='notice';action='build';}
+ if(!text&&p.recruitment?.reason==='Food limits recruitment'){text='No food — recruitment stopped';kind='notice';action='build';}
  if(!text){box.classList.add('hidden');hudAlertAction=null;return;}
  box.classList.remove('hidden');box.classList.toggle('danger',kind==='danger');box.dataset.actionable=String(Boolean(action));
   // A notice without a destination is not a fake button.
