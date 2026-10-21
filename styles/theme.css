@@ -2019,7 +2019,7 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
 #game#game#game #hudTroops:focus-visible{outline:2px solid var(--accent)!important;outline-offset:-2px!important}
 
 /* Match-wide geometry; don't strip semantic colors or button hit targets. */
-#game#game#game :is(#sidebar,#sessionPanel,#exitPanel,#armiesPanel,#quickLeadersPanel,#contextCard,#warPanel,#tutorial>section){
+#game#game#game :is(#sidebar,#sessionPanel,#exitPanel,#armiesPanel,#quickLeadersPanel,#contextCard,#warPanel,#tutorial>section,#resultSheet,#planReview,#planCancelDialog,#targetPreview,#quickBuild){
  border:0!important;border-radius:0!important;box-shadow:none!important;
  background:var(--sheet-flat)!important;color:var(--flat-ink)!important;
 }
@@ -2040,7 +2040,10 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
 #game#game#game #quickLeadersPanel .quick-row,
 #game#game#game #warPanel .nation-row,
 #game#game#game #sessionPanel :is(.session-action,.session-setting,.session-summary),
-#game#game#game #contextBody :is(.context-action,.context-effect){
+#game#game#game #contextBody :is(.context-action,.context-effect),
+#game#game#game #resultSheet .result-stat,
+#game#game#game #quickBuild .quick-build-item,
+#game#game#game #sessionPanel :is(.session-action-list,.session-action){
  margin:0!important;border:0!important;border-radius:0!important;
  background:transparent!important;box-shadow:none!important;
 }
@@ -2103,6 +2106,19 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
 }
 #game#game#game #quickLeadersPanel .quick-row.is-me b{color:var(--flat-ink)!important}
 
+/* Other conditional screens use the same uninterrupted rows. */
+#game#game#game #resultSheet .result-stat,
+#game#game#game #quickBuild .quick-build-item{
+ padding:12px 8px!important;border-bottom:1px solid var(--divider-flat)!important;
+}
+#game#game#game #sessionPanel .session-action-list{gap:0!important}
+#game#game#game #sessionPanel .session-action{
+ margin:0!important;padding:12px!important;min-height:48px!important;
+ background:var(--row-flat)!important;border-bottom:1px solid var(--divider-flat)!important;
+}
+#game#game#game #contextBody .context-effect{
+ padding:12px 0!important;border-bottom:1px solid var(--divider-flat)!important;
+}
 /* Every close action is the same flat, centered square. */
 #game#game#game :is(#closePanel,#closeContext,#closeArmies,#closeSession,#closeQuickLeaders,#closeTutorial,#warPanelClose,#threatClose){
  display:grid!important;place-items:center!important;
