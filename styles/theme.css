@@ -2987,3 +2987,165 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
  #game#game#game#game #victory .result-header{padding-bottom:8px!important}
  #game#game#game#game #victory #victoryStats .result-stat{padding:8px!important}
 }
+
+
+/* v99: one control vocabulary (flat graphite, cyan primary, 48px hit target,
+   single icon family). Applied across menu, room, match, and diplomacy. */
+#lobby,#waiting,#game{
+ --control-face:#202b39;
+ --control-hover:#2b3a4b;
+ --control-ink:#edf2f8;
+ --control-muted:#aebbc9;
+ --control-primary:#39d5ff;
+ --control-primary-ink:#081923;
+ --control-line:#354151;
+}
+#lobby#lobby#lobby#lobby .start-choice{
+ display:grid!important;grid-template-columns:44px minmax(0,1fr) 24px!important;
+ align-items:center!important;justify-items:stretch!important;
+ width:100%!important;min-width:0!important;min-height:76px!important;
+ gap:12px!important;padding:12px!important;
+ border:0!important;border-bottom:1px solid var(--control-line)!important;
+ border-radius:0!important;box-shadow:none!important;
+}
+#lobby#lobby#lobby#lobby .start-choice-primary{border-bottom:0!important}
+#lobby#lobby#lobby#lobby .start-choice .choice-symbol{
+ display:grid!important;place-items:center!important;
+ width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;
+ padding:8px!important;margin:0!important;
+ color:inherit!important;background:transparent!important;
+ border:0!important;border-radius:0!important;opacity:1!important;
+}
+#lobby#lobby#lobby#lobby .start-choice .choice-symbol svg,
+#lobby#lobby#lobby#lobby .start-choice .choice-arrow{
+ display:block!important;visibility:visible!important;opacity:1!important;
+ width:26px!important;height:26px!important;max-width:26px!important;max-height:26px!important;
+ fill:currentColor!important;stroke:none!important;color:inherit!important;
+}
+#lobby#lobby#lobby#lobby #demoButton .choice-symbol svg{
+ color:#081923!important;fill:#081923!important;
+}
+#lobby#lobby#lobby#lobby .start-choice:not(.start-choice-primary) .choice-symbol svg{color:var(--control-ink)!important;fill:var(--control-ink)!important}
+#lobby#lobby#lobby#lobby .start-choice .choice-arrow{
+ width:22px!important;height:22px!important;justify-self:end!important;
+}
+#lobby#lobby#lobby#lobby .start-choice :is(strong,small){
+ text-align:left!important;max-width:100%!important;
+}
+#lobby#lobby#lobby#lobby .start-choice:disabled{opacity:.48!important}
+#lobby#lobby#lobby#lobby :is(#joinButton,#cancelConnect),
+#waiting#waiting#waiting#waiting :is(#copyCode,#copyLink,#spawnAuto,#readyButton,#startButton,#leaveRoom){
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ gap:10px!important;box-sizing:border-box!important;
+ min-height:48px!important;padding:10px 12px!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+ font-weight:700!important;font-size:14px!important;line-height:20px!important;
+}
+#lobby#lobby#lobby#lobby #joinButton,
+#waiting#waiting#waiting#waiting :is(#copyLink,#startButton){
+ background:var(--control-primary)!important;color:var(--control-primary-ink)!important;
+}
+#lobby#lobby#lobby#lobby #cancelConnect,
+#waiting#waiting#waiting#waiting :is(#copyCode,#spawnAuto,#readyButton,#leaveRoom){
+ background:var(--control-face)!important;color:var(--control-ink)!important;
+}
+#waiting#waiting#waiting#waiting :is(#copyCode,#copyLink,#spawnAuto,#readyButton,#startButton,#leaveRoom) svg{
+ display:block!important;flex:none!important;width:20px!important;height:20px!important;
+ margin:0!important;fill:currentColor!important;color:inherit!important;
+}
+#waiting#waiting#waiting#waiting #startButton{
+ display:grid!important;grid-template-columns:minmax(0,1fr) 22px!important;
+ justify-items:center!important;gap:12px!important;
+}
+#waiting#waiting#waiting#waiting #startButton svg{justify-self:end!important}
+#waiting#waiting#waiting#waiting #leaveRoom svg{
+ margin:0!important;
+}
+#waiting#waiting#waiting#waiting #leaveRoom{
+ margin-top:8px!important;text-decoration:none!important;
+}
+/* Full-row selected state with true internal gutters on every country.
+   The outline never becomes the padding and buttons never touch its edges. */
+#game#game#game#game #warPanel .nation-row,
+#game#game#game#game #warPanel .nation-row.focused{
+ box-sizing:border-box!important;
+ width:100%!important;min-width:0!important;
+ padding:14px 12px!important;margin:0!important;
+ display:flex!important;flex-direction:column!important;gap:10px!important;
+ background:transparent!important;
+ border:0!important;border-bottom:1px solid var(--control-line)!important;
+ border-radius:0!important;box-shadow:none!important;
+}
+#game#game#game#game #warPanel .nation-row.focused{
+ background:#20303d!important;
+ box-shadow:inset 0 0 0 1px #54768a!important;
+}
+#game#game#game#game #warPanel .nation-row :is(.nation-identity,.nation-details,.nation-actions){
+ box-sizing:border-box!important;min-width:0!important;width:100%!important;
+ padding:0!important;margin:0!important;
+}
+#game#game#game#game #warPanel .nation-row .nation-identity{
+ display:grid!important;grid-template-columns:12px minmax(0,1fr) auto!important;
+ align-items:center!important;column-gap:10px!important;
+}
+#game#game#game#game #warPanel .nation-row .nation-name{
+ min-width:0!important;overflow-wrap:anywhere!important;
+}
+#game#game#game#game #warPanel .nation-row .nation-status{
+ justify-self:end!important;text-align:right!important;
+ padding:0!important;margin:0!important;
+ white-space:nowrap!important;
+}
+#game#game#game#game #warPanel .nation-row .nation-actions{
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;
+}
+#game#game#game#game #warPanel .nation-row .nation-actions button{
+ width:100%!important;min-width:0!important;min-height:48px!important;
+ margin:0!important;padding:10px 6px!important;
+ display:grid!important;place-items:center!important;
+ background:var(--control-face)!important;color:var(--control-ink)!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+ font:700 clamp(11px,2.6vw,14px)/1.2 system-ui!important;
+ white-space:normal!important;overflow-wrap:anywhere!important;
+}
+#game#game#game#game #warPanel .nation-row .nation-actions .nation-attack.chosen{
+ background:#59343c!important;color:#ffdae2!important;
+}
+#game#game#game#game #warPanel .nation-row .nation-actions button:disabled{
+ opacity:1!important;background:#232933!important;color:#7e8c9e!important;
+}
+#game#game#game#game #warPanel .nation-row .nation-actions button:focus-visible{
+ outline:2px solid #74dbf5!important;outline-offset:-2px!important;
+}
+/* Erasing is a tool state, not a temporary toast. Align it with the flat bottom
+   editing HUD, with text that can wrap safely on 320px phones. */
+#game#game#game#game #planEraseHint:not(.hidden){
+ display:flex!important;align-items:center!important;justify-content:flex-start!important;
+ flex-wrap:wrap!important;column-gap:12px!important;row-gap:2px!important;
+ position:absolute!important;left:0!important;right:0!important;bottom:0!important;
+ transform:none!important;
+ z-index:var(--layer-map-plan)!important;
+ width:100%!important;max-width:100%!important;min-height:48px!important;
+ box-sizing:border-box!important;margin:0!important;padding:10px 14px!important;
+ background:#151c26!important;color:#aebbc9!important;
+ border:0!important;border-top:1px solid #354151!important;
+ border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;
+ font:500 12px/18px system-ui!important;white-space:normal!important;
+ text-align:left!important;pointer-events:none!important;
+}
+#game#game#game#game #planEraseHint strong{
+ color:#85dfff!important;letter-spacing:.06em!important;
+ font:750 11px/18px system-ui!important;
+}
+#game#game#game#game #planEraseHint span{
+ color:#aebbc9!important;font:500 12px/18px system-ui!important;
+}
+#game#game#game#game #planEraseHint.hidden{display:none!important}
+@media(max-width:355px){
+ #game#game#game#game #warPanel .nation-row,
+ #game#game#game#game #warPanel .nation-row.focused{padding:12px 8px!important}
+ #game#game#game#game #planEraseHint:not(.hidden){padding:8px 10px!important;gap:4px 9px!important}
+}
+@media(max-height:480px) and (orientation:landscape){
+ #game#game#game#game #planEraseHint:not(.hidden){min-height:40px!important;padding:6px 12px!important}
+}
