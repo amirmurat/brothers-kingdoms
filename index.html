@@ -9,7 +9,7 @@
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
 <link rel="stylesheet" href="styles/legacy.css?v=49-visible-camp"/>
-<link rel="stylesheet" href="styles/theme.css?v=85-bottom-feedback"/>
+<link rel="stylesheet" href="styles/theme.css?v=86-unified-notifications"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -65,25 +65,26 @@
 <div aria-live="assertive" class="sr-only" id="incomingAnnouncement" role="alert"></div>
 <main class="game-layout">
 <section class="map-shell">
-<div class="game-feedback" id="gameFeedback" aria-label="Match alerts and connection status">
+<div id="notificationStack" aria-label="Match notifications"><div class="threat-rail hidden" id="threatRail" role="group" aria-label="Incoming attacks">
+<button aria-label="Go to nearest threat" class="incoming-attack" id="incomingAttack" type="button">
+<span aria-hidden="true" class="incoming-icon">!</span>
+<span class="incoming-body"><strong id="incomingTitle">UNDER ATTACK</strong><small id="incomingDetail">Enemy attacking your border</small></span>
+<span class="incoming-action" aria-hidden="true">↗</span>
+</button>
+<button type="button" class="threat-expand hidden" id="threatExpand" aria-controls="threatList" aria-expanded="false" aria-label="Incoming attacks list"><span aria-hidden="true">›</span><b id="threatCount" class="sr-only">0</b></button>
+<div class="threat-list hidden" id="threatList" aria-label="Incoming attacks list"><header><strong>Incoming attacks</strong><button type="button" id="threatClose" aria-label="Close threat list"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button></header><div class="threat-items" id="threatItems"></div></div>
+</div><div class="game-feedback" id="gameFeedback" aria-label="Match alerts and connection status">
 <div class="feedback-idle" id="feedbackIdle"><span class="feedback-dot" aria-hidden="true"></span><span id="feedbackStatus">MATCH ACTIVE</span></div>
 <button aria-live="polite" class="hud-alert hidden" id="hudAlert" type="button"><span aria-hidden="true" id="hudAlertIcon">!</span><span id="hudAlertText"></span><span aria-hidden="true" class="hud-alert-arrow">›</span></button>
 <div aria-live="polite" class="game-toast hidden" id="gameToast" role="status"></div>
+</div>
 </div>
 <div class="map-toolbar">
 <div class="map-location"><span class="location-dot"></span><strong id="myKingdom" title="Kingdom name">Kingdom</strong><span aria-live="polite" id="mapStatus">Tap Attack to plan an offensive</span></div><button class="war-chip" id="warChip" type="button" aria-controls="warPanel" aria-expanded="false" aria-label="Nations and diplomacy"><svg class="ui-icon nation-flag" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/controls.svg#flag-banner"></use></svg><span id="warChipLabel">NATIONS</span><span id="nationWarCount" class="nation-war-count hidden"></span></button>
 
 </div>
 <div class="map-view" id="mapView">
-<div class="threat-rail hidden" id="threatRail" role="group" aria-label="Incoming attacks">
-<button aria-label="Go to nearest threat" class="incoming-attack" id="incomingAttack" type="button">
-<span aria-hidden="true" class="incoming-icon">!</span>
-<span class="incoming-body"><strong id="incomingTitle">UNDER ATTACK</strong><small id="incomingDetail">Enemy attacking your border</small></span>
-<span class="incoming-action">DEFEND <span aria-hidden="true">↗</span></span>
-</button>
-<button type="button" class="threat-expand hidden" id="threatExpand" aria-controls="threatList" aria-expanded="false" aria-label="Incoming attacks list">Fronts <b id="threatCount">0</b></button>
-<div class="threat-list hidden" id="threatList" aria-label="Incoming attacks list"><header><strong>Incoming attacks</strong><button type="button" id="threatClose" aria-label="Close threat list"><svg class="ui-icon " viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/controls.svg#x"></use></svg></button></header><div class="threat-items" id="threatItems"></div></div>
-</div><canvas aria-label="Kingdom map. Arrow keys move the cursor; Enter selects a target." id="mapCanvas" role="application" tabindex="0"></canvas><div aria-live="polite" class="sr-only" id="keyboardPosition"></div>
+<canvas aria-label="Kingdom map. Arrow keys move the cursor; Enter selects a target." id="mapCanvas" role="application" tabindex="0"></canvas><div aria-live="polite" class="sr-only" id="keyboardPosition"></div>
 <div class="map-hint" id="mapHint">Tap the brush to paint a conquest area</div>
 <!-- Lucide paintbrush / eraser icons, ISC. License: assets/icons/LUCIDE_LICENSE.txt -->
 <div id="buildDock" role="group" aria-label="Place strategic buildings"></div>
@@ -184,8 +185,8 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="server-config.js?v=85-bottom-feedback"></script>
-<script src="engine.js?v=85-bottom-feedback"></script>
+<script src="server-config.js?v=86-unified-notifications"></script>
+<script src="engine.js?v=86-unified-notifications"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=85-bottom-feedback"></script>
+<script src="game.js?v=86-unified-notifications"></script>
 </body></html>

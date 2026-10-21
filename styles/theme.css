@@ -1771,25 +1771,57 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
 #game#game#game #warChipLabel{display:none!important}
 #game#game#game #warChip .nation-flag{width:24px!important;height:24px!important;min-width:24px!important;color:var(--text)!important}
 #game#game#game #warChip .nation-war-count{position:absolute!important;right:-4px!important;top:-5px!important;min-width:18px!important;height:18px!important;border-radius:6px!important;font-size:10px!important}
-#game#game#game #gameFeedback{
- top:auto!important;bottom:calc(88px + env(safe-area-inset-bottom,0px))!important;
- left:50%!important;right:auto!important;transform:translateX(-50%)!important;
- width:max-content!important;max-width:min(360px,calc(100% - 24px))!important;
+/* One upper-left notification stack; every message shares the same card. */
+#game#game#game #notificationStack{
+ position:absolute;top:10px;left:12px;width:min(320px,calc(100% - 84px));
+ display:flex;flex-direction:column;gap:8px;z-index:var(--layer-map-status);pointer-events:none;
+}
+#game#game#game #notificationStack :is(#gameFeedback,#threatRail){
+ position:relative!important;inset:auto!important;transform:none!important;
+ width:100%!important;max-width:100%!important;min-width:0!important;
  height:auto!important;min-height:0!important;max-height:none!important;
- overflow:visible!important;border:0!important;border-radius:18px!important;
- pointer-events:none!important;
+ margin:0!important;padding:0!important;border:0!important;background:transparent!important;
+ overflow:visible!important;box-sizing:border-box!important;pointer-events:none!important;
 }
-#game#game#game:has(#placingBuild:not(.hidden)) #gameFeedback{bottom:calc(174px + env(safe-area-inset-bottom,0px))!important}
-#game#game#game.plan-drawing #gameFeedback{bottom:calc(126px + env(safe-area-inset-bottom,0px))!important}
-#game#game#game #gameFeedback :is(#hudAlert,#gameToast){
- width:auto!important;max-width:100%!important;height:auto!important;min-height:36px!important;
- padding:9px 14px!important;border:0!important;border-radius:18px!important;
- background:#18212bf5!important;color:#e9eff6!important;box-shadow:0 3px 12px #0004!important;
- font:500 12px/18px system-ui!important;white-space:normal!important;text-align:center!important;
+#game#game#game #notificationStack :is(#hudAlert,#gameToast,#incomingAttack){
+ display:flex!important;align-items:center!important;gap:8px!important;
+ width:100%!important;min-width:0!important;max-width:none!important;
+ height:auto!important;min-height:44px!important;max-height:none!important;
+ padding:9px 10px!important;margin:0!important;box-sizing:border-box!important;
+ border:1px solid var(--line)!important;border-radius:12px!important;
+ background:var(--surface)!important;color:var(--text)!important;
+ font:500 12px/16px system-ui!important;letter-spacing:normal!important;
+ white-space:normal!important;text-align:left!important;box-shadow:none!important;
 }
-#game#game#game #gameFeedback #hudAlert{min-height:44px!important;pointer-events:auto!important}
-#game#game#game #gameFeedback #hudAlert.danger,#game#game#game #gameFeedback #gameToast[data-kind="error"]{background:#38232df5!important;color:#ffd8e2!important}
-#game#game#game #gameFeedback #gameToast::before{display:none!important}
-#game#game#game:has(#hudAlert:not(.hidden),#gameToast:not(.hidden)) #threatRail{top:64px!important}
+#game#game#game #notificationStack :is(#hudAlert,#incomingAttack){pointer-events:auto!important}
+#game#game#game #notificationStack #threatRail{
+ display:grid!important;grid-template-columns:minmax(0,1fr) 44px!important;gap:0!important;
+ border:1px solid #8e4e61!important;border-radius:12px!important;background:#302029!important;
+}
+#game#game#game #notificationStack #threatRail:has(#threatExpand.hidden){grid-template-columns:minmax(0,1fr)!important}
+#game#game#game #notificationStack #incomingAttack{border:0!important;background:transparent!important;color:#ffd8e2!important}
+#game#game#game #notificationStack #incomingAttack .incoming-body{max-width:none!important;flex:1!important}
+#game#game#game #notificationStack #incomingAttack .incoming-body strong{font:500 12px/16px system-ui!important;white-space:normal!important}
+#game#game#game #notificationStack #incomingAttack .incoming-action{font-size:16px!important;line-height:20px!important}
+#game#game#game #notificationStack #threatExpand{
+ position:relative!important;display:grid!important;place-items:center!important;
+ width:44px!important;height:100%!important;min-height:44px!important;max-height:none!important;
+ margin:0!important;padding:0!important;border:0!important;border-left:1px solid #8e4e61!important;
+ border-radius:0 12px 12px 0!important;background:transparent!important;color:#ffd8e2!important;
+ font-size:24px!important;pointer-events:auto!important;
+}
+#game#game#game #notificationStack :is(#incomingAttack .incoming-icon,#hudAlertIcon){
+ display:grid!important;place-items:center!important;flex:0 0 20px!important;
+ width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important;
+ padding:0!important;margin:0!important;border-radius:50%!important;background:#ffffff15!important;
+ color:inherit!important;font:700 12px/20px system-ui!important;
+}
+#game#game#game #notificationStack #hudAlert.danger,#game#game#game #notificationStack #gameToast[data-kind="error"]{border-color:#8e4e61!important;background:#302029!important;color:#ffd8e2!important}
+#game#game#game #notificationStack #gameToast::before{content:'i';display:grid!important;place-items:center;flex:0 0 20px;width:20px;height:20px;border-radius:50%;background:#ffffff15;font:700 12px/20px system-ui;color:inherit}
+#game#game#game #notificationStack #gameToast[data-kind="success"]::before{content:'✓'}
+#game#game#game #notificationStack :is(#gameToast,#hudAlert,#threatRail,#threatExpand).hidden{display:none!important}
+#game#game#game #notificationStack #gameFeedback:has(#gameToast:not(.hidden)) #hudAlert:not(.danger),
+#game#game#game #notificationStack #gameFeedback:has(#hudAlert.danger:not(.hidden)) #gameToast{display:none!important}
+#game#game#game #notificationStack #gameFeedback:has(#hudAlert.hidden):has(#gameToast.hidden){display:none!important}
+#game#game#game #notificationStack #threatList{grid-column:1/-1;left:0!important;right:auto!important;top:calc(100% + 8px)!important;width:100%!important;box-sizing:border-box!important;pointer-events:auto!important}
 #game#game#game .building-level-swatch{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:7px;border:1px solid #fff5;vertical-align:baseline}
-#game#game#game #gameFeedback:has(#hudAlert.danger:not(.hidden)){max-width:min(360px,calc(100% - 24px))!important}

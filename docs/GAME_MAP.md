@@ -584,3 +584,6 @@ buildingLevelColor supplies the shared map/detail level palette. drawHarvestSite
 
 ### v85 feedback placement
 #gameFeedback is now a content-sized bottom toast above #buildDock, raised further by :has(#placingBuild:not(.hidden)) and .plan-drawing. Neutral messages pass pointer input through; #hudAlert remains actionable. Threat shortcut stays top-left. No game or network logic change.
+
+### v86 unified alerts (replaces v85)
+#notificationStack is an absolute top-left flex column in .map-shell, containing #threatRail then #gameFeedback. All messages use one card geometry. #threatExpand is an integrated chevron; #threatCount remains screen-reader text. Existing handlers/IDs remain. Flow layout replaces hard-coded alert offsets and bottom positioning.

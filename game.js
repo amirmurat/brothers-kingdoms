@@ -149,7 +149,7 @@ function updateIncomingAttack(p){
  const attackers=[...new Set(threats.map(a=>a.owner))].map(id=>E.person(state,id)?.name||'Enemy');
  const force=threats.reduce((sum,a)=>sum+Math.max(0,a.strength),0);
  const signature=threats.map(a=>a.id).sort().join(',');
- $('incomingTitle').textContent=threats.length===1?'UNDER ATTACK':`ATTACKS · ${threats.length} FRONTS`;
+ $('incomingTitle').textContent=threats.length===1?'Under attack':`Under attack · ${threats.length} fronts`;
  $('incomingDetail').textContent=`${attackers.join(', ')} · ${number(force)} enemy troops`;
  $('threatCount').textContent=threats.length;
  $('incomingAttack').setAttribute('aria-label',threats.length>1?'Go to next of '+threats.length+' threats':'Go to attack location');
