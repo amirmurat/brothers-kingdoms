@@ -1660,3 +1660,6 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
 #game#game#game.plan-drawing #buildDock,#game#game#game:has(#sidebar.open,#auxBackdrop:not(.hidden),#tutorial:not(.hidden),#victory:not(.hidden),#warPanel:not(.hidden),#targetPreview:not(.hidden)) #buildDock{visibility:hidden;pointer-events:none}
 #game .production-setting{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 14px;font-size:13px;}
 #game .production-setting select{min-height:44px;max-width:145px;border:1px solid #536176;border-radius:10px;background:#202936;color:#edf3fa;padding:8px;}
+#game#game#game #planToolSwitch #developButton{display:none!important}
+#game#game#game #buildDock button{width:58px!important;height:58px!important;min-height:58px!important;padding:5px!important;}
+#game#game#game #buildDock .building-art{width:26px!important;height:26px!important;flex:0 0 26px!important;margin:0!important;}
