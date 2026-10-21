@@ -1,6 +1,32 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 _Обновлено: 22 октября 2026 года. Рабочий код v100; итог проверки и публикации — в последней записи START HERE._
 
+## START HERE — v100 VERIFIED / final result (22.10.2026)
+
+**Current game-code commit:** `d55849d3cb6b36be0dcb294c2356de1206dda4a1`, branch `design/visual-review-v26`. Full final Actions **39676885682 = SUCCESS**: 21 engine/economy/strategy/server/UI regressions plus median-of-five dense engine benchmark, Chromium + WebKit at 320×568, 390×780, 844×390, two real-browser client network bridge scenarios and dense browser performance/priority interactions. Previous failed runs below are historical and were addressed; do not treat them as current failures.
+
+**Publication independently verified:** Cloudflare build `150b6318-1267-4f05-a3ce-929a5b40a844` success; version `c8208079-04ce-4599-b6ca-ef7cfcff7dca`. Actual public health returned `{ok:true,build:v100,transport:cloudflare}`. Public HTML and a real Chrome tab loaded `engine.js` and `game.js` with `100-strategy-r4`. Downloaded public source hashes matched checked code byte-for-byte: engine SHA256 `e90d04926628cd5727ce1aa032fbee4fdbb753d79fd5c612bec0ba9c0c132de2`, game `de0c96f97b18221240e7ac38701d7a5d7c6f2a41d12247237a8639e06f01280d`. Two actual public Cloudflare WebSockets joined a fresh QA room, retained the creator, started a match, accepted Defend here and synchronized it to the other client. These are actual server tests, not merely mocks. QA rooms disconnect and expire under existing idle cleanup. Main was checked unchanged at `8ed0f5662df723fe64bb6fe263b45b8d4781bd60`.
+
+**Play/test URL:** https://brothers-kingdoms.murat-amir-olzhasuly.workers.dev/?v=100-strategy-r4 . Open a fresh page to load current scripts; an already running client can keep older JavaScript.
+
+**Final dense benchmark** (CI Linux runner, not a physical phone): four nations ×450k initial soldiers, 1,440 level-4 structures with sufficient actual capacity, roads/active war plans. Browser test splits physical columns to 1,000+ without creating strength, receives exact snapshots at 4 Hz and pans the camera at 390×780 for ~5 seconds/version. Baseline is v99 commit e8a8856.
+| Metric | v99 | v100 |
+|---|---:|---:|
+| Chromium FPS, CPU throttle ×4 | 17.34 | 46.00 |
+| Chromium draw p95, ms | 16.6 | 11.3 |
+| Chromium frame interval p95, ms | 86.6 | 44.4 |
+| WebKit FPS, unthrottled Linux | 10.15 | 43.62 |
+| WebKit draw p95, ms | 7 | 4 |
+| WebKit frame interval p95, ms | 132 | 31 |
+| Engine total CPU for 40 economy / 160 combat updates, median of 5 runs, ms | 3345.01 | 2797.82 |
+| Engine median simulated-second batch, ms | 85.79 | 69.52 |
+
+Dense building tessellation was a confirmed rendering bottleneck: exact licensed paths now reuse bounded 128px glyph canvases. Routing buffers/heap, global component pass, border/label/road/snapshot caches and conservative co-located squad merging reduce repeated work. Simulation and snapshot clocks were not lowered. Full gameplay outcomes can differ because combat/recruitment mechanics changed too; CPU comparisons are end-to-end scenario measurements, not a proof of identical battles. The earlier sparse-scene figures below are historical. Dense WebKit now reproduces a ~10 FPS baseline, but this is not proof of the same cause in Ramazan's specific iPhone session.
+
+**Playable controls and changes:** Military → My army has Defend here / Clear defense, Focus attack and Auto / Percent / Troops on the existing independent plans. Rows show allocated/en-route/target force; defense has assigned/en-route/in-position. All orders authoritative; no teleport, no double reservation, returning soldiers must reach base. Manual reduction conserves and physically returns surplus; eraser splits divide the numerical budget and retain focus only on the primary region. Priority defenders retain a protected 15% national-force portion against offensive mobilization, in addition to ordinary shared reserve rules. Deployed columns provide local defense and take local casualties. Recruits now appear across actual owned bases instead of always the first camp; zero production explains food/capacity limits. New same-kind construction surcharge 5%; upgrades use type base ×1.2/1.8/2.4. Reserve-based exponential reproduction removed. Building benefits retain actual per-level effects and show recruitment food cost. Optional Ping was not added.
+
+**Limits / next verification:** 30+ FPS on an actual iPhone Safari and the original brothers match are still not measured. Competitive balance needs live playtests; current economy scenarios verify formulas, food/capacity constraints and progression, not a proof that every strategy is equally strong. The latest commit after game-code d55849d only records this verified handoff (`[skip ci]`); it changes no executable files. Continue from fresh branch HEAD and this entry. Do not change main, redesign v99 surfaces or claim physical-device testing occurred.
+
 ## v100 recruitment locations / long-session squads / rapid resource input
 - Confirmed code issue behind camp confusion: `syncGarrisons` always spawned every recruit at `homeSites()[0]`. New recruitment chooses an actual owned base deterministically, weighted by barracks/city/background recruitment contribution. Initial old-save migration remains at the historical base. No recruits appear remotely on a front. Same-position/same-order cohorts now coalesce conservatively below the existing split threshold to avoid both indefinite group accumulation and merge/split order oscillation. Added 240-tick conservation/multiple-base/group-count regression.
 - Dense-renderer CI 39676242659 passed engine + Chromium but hit the pre-existing intermittent WebKit resource-toggle miss (`gold !== balanced`), also observed on initial v99. Resource HUD now activates once on valid pointerup, suppresses delayed compatibility click, retains keyboard/programmatic clicks, and ignores dragged/cancelled presses. Browser regression records pointer/click traces on failure. New cache r4; rerun all checks.
