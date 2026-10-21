@@ -326,6 +326,7 @@ function renderWars(){
  $('nationWarCount').classList.toggle('hidden',!wars.length);
  chip.setAttribute('aria-label','Nations and diplomacy · '+wars.length+' wars'+(incoming?' · offers pending':''));
  chip.classList.toggle('nations-pending',incoming||activeThreats.length>0);
+ chip.classList.toggle('nations-at-war',wars.length>0);
  const chosen=selectedNationTargets();
  const html=nations.map(n=>{
   const atWar=fighting(n.id),ally=me.allies.includes(n.id),targeted=chosen.includes(n.id);
