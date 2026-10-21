@@ -275,6 +275,21 @@ function declareApprovedWars(s,id,targets){
  }
 }
 
+function paintedComponents(cells){
+ const pending=new Set(cells),parts=[];
+ while(pending.size){
+  const first=pending.values().next().value,stack=[first],part=[];pending.delete(first);
+  while(stack.length){
+   const i=stack.pop();part.push(i);
+   const x=i%W,y=(i/W)|0;
+   for(const j of [x>0?i-1:-1,x<W-1?i+1:-1,y>0?i-W:-1,y<H-1?i+W:-1]){
+    if(pending.delete(j))stack.push(j);
+   }
+  }
+  parts.push(part.sort((a,b)=>a-b));
+ }
+ return parts.sort((a,b)=>b.length-a.length||a[0]-b[0]);
+}
 function upsertPaintedPlan(s,id,request,rawTargets,percent,editId=null,excludeTargets=[]){
  const p=person(s,id),checked=validatePaintedRegion(s,request,1);
  if(checked.error)return {ok:false,error:checked.error};
@@ -302,23 +317,24 @@ function upsertPaintedPlan(s,id,request,rawTargets,percent,editId=null,excludeTa
  // Preserve the full union instead of rejecting larger combined plans.
  if(!selected.size)return {ok:true,cells:0};
  // A painted region specifies geography only. Nations manages all hostility.
- const targets=[0,...nationTargets(s,id)];
+ const targets=[0,...nationTargets(s,id)],parts=paintedComponents(selected);
  const plan=original||[...merged][0]||{id:'p'+(++s.nonce),owner:id,waves:0,initialStrength:Math.max(35,Math.floor(p.troops*percent/100))};
  if(merged.size){
   const removedIds=new Set([...merged].map(pl=>pl.id));
-  // Withdraw active waves with the normal survivor refund; new geometry starts
-  // from the current border on the following tick.
   for(const wave of s.armies.filter(w=>removedIds.has(w.planId)))finishWave(s,wave,person(s,wave.owner));
   s.armies=s.armies.filter(w=>!removedIds.has(w.planId));
   s.attackPlans=s.attackPlans.filter(pl=>!removedIds.has(pl.id));
  }
- plan.zoneCells=[...selected].sort((a,b)=>a-b);
- plan.targets=targets;plan.targetOwner=targets[0]??0;plan.percent=percent;
- plan.nextWaveTick=merged.size?s.tick+1:s.tick;
- s.attackPlans??=[];s.attackPlans.push(plan);
- // War declarations are initiated explicitly in Nations.
- if(!merged.size)sendNextPlannedWave(s,plan);
- return {ok:true,merged:merged.size>0,planId:plan.id,waiting:!s.armies.some(a=>a.planId===plan.id)};
+ const plans=parts.map((zoneCells,i)=>{
+  const item=i===0?plan:{id:'p'+(++s.nonce),owner:id,waves:0,initialStrength:Math.max(35,Math.floor(p.troops*percent/100))};
+  item.zoneCells=zoneCells;item.targets=targets.slice();item.targetOwner=targets[0]??0;item.percent=percent;
+  item.nextWaveTick=merged.size?s.tick+1:s.tick;
+  s.attackPlans??=[];s.attackPlans.push(item);
+  if(!merged.size)sendNextPlannedWave(s,item);
+  return item;
+ });
+ return {ok:true,merged:merged.size>0,planId:plans[0].id,planIds:plans.map(q=>q.id),
+  separated:plans.length,waiting:plans.every(q=>!s.armies.some(a=>a.planId===q.id))};
 }
 function createPaintedPlan(s,id,a,percent){
  return upsertPaintedPlan(s,id,a.zone,a.targets??[s.owners[a.zone[0]]],percent,null,a.excludeTargets);
@@ -425,8 +441,10 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
    // Withdraw its active wave before changing zone geometry.
    for(const army of s.armies.filter(w=>w.planId===plan.id))finishWave(s,army,p);
    s.armies=s.armies.filter(w=>w.planId!==plan.id);
-   plan.zoneCells=remainder;
-   plan.nextWaveTick=Math.max(plan.nextWaveTick||0,s.tick+1);
+   const parts=paintedComponents(remainder);
+   plan.zoneCells=parts[0];plan.nextWaveTick=Math.max(plan.nextWaveTick||0,s.tick+1);
+   for(const cells of parts.slice(1))s.attackPlans.push({...plan,id:'p'+(++s.nonce),zoneCells:cells,
+    waves:0,nextWaveTick:s.tick+1});
   }
   return {ok:true,erased:changed,affected,deleted};
  }
