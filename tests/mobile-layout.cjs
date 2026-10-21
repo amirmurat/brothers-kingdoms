@@ -20,7 +20,20 @@ const server=http.createServer((req,res)=>{
   try{for(const viewport of [{width:320,height:568},{width:390,height:780},{width:844,height:390}]){
    const page=await browser.newPage({viewport});const label=name+' '+viewport.width+'x'+viewport.height;
    await page.goto(base,{waitUntil:'load'});
+   const entryFlat=await page.evaluate(()=>{
+    const read=id=>{const el=document.querySelector(id),s=getComputedStyle(el),r=el.getBoundingClientRect();return {radius:s.borderRadius,x:r.x,right:r.right};};
+    return {primary:read('#demoButton'),friends:read('#hostButton'),settings:read('#playerPreferences'),name:read('#nickname'),code:read('#roomCode')};
+   });
+   assert(Object.values(entryFlat).every(v=>v.radius==='0px'),label+' lobby controls share flat HUD corners');
+   assert(Math.abs(entryFlat.primary.x-entryFlat.friends.x)<1&&Math.abs(entryFlat.primary.right-entryFlat.friends.right)<1,label+' lobby buttons align');
+   assert(Math.abs(entryFlat.name.x-entryFlat.code.x)<1&&Math.abs(entryFlat.name.right-entryFlat.settings.right)<1,label+' lobby fields align');
    await page.evaluate(()=>window.__layout.setRoom());
+   const roomFlat=await page.evaluate(()=>{
+    const read=id=>{const el=document.querySelector(id),s=getComputedStyle(el),r=el.getBoundingClientRect();return {radius:s.borderRadius,border:s.borderLeftWidth,x:r.x,right:r.right};};
+    return {card:read('#waiting .waiting-card'),invite:read('#waiting .room-invite'),spawn:read('#waiting .spawn-picker'),rules:read('#waiting .room-rules')};
+   });
+   assert(Object.values(roomFlat).every(v=>v.radius==='0px'&&v.border==='0px'),label+' Room has no nested rounded cards');
+   assert(Math.abs(roomFlat.invite.x-roomFlat.spawn.x)<1&&Math.abs(roomFlat.invite.right-roomFlat.spawn.right)<1&&Math.abs(roomFlat.rules.x-roomFlat.spawn.x)<1,label+' Room sections share edges');
    assert(await page.locator('#waiting').isVisible(),label+' room is visible');
    assert(await page.locator('#startButton').isVisible(),label+' room Start visible');
    const spawn=page.locator('#spawnMap'),bounds=await spawn.boundingBox();
@@ -111,6 +124,14 @@ const server=http.createServer((req,res)=>{
    assert.equal(visualBudget.circles,0,label+' no per-squad circles');
    await page.evaluate(()=>{const L=window.__layout,s=L.getState();L.contextual(s.buildings.find(b=>b.kind==='capital'&&!s.players.find(p=>p.id===b.owner).bot));});
    assert((await page.locator('#contextBody').textContent()).includes('Garrison nearby'),label+' base tap reveals stationed troops');
+   const contextFlat=await page.evaluate(()=>{
+    const e=document.querySelector('#contextBody .context-effect'),style=getComputedStyle(e);
+    const costs=[...document.querySelectorAll('#contextBody .cost-unit')].map(x=>{const z=getComputedStyle(x);return {radius:z.borderRadius,fill:z.backgroundColor}});
+    return {radius:style.borderRadius,border:style.borderLeftWidth,costs};
+   });
+   assert.equal(contextFlat.radius,'0px',label+' building effect flat');
+   assert.equal(contextFlat.border,'0px',label+' building effect no frame');
+   assert(contextFlat.costs.every(c=>c.radius==='0px'&&c.fill==='rgba(0, 0, 0, 0)'),label+' costs have no pills');
    await page.evaluate(()=>window.__layout.hideAux());
    const bottomBefore=await page.locator('#buildDock').boundingBox();
    const toolBefore=await page.locator('#planToolPaint').boundingBox();
