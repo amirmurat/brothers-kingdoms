@@ -41,3 +41,36 @@ console.log('PASS v102: circular terrain scouting, allied visibility, invalid fo
  for(let n=0;n<100&&save.buildings[1].level===1;n++){save.tick++;E.workforceStep(save);}
  assert.equal(save.buildings[1].level,2,'Workers complete in-progress upgrade after save/restore');
 }
+
+
+{
+ const {s,id}=fixture(),fort={id:'travel-fort',owner:id,kind:'fort',level:1,x:35,y:20};
+ s.buildings=[fort,{id:'home',owner:id,kind:'capital',level:1,x:20,y:20}];
+ assert(E.action(s,id,{type:'upgrade',id:fort.id}).ok);
+ s.tick+=200;E.workforceStep(s);
+ assert.equal(fort.level,1,'Advancing the clock cannot instantly finish an upgrade');
+ assert.equal(fort.upgrade.progress,0,'Building work waits for workers to reach a distant site');
+ for(let n=0;n<140&&fort.level===1;n++){s.tick++;E.workforceStep(s);}
+ assert.equal(fort.level,2,'Builder travels the existing roads and actually upgrades the fort');
+ assert(!fort.upgrade,'Finished work clears paid job metadata');
+}
+{
+ const {s,id}=fixture(),fort={id:'isolated',owner:id,kind:'fort',level:1,x:30,y:20};
+ s.buildings=[fort];
+ assert(E.action(s,id,{type:'upgrade',id:fort.id}).ok);
+ s.tick+=300;E.workforceStep(s);
+ assert.equal(fort.level,1,'No builders means no upgrade progress despite elapsed time');
+ assert.equal(fort.upgrade.progress,0);
+ s.buildings.push({id:'base',owner:id,kind:'capital',level:1,x:20,y:20});
+ for(let n=0;n<140&&fort.level===1;n++){s.tick++;E.workforceStep(s);}
+ assert.equal(fort.level,2,'Building a worker base resumes previously queued upgrade');
+}
+{
+ const {s,id}=fixture(),fort={id:'legacy',owner:id,kind:'fort',level:1,x:20,y:20};
+ s.buildings=[fort,{id:'base',owner:id,kind:'capital',level:1,x:19,y:20}];
+ fort.upgrade={owner:id,level:2,readyTick:30};
+ s.tick=20;E.workforceStep(s);
+ assert(fort.upgrade.jobId,'Existing paid timed upgrades migrate to physical jobs');
+ assert(fort.upgrade.progress>=10,'Historical progress is preserved as completed work');
+ assert.equal(fort.level,1,'Migration cannot grant instant upgrade');
+}
