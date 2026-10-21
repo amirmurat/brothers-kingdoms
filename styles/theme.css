@@ -2005,30 +2005,201 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
 #game#game#game #resourceSummary.resource-hud>[data-resource]>.resource-heading>span{display:block!important;flex:0 0 auto!important;width:auto!important;min-width:0!important;max-width:none!important;position:static!important;margin:0!important;text-align:center!important}
 #game#game#game #resourceSummary.resource-hud>[data-resource]>.resource-heading>.res-icon{position:static!important;flex:0 0 14px!important;width:14px!important;height:14px!important;margin:0!important;transform:none!important}
 
-/* v91: flat controls share the header/footer surface language. */
+/* v93: shared flat surface system. The real children are .tech-item,
+   .army-line and .quick-row (not the unused .tech-card/.army-row).
+   This is the single active component layer, replacing v91's incomplete tail. */
+#game#game#game{
+ --hud-flat:#10141c;--sheet-flat:#151c26;--row-flat:#202b39;
+ --row-active:#203e49;--divider-flat:#354151;
+ --flat-ink:#edf2f8;--flat-muted:#acb8c8;
+}
 #game#game#game .topbar{grid-template-columns:repeat(3,minmax(0,1fr))!important}
 #game#game#game .topbar #hudFronts{display:none!important}
 #game#game#game #hudTroops{cursor:pointer}
 #game#game#game #hudTroops:focus-visible{outline:2px solid var(--accent)!important;outline-offset:-2px!important}
-#game#game#game button,
-#game#game#game :is(#sidebar,#sessionPanel,#exitPanel,#armiesPanel,#quickLeadersPanel,#contextCard,#warPanel,#tutorial>section,#minimapWrap,#planControls,.plan-vertical-item),
-#game#game#game :is(.nation-row,.army-row,.tech-card,.context-action,.aux-card){border-radius:0!important;box-shadow:none!important;border:0!important}
-#game#game#game :is(#planToolSwitch,#mapNavigation,.map-toolbar) button{
- display:grid!important;place-items:center!important;padding:0!important;width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;
- background:#151c26!important;border:0!important;border-radius:0!important;box-shadow:none!important;transform:none!important;
-}
-#game#game#game :is(#planToolSwitch,#mapNavigation,.map-toolbar) button>.ui-icon{margin:0!important;display:block!important;width:24px!important;height:24px!important}
-#game#game#game #planToolSwitch button.chosen{background:#174653!important;color:#8ae8ff!important}
-#game#game#game #minimapWrap{background:#10161e!important;overflow:hidden!important}
-#game#game#game #minimapWrap #minimap{border:0!important;border-radius:0!important}
-#game#game#game #minimapWrap:not(.minimized) #minimapToggle{width:100%!important}
-#game#game#game #planControls{background:#10161e!important}
-#game#game#game .plan-vertical-item{background:transparent!important}
-#game#game#game input[type=range]::-webkit-slider-thumb{border-radius:0!important;box-shadow:none!important}
-#game#game#game input[type=range]::-moz-range-thumb{border-radius:0!important;box-shadow:none!important}
-#game#game#game :is(#sidebar,#sessionPanel,#exitPanel,#armiesPanel,#quickLeadersPanel,#contextCard,#warPanel) button{min-height:44px!important}
-#game#game#game :is(#sidebar,#sessionPanel,#exitPanel,#armiesPanel,#quickLeadersPanel,#contextCard,#warPanel) :is(input,select){border-radius:0!important}
-#game#game#game :is(.aux-head,.panel-head,.war-panel-head) button{display:grid!important;place-items:center!important;padding:0!important;background:#202a38!important}
 
-/* Explicit action geometry wins over historical per-button skins. */
+/* Match-wide geometry; don't strip semantic colors or button hit targets. */
+#game#game#game :is(#sidebar,#sessionPanel,#exitPanel,#armiesPanel,#quickLeadersPanel,#contextCard,#warPanel,#tutorial>section){
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+ background:var(--sheet-flat)!important;color:var(--flat-ink)!important;
+}
+#game#game#game :is(#sidebar,#sessionPanel,#exitPanel,#armiesPanel,#quickLeadersPanel,#contextCard,#warPanel) :is(input,select,button),
+#game#game#game #tutorial button{
+ border-radius:0!important;box-shadow:none!important;
+}
+#game#game#game :is(#sidebar,#sessionPanel,#exitPanel,#armiesPanel,#quickLeadersPanel,#contextCard,#warPanel) button{
+ min-height:44px!important;border:0!important;box-shadow:none!important;
+}
+#game#game#game :is(.sidebar-heading,.aux-head,.armies-panel-head,.war-panel-title){
+ border:0!important;border-bottom:1px solid var(--divider-flat)!important;
+ border-radius:0!important;background:var(--sheet-flat)!important;
+}
+/* No mini-cards: section data is part of its panel, separated only by hairlines. */
+#game#game#game #techPanel .tech-item.tech-detail,
+#game#game#game #armiesList .army-line,
+#game#game#game #quickLeadersPanel .quick-row,
+#game#game#game #warPanel .nation-row,
+#game#game#game #sessionPanel :is(.session-action,.session-setting,.session-summary),
+#game#game#game #contextBody :is(.context-action,.context-effect){
+ margin:0!important;border:0!important;border-radius:0!important;
+ background:transparent!important;box-shadow:none!important;
+}
+#game#game#game #techPanel,
+#game#game#game #armiesList,
+#game#game#game #quickLeadersList,
+#game#game#game #warPanelList{gap:0!important;padding:0!important}
+#game#game#game #techPanel .tech-item.tech-detail{
+ padding:16px 0!important;gap:9px!important;
+ border-bottom:1px solid var(--divider-flat)!important;
+}
+#game#game#game #techPanel .tech-item.tech-detail:last-child{border-bottom:0!important}
+#game#game#game #techPanel :is(.tech-next,.tech-price,.tech-footer,.tech-availability){
+ background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;
+}
+#game#game#game #techPanel .tech-heading strong{color:var(--flat-ink)!important}
+#game#game#game #techPanel .tech-detail>p{color:var(--flat-muted)!important}
+#game#game#game #techPanel .cost-unit,
+#game#game#game #buildDock .dock-cost .cost-unit{
+ background:transparent!important;border:0!important;border-radius:0!important;
+ box-shadow:none!important;margin:0!important;padding:0!important;
+}
+#game#game#game #techPanel [data-research]{
+ background:var(--row-flat)!important;color:var(--flat-ink)!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+ min-height:44px!important;cursor:pointer;
+}
+#game#game#game #techPanel [data-research]:disabled{
+ background:#202630!important;color:#aab4c3!important;cursor:default;
+}
+/* Preserve concise army statuses while removing the redundant card outlines. */
+#game#game#game #armiesList .army-line{
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ gap:8px!important;padding:16px 0!important;min-width:0!important;
+ border-bottom:1px solid var(--divider-flat)!important;
+}
+#game#game#game #armiesList .army-line:last-child{border-bottom:0!important}
+#game#game#game #armiesList .army-line>div{grid-column:1/-1!important}
+#game#game#game #armiesList .army-line :is(strong,small){
+ display:block!important;white-space:normal!important;overflow-wrap:anywhere!important;
+}
+#game#game#game #armiesList .army-line strong{font-weight:700!important;color:var(--flat-ink)!important}
+#game#game#game #armiesList .army-line small{color:var(--flat-muted)!important}
+#game#game#game #armiesList .army-line button,
+#game#game#game #warPanel .nation-actions button{
+ width:100%!important;min-height:44px!important;margin:0!important;padding:8px 10px!important;
+ background:var(--row-flat)!important;color:var(--flat-ink)!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+}
+#game#game#game #warPanel .nation-actions .nation-attack.chosen{
+ background:#50303d!important;color:#ffd5e0!important;
+}
+#game#game#game #quickLeadersPanel .quick-row{
+ min-height:48px!important;padding:10px 8px!important;
+ border-bottom:1px solid var(--divider-flat)!important;
+}
+#game#game#game #quickLeadersPanel .quick-row:last-child{border-bottom:0!important}
+#game#game#game #quickLeadersPanel .quick-row.is-me{
+ background:var(--row-active)!important;border-radius:0!important;
+}
+#game#game#game #quickLeadersPanel .quick-row.is-me b{color:var(--flat-ink)!important}
+
+/* Every close action is the same flat, centered square. */
+#game#game#game :is(#closePanel,#closeContext,#closeArmies,#closeSession,#closeQuickLeaders,#closeTutorial,#warPanelClose,#threatClose){
+ display:grid!important;place-items:center!important;
+ width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;
+ padding:0!important;margin:0!important;flex:0 0 48px!important;
+ background:var(--row-flat)!important;color:var(--flat-muted)!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+}
+#game#game#game :is(#closePanel,#closeContext,#closeArmies,#closeSession,#closeQuickLeaders,#closeTutorial,#warPanelClose) svg{
+ display:block!important;width:20px!important;height:20px!important;margin:0!important;
+}
+/* Map actions belong to a single continuous toolbar, not separated cards. */
+#game#game#game #planToolSwitch{
+ display:flex!important;flex-direction:column!important;align-items:stretch!important;
+ gap:1px!important;padding:0!important;margin:0!important;
+ background:var(--divider-flat)!important;border:0!important;border-radius:0!important;box-shadow:none!important;
+ width:48px!important;min-width:48px!important;
+}
+#game#game#game #planToolSwitch button,
+#game#game#game #planToolSwitch #scienceButton,
+#game#game#game #mapNavigation #warChip,
+#game#game#game #mapNavigation #minimapToggle,
+#game#game#game .map-toolbar #menuToggle{
+ display:grid!important;place-items:center!important;
+ width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;
+ margin:0!important;padding:0!important;
+ background:var(--sheet-flat)!important;color:var(--flat-ink)!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;transform:none!important;
+}
+#game#game#game #planToolSwitch button :is(svg,.ui-icon),
+#game#game#game #mapNavigation button>.ui-icon,
+#game#game#game .map-toolbar button>.ui-icon{
+ display:block!important;width:24px!important;height:24px!important;margin:0!important;
+}
+#game#game#game #planToolSwitch button.chosen,
+#game#game#game #planToolSwitch #planToolErase.chosen,
+#game#game#game #planToolSwitch #scienceButton.chosen{
+ background:var(--row-active)!important;color:#8ae8ff!important;
+}
+#game#game#game #mapNavigation{gap:1px!important;background:var(--divider-flat)!important;align-items:flex-end!important}
+#game#game#game #mapNavigation #minimapWrap{
+ padding:0!important;margin:0!important;border:0!important;border-radius:0!important;
+ background:var(--sheet-flat)!important;box-shadow:none!important;overflow:hidden!important;
+}
+#game#game#game #mapNavigation #minimapWrap:not(.minimized) #minimapToggle{
+ width:100%!important;border-bottom:1px solid var(--divider-flat)!important;
+}
+#game#game#game #mapNavigation #minimap{
+ display:block!important;margin:0!important;border:0!important;border-radius:0!important;
+}
+#game#game#game #planControls{background:var(--sheet-flat)!important;border:0!important;border-radius:0!important}
+#game#game#game .plan-vertical-item{background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+
+/* The warning is one flat, tappable row in the same geometry as HUD cells. */
+#game#game#game #notificationStack :is(#incomingAttack,#hudAlert,#gameToast,#threatRail,#threatList){
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+}
+#game#game#game #notificationStack :is(#incomingAttack,#hudAlert,#gameToast){min-height:48px!important;max-height:48px!important}
+#game#game#game #notificationStack #threatList{background:var(--sheet-flat)!important}
+#game#game#game #notificationStack .threat-item{
+ background:transparent!important;border:0!important;border-top:1px solid var(--divider-flat)!important;
+ border-radius:0!important;box-shadow:none!important;
+}
+/* Bottom dock pricing is an inline readout, not individual pill frames. */
+#game#game#game #buildDock .dock-cost{gap:3px!important}
+#game#game#game #buildDock .dock-cost .cost-unit{
+ display:inline-flex!important;align-items:center!important;gap:1px!important;
+ color:var(--flat-muted)!important;
+}
+/* Focus remains visible without the old rounded outlines. */
+#game#game#game :is(button,[role="button"]):focus-visible{
+ outline:2px solid #74dbf5!important;outline-offset:-2px!important;
+}
+#game#game#game input[type=range]::-webkit-slider-thumb,
+#game#game#game input[type=range]::-moz-range-thumb{
+ border-radius:0!important;box-shadow:none!important;
+}
 #game#game#game#game#game#game button{border-radius:0!important;box-shadow:none!important;border:0!important}
+
+/* Main menu and waiting room use the same no-frame surface system. */
+#lobby#lobby#lobby :is(.start-screen,.start-choice,.start-settings,.join-direct,.choice-symbol,.start-emblem),
+#waiting#waiting#waiting :is(.waiting-card,.entry-card,.room-invite,.room-settings,.room-rules,.player-row,.room-share){
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+}
+#lobby#lobby#lobby :is(.start-choice,.join-direct,.start-settings),
+#waiting#waiting#waiting :is(.room-invite,.room-settings,.player-row){
+ background:var(--sheet-flat,#151c26)!important;
+}
+#lobby#lobby#lobby button,#waiting#waiting#waiting button,
+#lobby#lobby#lobby input,#waiting#waiting#waiting :is(input,select){
+ border-radius:0!important;box-shadow:none!important;
+}
+#lobby#lobby#lobby :is(.start-choice,.start-settings),
+#waiting#waiting#waiting .player-row{
+ border-bottom:1px solid #354151!important;
+}
+@media(max-height:480px) and (orientation:landscape){
+ #game#game#game #planToolSwitch{width:48px!important;min-width:48px!important}
+ #game#game#game #planToolSwitch button{height:48px!important}
+}
