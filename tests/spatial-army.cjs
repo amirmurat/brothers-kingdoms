@@ -70,3 +70,31 @@ const sum=p=>p.garrisons.reduce((n,g)=>n+g.strength,0);
  assert(t.p.troops<=before-lost+1e-6,'Encircled squads cannot teleport out of a captured pocket');
 }
 console.log('PASS spatial army: bases, wartime guards, rear reserve, local defense, peace, marching, recall, save/rejoin and disconnected routes');
+
+// A broad painted plan has a misleading distant midpoint. The real invasion
+// is at the north tip; a large reserve must reinforce that physical threat.
+{
+ const t=fixture();t.p.troops=196400;t.p.garrisons=[{id:'reserve',x:65,y:30,strength:196400,returning:false}];
+ E.action(t.s,t.id,{type:'setNationTarget',target:t.enemy,enabled:true});
+ t.s.armies=[{id:'invasion',owner:t.enemy,strength:12000,tx:70,ty:40,
+  columns:[{x:71,y:20,tx:71,ty:20,strength:12000,route:[]}]}];
+ for(let n=0;n<55;n++)E.spatialArmyStep(t.s);
+ const north=t.p.garrisons.filter(g=>g.role==='Guard'&&g.y<28).reduce((n,g)=>n+g.strength,0);
+ const south=t.p.garrisons.filter(g=>g.role==='Guard'&&g.y>32).reduce((n,g)=>n+g.strength,0);
+ assert(north>south*2,'Physical invasion outweighs a quiet, misleading wave midpoint');
+ assert(E.tileDefense(t.s,t.id,70,20)>E.tileDefense(t.s,t.id,70,40)*2,'Northern soldiers really defend the threatened cells');
+ assert(Math.abs(sum(t.p)-196400)<1e-6,'Redistribution cannot create or lose soldiers');
+}
+{
+ const t=fixture();t.p.troops=196400;t.p.garrisons=[{id:'reserve',x:65,y:30,strength:196400,returning:false}];
+ E.action(t.s,t.id,{type:'setNationTarget',target:t.enemy,enabled:true});
+ E.spatialArmyStep(t.s);
+ const g=t.p.garrisons.find(g=>g.role==='Guard'&&g.route?.length>3);
+ assert(g,'A real guard route is available');const before={x:g.x,y:g.y},length=g.route.length;
+ E.combatStep(t.s);
+ assert.equal(Math.abs(before.x-g.x)+Math.abs(before.y-g.y),1,'Reserve travels during combat substeps too');
+ assert.equal(g.route.length,length-1,'Combat movement reuses the friendly route');
+ const blocked=g.route[0];t.s.owners[blocked]=t.enemy;
+ const position={x:g.x,y:g.y};E.combatStep(t.s);
+ assert.equal(g.x,position.x);assert.equal(g.y,position.y,'No movement through a newly captured tile');
+}
