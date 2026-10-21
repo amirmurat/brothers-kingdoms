@@ -1594,7 +1594,10 @@ $('cancelConnect').onclick=goHome;
 $('hostButton').onclick=createRoom;$('joinButton').onclick=joinRoom;$('demoButton').onclick=()=>createDemo(false);$('resumeButton').onclick=()=>createDemo(true);
 $('leaveRoom').onclick=()=>{if(host)for(const c of connections.keys())try{c.send({t:'room-closed'});}catch(_){}goHome();};
 $('startButton').onclick=startGame;$('copyLink').onclick=inviteFriends;$('copyCode').onclick=()=>copyText(code);
-$('hudFronts').onclick=()=>$('armiesToggle').click();$('hudFronts').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('armiesToggle').click();}};
+for(const id of ['hudTroops','hudFronts']){
+ $(id).onclick=()=>showAux('armiesPanel');
+ $(id).onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showAux('armiesPanel');}};
+}
 function openResearch(){openPanel();$('scienceButton').setAttribute('aria-pressed','true');$('scienceButton').classList.add('chosen');updateUI();}
 $('scienceButton').onclick=openResearch;
 $('closeSession').onclick=hideAux;$('openLeaderboard').onclick=()=>showAux('quickLeadersPanel');$('closeQuickLeaders').onclick=hideAux;

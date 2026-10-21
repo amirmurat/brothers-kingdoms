@@ -205,7 +205,8 @@ const server=http.createServer((req,res)=>{
    await page.evaluate(()=>window.__layout.warnHud('Capital threatened','danger'));
    assert.equal(await page.locator('#hudAlert').isVisible(),true,label+' danger takes priority');
    assert.equal(await page.locator('#gameToast').isVisible(),false,label+' toast hidden behind danger');
-   await page.evaluate(()=>window.__layout.showAux('armiesPanel'));
+   assert.equal(await page.locator('#hudFronts').isVisible(),false,label+' separate offensives HUD removed');
+   await page.locator('#hudTroops').click();
    assert(await page.locator('[data-front-row="home-army"]').isVisible(),label+' home squads are visible in army overview');
    const armyBox=await page.locator('#armiesPanel').boundingBox();
    assert(armyBox.x>=0&&armyBox.x+armyBox.width<=viewport.width+1,label+' army overview fits the screen');
@@ -219,6 +220,7 @@ const server=http.createServer((req,res)=>{
     return {x:r.x,width:r.width,bottom:r.bottom,radius:css.borderRadius,background:css.backgroundColor,title:head.fontSize};
    },heading);
    const match=await sheetStyle('#sessionPanel','.aux-head strong');
+   assert.equal(match.radius,'0px',label+' flat rectangular sheets');
    await page.evaluate(()=>{window.__layout.hideAux();window.__layout.openPanel();});
    const research=await sheetStyle('#sidebar','.sidebar-heading strong');
    await page.evaluate(()=>window.__layout.closePanel());

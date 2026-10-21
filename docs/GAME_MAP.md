@@ -599,3 +599,6 @@ syncPaintEligibility prunes invalid draft cells when ownership or saved-plan geo
 
 ### v90 fixed HUD grid
 .resource-heading wraps each resource icon/name. --bottom-hud-size and --bottom-hud-half define equal normal/paint bottom HUD geometry and usable-map control centering. Header/value/income rows are fixed independently of text length. ThreatExpand remains hidden compatibility DOM; incomingAttack now opens the flat list for multiple threats, or focuses the sole threat. No simulation changes.
+
+### v91 flat controls / Reserve navigation
+#hudTroops now has button semantics and opens #armiesPanel on click/Enter/Space. #hudFronts stays hidden compatibility DOM; topbar has three columns. Final theme component rules flatten match buttons, sheets, minimap and brush surfaces; fixed-size side controls preserve position and hit targets.

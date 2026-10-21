@@ -522,3 +522,8 @@ _Обновлено: 20 октября 2026 года, рабочая preview-в�
 - Normal building HUD and planning HUD share 112px height (88px landscape), plus safe-area inset, with the same bottom anchor. Original bottom HUD is increased to match planner per user request. Both side controls are centered between the reserved top status row and fixed bottom HUD, same before/after selecting attack. Navigation is raised above that surface.
 - Threat notification is one flat action with plain status glyph and one arrow; separate Fronts chevron hidden. Multiple-threat click opens list, single-threat click locates it. List/header/rows are flat, without nested frames or rounded inner cards. Existing one-notification priority remains.
 - Local UI/client/cap/build checks passed. Browser suite checks numeric stability, full-cell fills, identical bottom heights/positions and both control centers in all 3 viewports. CI/deployment checked after publication. Physical iPhone Safari still unverified.
+
+## v91 — Reserve navigation and flat match controls
+- Removed the separate Offensives HUD cell; Reserve opens My army/offensives by tap or Enter/Space. Legacy counters remain hidden for snapshot compatibility. Three equal top stats retain fixed number rows.
+- Match buttons, sheets, minimap and brush control use flat rectangular surfaces without framed rounded cards. Side controls retain fixed 48px targets and centered icons, selected tools use background fill. No simulation/animation changes.
+- Local syntax, UI transitions, Cloudflare client, army paint limit and asset build checks passed. Mobile CI covers Reserve navigation and flat sheet geometry; physical iPhone remains unverified.

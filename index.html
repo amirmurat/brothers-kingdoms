@@ -9,7 +9,7 @@
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
 <link rel="stylesheet" href="styles/legacy.css?v=49-visible-camp"/>
-<link rel="stylesheet" href="styles/theme.css?v=90-stable-hud-grid-r3"/>
+<link rel="stylesheet" href="styles/theme.css?v=91-flat-controls"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -50,7 +50,7 @@
 <div class="game-screen hidden" id="game">
 <header class="topbar">
 <div class="brand"><div class="brand-symbol"><svg aria-hidden="true" viewbox="0 0 24 24"><path d="M4 19V9l5 3 3-7 3 7 5-3v10H4Z"></path></svg></div><div class="brand-name">BROTHERS <b>KINGDOMS</b></div></div>
-<div class="top-stat troop-stat" id="hudTroops" title="Troops in reserve"><span class="reserve-label"><svg class="reserve-army-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/game.svg#sword"></use><use href="assets/icons/game.svg#sword" transform="translate(256 0) scale(-1 1)"></use></svg><span>RESERVE</span></span><b id="troopCount">0</b><div class="stat-meta"><small id="troopGrowth">+0/s</small><small class="stat-aux" id="troopCap">/0</small><small class="troop-reason hidden" id="troopReason"></small></div></div>
+<div class="top-stat troop-stat" id="hudTroops" role="button" tabindex="0" aria-label="Open army and offensives" title="Open army and offensives"><span class="reserve-label"><svg class="reserve-army-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/game.svg#sword"></use><use href="assets/icons/game.svg#sword" transform="translate(256 0) scale(-1 1)"></use></svg><span>RESERVE</span></span><b id="troopCount">0</b><div class="stat-meta"><small id="troopGrowth">+0/s</small><small class="stat-aux" id="troopCap">/0</small><small class="troop-reason hidden" id="troopReason"></small></div></div>
 <div class="top-stat" id="hudWorkers" title="Civilian builders and harvesters"><span class="reserve-label"><svg class="reserve-army-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/game.svg#hammer"></use></svg><span>BUILDERS</span></span><b id="workerCount">0</b><small id="workerStatus">0 working</small></div><div class="top-stat land-stat" title="Conquered land percentage"><span>LAND</span><b id="landCount">0%</b><small id="landShare">goal 100%</small><div aria-hidden="true" class="land-progress"><i id="landProgress"></i></div></div>
 <div class="top-stat clock-stat" id="hudFronts" role="button" tabindex="0" aria-label="Open my offensives"><span>OFFENSIVES</span><b id="frontCount">0</b><small id="networkStatus">ONLINE</small></div>
 
@@ -185,8 +185,8 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="server-config.js?v=90-stable-hud-grid-r3"></script>
-<script src="engine.js?v=90-stable-hud-grid-r3"></script>
+<script src="server-config.js?v=91-flat-controls"></script>
+<script src="engine.js?v=91-flat-controls"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=90-stable-hud-grid-r3"></script>
+<script src="game.js?v=91-flat-controls"></script>
 </body></html>
