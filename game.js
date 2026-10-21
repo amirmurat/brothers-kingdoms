@@ -1478,16 +1478,16 @@ function drawInfrastructure(){
   const paths=new Map(),roadPath=new Path2D();
   for(const z of zones||[]){let path=paths.get(z.resource);if(!path){path=new Path2D();paths.set(z.resource,path);}if(z.owner===myId)for(const i of z.zoneCells)path.rect(i%E.W*TILE,((i/E.W)|0)*TILE,TILE,TILE);}
   const connected=new Set(roads);
-  for(const i of roads){const x=i%E.W,y=(i/E.W)|0;roadPath.rect((x+.3)*TILE,(y+.3)*TILE,TILE*.4,TILE*.4);
-   if(x<E.W-1&&connected.has(i+1))roadPath.rect((x+.5)*TILE,(y+.36)*TILE,TILE,TILE*.28);
-   if(y<E.H-1&&connected.has(i+E.W))roadPath.rect((x+.36)*TILE,(y+.5)*TILE,TILE*.28,TILE);
+  for(const i of roads){const x=i%E.W,y=(i/E.W)|0;roadPath.rect((x+.39)*TILE,(y+.39)*TILE,TILE*.22,TILE*.22);
+   if(x<E.W-1&&connected.has(i+1))roadPath.rect((x+.5)*TILE,(y+.42)*TILE,TILE,TILE*.16);
+   if(y<E.H-1&&connected.has(i+E.W))roadPath.rect((x+.42)*TILE,(y+.5)*TILE,TILE*.16,TILE);
   }
   infrastructureCache={seed:state.seed,myId,zoneCells:(zones||[]).map(z=>z.zoneCells),length:roads.length,roadRevision:state.roadRevision,revision:state.workRevision,paths,roadPath};
  }
  ctx.save();ctx.globalAlpha=.18;
  const shades={food:'#a7cf78',wood:'#54bc94',stone:'#c7cfdb',gold:'#e8ca70'};
  for(const [r,path] of infrastructureCache.paths){ctx.fillStyle=shades[r];ctx.fill(path);}
- ctx.globalAlpha=.65;ctx.fillStyle='#bdad92';ctx.fill(infrastructureCache.roadPath);ctx.restore();
+ if(zoom>=.85){ctx.globalAlpha=zoom<1.5?.25:.48;ctx.fillStyle='#a98f68';ctx.fill(infrastructureCache.roadPath);}ctx.restore();
 }
 function drawHarvestSites(w,h){
  const p=mine();if(!p)return;const colors={food:'#d6e88c',wood:'#7ae0aa',stone:'#d8e2ee',gold:'#ffdc71'};
