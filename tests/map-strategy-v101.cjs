@@ -31,3 +31,10 @@ console.log('PASS v101: fort intelligence, hidden AI knowledge, cluster weight, 
  assert(E.action(s,id,{type:'armyPosture',value:'defensive'}).ok);assert.equal(E.militaryStrength(s,id).total,10000);assert.equal(s.armies[0].strength,4000);
  assert(p.garrisons.some(g=>g.returning&&g.x===68&&g.y===40&&g.strength===4000),'Defensive posture withdraws surplus physically from the front');
 }
+
+{
+ const {s,id,p}=fixture();s.buildings=[{id:'only-camp',owner:id,kind:'barracks',level:1,x:60,y:40}];p.garrisons=[{id:'home',x:60,y:40,strength:10000}];E.spatialArmyStep(s,false);
+ const guard=p.garrisons.find(g=>g.camp!==undefined),initial=guard.strength;
+ for(let n=0;n<30;n++){s.tick++;p.troops+=100;E.spatialArmyStep(s,false);}
+ assert.equal(guard.strength,initial,'New recruits never merge into the protected minimum camp guard');assert.equal(E.militaryStrength(s,id).total,13000);
+}

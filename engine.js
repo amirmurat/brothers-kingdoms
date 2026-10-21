@@ -760,7 +760,7 @@ function homeSites(s,id){
 }
 function reserveSquad(s,p,x,y,strength,returning=false){
  p.garrisons??=[];
- const same=p.garrisons.find(g=>g.x===x&&g.y===y&&!!g.returning===returning);
+ const same=p.garrisons.find(g=>g.x===x&&g.y===y&&g.camp===undefined&&!!g.returning===returning);
  if(same){same.strength+=strength;return same;}
  const g={id:'g'+(++s.nonce),x,y,strength,returning};p.garrisons.push(g);return g;
 }
