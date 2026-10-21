@@ -21,6 +21,7 @@ const BUILDING_TIERS={city:['#bd88ed','#e572cd','#ee82a3','#efb15b','#ffe69a'],b
 const buildingLevelColor=b=>(BUILDING_TIERS[b.kind]||BUILDING_LEVEL_COLORS)[Math.min(4,Math.max(0,(b.level||1)-1))];
 
 const buildingArt=kind=>`<img class="building-art" src="assets/shapes/${kind}.svg" alt="" aria-hidden="true"/>`;
+const BUILDING_CODES={capital:'HQ',city:'CT',barracks:'BA',fort:'FT',farm:'FM',lumber:'WD',quarry:'ST',mine:'AU'};
 const buildingInfo={
  farm:{short:'Feeds your army.',detail:'+8 food/s per level',place:'Your land, excluding mountain summits',resource:'food',perLevel:8},
  lumber:{short:'Produces wood for development.',detail:'+7 wood/s per level',place:'Forests only',resource:'wood',perLevel:7},
@@ -665,16 +666,20 @@ function contextual(item){
  const box=$('contextCard'),content=$('contextBody');if(!item){if(!box.classList.contains('hidden'))hideAux();return;}
  const me=mine(),own=item.owner===myId,other=E.person(state,item.owner);let html='';
  if(item.kind&&item.kind!=='army'){
-  const details=buildingInfo[item.kind],cost=E.costUpgrade(item),maxed=item.level>=4,upgrading=item.upgrade,remaining=Math.max(0,(upgrading?.readyTick||0)-state.tick);
+  const details=buildingInfo[item.kind],cost=E.costUpgrade(item),maxed=item.level>=4,upgrading=item.upgrade;
+  const upgradeJob=upgrading&&(state.buildJobs||[]).find(j=>j.id===upgrading.jobId);
+  const upgradeWorker=upgrading&&(me.workers||[]).find(g=>g.job===upgrading.jobId);
+  const progress=upgradeJob?.progress??upgrading?.progress??0,total=upgrading?.total||E.upgradeTime(item);
+  const buildState=!upgradeWorker?'Waiting for builders':upgradeWorker.x===item.x&&upgradeWorker.y===item.y?'Builders working':'Builders travelling';
   const effect=details?buildingBenefit(item.kind,me,item.level):'Capital defense improves at each level';
   const next=details?buildingBenefit(item.kind,me,item.level+1):'Capital defense will increase';
   const stationed=own&&['capital','city','barracks'].includes(item.kind)?(me.garrisons||[]).filter(c=>!c.returning&&(!Number.isFinite(c.tx)||c.x===c.tx&&c.y===c.ty)&&Math.abs(c.x-item.x)+Math.abs(c.y-item.y)<=2).reduce((n,c)=>n+c.strength,0):null;
-  html=`<div class="context-heading"><strong><i class="building-level-swatch" style="background:${buildingLevelColor(item)}" aria-hidden="true"></i>${esc(E.KINDS[item.kind]?.name||'Capital')} · lvl. ${item.level}</strong><small>${esc(other?.name||'')}</small></div>
+  html=`<div class="context-heading"><strong><img class="context-building-art" src="assets/shapes/${esc(item.kind)}.svg" alt="" aria-hidden="true"/>${esc(E.KINDS[item.kind]?.name||'Capital')} · lvl. ${item.level}</strong><small>${esc(other?.name||'')}</small></div>
    <div class="context-effect"><small>Current</small><span>${esc(effect)}</span></div>
    ${own&&item.kind==='fort'?`<div class="context-effect"><small>Scouting range</small><span>${E.fortRadius(item,state)} tiles · ${esc(terrainNames[E.tile(state,item.x,item.y)])}</span></div>`:''}
    ${stationed===null?'':`<div class="context-effect"><small>Garrison nearby</small><span>${number(stationed)} troops</span></div>`}
    ${maxed?'':`<div class="context-effect context-effect-next"><small>After upgrade</small><span>${esc(next)}</span></div>`}
-   ${own&&upgrading?`<div class="context-effect"><small>Upgrading to level ${upgrading.level}</small><span>${remaining}s remaining · current output until complete</span></div>`:own&&!maxed?`<div class="context-upgrade-price"><small>Upgrade cost</small><div>${briefCost(cost)}</div></div><button data-context-upgrade="${esc(item.id)}" ${!canPay(me,cost)?'disabled':''}>Upgrade · ${E.upgradeTime(item)}s</button>${!canPay(me,cost)?`<small class="context-shortage">Missing: ${deficit(me,cost)}</small>`:''}`:own?'<small>Maximum level</small>':''}`;
+   ${own&&upgrading?`<div class="context-effect"><small>Upgrading to level ${upgrading.level}</small><span>${buildState} · ${Math.floor(progress)}/${total} work · current output until complete</span></div>`:own&&!maxed?`<div class="context-upgrade-price"><small>Upgrade cost</small><div>${briefCost(cost)}</div></div><button data-context-upgrade="${esc(item.id)}" ${!canPay(me,cost)?'disabled':''}>Assign builders · ${E.upgradeTime(item)} work</button>${!canPay(me,cost)?`<small class="context-shortage">Missing: ${deficit(me,cost)}</small>`:''}`:own?'<small>Maximum level</small>':''}`;
 
  }else html=`<strong>Army · ${esc(other?.name||'')}</strong><span>${number(item.strength)} troops · ${item.tx},${item.ty}</span>${own?`${!Array.isArray(item.zoneCells)?`<button data-context-redirect="${esc(item.id)}">Change target</button>`:''}<button data-context-return="${esc(item.id)}">Retreat</button>`:''}`;
  if(content.__last!==html){content.innerHTML=html;content.__last=html;}if(box.classList.contains('hidden'))showAux('contextCard');
@@ -1583,6 +1588,22 @@ if(typeof Image==='function')for(const id of new Set(Object.values(townRecipes).
  const tile=new Image();townTiles[id]=tile;tile.onload=assembleTownSprites;
  tile.src='assets/tiny-town/tile_'+String(id).padStart(4,'0')+'.png';
 }
+// Accessible, type-specific map markers: independent silhouettes and two-letter
+// labels remain readable in greyscale. Pre-render to avoid per-frame text work.
+const buildingTypeMarkers=new Map();
+function buildingTypeMarker(kind){
+ if(buildingTypeMarkers.has(kind))return buildingTypeMarkers.get(kind);
+ const icon=document.createElement('canvas');icon.width=52;icon.height=62;
+ const c=icon.getContext('2d');c.fillStyle='#0e1e28';c.fillRect(2,2,48,58);
+ c.strokeStyle='#dcecf6';c.lineWidth=3;c.strokeRect(2.5,2.5,47,57);
+ const path=buildingPaths[kind]||buildingPaths.city;
+ c.save();c.translate(13,5);c.scale(26/(kind==='capital'?64:512),26/(kind==='capital'?64:512));
+ c.fillStyle='#f5faff';c.fill(path,'evenodd');c.restore();
+ c.fillStyle='#dbe5ef';c.fillRect(4,34,44,1);
+ c.textAlign='center';c.textBaseline='middle';c.fillStyle='#ffffff';
+ c.font='bold 17px system-ui';c.fillText(BUILDING_CODES[kind]||'BL',26,47);
+ buildingTypeMarkers.set(kind,icon);return icon;
+}
 // Reuse exact licensed vector silhouettes as raster glyphs. Dense cities no
 // longer tessellate/stroke the same long SVG paths on every pan frame.
 const buildingGlyphs=new Map();
@@ -1639,19 +1660,30 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   if(!E.visibleBuilding(state,myId,b))continue;
   const x=(b.x+.5)*TILE,y=(b.y+.5)*TILE;
   if(x*zoom+camX<-55||x*zoom+camX>w+55||y*zoom+camY<-55||y*zoom+camY>h+55)continue;
-  const ownerColor=color(b.owner),footY=y+TILE*.43;
-  if(zoom<1.4){
-   // Overview markers stay legible without turning the entire map into icons.
-   ctx.fillStyle='#0b2438';ctx.fillRect(x-TILE*.23,y-TILE*.23,TILE*.46,TILE*.46);
-   ctx.fillStyle=buildingLevelColor(b);ctx.fillRect(x-TILE*.16,y-TILE*.16,TILE*.32,TILE*.32);
+  const ownerColor=color(b.owner),footY=y+TILE*.43,marker=buildingTypeMarker(b.kind);
+  if(zoom<1.35){
+   // At strategic overview hide resource production; strategic silhouettes
+   // retain their type label instead of becoming indistinguishable color dots.
+   if(zoom<.48&&E.KINDS[b.kind]?.income)continue;
+   const h=Math.max(15,Math.min(28,17+zoom*9))/zoom,w=h*marker.width/marker.height;
+   ctx.drawImage(marker,x-w/2,y-h/2,w,h);
+   if(zoom>=.75&&b.level>1){
+    ctx.fillStyle='#101c26';ctx.fillRect(x+w*.14,y+h*.2,8/zoom,8/zoom);
+    ctx.fillStyle='#ffffff';ctx.font=`bold ${7/zoom}px system-ui`;ctx.fillText(String(b.level),x+w*.14+4/zoom,y+h*.2+4/zoom);
+   }
    continue;
   }
+  // Recognizable licensed pixel art at close zoom, with a monochrome type
+  // emblem and explicit tier number rather than relying on its roof color.
   ctx.fillStyle='#0b243899';ctx.beginPath();ctx.ellipse(x,footY,TILE*.64,TILE*.19,0,0,Math.PI*2);ctx.fill();
   const spriteH=TILE*1.58,sprite=townSprites[b.kind];
   if(sprite){ctx.imageSmoothingEnabled=false;ctx.drawImage(sprite,x-spriteH/2,footY-spriteH,spriteH,spriteH);ctx.imageSmoothingEnabled=true;}
   else ctx.drawImage(buildingGlyph(b),x-spriteH/2,footY-spriteH,spriteH,spriteH);
   ctx.fillStyle=ownerColor;ctx.fillRect(x-TILE*.28,footY+TILE*.01,TILE*.56,TILE*.10);
-  if(b.level>1){ctx.fillStyle='#ffe5a0';for(let n=0;n<Math.min(4,b.level-1);n++)ctx.fillRect(x-TILE*.3+n*TILE*.16,footY+TILE*.15,TILE*.12,TILE*.1);}
+  const emblemH=11/zoom,emblemW=emblemH*marker.width/marker.height;
+  ctx.drawImage(marker,x-spriteH*.49,footY-emblemH*.8,emblemW,emblemH);
+  ctx.fillStyle='#101c26';ctx.fillRect(x+spriteH*.18,footY-11/zoom,13/zoom,11/zoom);
+  ctx.fillStyle='#fff';ctx.font=`bold ${9/zoom}px system-ui`;ctx.fillText(String(b.level),x+spriteH*.18+6.5/zoom,footY-5.5/zoom);
  }
  // Draw one name per surviving country, even after the capital becomes a city.
  // Full territorial flood-fill runs only when the territory revision changes.
