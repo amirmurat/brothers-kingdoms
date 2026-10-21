@@ -78,6 +78,40 @@ function show(screen){
 function error(s){$('lobbyError').textContent=s;toast(s);}
 // One auxiliary surface at a time. No panel stacks above another.
 const AUX_IDS=['armiesPanel','quickLeadersPanel','contextCard','sessionPanel','exitPanel'];
+// A single tactical surface owns each list; the old overlays are retained only
+// as hidden compatibility containers. Moving nodes keeps handlers and live state.
+let militaryTab='nations';
+$('warHubArmy').appendChild($('armiesList'));
+$('warHubThreats').appendChild($('threatList'));
+function syncMilitaryThreats(){
+ const count=activeThreats.length,inside=militaryTab==='threats'&&!$('warPanel').classList.contains('hidden');
+ $('warThreatCount').textContent=count?String(count):'';
+ $('warThreatEmpty').classList.toggle('hidden',!!count);
+ $('threatList').classList.toggle('hidden',!count);
+ $('incomingAttack').setAttribute('aria-expanded',String(inside));
+}
+function chooseMilitaryTab(tab){
+ militaryTab=['nations','threats','army'].includes(tab)?tab:'nations';
+ for(const t of ['nations','threats','army']){
+  const active=t===militaryTab;
+  $('warHub'+t[0].toUpperCase()+t.slice(1)).classList.toggle('hidden',!active);
+  $('warTab'+t[0].toUpperCase()+t.slice(1)).setAttribute('aria-selected',String(active));
+  $('warTab'+t[0].toUpperCase()+t.slice(1)).tabIndex=active?0:-1;
+ }
+ $('warPanel').scrollTop=0;
+ if(militaryTab==='nations')renderWars();
+ if(militaryTab==='army')renderArmies();
+ if(militaryTab==='threats')syncMilitaryThreats();
+}
+function openMilitary(tab='nations'){
+ if($('warPanel').classList.contains('hidden')){
+  hideAux();closePanelIfOpen();toggleQuickBuild(false);
+  selected=null;setPreview(null);buildMode=null;refreshQuickBuild();suspendMapGesture();
+ }
+ $('warPanel').classList.remove('hidden');
+ $('warChip').setAttribute('aria-expanded','true');
+ chooseMilitaryTab(tab);
+}
 function closeNations(){ $('warPanel').classList.add('hidden');$('warChip').setAttribute('aria-expanded','false'); }
 function suspendMapGesture(){
  pressed.clear();pointerStart=null;gesture=null;
@@ -85,6 +119,7 @@ function suspendMapGesture(){
 }
 function mapInputBlocked(){return panelOpen||document.body.classList.contains('aux-open')||!$('warPanel').classList.contains('hidden')||!$('tutorial').classList.contains('hidden')||!$('victory').classList.contains('hidden')||quickBuildOpen;}
 function hideAux(){
+ closeNations();
  if(menuPausedSolo){pauseSolo=false;menuPausedSolo=false;}
  const closingContext=!$('contextCard').classList.contains('hidden');
  for(const id of AUX_IDS)$(id)?.classList.add('hidden');
@@ -93,6 +128,7 @@ function hideAux(){
  if(closingContext)selected=null;
 }
 function showAux(id){
+ if(id==='armiesPanel'){openMilitary('army');return;}
  const el=$(id);if(!el)return;
  const wasOpen=!el.classList.contains('hidden');
  closeNations();setThreatList(false);
@@ -138,16 +174,16 @@ function threatDistance(a,p){
  const c=p?.capital;return c?Math.round(Math.hypot(a.x-c.x,a.y-c.y)):999;
 }
 function setThreatList(open){
- const expanded=!!open&&activeThreats.length>1;
- $('threatList').classList.toggle('hidden',!expanded);
- $('threatExpand').setAttribute('aria-expanded',String(expanded));$('incomingAttack').setAttribute('aria-expanded',String(expanded));
+ // The old floating list is replaced by the Military/Attacks tab.
+ if(open)openMilitary('threats');
 }
+
 function updateIncomingAttack(p){
  const threats=hostileAttacks(p).sort((a,b)=>threatDistance(a,p)-threatDistance(b,p)||b.strength-a.strength);
  activeThreats=threats;
  $('threatRail').classList.toggle('hidden',!threats.length);
  $('threatExpand').classList.toggle('hidden',threats.length<2);
- if(!threats.length){lastThreatSignature='';announcedThreats.clear();setThreatList(false);return;}
+ if(!threats.length){lastThreatSignature='';announcedThreats.clear();syncMilitaryThreats();return;}
  const attackers=[...new Set(threats.map(a=>a.owner))].map(id=>E.person(state,id)?.name||'Enemy');
  const force=threats.reduce((sum,a)=>sum+Math.max(0,a.strength),0);
  const signature=threats.map(a=>a.id).sort().join(',');
@@ -168,7 +204,7 @@ function updateIncomingAttack(p){
   node.querySelector('small').textContent=number(a.strength)+' troops · '+(distance<999?'≈'+distance+' tiles from capital':'at border');
   node.querySelector('b').textContent=(i+1)+' ↗';
  }
- if(threats.length<2)setThreatList(false);
+ syncMilitaryThreats();
  if(signature!==lastThreatSignature){
   const fresh=threats.filter(a=>!announcedThreats.has(a.id));
   if(fresh.length){
@@ -180,21 +216,14 @@ function updateIncomingAttack(p){
   lastThreatSignature=signature;
  }
 }
-$('incomingAttack').onclick=()=>{
- if(!activeThreats.length)return;
- if(activeThreats.length>1){setThreatList($('threatList').classList.contains('hidden'));return;}
- focusThreat(activeThreats[0]);setThreatList(false);
-};
-$('threatExpand').onclick=()=>setThreatList($('threatList').classList.contains('hidden'));
-$('threatClose').onclick=()=>setThreatList(false);
+$('incomingAttack').onclick=()=>{if(activeThreats.length)openMilitary('threats');};
+$('threatExpand').onclick=()=>openMilitary('threats');
+$('threatClose').onclick=closeNations;
 $('threatItems').onclick=e=>{
  const b=e.target.closest('[data-focus-threat]');if(!b)return;
  const a=activeThreats.find(a=>a.id===b.dataset.focusThreat);
- if(a){focusThreat(a);setThreatList(false);}
+ if(a){focusThreat(a);closeNations();}
 };
-document.addEventListener('pointerdown',e=>{
- if(!$('threatRail').contains(e.target)&&!$('threatList').classList.contains('hidden'))setThreatList(false);
-});
 function refreshHudAlert(p){
  const box=$('hudAlert');if(!box||!p||state?.phase!=='playing'){box?.classList.add('hidden');return;}
  let text='',kind='',action=null;
@@ -986,11 +1015,12 @@ $('planCancelYes').onclick=()=>{
  $('planCancelDialog').classList.add('hidden');planCancelArmy=null;
 };
 $('warChip').onclick=()=>{
- // Nations can be opened during painting without discarding the draft region.
- const panel=$('warPanel'),opening=panel.classList.contains('hidden');
- if(opening){hideAux();closePanelIfOpen();toggleQuickBuild(false);setThreatList(false);selected=null;setPreview(null);buildMode=null;refreshQuickBuild();suspendMapGesture();}
- panel.classList.toggle('hidden',!opening);$('warChip').setAttribute('aria-expanded',String(opening));
+ if(!$('warPanel').classList.contains('hidden')&&militaryTab==='nations')closeNations();
+ else openMilitary('nations');
 };
+$('warTabNations').onclick=()=>chooseMilitaryTab('nations');
+$('warTabThreats').onclick=()=>chooseMilitaryTab('threats');
+$('warTabArmy').onclick=()=>chooseMilitaryTab('army');
 $('warPanelClose').onclick=closeNations;$('nationsBackdrop').onclick=closeNations;
 $('warPanelList').onclick=e=>{
  const attack=e.target.closest('[data-nation-attack]'),peace=e.target.closest('[data-nation-peace]'),
@@ -1042,7 +1072,7 @@ function setMinimapExpanded(expanded){
 }
 $('minimapToggle').onclick=()=>setMinimapExpanded($('minimapWrap').classList.contains('minimized'));
 function renderArmies(){
- if(!state||!myId||$('armiesPanel').classList.contains('hidden'))return;
+ if(!state||!myId||$('warPanel').classList.contains('hidden')||militaryTab!=='army')return;
  const plans=(state.attackPlans||[]).filter(p=>p.owner===myId);
  const recovery=(state.recoveryPlans||[]).filter(p=>p.owner===myId);
  const plannedIDs=new Set([...plans,...recovery].map(p=>p.id)),rows=[];
@@ -1094,7 +1124,7 @@ function renderArmies(){
   for(const field of ['title','status','detail']){const target=node.querySelector('[data-front-'+field+']');if(target)target.textContent=row[field];}
  }
 }
-$('armiesToggle').onclick=()=>showAux('armiesPanel');
+$('armiesToggle').onclick=()=>openMilitary('army');
 $('closeArmies').onclick=hideAux;
 $('armiesList').onclick=e=>{
  const cancel=e.target.closest('[data-cancel-plan]'),edit=e.target.closest('[data-edit-plan]'),focus=e.target.closest('[data-focus-plan]');
@@ -1599,8 +1629,8 @@ $('hostButton').onclick=createRoom;$('joinButton').onclick=joinRoom;$('demoButto
 $('leaveRoom').onclick=()=>{if(host)for(const c of connections.keys())try{c.send({t:'room-closed'});}catch(_){}goHome();};
 $('startButton').onclick=startGame;$('copyLink').onclick=inviteFriends;$('copyCode').onclick=()=>copyText(code);
 for(const id of ['hudTroops','hudFronts']){
- $(id).onclick=()=>showAux('armiesPanel');
- $(id).onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showAux('armiesPanel');}};
+ $(id).onclick=()=>openMilitary('army');
+ $(id).onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openMilitary('army');}};
 }
 function openResearch(){openPanel();$('scienceButton').setAttribute('aria-pressed','true');$('scienceButton').classList.add('chosen');updateUI();}
 $('scienceButton').onclick=openResearch;
