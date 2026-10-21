@@ -1591,6 +1591,16 @@ if(typeof Image==='function')for(const id of new Set(Object.values(townRecipes).
 // Accessible, type-specific map markers: independent silhouettes and two-letter
 // labels remain readable in greyscale. Pre-render to avoid per-frame text work.
 const buildingTypeMarkers=new Map();
+function drawUpgradeWork(b,x,y){
+ if(!b.upgrade||b.owner!==myId)return;
+ const job=(state.buildJobs||[]).find(j=>j.id===b.upgrade.jobId);
+ const total=Math.max(1,b.upgrade.total||E.upgradeTime(b)),fraction=Math.max(0,Math.min(1,(job?.progress??b.upgrade.progress??0)/total));
+ const scale=1/Math.max(.15,zoom),w=28*scale,h=14*scale,top=y+TILE*.68;
+ ctx.fillStyle='#0e1c29';ctx.fillRect(x-w/2,top,w,h);
+ ctx.fillStyle='#f1f6fa';ctx.font=`bold ${8*scale}px system-ui`;ctx.fillText('UP',x,top+5*scale);
+ ctx.fillStyle='#536170';ctx.fillRect(x-w/2+2*scale,top+10*scale,w-4*scale,2*scale);
+ ctx.fillStyle='#f5f7fb';ctx.fillRect(x-w/2+2*scale,top+10*scale,(w-4*scale)*fraction,2*scale);
+}
 function buildingTypeMarker(kind){
  if(buildingTypeMarkers.has(kind))return buildingTypeMarkers.get(kind);
  const icon=document.createElement('canvas');icon.width=52;icon.height=62;
@@ -1671,6 +1681,7 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
     ctx.fillStyle='#101c26';ctx.fillRect(x+w*.14,y+h*.2,8/zoom,8/zoom);
     ctx.fillStyle='#ffffff';ctx.font=`bold ${7/zoom}px system-ui`;ctx.fillText(String(b.level),x+w*.14+4/zoom,y+h*.2+4/zoom);
    }
+   drawUpgradeWork(b,x,y);
    continue;
   }
   // Recognizable licensed pixel art at close zoom, with a monochrome type
@@ -1684,6 +1695,7 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   ctx.drawImage(marker,x-spriteH*.49,footY-emblemH*.8,emblemW,emblemH);
   ctx.fillStyle='#101c26';ctx.fillRect(x+spriteH*.18,footY-11/zoom,13/zoom,11/zoom);
   ctx.fillStyle='#fff';ctx.font=`bold ${9/zoom}px system-ui`;ctx.fillText(String(b.level),x+spriteH*.18+6.5/zoom,footY-5.5/zoom);
+  drawUpgradeWork(b,x,y);
  }
  // Draw one name per surviving country, even after the capital becomes a city.
  // Full territorial flood-fill runs only when the territory revision changes.
