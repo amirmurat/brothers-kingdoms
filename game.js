@@ -1572,38 +1572,12 @@ function nationLabelAnchors(snapshot=state){
 }
 // Existing Kenney Tiny Town CC0 tiles form original, readable pixel buildings.
 // The shared vector glyph remains a fallback until its sprite finishes loading.
-const townRecipes={
- farm:{parts:[52,53,54,64,65,66,72,74,75],deco:94},
- lumber:{parts:[48,49,50,60,61,62,72,74,75],deco:106},
- quarry:{parts:[96,97,98,108,109,110,120,121,122],deco:104},
- mine:{parts:[48,49,50,60,61,62,76,78,79],deco:57},
- barracks:{parts:[52,53,54,64,65,66,76,78,79],deco:119},
- fort:{parts:[96,97,98,108,109,110,120,121,122],deco:92},
- city:{parts:[48,49,50,60,61,62,76,78,79],deco:83},
- capital:{parts:[52,53,54,64,65,66,76,78,79],deco:92}
-};
-const townTiles=Object.create(null),townSprites=Object.create(null);
+// Render the eight distinct building images already committed to this project.
 const mapBuildingSprites=Object.create(null);
 if(typeof Image==='function')for(const kind of Object.keys(BUILDING_TYPE_COLORS)){
  const sprite=new Image();mapBuildingSprites[kind]=sprite;
  sprite.onload=()=>queueDraw();
  sprite.src='assets/buildings/'+kind+'.png';
-}
-function assembleTownSprites(){
- let changed=false;
- for(const [kind,recipe] of Object.entries(townRecipes)){
-  if(townSprites[kind]||![...recipe.parts,recipe.deco].every(id=>townTiles[id]?.naturalWidth))continue;
-  const sprite=document.createElement('canvas');sprite.width=48;sprite.height=48;
-  const brush=sprite.getContext('2d');brush.imageSmoothingEnabled=false;
-  recipe.parts.forEach((id,i)=>brush.drawImage(townTiles[id],(i%3)*16,Math.floor(i/3)*16,16,16));
-  brush.drawImage(townTiles[recipe.deco],31,31,15,15);
-  townSprites[kind]=sprite;changed=true;
- }
- if(changed)queueDraw();
-}
-if(typeof Image==='function')for(const id of new Set(Object.values(townRecipes).flatMap(r=>[...r.parts,r.deco]))){
- const tile=new Image();townTiles[id]=tile;tile.onload=assembleTownSprites;
- tile.src='assets/tiny-town/tile_'+String(id).padStart(4,'0')+'.png';
 }
 // Building icons have original silhouettes and type colors. Levels have a separate
 // numeric rank and a shared rank color, so neither identity relies on color alone.
@@ -1662,17 +1636,6 @@ function drawMapBuilding(b,x,y,overviewCount=1){
   ctx.fillText(String(b.level||1),x+w*.24+ww/2,baseY+h+hh*.09);
  }
  ctx.restore();drawUpgradeWork(b,x,y);
-}
-// Reuse exact licensed vector silhouettes as raster glyphs. Dense cities no
-// longer tessellate/stroke the same long SVG paths on every pan frame.
-const buildingGlyphs=new Map();
-function buildingGlyph(b){
- const key=b.kind+':'+buildingLevelColor(b);let glyph=buildingGlyphs.get(key);
- if(glyph)return glyph;
- glyph=document.createElement('canvas');glyph.width=glyph.height=128;
- const c=glyph.getContext('2d'),unit=b.kind==='capital'?64:512;c.scale(128/unit,128/unit);
- const path=buildingPaths[b.kind]||buildingPaths.city;c.fillStyle=buildingLevelColor(b);c.fill(path,'evenodd');c.strokeStyle='#101923';c.lineWidth=b.kind==='capital'?3:8;c.stroke(path);
- buildingGlyphs.set(key,glyph);return glyph;
 }
 let worldBordersCache=null;
 function worldBorderPaths(){
