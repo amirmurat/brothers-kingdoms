@@ -575,3 +575,6 @@ Resource buttons now call setWorkPriority instead of beginWorkPlanner; #workBala
 
 ### v82 performance
 repaintWorld returns the number of painted terrain cells and retains mapPaintOwners for incremental ownership updates; one capture affects at most five cells. Main draw no longer self-schedules for obsolete arrow interpolation. drawMini skips minimized minimap. Cloudflare snapshot(includeTerrain) includes static terrain for welcome/resync/map changes only; broadcasts omit unchanged terrain. localRoute memoizes bounded road queries and roadRoute reuses typed search buffers per simulation. Simulation and snapshot frequencies are unchanged.
+
+### v83 interface components
+#warPanel is now a dialog next to #sidebar (outside map stacking context), with #nationsBackdrop dismissing via closeNations. #sidebar/#sessionPanel/#warPanel and auxiliary dialogs share sheet geometry in the final component section of theme.css. #planToolPaint keeps its paint-zone handler but presents a sword/Plan attack action. #buildDock and #placingBuildIcon use uiIcon instead of colored buildingArt; placement icon is a span containing SVG. #closeQuickLeaders/#closeTutorial live in common title rows. Feedback has a full readable row below Nations; visible feedback shifts #threatRail down. Existing performance caches and draw scheduling are unchanged.

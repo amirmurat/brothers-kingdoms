@@ -97,6 +97,9 @@ const server=http.createServer((req,res)=>{
    assert(dock&&dock.width<=viewport.width&&dock.x>=0&&dock.y+dock.height<=viewport.height+1,label+' strategic dock fits');
    assert.equal(await page.locator('#developButton').isVisible(),false,label+' no construction catalogue toggle');
    assert.equal(await page.locator('[data-place-building]').count(),3,label+' only three strategic buildings');
+   assert.equal(await page.locator('#buildDock img').count(),0,label+' dock uses interface icons, not colored map art');
+   assert.equal(await page.locator('#buildDock svg use').count(),3,label+' all strategic actions have shared vector icons');
+   assert.equal(await page.locator('#planToolPaint use').getAttribute('href'),'assets/icons/game.svg#sword',label+' attack action has sword icon');
    await page.evaluate(()=>window.__layout.setBuildingMode('barracks'));
    const geometry=await page.locator('#placingBuild').evaluate(bar=>{
     const r=bar.getBoundingClientRect(),name=document.getElementById('placingBuildName').getBoundingClientRect(),cost=document.getElementById('placingBuildCost').getBoundingClientRect();
@@ -122,6 +125,28 @@ const server=http.createServer((req,res)=>{
    assert.equal(await page.locator('#planToolSwitch').isVisible(),false,label+' tools do not cover Research');
    await page.evaluate(()=>window.__layout.showAux('sessionPanel'));
    assert.equal(await page.locator('#sidebar').evaluate(el=>el.classList.contains('open')),false,label+' Research closes for Match');
+   const sheetStyle=async(selector,heading)=>page.locator(selector).evaluate((el,h)=>{
+    const r=el.getBoundingClientRect(),css=getComputedStyle(el),head=getComputedStyle(el.querySelector(h));
+    return {x:r.x,width:r.width,bottom:r.bottom,radius:css.borderRadius,background:css.backgroundColor,title:head.fontSize};
+   },heading);
+   const match=await sheetStyle('#sessionPanel','.aux-head strong');
+   await page.evaluate(()=>{window.__layout.hideAux();window.__layout.openPanel();});
+   const research=await sheetStyle('#sidebar','.sidebar-heading strong');
+   await page.evaluate(()=>window.__layout.closePanel());
+   await page.locator('#warChip').click();
+   const nations=await sheetStyle('#warPanel','.war-panel-title strong');
+   for(const [kind,sheet] of [['Research',research],['Nations',nations]]){
+    assert.equal(sheet.width,match.width,label+' '+kind+' shares sheet width');
+    assert.equal(sheet.radius,match.radius,label+' '+kind+' shares corner radius');
+    assert.equal(sheet.background,match.background,label+' '+kind+' shares surface');
+    assert.equal(sheet.title,match.title,label+' '+kind+' shares title type');
+    assert(sheet.x>=0&&sheet.bottom<=viewport.height+1,label+' '+kind+' fits viewport');
+   }
+   assert.equal(await page.locator('#nationsBackdrop').isVisible(),true,label+' Nations has a modal backdrop');
+   assert.equal(await page.locator('#buildDock').isVisible(),false,label+' Nations hides placement tools');
+   await page.locator('#warPanelClose').click();
+   assert.equal(await page.locator('#nationsBackdrop').isVisible(),false,label+' closing Nations removes its backdrop');
+   await page.evaluate(()=>window.__layout.showAux('sessionPanel'));
    const close=page.locator('#closeSession');await close.click();
    await page.evaluate(()=>window.__layout.goHome());
    assert(await page.locator('#lobby').isVisible(),label+' home visible');

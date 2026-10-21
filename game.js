@@ -881,10 +881,10 @@ function updateSelection(){const item=selected?.kind==='army'?state.armies.find(
 function refreshQuickBuild(){
  const p=mine();if(!p||!state)return;
  const dock=$('buildDock');
- if(!dock.dataset.ready){dock.innerHTML=['city','barracks','fort'].map(id=>'<button type="button" data-place-building="'+id+'" aria-label="Place '+E.KINDS[id].name+'" aria-pressed="false">'+buildingArt(id)+'<span>'+E.KINDS[id].name+'</span></button>').join('');dock.dataset.ready='yes';}
+ if(!dock.dataset.ready){dock.innerHTML=['city','barracks','fort'].map(id=>'<button type="button" data-place-building="'+id+'" aria-label="Place '+E.KINDS[id].name+'" aria-pressed="false">'+uiIcon(id)+'<span>'+E.KINDS[id].name+'</span></button>').join('');dock.dataset.ready='yes';}
  for(const id of ['city','barracks','fort']){const b=dock.querySelector('[data-place-building="'+id+'"]');b.classList.toggle('chosen',buildMode===id);b.setAttribute('aria-pressed',String(buildMode===id));b.title=E.KINDS[id].name+' · '+costText(E.costBuilding(state,myId,id));}
  $('placingBuild').classList.toggle('hidden',!buildMode);
- if(buildMode){$('placingBuildName').textContent=E.KINDS[buildMode].name;$('placingBuildCost').textContent=costText(E.costBuilding(state,myId,buildMode));$('placingBuildIcon').src='assets/shapes/'+buildMode+'.svg';}
+ if(buildMode){$('placingBuildName').textContent=E.KINDS[buildMode].name;$('placingBuildCost').textContent=costText(E.costBuilding(state,myId,buildMode));$('placingBuildIcon').innerHTML=uiIcon(buildMode);}
  const workers=E.workforceStats(state,myId);
  $('workforceSummary').textContent=number(workers.working)+' / '+number(workers.capacity)+' working · '+workers.building+' queued';
  $('productionPriority').value=p.workPriority||'balanced';
@@ -962,7 +962,7 @@ $('warChip').onclick=()=>{
  if(opening){hideAux();closePanelIfOpen();toggleQuickBuild(false);setThreatList(false);selected=null;setPreview(null);buildMode=null;refreshQuickBuild();suspendMapGesture();}
  panel.classList.toggle('hidden',!opening);$('warChip').setAttribute('aria-expanded',String(opening));
 };
-$('warPanelClose').onclick=closeNations;
+$('warPanelClose').onclick=closeNations;$('nationsBackdrop').onclick=closeNations;
 $('warPanelList').onclick=e=>{
  const attack=e.target.closest('[data-nation-attack]'),peace=e.target.closest('[data-nation-peace]'),
   alliance=e.target.closest('[data-nation-diplomacy]');

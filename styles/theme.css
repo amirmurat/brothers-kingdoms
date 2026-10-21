@@ -1663,3 +1663,104 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
 #game#game#game #planToolSwitch #developButton{display:none!important}
 #game#game#game #buildDock button{width:58px!important;height:58px!important;min-height:58px!important;padding:5px!important;}
 #game#game#game #buildDock .building-art{width:26px!important;height:26px!important;flex:0 0 26px!important;margin:0!important;}
+
+/* Shared interface components: one surface, sheet geometry and action language.
+   Content determines sheet height; navigation never changes its width or header. */
+#game#game#game{
+ --sheet-width:440px;--surface:#151c26;--surface-raised:#202a38;
+ --line:#394657;--text:#edf2f8;--muted:#acb8c8;--accent:#74dbf5;
+}
+#game#game#game :is(#sidebar,#sessionPanel,#exitPanel,#armiesPanel,#quickLeadersPanel,#contextCard,#warPanel){
+ position:fixed!important;inset:auto!important;left:50%!important;
+ bottom:calc(12px + env(safe-area-inset-bottom,0px))!important;transform:translateX(-50%)!important;
+ width:min(var(--sheet-width),calc(100vw - 24px))!important;
+ max-height:min(640px,calc(100dvh - 24px - env(safe-area-inset-bottom,0px)))!important;
+ height:auto!important;min-height:0!important;box-sizing:border-box!important;
+ padding:16px!important;overflow-y:auto!important;overscroll-behavior:contain!important;
+ border:1px solid var(--line)!important;border-radius:16px!important;
+ background:var(--surface)!important;color:var(--text)!important;box-shadow:0 16px 48px #0008!important;
+}
+#game#game#game #sidebar:not(.open){display:none!important}
+#game#game#game #sidebar.open{display:block!important}
+#game#game#game :is(.sidebar-heading,.aux-head,.armies-panel-head,.war-panel-title),
+#game#game#game #sessionPanel .aux-head,#game#game#game #sidebar .sidebar-heading{
+ display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;
+ min-height:52px!important;padding:0 0 8px!important;margin:0 0 16px!important;
+ border:0!important;border-bottom:1px solid var(--line)!important;background:var(--surface)!important;
+ letter-spacing:normal!important;text-transform:none!important;box-sizing:border-box!important;
+}
+#game#game#game :is(.sidebar-heading,.aux-head,.armies-panel-head,.war-panel-title) strong,
+#game#game#game #sessionPanel .aux-head>strong,#game#game#game #sidebar .sidebar-heading strong{
+ font:700 20px/26px system-ui!important;letter-spacing:-.02em!important;color:var(--text)!important;
+}
+#game#game#game :is(#closePanel,#closeContext,#closeArmies,#closeSession,#warPanelClose,#planReviewClose,#stopBuild,#quickBuildClose,#threatClose),
+#game#game#game #sessionPanel #closeSession{
+ border:1px solid var(--line)!important;border-radius:10px!important;background:transparent!important;
+ color:var(--muted)!important;box-shadow:none!important;padding:11px!important;
+}
+#game#game#game :is(#closePanel,#closeContext,#closeArmies,#closeSession,#warPanelClose,#stopBuild) svg{width:20px!important;height:20px!important}
+#game#game#game #sidebar .side-scroll{overflow:visible!important;max-height:none!important;height:auto!important}
+#game#game#game #sidebar #tab-tech{padding:0!important}
+#game#game#game :is(.nation-panel-help,#sidebar #tab-tech .section-head p){font-size:12px!important;line-height:1.5!important;color:var(--muted)!important;margin:0 0 16px!important}
+#game#game#game :is(.nation-actions button,.tech-footer button,.army-line button,#closeQuickLeaders){
+ min-height:44px!important;border-radius:10px!important;font-size:12px!important;font-weight:650!important;
+}
+#game#game#game .nation-actions button{background:var(--surface-raised)!important;border-color:var(--line)!important;color:var(--text)!important}
+#game#game#game .nation-actions button:disabled{opacity:.5!important}
+#game#game#game .nation-details{font-size:12px!important;color:var(--muted)!important}
+#game#game#game #techPanel .tech-next{color:#a6dfb4!important}
+#game#game#game #sessionPanel .production-setting{margin:16px 0 10px!important;font-size:13px!important}
+#game#game#game #sessionPanel .workforce-summary{padding:0!important;margin:8px 0!important;font-size:12px!important;color:var(--muted)!important}
+#game#game#game #sessionPanel #sessionHint{margin:8px 0 0!important}
+#game#game#game #buildDock{
+ gap:4px!important;padding:6px!important;border:1px solid var(--line)!important;
+ border-radius:16px!important;background:var(--surface)!important;box-shadow:0 6px 24px #0005!important;
+}
+#game#game#game #buildDock button{width:68px!important;height:58px!important;gap:4px!important;color:var(--muted)!important;font:600 11px/14px system-ui!important;border-radius:10px!important}
+#game#game#game #buildDock button .ui-icon{width:24px!important;height:24px!important;margin:0!important;color:inherit!important}
+#game#game#game #buildDock button.chosen{background:#203c49!important;border-color:var(--accent)!important;color:var(--accent)!important}
+#game#game#game #placingBuild{background:var(--surface)!important;border:1px solid var(--line)!important;border-radius:12px!important}
+#game#game#game #placingBuildIcon{display:grid!important;place-items:center!important;color:var(--accent)!important}
+#game#game#game #placingBuildIcon .ui-icon{width:26px!important;height:26px!important}
+#game#game#game #planToolSwitch button,#game#game#game #planToolSwitch #scienceButton{
+ width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;
+ border:1px solid var(--line)!important;border-radius:12px!important;background:var(--surface)!important;color:var(--text)!important;
+}
+#game#game#game #planToolSwitch button.chosen{background:#203c49!important;border-color:var(--accent)!important;color:var(--accent)!important}
+#game#game#game #planToolSwitch button svg{width:24px!important;height:24px!important;min-width:24px!important;min-height:24px!important}
+#game#game#game .map-toolbar{top:10px!important;right:12px!important;height:44px!important;width:124px!important;min-width:124px!important;max-width:124px!important}
+#game#game#game #warChip{height:44px!important;min-height:44px!important;max-height:44px!important;border-color:var(--line)!important;background:var(--surface)!important;border-radius:12px!important}
+/* Status text gets its own readable row, rather than squeezing beside Nations. */
+#game#game#game #gameFeedback{top:64px!important;left:12px!important;right:12px!important;height:48px!important;min-height:48px!important;max-height:48px!important;padding:0!important;background:transparent!important;border:0!important;border-radius:12px!important}
+#game#game#game #gameFeedback :is(#hudAlert,#gameToast){
+ box-sizing:border-box!important;padding:8px 12px!important;margin:0!important;gap:8px!important;
+ border:1px solid var(--line)!important;border-radius:12px!important;
+ background:var(--surface)!important;color:var(--text)!important;font-size:12px!important;line-height:16px!important;
+}
+#game#game#game #gameFeedback #gameToast{display:flex!important;align-items:center!important;white-space:normal!important}
+#game#game#game #gameFeedback #hudAlert #hudAlertText{white-space:normal!important;display:-webkit-box!important;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+#game#game#game #gameFeedback #hudAlert.danger,#game#game#game #gameFeedback #gameToast[data-kind="error"]{background:#302029!important;border-color:#985267!important;color:#ffd8e2!important}
+#game#game#game #gameFeedback #gameToast[data-kind="success"]{border-color:#46765d!important;color:#c0edcc!important}
+#game#game#game #threatRail{top:64px!important;left:12px!important;max-width:calc(100% - 24px)!important;height:44px!important;min-height:44px!important}
+#game#game#game:has(#hudAlert:not(.hidden),#gameToast:not(.hidden)) #threatRail{top:120px!important}
+#game#game#game :is(#incomingAttack,#threatExpand){height:44px!important;min-height:44px!important;max-height:44px!important;border-radius:12px!important}
+#game#game#game button:focus-visible{outline:2px solid var(--accent)!important;outline-offset:2px!important}
+@media(max-height:480px) and (orientation:landscape){
+ #game#game#game #planToolSwitch{grid-template-columns:repeat(2,48px)!important;width:102px!important}
+ #game#game#game #gameFeedback{top:10px!important;right:148px!important;max-width:440px!important}
+ #game#game#game #threatRail{top:66px!important}
+ #game#game#game:has(#hudAlert:not(.hidden),#gameToast:not(.hidden)) #threatRail{top:66px!important}
+}
+#game#game#game #warPanel{z-index:var(--layer-dialog)!important}
+#game#game#game #nationsBackdrop{display:none;position:fixed;inset:0;z-index:var(--layer-dialog-backdrop);background:#0009}
+#game#game#game:has(#warPanel:not(.hidden)) #nationsBackdrop{display:block}
+#game#game#game:has(#warPanel:not(.hidden)) :is(.map-toolbar,#gameFeedback,#threatRail){visibility:hidden!important;pointer-events:none!important}
+#game#game#game #tutorial section{width:min(var(--sheet-width),calc(100vw - 24px))!important;max-height:min(640px,calc(100dvh - 24px))!important;padding:16px!important;border:1px solid var(--line)!important;border-radius:16px!important;background:var(--surface)!important;margin:0!important}
+#game#game#game #tutorial{align-items:flex-end!important;padding:12px 0 calc(12px + env(safe-area-inset-bottom,0px))!important;box-sizing:border-box!important}
+#game#game#game #quickLeadersPanel #closeQuickLeaders,#game#game#game #tutorial #closeTutorial{
+ width:44px!important;height:44px!important;min-height:44px!important;flex:0 0 44px!important;padding:11px!important;margin:0!important;
+ display:grid!important;place-items:center!important;border:1px solid var(--line)!important;border-radius:10px!important;background:transparent!important;color:var(--muted)!important;
+}
+#game#game#game :is(#closeQuickLeaders,#closeTutorial) svg{width:20px!important;height:20px!important}
+#game#game#game #planToolSwitch #planToolPaint .plan-icon{fill:currentColor!important;stroke:none!important}
+#game#game#game #planToolSwitch #planToolErase.chosen{background:#203c49!important;border-color:var(--accent)!important;color:var(--accent)!important;box-shadow:none!important}
