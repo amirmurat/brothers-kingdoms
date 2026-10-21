@@ -1910,3 +1910,6 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
  #game#game#game #planGuideHint{display:none!important}
 }
 #game#game#game #planToolSwitch button:active,#game#game#game #buildDock button:active,#game#game#game #planGuide button:active{transform:none!important;translate:none!important;scale:1!important}
+#game#game#game.plan-drawing #mapNavigation{visibility:hidden!important;pointer-events:none!important}
+#game#game#game.plan-drawing #planToolSwitch{top:50%!important;transform:translateY(-50%)!important}
+@media(max-height:480px) and (orientation:landscape){#game#game#game.plan-drawing #planToolSwitch{top:56px!important;transform:none!important}}

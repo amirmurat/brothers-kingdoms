@@ -112,7 +112,10 @@ const server=http.createServer((req,res)=>{
    await page.evaluate(()=>{const L=window.__layout,s=L.getState();L.contextual(s.buildings.find(b=>b.kind==='capital'&&!s.players.find(p=>p.id===b.owner).bot));});
    assert((await page.locator('#contextBody').textContent()).includes('Garrison nearby'),label+' base tap reveals stationed troops');
    await page.evaluate(()=>window.__layout.hideAux());
+   const toolBefore=await page.locator('#planToolPaint').boundingBox();
    await page.locator('#planToolPaint').click();
+   const toolAfter=await page.locator('#planToolPaint').boundingBox();
+   assert(Math.abs(toolBefore.x-toolAfter.x)<1&&Math.abs(toolBefore.y-toolAfter.y)<1,label+' selecting attack keeps side tool position stable');
    assert.equal(await page.locator('#planTroopsControl').isVisible(),false,label+' no troop percentage slider');
    assert.equal(await page.locator('#planBrushSize').isVisible(),true,label+' brush sizing remains available');
    await page.evaluate(()=>{window.__layout.showAux('armiesPanel');window.__layout.hideAux();});
