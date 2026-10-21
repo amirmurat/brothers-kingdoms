@@ -1,5 +1,24 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 
+## START HERE — v104 visual clarity, coherent map panels (22.10.2026)
+
+**Executable HEAD:** `a03e45ccfb8668141f721649f8fda7141c97e24e`, branch `design/visual-review-v26`, PR #11 draft; `main` untouched. CI for exact HEAD: GitHub Actions `39693174821` **running when note was written**. Preceding executable commit `11f622508e01743fca79d67a30227ce12cf0ed52` fully passed `39692827099 SUCCESS` (engine/server tests, Chromium/WebKit mobile geometry and network, browser performance). Do not claim final HEAD verified until checking CI. Cache parameter: `104-art-roads-panel-r2`. Cloudflare production and actual iPhone Safari not verified.
+
+**Latest physical iPhone screenshots (04:07–04:08) prompted this pass:** Attack Plan, Focus and Eraser bottom sheets looked visually inconsistent; monochrome black map tiles obscured the land and level/type colors, same Tiny Town composites made the close-zoom buildings look identical, road network was too faint despite strategic importance.
+
+**Changes:**
+- **One tool component:** `styles/theme.css` consolidated the late v103 conflicting panel rules into a shared v104 selector for `#planGuide`, `#armyFocusGuide`, and `#planEraseHint`. Fixed same bottom, height = `--bottom-hud-size` + safe-area, width, grid rows, padding, typography and 48px actions (40px landscape). Plan and Eraser have 1:1:2 action columns; Focus 1:1; semantic colors remain, disabled actions neutral. Legacy CSS remains historical, do not add more unrelated overrides.
+- **Distinct committed sprites:** `game.js` uses `assets/buildings/{capital,city,barracks,fort,farm,lumber,quarry,mine}.png` instead of reassembling all variants from the same Tiny Town rooftops. All eight are already in repo and have different silhouettes. Removed unused 30+ Tiny Town asset downloads and unused vector glyph renderer.
+- **Accessible categories and tiers:** distinct colored 3px top banners per building type, always-present two-letter type codes (HQ/CT/BA/FT/FM/WD/ST/AU), plus numerical level with separate, consistent tier-color badge. At strategic overview (<1.35 zoom) nearby buildings coalesce into ~30–39 screen-pixel buckets with a count badge, picking a strategic representative instead of covering the entire map with tags. Selecting underlying buildings uses unchanged gameplay hit detection.
+- **Roads:** existing public road data/engine unchanged; cached Path2D now contains continuous connected centerlines and tiny round isolated-node ends, stroked dark outline + high-contrast sand center; visibility raised across overview and close zoom.
+- `tests/mobile-layout.cjs` now checks equal panel y/height and action-button height, not only matching backgrounds; full CI on `11f6225` passed. `index.html` cache refreshed after deleting unused sprite loader.
+
+**Limitations:** Different artwork per *upgrade level* is NOT present in committed assets. Color + numeric tier is an accessibility and information solution, but the silhouette doesn't transform with levels; better per-tier visual evolution needs additional deliberately matched licensed art. Overview grouping trades individual visibility for map readability, should be tested on owner's populated match. UI responsive CI is not a physical Safari user test, and Cloudflare production deploy is not proven. Avoid calling this production live without independent verification.
+
+---
+
+
+
 
 ## START HERE — v103 accessible map + real builder upgrades (22.10.2026)
 
