@@ -555,3 +555,8 @@ _Актуальный реестр, извлечённый из `index.html` н�
 - Mobilization chooses nearby garrisons. Updated fronts allocate minimums locally and retain surplus near prior positions, instead of proportionally reshuffling every soldier each layer. Explicit orders have 2:1 allocation weight versus automatic recovery.
 - getArmyDisplay caches owner/concentration Path2D boundaries and grouped transfer arrows. drawArmyDisplay shows at most 8 on-screen arrows and no individual troop circles/numbers; minimap reuses cached lines. Existing base contextCard reports stationary nearby garrison strength.
 - My army statuses expose waitingForRoute/awaitingReinforcements rather than silently cycling troops home. No new IDs or stacking layers.
+
+### v76 autonomous sectors — latest gameplay rule
+User explicitly replaces whole-front simultaneous readiness and manual troop percentage. Every drawn plan now advances funded, physically arrived local sectors independently. Unready/distant/blocked sectors wait on their own, not as a barrier to the rest of the plan.
+automaticAllocation estimates resistance, supply distance, shared capacity and a defensive reserve; legacy percent is ignored for painted plans. Reinforcements remain physical. Normal sectors pay their full local sector cost; recovery can use affordable partial sectors.
+#planTroopsControl, .plan-force-options, #targetQuickPercents and #battleDock are hidden in theme.css. The brush control remains available. Normal paint/edit orders omit percent; existing plans need no redraw.

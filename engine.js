@@ -688,11 +688,13 @@ function positionAttack(s,a,front,partial=false){
  if(Math.abs(sum-a.strength)>1e-7)units=units.map(c=>({...c,strength:c.strength*a.strength/Math.max(1e-7,sum)}));
  const signature=front.join(',');
  if(a.frontSignature===signature&&a.columns?.length){a.columns=units;return true;}
- const established=!!a.sectors?.length,combined=new Map();
+ const established=!!a.sectors?.length,committed=new Set((a.columns||[]).filter(c=>c.strength>0).map(c=>c.sector)),combined=new Map();
  for(const c of units){const key=idx(c.x,c.y),g=combined.get(key);if(g)g.strength+=c.strength;else combined.set(key,{x:c.x,y:c.y,strength:c.strength});}
  units=[...combined.values()];
  const sectors=frontSectors(s,a.owner,front),components=ownedComponents(s,a.owner);
- const reachable=sectors.filter(t=>units.some(c=>components[idx(c.x,c.y)]&&components[idx(c.x,c.y)]===components[t.anchor]));
+ const distance=t=>Math.min(...units.filter(c=>components[idx(c.x,c.y)]===components[t.anchor]).map(c=>near(c,{x:t.anchor%W,y:(t.anchor/W)|0})));
+ const reachable=sectors.filter(t=>units.some(c=>components[idx(c.x,c.y)]&&components[idx(c.x,c.y)]===components[t.anchor]))
+  .sort((a,b)=>distance(a)+Math.log2(1+a.required)*2-distance(b)-Math.log2(1+b.required)*2);
  if(!reachable.length||!partial&&reachable.length!==sectors.length)return false;
  const sources=units.map(c=>({...c})),columns=[],componentStrength=new Map(),componentNeed=new Map();
  for(const c of sources){const k=components[idx(c.x,c.y)];componentStrength.set(k,(componentStrength.get(k)||0)+c.strength);}
@@ -708,7 +710,8 @@ function positionAttack(s,a,front,partial=false){
   const component=components[sector.anchor],total=componentStrength.get(component)||0,need=componentNeed.get(component)||1;
   // First deployment spreads the committed force. Later layers only cover
   // local minimums; the rest stays near its existing position.
-  let left=established?sector.required*Math.min(1,total/need):total*sector.required/need;
+  if(established&&distance(sector)>8&&!committed.has(sector.key))continue;
+  let left=sector.required*(established?1:3);
   for(const c of candidatesFor(sector)){const n=Math.min(left,c.strength);assign(c,sector,n);left-=n;if(left<1e-7)break;}
  }
  for(const c of sources)if(c.strength>1e-7){
@@ -726,7 +729,9 @@ function mobilize(s,p,strength,src,front,partial=false){
  // contribution from every distant squad before the whole line can attack.
  const distance=g=>Math.min(...sectors.map(t=>near(g,{x:t.anchor%W,y:(t.anchor/W)|0})));
  eligible.sort((a,b)=>distance(a)-distance(b)||a.id.localeCompare(b.id));
- if(eligible.reduce((n,g)=>n+g.strength,0)+1e-7<strength)return null;
+ const accessible=eligible.reduce((n,g)=>n+g.strength,0);
+ if(partial)strength=Math.min(strength,accessible);
+ if(strength<35||accessible+1e-7<strength)return null;
  const drawn=[];let left=strength;
  for(const g of eligible){const n=Math.min(left,g.strength);if(n>1e-7)drawn.push({g,n});left-=n;if(left<1e-7)break;}
  const wave={owner:p.id,strength,columns:drawn.map(({g,n})=>({x:g.x,y:g.y,strength:n}))};
@@ -873,19 +878,38 @@ function militaryStrength(s,id){
  const deployed=s.armies.reduce((n,a)=>n+(a.owner===id?Math.max(0,a.strength):0),0);
  return {reserve,deployed,total:reserve+deployed};
 }
-function planAllocation(s,plan){
- const force=militaryStrength(s,plan.owner);
- const plans=[...(s.attackPlans||[]),...(s.recoveryPlans||[])].filter(p=>p.owner===plan.owner&&planFrontier(s,p).length);
- if(!plans.some(p=>p.id===plan.id))plans.push(plan);
- const weightOf=p=>p.percent*(p.autoRecovery ? .5 : 1);
- const weight=plans.reduce((n,p)=>n+weightOf(p),0);
- const budget=force.total*Math.max(...plans.map(p=>p.percent))/100;
+
+const autoDemandCache=new WeakMap();
+function automaticAllocation(s,plan){
+ const p=person(s,plan.owner),force=militaryStrength(s,plan.owner);
+ const plans=[...(s.attackPlans||[]),...(s.recoveryPlans||[])].filter(q=>q.owner===plan.owner);
+ if(!plans.some(q=>q.id===plan.id))plans.push(plan);
+ const home=(p?.garrisons||[]).filter(g=>!g.returning&&g.strength>0);
+ const metadata=plans.map(q=>q.id+':'+!!q.autoRecovery+':'+(q.targets??[q.targetOwner]).join(',')).join('|')+'@'+(s.wars||[]).join(',')+'@'+(p?.allies||[]).join(',')+'@'+p?.tech.war+':'+p?.tech.logistics;
+ let cache=autoDemandCache.get(s);if(!cache){cache=new Map();autoDemandCache.set(s,cache);}
+ const saved=cache.get(plan.owner),valid=saved&&saved.tick===s.tick&&saved.revision===s.territoryRevision&&saved.home===p?.garrisons&&saved.metadata===metadata&&saved.zones.length===plans.length&&plans.every((q,i)=>q.zoneCells===saved.zones[i]);
+ const demands=valid?saved.demands:[];
+ if(!valid)for(const q of plans){
+  const front=planFrontier(s,q);if(!front.length)continue;
+  const sectors=frontSectors(s,q.owner,front),required=sectors.reduce((n,t)=>n+t.required,0);
+  let distance=80;
+  for(const g of home)for(const t of sectors)distance=Math.min(distance,near(g,{x:t.anchor%W,y:(t.anchor/W)|0}));
+  const demand=Math.max(80,required*(6+Math.min(12,distance/3)));
+  demands.push({plan:q,required,distance,demand,weight:Math.sqrt(Math.max(1,required))*(q.autoRecovery?1:1.5)/(1+distance/60)});
+ }
+ if(!valid)cache.set(plan.owner,{tick:s.tick,revision:s.territoryRevision,home:p?.garrisons,metadata,zones:plans.map(q=>q.zoneCells),demands});
+ const item=demands.find(d=>d.plan.id===plan.id);
+ if(!item)return {available:0,target:0,required:0};
+ const incoming=s.armies.filter(a=>a.owner!==plan.owner&&(s.wars||[]).includes(warKey(plan.owner,a.owner))&&a.targetOwner===plan.owner).reduce((n,a)=>n+a.strength,0);
+ const reserveGoal=Math.min(force.total*.4,Math.max(force.total*.25,incoming*.6));
+ const pool=Math.max(0,force.total-reserveGoal),totalDemand=demands.reduce((n,d)=>n+d.demand,0),weights=demands.reduce((n,d)=>n+d.weight,0);
+ const target=Math.min(item.demand,totalDemand<=pool?item.demand:pool*item.weight/Math.max(1e-7,weights));
  const assigned=s.armies.reduce((n,a)=>n+(a.planId===plan.id?Math.max(0,a.strength):0),0);
- const squads=person(s,plan.owner)?.garrisons||[],stationed=squads.reduce((n,g)=>n+g.strength,0);
- const returning=squads.filter(g=>g.returning).reduce((n,g)=>n+g.strength,0);
+ const squads=p?.garrisons||[],stationed=squads.reduce((n,g)=>n+g.strength,0),returning=squads.filter(g=>g.returning).reduce((n,g)=>n+g.strength,0);
  const available=force.reserve*(stationed?1-returning/stationed:1);
- return Math.max(0,Math.floor(Math.min(available,budget-force.deployed,budget*weightOf(plan)/weight-assigned)));
+ return {available:Math.max(0,Math.floor(Math.min(available,pool-force.deployed,target-assigned))),target,required:item.required,distance:item.distance,reserveGoal};
 }
+function planAllocation(s,plan){return automaticAllocation(s,plan).available;}
 function estimatePlanFront(s,plan){
  const cells=planFrontier(s,plan),sectors=frontSectors(s,plan.owner,cells);
  return {cells:cells.length,sectors:sectors.length,required:sectors.reduce((n,t)=>n+t.required,0),committed:planAllocation(s,plan)};
@@ -894,7 +918,7 @@ function advancePlannedWave(s,a,plan){
  const p=person(s,a.owner),front=planFrontier(s,plan);
  if(!front.length){finishWave(s,a,p);return;}
  a.awaitingReinforcements=false;
- if(marchWave(s,a,p,front,!!plan.autoRecovery))return;
+ if(marchWave(s,a,p,front,true))return;
  // Price the whole frontier against one snapshot, then capture all its tiles
  // as one atomic logical turn. Never accept a partially funded layer.
  const receipt=front.map(i=>({i,former:s.owners[i],cost:planTileCost(s,plan,i)}));
@@ -903,7 +927,8 @@ function advancePlannedWave(s,a,plan){
  let required=Math.max(receipt.some(c=>s.tiles[c.i]===6)?10:0,Math.ceil(sum*1000)/1000);
  const sectorCosts=new Map();for(const r of receipt){const key=attackSector(a,r.i)?.key;sectorCosts.set(key,(sectorCosts.get(key)||0)+r.cost);}
  const unfunded=(a.sectors||[]).some(t=>localAttackStrength(a,t.cells[0])+1e-7<Math.max(t.cells.some(i=>s.tiles[i]===6)?10:0,sectorCosts.get(t.key)||0));
- if(plan.autoRecovery){
+ {
+  // Every drawn plan advances locally. Distant arrivals never gate ready sectors.
   // Defensive recovery may reclaim affordable portions. The normal offensive
   // still requires its complete frontier to expand atomically.
   const byCell=new Map(receipt.map(r=>[r.i,r]));
@@ -911,7 +936,10 @@ function advancePlannedWave(s,a,plan){
   selected=[];const budgets=new Map((a.sectors||[]).map(t=>[t.key,localAttackStrength(a,t.cells[0])]));
   for(const r of ordered){
    const price=Math.max(s.tiles[r.i]===6?10:0,Math.ceil(r.cost*1000)/1000);
-   const key=attackSector(a,r.i)?.key,budget=budgets.get(key)||0;
+   const sector=attackSector(a,r.i),key=sector?.key,budget=budgets.get(key)||0;
+   if(!sector)continue;
+   const sectorNeed=Math.max(sector?.cells.some(i=>s.tiles[i]===6)?10:0,sectorCosts.get(key)||0);
+   if(!plan.autoRecovery&&(localAttackStrength(a,sector.cells[0])+1e-7<sectorNeed))continue;
    if(price>budget+1e-7)continue;
    selected.push(r);budgets.set(key,budget-r.cost);
   }
@@ -919,7 +947,7 @@ function advancePlannedWave(s,a,plan){
   sum=selected.reduce((t,c)=>t+c.cost,0);
   required=sum;
  }
- if(!plan.autoRecovery&&unfunded||a.strength+1e-7<required){
+ if(a.strength+1e-7<required){
   a.awaitingReinforcements=true;
   const attempt=front.join(',')+'@'+Math.ceil(required);
   if(a.strength>=required&&a.rebalanceAttempt!==attempt){a.frontSignature=null;a.rebalanceAttempt=attempt;}
@@ -946,13 +974,13 @@ function sendNextPlannedWave(s,plan){
  const front=planFrontier(s,plan);
  if(!front.length||s.armies.filter(a=>a.owner===plan.owner).length>=12)return false;
  const estimated=estimatePlanFront(s,plan);
- const strength=estimated.committed;
- const minimum=plan.autoRecovery?Math.max(35,Math.min(estimated.required,50)):Math.max(35,estimated.required);
+ let strength=estimated.committed;
+ const minimum=35;
  if(strength<minimum)return false;
  const first=front[(front.length/2)|0],tx=first%W,ty=(first/W)|0;
  const src=nearestBorderLand(s,plan.owner,tx,ty);if(!src)return false;
- const deployment=mobilize(s,p,strength,src,front,!!plan.autoRecovery);if(!deployment)return false;
- const {columns,sectors,frontSignature}=deployment;
+ const deployment=mobilize(s,p,strength,src,front,true);if(!deployment)return false;
+ const {columns,sectors,frontSignature}=deployment;strength=deployment.strength;
  s.armies.push({id:'a'+(++s.nonce),owner:plan.owner,x:columns[0].x,y:columns[0].y,ox:columns[0].x,oy:columns[0].y,tx,ty,
   targetOwner:s.owners[first],planId:plan.id,zoneCells:plan.zoneCells,frontCells:front,columns,sectors,frontSignature,marching:columns.some(c=>c.route.length),
   strength,initialStrength:strength,captured:0,turns:0,stuck:0});
@@ -975,14 +1003,12 @@ function adoptLegacyOffensives(s){
 
 function reinforcePlannedWave(s,plan,a){
  const front=planFrontier(s,plan);if(!front.length)return false;
- const required=frontSectors(s,plan.owner,front).reduce((n,t)=>n+t.required,0);
- if(a.frontSignature===null&&a.strength>=required&&!a.waitingForRoute)return false;
- if(!a.awaitingReinforcements&&!a.waitingForRoute&&a.strength>=Math.max(35,required*2))return false;
- const available=planAllocation(s,plan),amount=Math.floor(Math.min(available,Math.max(35,required*3-a.strength)));
+ const allocation=automaticAllocation(s,plan),amount=allocation.available;
+ if(!a.awaitingReinforcements&&!a.waitingForRoute&&a.strength>=allocation.target*.65)return false;
  if(amount<35)return false;
  const p=person(s,plan.owner),i=front[(front.length/2)|0],src=nearestBorderLand(s,plan.owner,i%W,(i/W)|0);
  if(!src)return false;
- const extra=mobilize(s,p,amount,src,front,!!plan.autoRecovery);if(!extra)return false;
+ const extra=mobilize(s,p,amount,src,front,true);if(!extra)return false;
  a.columns??=[];a.columns.push(...extra.columns);a.strength+=extra.strength;
  a.initialStrength=(a.initialStrength||0)+extra.strength;a.reinforced=(a.reinforced||0)+extra.strength;
  a.frontSignature=null;localStrengthCache.delete(a);return true;
@@ -1179,5 +1205,5 @@ function restoreNetworkState(s){
  delete s.armyPacked;return s;
 }
 
-return{BUILD:'v75',networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v76',automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });

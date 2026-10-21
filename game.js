@@ -421,7 +421,7 @@ function refreshPaintGuide(){
  $('planGuideHint').textContent=checked.error||
   (overlap?'Merges with '+overlap+' plan'+(overlap!==1?'s':'')+' · ':'')+
   (protectedCount?number(protectedCount)+' protected · ':'')+
-  'Targets in Nations · '+number(permitted)+' permitted · waits for troops';
+  'Targets in Nations · '+number(permitted)+' permitted · automatic local advance';
 }
 function clearPaintedZone(){
  const plan=attackPlanner;if(plan?.mode!=='paint'||pressed.size>0)return;
@@ -437,8 +437,8 @@ function reviewPaintedZone(){
  const targets=selectedNationTargets();
  const foreign=checked.cells.find(i=>state.owners[i]!==myId)??checked.cells[0];
  const order=plan.editId?
-  {type:'updatePlan',id:plan.editId,zone:checked.cells,targets,excludeTargets:[...plan.removedTargets],percent}:
-  {type:'send',x:foreign%E.W,y:(foreign/E.W)|0,zone:checked.cells,targets,excludeTargets:[...plan.removedTargets],percent};
+  {type:'updatePlan',id:plan.editId,zone:checked.cells,targets,excludeTargets:[...plan.removedTargets]}:
+  {type:'send',x:foreign%E.W,y:(foreign/E.W)|0,zone:checked.cells,targets,excludeTargets:[...plan.removedTargets]};
  if(command(order)){resetAttackPlanner();toast(plan.editId?'Offensive plan updated':'Offensive plan created');}
 }
 function editPaintedZone(){
@@ -458,11 +458,11 @@ function refreshPlanReview(){
  $('planDescription').textContent=other&&!war?'Confirming will declare war on '+other.name+'. Captures will advance only inside the outline.':
   other?'War is already active. Troops will advance only through the marked zone.':
   'Your army will gradually claim the marked neutral land. No troops move before confirmation.';
- $('planForceLabel').textContent=percent+'%';
- $('planForceDetails').textContent=number(sent)+' committed · '+number(remaining)+' in reserve';
+ $('planForceLabel').textContent='AUTO';
+ $('planForceDetails').textContent='Ready sectors advance independently. Troops and defensive reserves are assigned automatically.';
  const btn=$('planLaunch');btn.textContent=other&&!war?'Declare war & attack':'Start offensive';
  btn.classList.toggle('declare-war',!!other&&!war);
- btn.disabled=sent<35||!plan.zoneCells?.length||(state.armies||[]).filter(a=>a.owner===myId).length>=12;
+ btn.disabled=!plan.zoneCells?.length;
  for(const b of document.querySelectorAll('[data-plan-percent]'))b.classList.toggle('active',Number(b.dataset.planPercent)===percent);
 }
 function openCancelPlan(item){
@@ -553,7 +553,7 @@ function drawAttackPlanning(){
 function setPreview(t){
  target=t;const box=$('targetPreview');box.classList.toggle('hidden',!t);$('game').classList.toggle('is-targeting',!!t);
  if(!t){queueDraw();return;}
- const owner=E.owner(state,t.x,t.y),enemy=E.person(state,owner),p=mine(),sent=Math.floor(p.troops*percent/100);
+ const owner=E.owner(state,t.x,t.y),enemy=E.person(state,owner),p=mine(),sent=t.type==='redirect'?(state.armies.find(a=>a.id===redirectArmy)?.strength||0):0;
  const front=E.previewFront(state,myId,t.x,t.y),sea=E.tile(state,t.x,t.y)===0;
  const allied=!!enemy&&p.allies.includes(owner),received=!!enemy&&enemy.offers.includes(myId),sentOffer=!!enemy&&p.offers.includes(owner);
  const war=!!enemy&&fighting(owner),diplomatic=t.type==='send'&&!!enemy&&!war,offerButton=$('targetDiplomacy');
@@ -566,7 +566,7 @@ function setPreview(t){
  box.dataset.diplomacy=allied?'allied':received?'received':sentOffer?'sent':enemy?.bot?'bot':'offer';
  const building=E.buildingAt(state,t.x,t.y);
  $('targetTitle').textContent=t.type==='redirect'?'Redirect offensive':allied?'Ally: '+enemy.name:enemy?'Diplomacy · '+enemy.name:'No foreign kingdom';
- $('targetDetail').textContent=t.type==='redirect'?`${number(sent)} troops · reserve ${number(p.troops-sent)} · ${terrainNames[E.tile(state,t.x,t.y)]}`:`${terrainNames[E.tile(state,t.x,t.y)]}${building?' · '+(E.KINDS[building.kind]?.name||'Capital'):''} · Alliances and peace`;
+ $('targetDetail').textContent=t.type==='redirect'?`${number(sent)} troops · reserve ${number(p.troops)} · ${terrainNames[E.tile(state,t.x,t.y)]}`:`${terrainNames[E.tile(state,t.x,t.y)]}${building?' · '+(E.KINDS[building.kind]?.name||'Capital'):''} · Alliances and peace`;
  const defense=enemy?Math.round(E.tileDefense(state,owner,t.x,t.y)):0;const averageDefense=enemy&&front.cells.length?Math.round(front.cells.reduce((sum,i)=>sum+E.tileDefense(state,owner,i%E.W,Math.floor(i/E.W)),0)/front.cells.length):0;
  $('targetForecast').textContent=allied?'Allied territory cannot be attacked. End the alliance first.':
    t.type==='redirect'?'Confirm to redirect your army.':
@@ -575,7 +575,7 @@ function setPreview(t){
    'Brush over neutral land connected to your border, then review and confirm.';
  $('confirmTarget').textContent=t.type==='redirect'?'Change target':'Paint attack zone';
  $('confirmTarget').disabled=allied;
- if(t.type==='redirect'&&!allied&&p.troops-sent<Math.max(75,Math.min(300,p.troopCap*.12)))$('targetForecast').textContent+=' Warning: your reserve will be low after this order.';
+ if(t.type==='redirect'&&!allied&&p.troops<Math.max(75,Math.min(300,p.troopCap*.12)))$('targetForecast').textContent+=' Warning: your reserve will be low after this order.';
  box.dataset.order=t.type;$('cancelTarget').textContent=t.type==='redirect'?'Cancel':'Close';
  const projectedY=(t.y+.5)*TILE*zoom+camY,available=canvas.clientHeight-Math.min(270,Math.max(155,canvas.clientHeight*.37));
  if(t.type==='redirect'&&projectedY>available){camY-=projectedY-available+18;clampCamera();}
@@ -818,7 +818,7 @@ function updateUI(){const p=mine();if(!p)return;
  const sent=Math.floor(p.troops*percent/100);
  const myPlans=[...(state.attackPlans||[]),...(state.recoveryPlans||[])].filter(v=>v.owner===myId),unplanned=state.armies.filter(a=>a.owner===myId&&!myPlans.some(plan=>plan.id===a.planId));
  const frontNum=myPlans.length+unplanned.length;
- $('sendingTroops').textContent=number(sent);$('remainingTroops').textContent=number(p.troops-sent);$('activeArmies').textContent=number(frontNum);$('dockSummary').textContent=percent+'%';if(target)setPreview(target);$('frontCountBadge').textContent=String(frontNum);$('frontCountBadge').classList.toggle('hidden',frontNum===0);$('armiesToggle').setAttribute('aria-label',`My offensives: ${frontNum}`);$('armiesToggle').classList.toggle('has-fronts',frontNum>0);renderArmies();
+ $('sendingTroops').textContent=number(sent);$('remainingTroops').textContent=number(p.troops-sent);$('activeArmies').textContent=number(frontNum);$('dockSummary').textContent='AUTO';if(target)setPreview(target);$('frontCountBadge').textContent=String(frontNum);$('frontCountBadge').classList.toggle('hidden',frontNum===0);$('armiesToggle').setAttribute('aria-label',`My offensives: ${frontNum}`);$('armiesToggle').classList.toggle('has-fronts',frontNum>0);renderArmies();
  const top=[...state.players].filter(p=>p.land>0).sort((a,b)=>b.land-a.land);
  patchHtml('quickLeadersList',top.length?top.map((v,i)=>`<div class="quick-row${v.id===myId?' is-me':''}"><span class="leader-rank">${i+1}</span><i class="leader-dot" style="background:${v.color}"></i><b>${esc(v.name)}${v.bot?' · Bot':''}</b><small>${(v.land/Math.max(1,state.landTotal)*100).toFixed(1)}% · ${number(v.land)} tiles</small></div>`).join(''):'<p class="leader-empty">No active players</p>');
  updateTechCards(p);
@@ -1028,10 +1028,10 @@ function renderArmies(){
   const estimate=E.estimatePlanFront(state,p);
   rows.push({key:'plan-'+p.id,
    title:label+' · '+number(left)+' cells left',
-   status:active?(active.waitingForRoute?'Waiting for friendly route · ':active.awaitingReinforcements?'Reinforcements requested · ':active.marching?'Deploying along front · ':'Wave ')+number(p.waves)+' · '+number(active.strength)+' troops · '+estimate.cells+' frontier cells':
-    estimate.cells&&estimate.committed<Math.max(35,estimate.required)?'Front needs '+number(Math.max(35,estimate.required))+' troops · allocated '+number(estimate.committed):
+   status:active?(active.waitingForRoute?'Waiting for friendly route · ':active.awaitingReinforcements?'Reinforcements requested · ':active.marching?'Local advance · troops moving · ':'Local advance · ')+number(p.waves)+' · '+number(active.strength)+' troops · '+estimate.cells+' frontier cells':
+    estimate.cells&&estimate.committed<Math.max(35,estimate.required)?'Automatic deployment · '+number(estimate.committed)+' troops available now':
     !capturable?'Choose opponents in Nations':'Waiting for route / troops',
-   detail:active?E.frontDeployment(active).ready+'/'+E.frontDeployment(active).sectors+' sectors ready · each sector uses its own troops':'Shared army · '+p.percent+'% commitment · more fronts divide troops',
+   detail:active?E.frontDeployment(active).ready+'/'+E.frontDeployment(active).sectors+' sectors ready · advancing independently':'Automatic deployment · local sectors advance independently',
    buttons:'<button data-edit-plan="'+esc(p.id)+'" aria-label="Edit offensive region">Edit</button><button data-cancel-plan="'+esc(p.id)+'" aria-label="Cancel offensive plan">Cancel</button>'});
  }
  for(const p of recovery){

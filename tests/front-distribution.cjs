@@ -11,50 +11,33 @@ function setup(){
  assert(E.action(s,id,{type:'send',x:71,y:40,zone,percent:60}).ok);
  return {s,id,p,zone,a:s.armies[0]};
 }
-function assemble(t){
- for(let n=0;n<150&&t.a.columns.some(c=>c.route?.length);n++){
-  const land=t.p.land;E.combatStep(t.s);assert.equal(t.p.land,land,'Whole manual line waits for every local deployment');
- }
- assert(t.a.columns.every(c=>!c.route?.length),'Every sector receives troops');
-}
+
+function firstAdvance(t){const before=t.p.land;for(let n=0;n<150&&t.p.land===before;n++)E.combatStep(t.s);return before;}
 {
- const t=setup();assert(t.a.sectors.length>5,'Wide front has several local sectors');
- const ys=t.a.columns.map(c=>c.ty);assert(Math.max(...ys)-Math.min(...ys)>30,'Troops deploy along entire front, not its midpoint');
- assemble(t);const before=t.p.land;E.combatStep(t.s);
- assert.equal(t.p.land-before,41,'Full line advances atomically only after all sectors arrive');
- assert(t.a.columns.length>5,'Physical front troops survive a successful capture');
- assert(Math.abs(t.a.columns.reduce((n,c)=>n+c.strength,0)-t.a.strength)<1e-6,'Casualties are charged to those same columns');
- const land=t.p.land;E.combatStep(t.s);assert.equal(t.p.land,land,'New frontier requires physical movement before another capture');
- const positions=t.a.columns.map(c=>({x:c.x,y:c.y}));
- const saved=JSON.parse(JSON.stringify(t.s)),copy=saved.armies.find(a=>a.id===t.a.id);
- assert.equal(copy.columns.length,t.a.columns.length,'Save/rejoin preserves actual distributed troops');
+ const t=setup(),before=firstAdvance(t);
+ assert(t.p.land>before&&t.p.land-before<41,'Ready local sectors advance without waiting for the complete long frontier');
+ assert(t.a.columns.some(c=>c.route?.length),'Distant sectors are still receiving troops');
+ assert(t.a.columns.length>1,'Deployed soldiers remain distributed and physical');
+ for(const i of t.zone.filter(i=>t.s.owners[i]===t.id))assert(E.localAttackStrength(t.a,i)>0,'Only locally manned cells are captured');
+ assert(Math.abs(t.a.columns.reduce((n,c)=>n+c.strength,0)-t.a.strength)<1e-5,'Local payments match total strength');
+ const positions=t.a.columns.map(c=>({x:c.x,y:c.y})),saved=JSON.parse(JSON.stringify(t.s));
+ assert.equal(saved.armies[0].columns.length,t.a.columns.length);
  E.action(t.s,t.id,{type:'cancelPlan',id:t.s.attackPlans[0].id});
- for(const g of t.p.garrisons.filter(g=>g.returning))assert(positions.some(c=>c.x===g.x&&c.y===g.y),'Recall starts from each actual sector');
+ for(const g of t.p.garrisons.filter(g=>g.returning))assert(positions.some(c=>c.x===g.x&&c.y===g.y),'Recall preserves real locations');
 }
 {
- const t=setup();assemble(t);
- const first=t.a.columns[0],last=t.a.columns[t.a.columns.length-1];
- last.strength+=first.strength;first.strength=0;
+ const t=setup();for(const c of t.a.columns){c.x=c.tx;c.y=c.ty;c.route=[];}
+ const weak=t.a.sectors[0],other=t.a.columns.find(c=>c.sector!==weak.key);
+ for(const c of t.a.columns)if(c.sector===weak.key){other.strength+=c.strength;c.strength=0;}
  const before=t.p.land;E.combatStep(t.s);
- assert.equal(t.p.land,before,'A rich remote sector cannot fund an undefended sector');
- assert.equal(t.s.attackPlans.length,1,'Unfunded line keeps its drawn plan');
+ assert(t.p.land>before,'A weak sector does not block healthy parts of the plan');
+ for(const i of weak.cells)assert.equal(t.s.owners[i],0,'A remote force cannot pay for the empty sector');
+ assert.equal(t.s.attackPlans.length,1,'The uncompleted plan remains active');
 }
 {
- const t=setup();
- // The legacy bot path uses the exact same local deployment, not the old pool.
- E.action(t.s,t.id,{type:'cancelPlan',id:t.s.attackPlans[0].id});
+ const t=setup();E.action(t.s,t.id,{type:'cancelPlan',id:t.s.attackPlans[0].id});
  t.s.armies=[];t.s.attackPlans=[];t.p.troops=2000;t.p.garrisons=[{id:'home2',x:22,y:40,strength:2000}];t.p.bot=true;
  assert(E.action(t.s,t.id,{type:'send',x:71,y:40,percent:60}).ok);
- const a=t.s.armies[0];assert(a.columns.length>1);
- E.combatStep(t.s);assert.equal(a.captured,0,'Bot armies must physically arrive too');
+ const a=t.s.armies[0];E.combatStep(t.s);assert.equal(a.captured,0,'Bot troops must also arrive physically');
 }
-{
- const t=setup();t.s.attackPlans[0].autoRecovery=true;
- const before=t.p.land;
- for(let n=0;n<100&&t.p.land===before;n++)E.combatStep(t.s);
- assert(t.p.land>before,'Recovery advances where its own troops have arrived');
- assert(t.a.columns.some(c=>c.route?.length),'Local recovery need not wait for distant marching sectors');
- for(const i of t.zone.filter(i=>t.s.owners[i]===t.id))assert(E.localAttackStrength(t.a,i)>0,'Every recovered cell has actual nearby assigned troops');
- assert.equal(t.s.owners[E.idx(71,20)],0,'Unreached distant frontier cannot capture remotely');
-}
-console.log('PASS distributed front: distinct destinations, all-sector readiness, local losses, movement after capture, no remote funding, real recall/save and bot parity');
+console.log('PASS distributed front: independent ready sectors, no remote payment, save/recall positions and physical bot travel');

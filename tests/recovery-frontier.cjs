@@ -29,5 +29,5 @@ for(let k=0;k<150&&wave.columns?.some(c=>c.route?.length);k++)E.combatStep(s);
 E.combatStep(s);const gained=p.land-before;
 assert(gained>0&&gained<estimate.cells,'Automatic recovery must capture an affordable subset');
 assert.equal(p.attackTargets.length,0,'Defensive recovery does not require Attack in Nations');
-console.log('PASS: with 81-cell frontier and only 90 committed troops, recovery advances '+gained+
+console.log('PASS: automatic recovery on an 81-cell frontier advances '+gained+
  ' cells; Nations Attack remains disabled');

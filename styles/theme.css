@@ -1637,3 +1637,9 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
 #waiting#waiting#waiting .spawn-player{display:flex!important;align-items:center!important;gap:7px!important;min-width:0!important;font-size:11px!important;line-height:1.4!important;color:#c4d1e0!important}
 #waiting#waiting#waiting .spawn-player i{width:9px!important;height:9px!important;flex:0 0 9px!important;border-radius:3px!important}
 #waiting#waiting#waiting .spawn-player span{min-width:0!important;overflow-wrap:anywhere!important}
+
+/* Autonomous deployment: no player percentages or manual army-size controls. */
+#game#game#game #planTroopsControl,
+#game#game#game .plan-force-options,
+#game#game#game #targetQuickPercents,
+#game#game#game #battleDock{display:none!important}

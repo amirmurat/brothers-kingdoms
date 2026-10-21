@@ -16,32 +16,13 @@ function attack(t,cells,targets=[0],percent=30,extras={}){
  const i=cells[0];return E.action(t.s,t.id,{type:'send',x:i%E.W,y:(i/E.W)|0,zone:cells,targets,percent,...extras});
 }
 function testFullFront(){
- const t=setup(),zone=tiles(span(55,63),span(40,45));
- assert(attack(t,zone).ok);
+ const t=setup(),zone=tiles(span(55,63),span(40,45));assert(attack(t,zone).ok);
  const plan=t.s.attackPlans[0],wave=t.s.armies[0],info=E.estimatePlanFront(t.s,plan);
- assert.equal(info.cells,6,'Entire six-cell frontline must be included');
- assert(info.required>0);
- wave.strength=info.required-.1;
- const initial=t.p.land;
- for(let k=0;k<20&&wave.columns?.some(c=>c.route?.length);k++)E.combatStep(t.s);
- E.combatStep(t.s);
- assert.equal(t.p.land,initial,'Not one tile may be taken by an underfunded wave');
- assert.equal(t.s.armies.length,1);
- assert(wave.awaitingReinforcements,'Underfunded front waits in place for support');
- assert.equal(t.s.attackPlans.length,1,'Plan persists with its waiting wave');
- t.p.troops=0;
- for(let j=0;j<4;j++)E.tick(t.s);
- assert.equal(plan.waves,1,'No second wave below required reserve');
- t.p.troops=1800;
- for(let j=0;j<6&&!wave.reinforced;j++)E.tick(t.s);
- assert(wave.reinforced>=35,'Reserve reinforces the existing wave');
- assert.equal(plan.waves,1,'Support does not discard and relaunch the front');
- const count=E.estimatePlanFront(t.s,plan).cells,land=t.p.land;
- assert.equal(count,6);
- const next=t.s.armies.find(a=>a.planId===plan.id);
- for(let k=0;k<20&&next?.columns?.some(c=>c.route?.length);k++)E.combatStep(t.s);
- E.combatStep(t.s);
- assert.equal(t.p.land-land,count,'All six cells must expand on same tick');
+ assert.equal(info.cells,6);assert(info.sectors>=2);
+ wave.strength=info.required-.1;const initial=t.p.land;
+ for(let n=0;n<30&&t.p.land===initial;n++)E.combatStep(t.s);
+ assert(t.p.land>initial&&t.p.land-initial<6,'A funded local sector advances while the rest of the drawn front waits for its own troops');
+ assert.equal(t.s.attackPlans.length,1,'Uncompleted geometry remains a persistent plan');
 }
 function testNoTroops(){
  const t=setup();t.p.troops=0;
@@ -88,4 +69,4 @@ function testConsentAndOverlap(){
  assert.equal(E.estimatePlanFront(t.s,t.s.attackPlans[0]).cells,1,'Front must ignore protected enemy tile');
 }
 testFullFront();testNoTroops();testMergingAndEraser();testConsentAndOverlap();
-console.log('PASS: atomic frontier, reserve wait, overlap union, partial eraser, no troops, consent');
+console.log('PASS: autonomous local sectors, overlap union, partial eraser, no troops and Nations consent');
