@@ -1,7 +1,10 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 _Обновлено: 21 октября 2026 года. Актуальная версия v91; старые блоки ниже — история._
 
-## START HERE — передача 21.10.2026, v91
+## START HERE — передача 21.10.2026, v92
+- v92 branch code: `7d569ba2e7a5295af508435c9b6eb4e4e83e2193` (game.js), `1fad3a2c66ee3b1b51e8cf3536840c926b36ea3f` (browser regression), `dc68b9fb443af2aa8eadb6a6b43e423dcab1097f` (index v92 cache tags). My army always includes Home army / current reserve even when garrisons is an empty array in a transient network snapshot. Explicit 0-squad/deployed fallback. Engine, ownership and combat unchanged.
+- JS parse checks passed in the edit environment. Full Chromium/WebKit CI and Cloudflare production build for v92 MUST be checked after push; neither is verified yet. This tool environment cannot open workers.dev or /api/health (web reader returns inaccessible) and cannot run a local git/Node clone; do not claim a successful live deployment from the commit alone. Last verified Cloudflare remains the earlier v91 `91-flat-controls` build (5462143); final v91 r2 was not independently verified.
+- Live URL remains https://brothers-kingdoms.murat-amir-olzhasuly.workers.dev/ . Cloudflare branch build tracks `design/visual-review-v26`; do not alter `main`. Physical iPhone Safari still unverified. Latest task is to confirm v92 HTML `92-reserve-snapshot` live, then review three-screen geometry and selected controls on the real device.
 - Продолжать существующий проект в `design/visual-review-v26`; `main` не менять. Общение RU, интерфейс EN. Пользователь хочет видеть результат на публичной ссылке: не завершать работу только на коммите/очереди CI, продолжать до проверки live, если нет реального блокера.
 - Последний код: `a962872a8d738442f1e030e468da3134294501d6` (v91, cache tag `91-flat-controls-r2`). Его browser CI **success** (run 39624970288). На момент передачи Cloudflare check для этого последнего косметического коммита ещё отсутствует: проверить публикацию.
 - Публичная ссылка: https://brothers-kingdoms.murat-amir-olzhasuly.workers.dev/ . Непосредственно проверено live: v91 с cache tag `91-flat-controls` из `5462143`, Cloudflare success. Reserve действительно открывает My army; Offensives сверху скрыт, три равные колонки. Финальный r2 убирает оставшиеся скругления Menu/Research, которые визуально нашлись в live; **r2 live ещё не подтверждён**.
@@ -539,3 +542,8 @@ _Обновлено: 21 октября 2026 года. Актуальная ве�
 - Local syntax, UI transitions, Cloudflare client, army paint limit and asset build checks passed. Chromium/WebKit mobile CI and two-client network regression passed (run 39616185638). Cloudflare did not register a build for the first v91 commit; this follow-up records validation and retriggers branch publication. Physical iPhone remains unverified.
 
 - v91 live verification: Cloudflare follow-up 5462143 deployed successfully; public script tag confirmed v91 and Reserve opened My army. Desktop visual caught legacy rounded Menu/Research rules; explicit shared action geometry now overrides them. Repeat browser CI encountered intermittent WebKit home-squad visibility assertion; original implementation run passed all browsers/network, retry requested.
+
+## v92 — persistent Reserve overview during network garrison transitions (21.10.2026)
+- The My army panel previously omitted its entire Home army row when the current authoritative garrisons array was temporarily empty, despite having a known reserve. The row now always renders with current reserve, deployed total and accurate zero-squad fallback, eliminating the misleading empty overview and the conditional element behind intermittent WebKit assertions.
+- Browser regression explicitly clears/restores local garrisons while the panel is open, ensuring the Home army row survives. No timer, polling, game-rule or CSS changes. New cache tag: `92-reserve-snapshot`.
+- Syntax-only checks passed locally in the connector edit runtime. Browser CI, Cloudflare build and public HTML checks are not confirmed by the current tools; do not claim v92 live without verification. This is preview branch only, not main.
