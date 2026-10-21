@@ -1913,3 +1913,4 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
 #game#game#game.plan-drawing #mapNavigation{visibility:hidden!important;pointer-events:none!important}
 #game#game#game.plan-drawing #planToolSwitch{top:50%!important;transform:translateY(-50%)!important}
 @media(max-height:480px) and (orientation:landscape){#game#game#game.plan-drawing #planToolSwitch{top:56px!important;transform:none!important}}
+#game#game#game #planGuide :is(#planGuideExit,#planPaintClear,#planReviewButton){border:0!important;border-radius:0!important;box-shadow:none!important}

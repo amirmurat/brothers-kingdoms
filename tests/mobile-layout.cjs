@@ -118,6 +118,7 @@ const server=http.createServer((req,res)=>{
    assert(Math.abs(toolBefore.x-toolAfter.x)<1&&Math.abs(toolBefore.y-toolAfter.y)<1,label+' selecting attack keeps side tool position stable');
    assert.equal(await page.locator('#planTroopsControl').isVisible(),false,label+' no troop percentage slider');
    assert.equal(await page.locator('#planBrushSize').isVisible(),true,label+' brush sizing remains available');
+   assert.equal(await page.locator('#planGuideExit').evaluate(el=>getComputedStyle(el).borderTopWidth),'0px',label+' plan controls have no frames');
    await page.evaluate(()=>{window.__layout.showAux('armiesPanel');window.__layout.hideAux();});
    await page.evaluate(()=>window.__layout.setBuildingMode('lumber'));
    assert.equal(await page.locator('#planGuide').isVisible(),false,label+' resource priority does not open paint');
