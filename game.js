@@ -19,6 +19,9 @@ const BUILDING_PALETTE={farm:'#F0AD6D',lumber:'#69D9A4',quarry:'#B6BFCF',mine:'#
 const BUILDING_LEVEL_COLORS=['#bdc9d6','#72d8b0','#70caff','#c49bff','#ffd477'];
 const BUILDING_TIERS={city:['#bd88ed','#e572cd','#ee82a3','#efb15b','#ffe69a'],barracks:['#729be9','#4dc7d4','#67dfab','#a4e568','#e1f2aa'],fort:['#eb737c','#ed9762','#e5bf62','#dfd38f','#fff0bb']};
 const buildingLevelColor=b=>(BUILDING_TIERS[b.kind]||BUILDING_LEVEL_COLORS)[Math.min(4,Math.max(0,(b.level||1)-1))];
+const BUILDING_TYPE_COLORS={capital:'#ffd47c',city:'#c899f2',barracks:'#7daefa',fort:'#ff837f',farm:'#dfbe70',lumber:'#5fd69d',quarry:'#c5d0e0',mine:'#f0b76a'};
+const LEVEL_RANK_COLORS=['#dce4f0','#6adf9c','#77c8ff','#c9a1ff','#f5d17c'];
+const BUILDING_PRIORITY={capital:9,fort:8,barracks:7,city:6,mine:3,quarry:3,lumber:3,farm:3};
 
 const buildingArt=kind=>`<img class="building-art" src="assets/shapes/${kind}.svg" alt="" aria-hidden="true"/>`;
 const BUILDING_CODES={capital:'HQ',city:'CT',barracks:'BA',fort:'FT',farm:'FM',lumber:'WD',quarry:'ST',mine:'AU'};
@@ -1483,16 +1486,24 @@ function drawInfrastructure(){
   const paths=new Map(),roadPath=new Path2D();
   for(const z of zones||[]){let path=paths.get(z.resource);if(!path){path=new Path2D();paths.set(z.resource,path);}if(z.owner===myId)for(const i of z.zoneCells)path.rect(i%E.W*TILE,((i/E.W)|0)*TILE,TILE,TILE);}
   const connected=new Set(roads);
-  for(const i of roads){const x=i%E.W,y=(i/E.W)|0;roadPath.rect((x+.39)*TILE,(y+.39)*TILE,TILE*.22,TILE*.22);
-   if(x<E.W-1&&connected.has(i+1))roadPath.rect((x+.5)*TILE,(y+.42)*TILE,TILE,TILE*.16);
-   if(y<E.H-1&&connected.has(i+E.W))roadPath.rect((x+.42)*TILE,(y+.5)*TILE,TILE*.16,TILE);
+  // Cached, continuous centerlines: preserve strategic visibility without tile-sized boxes.
+  for(const i of roads){
+   const x=i%E.W,y=(i/E.W)|0,cx=(x+.5)*TILE,cy=(y+.5)*TILE;
+   if(x<E.W-1&&connected.has(i+1)){roadPath.moveTo(cx,cy);roadPath.lineTo(cx+TILE,cy);}
+   if(y<E.H-1&&connected.has(i+E.W)){roadPath.moveTo(cx,cy);roadPath.lineTo(cx,cy+TILE);}
+   roadPath.moveTo(cx+.5,cy);roadPath.arc(cx,cy,.5,0,Math.PI*2);
   }
   infrastructureCache={seed:state.seed,myId,zoneCells:(zones||[]).map(z=>z.zoneCells),length:roads.length,roadRevision:state.roadRevision,revision:state.workRevision,paths,roadPath};
  }
  ctx.save();ctx.globalAlpha=.18;
  const shades={food:'#a7cf78',wood:'#54bc94',stone:'#c7cfdb',gold:'#e8ca70'};
  for(const [r,path] of infrastructureCache.paths){ctx.fillStyle=shades[r];ctx.fill(path);}
- if(zoom>=.85){ctx.globalAlpha=zoom<1.5?.25:.48;ctx.fillStyle='#a98f68';ctx.fill(infrastructureCache.roadPath);}ctx.restore();
+ if(roads.length){
+  ctx.globalAlpha=zoom<.5?.45:zoom<.9?.76:.92;
+  ctx.lineJoin='round';ctx.lineCap='round';
+  ctx.strokeStyle='#3f4b42';ctx.lineWidth=TILE*.34;ctx.stroke(infrastructureCache.roadPath);
+  ctx.strokeStyle='#e8ce94';ctx.lineWidth=TILE*.20;ctx.stroke(infrastructureCache.roadPath);
+ }ctx.restore();
 }
 function drawHarvestSites(w,h){
  const p=mine();if(!p)return;const colors={food:'#d6e88c',wood:'#7ae0aa',stone:'#d8e2ee',gold:'#ffdc71'};
@@ -1572,6 +1583,12 @@ const townRecipes={
  capital:{parts:[52,53,54,64,65,66,76,78,79],deco:92}
 };
 const townTiles=Object.create(null),townSprites=Object.create(null);
+const mapBuildingSprites=Object.create(null);
+if(typeof Image==='function')for(const kind of Object.keys(BUILDING_TYPE_COLORS)){
+ const sprite=new Image();mapBuildingSprites[kind]=sprite;
+ sprite.onload=()=>queueDraw();
+ sprite.src='assets/buildings/'+kind+'.png';
+}
 function assembleTownSprites(){
  let changed=false;
  for(const [kind,recipe] of Object.entries(townRecipes)){
@@ -1588,8 +1605,8 @@ if(typeof Image==='function')for(const id of new Set(Object.values(townRecipes).
  const tile=new Image();townTiles[id]=tile;tile.onload=assembleTownSprites;
  tile.src='assets/tiny-town/tile_'+String(id).padStart(4,'0')+'.png';
 }
-// Accessible, type-specific map markers: independent silhouettes and two-letter
-// labels remain readable in greyscale. Pre-render to avoid per-frame text work.
+// Building icons have original silhouettes and type colors. Levels have a separate
+// numeric rank and a shared rank color, so neither identity relies on color alone.
 const buildingTypeMarkers=new Map();
 function drawUpgradeWork(b,x,y){
  if(!b.upgrade||b.owner!==myId)return;
@@ -1603,16 +1620,48 @@ function drawUpgradeWork(b,x,y){
 }
 function buildingTypeMarker(kind){
  if(buildingTypeMarkers.has(kind))return buildingTypeMarkers.get(kind);
- const icon=document.createElement('canvas');icon.width=52;icon.height=62;
- const c=icon.getContext('2d');c.fillStyle='#0e1e28';c.fillRect(2,2,48,58);
- c.strokeStyle='#dcecf6';c.lineWidth=3;c.strokeRect(2.5,2.5,47,57);
+ const icon=document.createElement('canvas');icon.width=44;icon.height=44;
+ const c=icon.getContext('2d');c.clearRect(0,0,44,44);
+ c.fillStyle='#192838';c.fillRect(1,1,42,42);
+ c.fillStyle=BUILDING_TYPE_COLORS[kind]||'#dce6f0';c.fillRect(1,1,42,5);
  const path=buildingPaths[kind]||buildingPaths.city;
- c.save();c.translate(13,5);c.scale(26/(kind==='capital'?64:512),26/(kind==='capital'?64:512));
- c.fillStyle='#f5faff';c.fill(path,'evenodd');c.restore();
- c.fillStyle='#dbe5ef';c.fillRect(4,34,44,1);
- c.textAlign='center';c.textBaseline='middle';c.fillStyle='#ffffff';
- c.font='bold 17px system-ui';c.fillText(BUILDING_CODES[kind]||'BL',26,47);
+ c.save();c.translate(11,9);c.scale(22/(kind==='capital'?64:512),22/(kind==='capital'?64:512));
+ c.fillStyle='#f2f6fb';c.fill(path,'evenodd');c.restore();
+ c.font='bold 11px system-ui';c.textAlign='center';c.textBaseline='middle';
+ c.fillStyle='#ffffff';c.fillText(BUILDING_CODES[kind]||'BL',22,35);
  buildingTypeMarkers.set(kind,icon);return icon;
+}
+function drawMapBuilding(b,x,y,overviewCount=1){
+ const kind=b.kind,source=mapBuildingSprites[kind],loaded=source?.naturalWidth>0;
+ const color=BUILDING_TYPE_COLORS[kind]||'#dce6f0',levelColor=LEVEL_RANK_COLORS[Math.max(0,Math.min(4,(b.level||1)-1))];
+ const macro=zoom<1.35,far=zoom<.55;
+ const screenH=macro?(far?24:30):Math.min(84,Math.max(38,TILE*zoom*1.5));
+ const h=screenH/zoom,w=h*(loaded?source.naturalWidth/source.naturalHeight:1);
+ const baseX=x-w/2,baseY=y-h*.74;
+ ctx.save();
+ // A restrained type-colored base, instead of a large black monochrome tile.
+ ctx.fillStyle='#142532dd';
+ ctx.fillRect(baseX-2/zoom,baseY-2/zoom,w+4/zoom,h+4/zoom);
+ ctx.fillStyle=color;
+ ctx.fillRect(baseX-2/zoom,baseY-2/zoom,w+4/zoom,3/zoom);
+ if(loaded){ctx.imageSmoothingEnabled=false;ctx.drawImage(source,baseX,baseY,w,h);ctx.imageSmoothingEnabled=true;}
+ else ctx.drawImage(buildingTypeMarker(kind),baseX,baseY,w,h);
+ const labelW=(overviewCount>1?22:20)/zoom, labelH=macro?11/zoom:13/zoom;
+ ctx.fillStyle='#12212de9';ctx.fillRect(x-labelW/2,baseY+h-labelH*.65,labelW,labelH);
+ ctx.fillStyle='#f7f8fb';ctx.textAlign='center';ctx.textBaseline='middle';
+ ctx.font=`bold ${(macro?8:9)/zoom}px system-ui`;ctx.fillText(BUILDING_CODES[kind]||'BL',x,baseY+h-labelH*.13);
+ if(overviewCount>1){
+  const ww=18/zoom,hh=12/zoom;
+  ctx.fillStyle='#ecf0f4';ctx.fillRect(x+w*.24,baseY-hh*.45,ww,hh);
+  ctx.fillStyle='#132333';ctx.font=`bold ${8/zoom}px system-ui`;
+  ctx.fillText(String(overviewCount),x+w*.24+ww/2,baseY+hh*.05);
+ }else if(!far){
+  const ww=14/zoom,hh=13/zoom;
+  ctx.fillStyle=levelColor;ctx.fillRect(x+w*.24,baseY+h-hh*.4,ww,hh);
+  ctx.fillStyle='#102032';ctx.font=`bold ${9/zoom}px system-ui`;
+  ctx.fillText(String(b.level||1),x+w*.24+ww/2,baseY+h+hh*.09);
+ }
+ ctx.restore();drawUpgradeWork(b,x,y);
 }
 // Reuse exact licensed vector silhouettes as raster glyphs. Dense cities no
 // longer tessellate/stroke the same long SVG paths on every pan frame.
@@ -1664,39 +1713,27 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
 
  // Fort scouting still works; range rings appear only while inspecting a fort or positioning one.
  drawInfrastructure();drawAttackPlanning();drawArmyDisplay(w,h);drawHarvestSites(w,h);
- // One-cell geometric landmarks; catalogue and map use identical silhouettes.
- ctx.textAlign='center';ctx.textBaseline='middle';
+ // Low-detail overview groups nearby buildings by screen cell. Group count is
+ // explicit; zooming reveals individual building artwork and numeric levels.
+ const markerBins=zoom<1.35?new Map():null,markerList=[];
  for(const b of state.buildings){
   if(!E.visibleBuilding(state,myId,b))continue;
   const x=(b.x+.5)*TILE,y=(b.y+.5)*TILE;
-  if(x*zoom+camX<-55||x*zoom+camX>w+55||y*zoom+camY<-55||y*zoom+camY>h+55)continue;
-  const ownerColor=color(b.owner),footY=y+TILE*.43,marker=buildingTypeMarker(b.kind);
-  if(zoom<1.35){
-   // At strategic overview hide resource production; strategic silhouettes
-   // retain their type label instead of becoming indistinguishable color dots.
-   if(zoom<.48&&E.KINDS[b.kind]?.income)continue;
-   const h=Math.max(15,Math.min(28,17+zoom*9))/zoom,w=h*marker.width/marker.height;
-   ctx.drawImage(marker,x-w/2,y-h/2,w,h);
-   if(zoom>=.75&&b.level>1){
-    ctx.fillStyle='#101c26';ctx.fillRect(x+w*.14,y+h*.2,8/zoom,8/zoom);
-    ctx.fillStyle='#ffffff';ctx.font=`bold ${7/zoom}px system-ui`;ctx.fillText(String(b.level),x+w*.14+4/zoom,y+h*.2+4/zoom);
-   }
-   drawUpgradeWork(b,x,y);
-   continue;
+  const sx=x*zoom+camX,sy=y*zoom+camY;
+  if(sx<-65||sx>w+65||sy<-65||sy>h+65)continue;
+  if(!markerBins){markerList.push({b,x,y,count:1});continue;}
+  const size=zoom<.55?39:zoom<.95?34:30;
+  const key=Math.floor(sx/size)+':'+Math.floor(sy/size);
+  const existing=markerBins.get(key);
+  if(!existing)markerBins.set(key,{b,x,y,count:1});
+  else{
+   existing.count++;
+   if((BUILDING_PRIORITY[b.kind]||0)+(b.level||1)*.2>(BUILDING_PRIORITY[existing.b.kind]||0)+(existing.b.level||1)*.2){existing.b=b;existing.x=x;existing.y=y;}
   }
-  // Recognizable licensed pixel art at close zoom, with a monochrome type
-  // emblem and explicit tier number rather than relying on its roof color.
-  ctx.fillStyle='#0b243899';ctx.beginPath();ctx.ellipse(x,footY,TILE*.64,TILE*.19,0,0,Math.PI*2);ctx.fill();
-  const spriteH=TILE*1.58,sprite=townSprites[b.kind];
-  if(sprite){ctx.imageSmoothingEnabled=false;ctx.drawImage(sprite,x-spriteH/2,footY-spriteH,spriteH,spriteH);ctx.imageSmoothingEnabled=true;}
-  else ctx.drawImage(buildingGlyph(b),x-spriteH/2,footY-spriteH,spriteH,spriteH);
-  ctx.fillStyle=ownerColor;ctx.fillRect(x-TILE*.28,footY+TILE*.01,TILE*.56,TILE*.10);
-  const emblemH=11/zoom,emblemW=emblemH*marker.width/marker.height;
-  ctx.drawImage(marker,x-spriteH*.49,footY-emblemH*.8,emblemW,emblemH);
-  ctx.fillStyle='#101c26';ctx.fillRect(x+spriteH*.18,footY-11/zoom,13/zoom,11/zoom);
-  ctx.fillStyle='#fff';ctx.font=`bold ${9/zoom}px system-ui`;ctx.fillText(String(b.level),x+spriteH*.18+6.5/zoom,footY-5.5/zoom);
-  drawUpgradeWork(b,x,y);
  }
+ if(markerBins)markerList.push(...markerBins.values());
+ ctx.textAlign='center';ctx.textBaseline='middle';
+ for(const marker of markerList)drawMapBuilding(marker.b,marker.x,marker.y,marker.count);
  // Draw one name per surviving country, even after the capital becomes a city.
  // Full territorial flood-fill runs only when the territory revision changes.
  const labelBoxes=[];
