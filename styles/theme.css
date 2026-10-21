@@ -1777,7 +1777,7 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
  display:grid!important;grid-template-columns:minmax(0,1fr);align-content:start;gap:8px!important;height:auto!important;z-index:var(--layer-map-status);pointer-events:none;
 }
 #game#game#game #notificationStack :is(#gameFeedback,#threatRail){
- position:relative!important;inset:auto!important;transform:none!important;
+ position:static!important;inset:auto!important;transform:none!important;
  width:100%!important;max-width:100%!important;min-width:0!important;
  height:auto!important;min-height:0!important;max-height:none!important;flex:none!important;
  margin:0!important;padding:0!important;border:0!important;background:transparent!important;
