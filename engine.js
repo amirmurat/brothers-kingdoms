@@ -473,9 +473,15 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
   if(!available(p,c))return {ok:false,error:'Not enough resources.'};charge(p,c);p.tech[key]++;log(s,p.name+' researched '+TECH[key].name+' ('+p.tech[key]+').');return {ok:true};
  }
  if(a.type==='peace'){
-  const other=person(s,Number(a.target));if(!alive(other)||other.id===id||other.bot)return {ok:false,error:'Choose another human kingdom.'};
+  const other=person(s,Number(a.target));if(!alive(other)||other.id===id)return {ok:false,error:'Choose another living kingdom.'};
   const key=warKey(id,other.id);if(!(s.wars||[]).includes(key))return {ok:false,error:'These kingdoms are not at war.'};
   s.peaceOffers??=[];
+  // AI negotiates immediately according to current military and territorial balance.
+  if(other.bot&&!s.peaceOffers.some(o=>o.from===other.id&&o.to===id)){
+   const theirs=militaryStrength(s,other.id).total,ours=militaryStrength(s,id).total;
+   if(ours<theirs*.75&&p.land>other.land*.65)return {ok:false,error:other.name+' rejects peace while holding a military advantage.'};
+   s.peaceOffers.push({from:other.id,to:id});
+  }
   if(s.peaceOffers.some(o=>o.from===other.id&&o.to===id)){
    s.wars=s.wars.filter(k=>k!==key);s.peaceOffers=s.peaceOffers.filter(o=>warKey(o.from,o.to)!==key);
    p.attackTargets=nationTargets(s,id).filter(t=>t!==other.id);
@@ -502,6 +508,11 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
   if((s.wars||[]).includes(warKey(id,target.id)))return {ok:false,error:'Agree on peace before an alliance.'};
   if(p.allies.includes(target.id)){
    p.allies=p.allies.filter(v=>v!==target.id);target.allies=target.allies.filter(v=>v!==id);log(s,p.name+' ended the alliance with '+target.name);return {ok:true};
+  }
+  if(target.bot&&!target.offers.includes(id)){
+   const ours=militaryStrength(s,id).total,theirs=militaryStrength(s,target.id).total;
+   if(ours<theirs*.6&&p.land<target.land*.6)return {ok:false,error:target.name+' declines the alliance for now.'};
+   target.offers.push(id);
   }
   if(target.offers.includes(id)){
    p.allies.push(target.id);target.allies.push(id);
@@ -1397,6 +1408,11 @@ function tick(s){if(s.phase!=='playing')return;s.tick++;
  combatStep(s);
  for(const p of s.players){if(!p.eliminated&&p.land<=0){p.eliminated=true;p.troops=0;p.garrisons=[];s.armies=s.armies.filter(a=>a.owner!==p.id);log(s,p.name+' lost all territory.');}}
  advanceOffensivePlans(s);
+ // Elimination retires war status, rather than leaving a growing badge of dead enemies.
+ if(s.wars?.length){
+  s.wars=s.wars.filter(key=>key.split(':').every(raw=>alive(person(s,Number(raw)))));
+  s.peaceOffers=(s.peaceOffers||[]).filter(o=>alive(person(s,o.from))&&alive(person(s,o.to)));
+ }
  for(const p of s.players)if(p.bot&&alive(p))bot(s,p.id);
  // Capturing land always costs troops; do not award free cells at every tick.
  checkWin(s);
