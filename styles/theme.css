@@ -3279,7 +3279,7 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
 #game#game#game#game #contextBody .context-building-art{
  display:inline-block!important;width:27px!important;height:27px!important;
  min-width:27px!important;vertical-align:middle!important;object-fit:contain!important;
- margin:0 8px 0 0!important;filter:brightness(0) invert(1)!important;
+ margin:0 8px 0 0!important;filter:none!important;
 }
 #game#game#game#game #contextBody .context-heading strong{
  display:flex!important;align-items:center!important;line-height:1.3!important;
