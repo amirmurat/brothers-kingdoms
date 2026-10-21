@@ -1,6 +1,10 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 _Обновлено: 22 октября 2026 года. Рабочий код v100; итог проверки и публикации — в последней записи START HERE._
 
+## START HERE — v101 implementation / verification in progress (22.10.2026)
+
+User supersedes per-plan focus UI: global independent brush/eraser, geographic focus beside brush, weighted own building clusters/borders and visible enemy objectives, forts reveal foreign structures, country posture and minimum physical barracks guards. Implemented in current work branch; do not treat old v100 instructions below as current UX. BUILD v101, cache 101-map-command-r1. Engine tests locally pass except any subsequent failures explicitly recorded; full CI and actual deployment must be checked before final claim. New tests map-strategy-v101 + server filtered snapshots and mobile brush→eraser transition. Fort sight Manhattan 14/20/26/32, defense range remains 4. Ordinary reserve Aggressive20/Balanced35/Defensive60%; emergency own-land recovery retains half these floors. Camp guard up to35, total8% home reserve, drawn from real connected squads and routed to barracks. Scarcity/isolated routes can delay camp staffing. Focus is a bias within reachable existing orders and country posture, cannot attack without a plan/hostility permission. UI plan budget/focus removed; backward command API retained for old clients. Main unchanged.
+
 ## START HERE — v100 VERIFIED / final result (22.10.2026)
 
 **Current game-code commit:** `d55849d3cb6b36be0dcb294c2356de1206dda4a1`, branch `design/visual-review-v26`. Full final Actions **39676885682 = SUCCESS**: 21 engine/economy/strategy/server/UI regressions plus median-of-five dense engine benchmark, Chromium + WebKit at 320×568, 390×780, 844×390, two real-browser client network bridge scenarios and dense browser performance/priority interactions. Previous failed runs below are historical and were addressed; do not treat them as current failures.

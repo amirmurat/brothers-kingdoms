@@ -27,6 +27,12 @@ async function checkRoom(E,source,assert,btoa){
  await msg(b,{t:'start'});assert.equal(room.s.phase,'lobby');
  await msg(a,{t:'start'});assert.equal(room.s.phase,'playing');assert.deepEqual(E.person(room.s,1).capital,chosen);
  assert.equal(timers.size,1);assert(a.sent.some(m=>m.state?.packed),'compressed snapshots');
+ const av=a.sent.filter(m=>m.t==='state').at(-1).state,bv=b.sent.filter(m=>m.t==='state').at(-1).state;
+ assert(av.buildings.every(x=>x.owner===1),'Unscouted buildings are absent from authoritative player A packet');assert(bv.buildings.every(x=>x.owner===2),'Player B gets its own filtered packet');
+ assert.equal(av.players.find(p=>p.id===2).capital,null);
+ a.attachment.last=0;await msg(a,{t:'action',id:201,action:{type:'armyFocus',...chosen}});assert.deepEqual(E.person(room.s,1).armyFocus,chosen);
+ a.attachment.last=0;await msg(a,{t:'action',id:202,action:{type:'armyPosture',value:'defensive'}});assert.equal(E.person(room.s,1).armyPosture,'defensive');
+ a.attachment.last=0;await msg(a,{t:'action',id:203,action:{type:'armyPosture',value:'balanced'}});
  const before=room.s.tick;for(let i=0;i<4;i++)for(const tick of timers.values())tick();
  assert.equal(room.s.tick,before+1);
  a.attachment.last=0;

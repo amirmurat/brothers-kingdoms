@@ -183,7 +183,10 @@ const server=http.createServer((req,res)=>{
    assert(contextFlat.costs.every(c=>c.radius==='0px'&&c.fill==='rgba(0, 0, 0, 0)'),label+' costs have no pills');
    await page.evaluate(()=>window.__layout.hideAux());
 
+   await page.locator('#planToolPaint').click();
    await page.locator('#planToolErase').click();
+   assert(await page.locator('#planGuide').evaluate(e=>e.classList.contains('hidden')),label+' brush to eraser closes planning panel');
+   assert.equal(await page.evaluate(()=>window.__layout.getPlanner().mode),'erase',label+' eraser is global');
    const eraseHud=await page.evaluate(()=>{
     const h=document.getElementById('planEraseHint'),m=document.getElementById('mapView'),r=h.getBoundingClientRect(),mr=m.getBoundingClientRect(),s=getComputedStyle(h);
     return {visible:!h.classList.contains('hidden'),radius:s.borderRadius,background:s.backgroundColor,

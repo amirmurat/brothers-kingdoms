@@ -3156,3 +3156,8 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
 #armiesList select, #armiesList input { min-width:0; width:100%; max-width:100%; min-height:44px; background:#171d26; color:#edf2fa; border:0; padding:8px; border-radius:0; }
 #armiesList button { min-height:44px; }
 #armiesList input[hidden] { display:none; }
+
+/* v101: independent map focus, same flat bottom HUD geometry. */
+#armyFocusGuide{position:absolute;bottom:0;left:0;right:0;z-index:32;min-height:var(--bottom-hud-size,72px);padding:8px 12px;background:var(--sheet-flat,#151b24);display:flex;align-items:center;gap:10px;box-sizing:border-box}
+#armyFocusGuide strong{font-size:10px;letter-spacing:.08em}#armyFocusGuide span{flex:1;font-size:11px;line-height:1.4}#armyFocusGuide button{min-width:48px;min-height:48px;border-radius:0}
+#planToolFocus.chosen{color:#39d5ff!important}

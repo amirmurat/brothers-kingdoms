@@ -18,6 +18,7 @@ jobs:
           node-version: '22'
       - name: Engine and server regressions
         run: |
+          node tests/map-strategy-v101.cjs
           node tests/strategic-priorities.cjs
           node tests/economy-v100.cjs
           node tests/performance-v100.cjs

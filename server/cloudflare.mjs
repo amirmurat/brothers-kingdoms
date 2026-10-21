@@ -4,11 +4,11 @@ function compress(arr){let chunks=[];for(let i=0;i<arr.length;i+=8192)chunks.pus
 function expand(str){const raw=atob(str),out=new Array(raw.length);for(let i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);return out;}
 function rlePack(arr){const b=[];for(let i=0;i<arr.length;){const id=arr[i];let n=1;while(i+n<arr.length&&arr[i+n]===id&&n<65535)n++;b.push(id,n&255,n>>8);i+=n;}return compress(b);}
 const ownerPacketCache=new WeakMap();
-function pack(s,includeTerrain=true){
+function pack(s,includeTerrain=true,viewerId=null){
  if(!s||!s.owners?.length)return s;
  let cache=ownerPacketCache.get(s);
  if(!cache||cache.revision!==s.territoryRevision||cache.owners!==s.owners){cache={revision:s.territoryRevision,owners:s.owners,encoded:rlePack(s.owners)};ownerPacketCache.set(s,cache);}
- return {...E.networkState(s),tiles:includeTerrain?compress(s.tiles):null,owners:cache.encoded,ownerRle:true,packed:true};
+ return {...E.networkState(s,viewerId),tiles:includeTerrain?compress(s.tiles):null,owners:cache.encoded,ownerRle:true,packed:true};
 }
 
 const json = (data, status = 200) => Response.json(data, {status});
@@ -50,12 +50,11 @@ export class KingdomRoom {
   const parts=[];for(let i=0;i<data.length;i+=50000)parts.push(data.slice(i,i+50000));
   await this.ctx.storage.transaction(async tx=>{await tx.put('chunks',parts.length);for(let i=0;i<parts.length;i++)await tx.put('state:'+i,parts[i]);});
  }
- snapshot(includeTerrain=true){return {...pack(this.s,includeTerrain),serverBuild:E.BUILD,serverAdmin:this.admin};}
+ snapshot(includeTerrain=true,viewerId=null){return {...pack(this.s,includeTerrain,viewerId),serverBuild:E.BUILD,serverAdmin:this.admin};}
  broadcast(){
   const key=this.s?.seed+':'+(this.s?.tiles?.length||0),terrain=this.terrainKey!==key;
   this.terrainKey=key;
-  const text=JSON.stringify({t:'state',state:this.snapshot(terrain)});
-  for(const ws of this.sockets())try{ws.send(text);}catch(_){}
+  for(const ws of this.sockets())try{const id=ws.deserializeAttachment()?.id;if(id)ws.send(JSON.stringify({t:'state',state:this.snapshot(terrain,id)}));}catch(_){}
  }
  run(){
   if(this.timer||this.s?.phase!=='playing'||!this.sockets().length)return;
@@ -114,12 +113,12 @@ export class KingdomRoom {
    ws.serializeAttachment({id,last:0,connected:Date.now()});
    p.connected=true;p.ready=true;
    await this.save();
-   this.safe(ws,{t:'welcome',id,state:this.snapshot()});this.broadcast();this.run();return;
+   this.safe(ws,{t:'welcome',id,state:this.snapshot(true,id)});this.broadcast();this.run();return;
   }
   if(!a.id)return;
   const p=E.person(this.s,a.id);if(!p)return;
   if(m.t==='ping'){this.safe(ws,{t:'pong'});return;}
-  if(m.t==='resync'){this.safe(ws,{t:'state',state:this.snapshot()});return;}
+  if(m.t==='resync'){this.safe(ws,{t:'state',state:this.snapshot(true,a.id)});return;}
   const now=Date.now();
   if(m.t==='action'&&now-(a.last||0)<60){this.safe(ws,{t:'ack',id:m.id,ok:false,error:'Please wait before the next command.'});return;}
   ws.serializeAttachment({...a,last:now});
