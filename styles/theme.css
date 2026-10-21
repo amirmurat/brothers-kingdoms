@@ -2729,3 +2729,59 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
  width:6px!important;height:6px!important;background:#ff9cac!important;
  border:0!important;border-radius:0!important;
 }
+
+
+/* v97 — one aligned action grid for plan editing. All three cells fill the
+   same vertical span; color carries the action semantics, not unequal widths. */
+#game#game#game#game #planGuide .plan-guide-actions{
+ display:grid!important;
+ grid-template-columns:minmax(0,.85fr) minmax(0,1.25fr) minmax(0,1.35fr)!important;
+ align-items:stretch!important;justify-items:stretch!important;
+ gap:2px!important;width:100%!important;
+ margin:0!important;padding:0!important;
+ background:#10141c!important;
+}
+#game#game#game#game #planGuide .plan-guide-actions button{
+ display:grid!important;place-items:center!important;align-self:stretch!important;
+ width:100%!important;min-width:0!important;height:100%!important;
+ min-height:48px!important;max-height:none!important;
+ margin:0!important;padding:8px 4px!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+ font:700 clamp(11px,3.2vw,14px)/1.2 system-ui!important;
+ letter-spacing:0!important;text-align:center!important;white-space:normal!important;
+}
+#game#game#game#game #planGuide #planGuideExit{
+ background:#26313e!important;color:#dae4ef!important;
+}
+#game#game#game#game #planGuide #planPaintClear{
+ background:#59343c!important;color:#ffdae2!important;
+}
+#game#game#game#game #planGuide #planReviewButton{
+ background:#23615a!important;color:#e7fff6!important;
+}
+#game#game#game#game #planGuide .plan-guide-actions button:disabled{
+ background:#242b34!important;color:#8795a5!important;opacity:1!important;
+}
+/* Chosen nation must occupy precisely the same grid as every other row.
+   A subtle full-width selection outline replaces the clipping left stripe. */
+#game#game#game#game #warPanel .nation-row.focused{
+ position:relative!important;box-sizing:border-box!important;
+ padding:14px 0!important;border-left:0!important;border-right:0!important;
+ background:#20303d!important;box-shadow:inset 0 0 0 1px #446578!important;
+ border-radius:0!important;
+}
+#game#game#game#game #warPanel .nation-row.focused .nation-identity,
+#game#game#game#game #warPanel .nation-row.focused .nation-actions,
+#game#game#game#game #warPanel .nation-row.focused .nation-details{
+ margin-left:0!important;margin-right:0!important;padding-left:0!important;padding-right:0!important;
+}
+#game#game#game#game #warPanel .nation-identity .nation-color{
+ display:block!important;flex:none!important;width:12px!important;min-width:12px!important;height:12px!important;
+ border:0!important;border-radius:2px!important;
+}
+/* Prevent rapid button taps from becoming Safari's browser zoom gesture.
+   Do not disable accessibility pinch zoom or the game's intentional map zoom. */
+html,body,#lobby,#waiting,#game,#victory{touch-action:manipulation}
+button,a,summary,select,[role="button"],[role="tab"],[data-resource],
+#game #hudTroops,#game #warPanel .nation-row{touch-action:manipulation!important}
+#game #mapCanvas,#game #minimap{touch-action:none!important}
