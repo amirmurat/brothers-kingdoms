@@ -1076,9 +1076,13 @@ function renderArmies(){
    buttons:'<button data-focus-army="'+esc(a.id)+'" aria-label="Locate army">Locate</button><button data-recall-army="'+esc(a.id)+'" aria-label="Recall army">Recall</button>'});
  }
  const guards=mine()?.garrisons||[],returning=guards.filter(g=>g.returning).reduce((n,g)=>n+g.strength,0);
- if(guards.length)rows.unshift({key:'home-army',title:'Home army · '+number(mine().troops)+' troops',
-  status:guards.some(g=>g.role==='Guard')?'Guarding war fronts · reserve held behind the line':'Garrisoned near barracks and cities',
-  detail:number(guards.length)+' squads · '+number(returning)+' returning · nearby troops provide defense',buttons:''});
+ const strength=E.militaryStrength(state,myId);
+ // Reserve is a permanent section. A garrison snapshot may temporarily be empty.
+ rows.unshift({key:'home-army',title:'Home army · '+number(strength.reserve)+' troops',
+  status:guards.length?(guards.some(g=>g.role==='Guard')?'Guarding war fronts · reserve held behind the line':'Garrisoned near barracks and cities'):
+   strength.reserve?'Reserve not yet positioned on the map':strength.deployed?'Troops assigned to active fronts':'No home troops available',
+  detail:guards.length?number(guards.length)+' squads · '+number(returning)+' returning · nearby troops provide defense':
+   '0 squads · '+number(strength.deployed)+' deployed',buttons:''});
  const container=$('armiesList'),structure=rows.map(row=>row.key).join('|');
  if(container.dataset.structure!==structure){
   container.innerHTML=rows.length?rows.map(row=>'<div class="army-line" data-front-row="'+esc(row.key)+'"><div><strong data-front-title></strong><small data-front-status></small><small class="army-stats" data-front-detail></small></div>'+row.buttons+'</div>').join(''):
