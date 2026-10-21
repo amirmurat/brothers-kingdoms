@@ -1613,11 +1613,18 @@ function drawMapBuilding(b,x,y,overviewCount=1){
  const h=screenH/zoom,w=h*(loaded?source.naturalWidth/source.naturalHeight:1);
  const baseX=x-w/2,baseY=y-h*.74;
  ctx.save();
- // A restrained type-colored base, instead of a large black monochrome tile.
- ctx.fillStyle='#142532dd';
- ctx.fillRect(baseX-2/zoom,baseY-2/zoom,w+4/zoom,h+4/zoom);
- ctx.fillStyle=color;
- ctx.fillRect(baseX-2/zoom,baseY-2/zoom,w+4/zoom,3/zoom);
+ // Close zoom preserves the pixel sprite's silhouette; no opaque black tile.
+ // Overview gets a small translucent type-tinted medallion for contrast.
+ if(macro){
+  ctx.save();ctx.globalAlpha=.25;ctx.fillStyle=color;
+  ctx.fillRect(baseX-2/zoom,baseY-2/zoom,w+4/zoom,h+4/zoom);ctx.restore();
+  ctx.strokeStyle=color;ctx.lineWidth=2/zoom;
+  ctx.strokeRect(baseX-1/zoom,baseY-1/zoom,w+2/zoom,h+2/zoom);
+ }else{
+  ctx.fillStyle='#16303966';ctx.beginPath();
+  ctx.ellipse(x,baseY+h,w*.48,h*.12,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=color;ctx.fillRect(baseX+2/zoom,baseY+h-2/zoom,w-4/zoom,3/zoom);
+ }
  if(loaded){ctx.imageSmoothingEnabled=false;ctx.drawImage(source,baseX,baseY,w,h);ctx.imageSmoothingEnabled=true;}
  else ctx.drawImage(buildingTypeMarker(kind),baseX,baseY,w,h);
  const labelW=(overviewCount>1?22:20)/zoom, labelH=macro?11/zoom:13/zoom;
