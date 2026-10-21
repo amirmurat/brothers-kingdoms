@@ -526,4 +526,4 @@ _Обновлено: 20 октября 2026 года, рабочая preview-в�
 ## v91 — Reserve navigation and flat match controls
 - Removed the separate Offensives HUD cell; Reserve opens My army/offensives by tap or Enter/Space. Legacy counters remain hidden for snapshot compatibility. Three equal top stats retain fixed number rows.
 - Match buttons, sheets, minimap and brush control use flat rectangular surfaces without framed rounded cards. Side controls retain fixed 48px targets and centered icons, selected tools use background fill. No simulation/animation changes.
-- Local syntax, UI transitions, Cloudflare client, army paint limit and asset build checks passed. Mobile CI covers Reserve navigation and flat sheet geometry; physical iPhone remains unverified.
+- Local syntax, UI transitions, Cloudflare client, army paint limit and asset build checks passed. Chromium/WebKit mobile CI and two-client network regression passed (run 39616185638). Cloudflare did not register a build for the first v91 commit; this follow-up records validation and retriggers branch publication. Physical iPhone remains unverified.
