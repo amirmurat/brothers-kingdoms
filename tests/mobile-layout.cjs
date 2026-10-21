@@ -8,7 +8,7 @@ const server=http.createServer((req,res)=>{
  try{
   let body=fs.readFileSync(file);
   if(name==='/'||name==='/index.html')body=body.toString().split('\n').filter(line=>!line.includes('unpkg.com/peerjs')).join('\n');
-  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={beginAttackPlanner,brushAt,syncPaintEligibility,resetAttackPlanner,getPlanner:()=>attackPlanner,buildingCells,drawHarvestSites,buildingLevelColor,repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
+  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={beginAttackPlanner,brushAt,syncPaintEligibility,resetAttackPlanner,getPlanner:()=>attackPlanner,buildingCells,drawHarvestSites,buildingLevelColor,repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,nationLabelAnchors,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
   res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream'});res.end(body);
  }catch(_){res.writeHead(404);res.end();}
 });
@@ -44,6 +44,31 @@ const server=http.createServer((req,res)=>{
    assert.deepEqual(await page.evaluate(()=>window.__layout.getState().players[0].spawnPoint),chosen,label+' map click chooses exact point');
    await page.locator('#spawnAuto').click();assert.equal(await page.evaluate(()=>window.__layout.getState().players[0].spawnPoint),null,label+' automatic resets selection');
    await page.evaluate(()=>window.__layout.createDemo(false));
+   const planStyle=await page.evaluate(()=>{
+    const L=window.__layout;L.beginAttackPlanner();
+    const buttons=[...document.querySelectorAll('#planGuide .plan-guide-actions button')];
+    const rows=buttons.map(b=>{const r=b.getBoundingClientRect(),s=getComputedStyle(b);return {x:r.x,right:r.right,top:r.top,bottom:r.bottom,background:s.backgroundColor,touch:s.touchAction};});
+    const pageTouch=getComputedStyle(document.body).touchAction,mapTouch=getComputedStyle(document.getElementById('mapCanvas')).touchAction;
+    L.resetAttackPlanner();return {rows,pageTouch,mapTouch};
+   });
+   assert.equal(planStyle.pageTouch,'manipulation',label+' double-tap browser zoom disabled');
+   assert.equal(planStyle.mapTouch,'none',label+' map retains custom touch gestures');
+   assert(planStyle.rows.every(r=>r.touch==='manipulation'),label+' repeated action taps cannot trigger Safari zoom');
+   assert.equal(new Set(planStyle.rows.map(r=>r.background)).size,3,label+' plan Exit/Reset/Save have distinct backgrounds');
+   assert(planStyle.rows.every(r=>Math.abs(r.top-planStyle.rows[0].top)<1&&Math.abs(r.bottom-planStyle.rows[0].bottom)<1),label+' plan buttons share same height and y position');
+   assert(planStyle.rows.every((r,i,a)=>i===0||r.x>=a[i-1].right),label+' plan buttons do not overlap');
+   const nationFallback=await page.evaluate(()=>{
+    const E=window.BKEngine,L=window.__layout,s=L.getState();
+    const p=s.players.find(p=>p.land>1&&!p.eliminated);if(!p)throw Error('missing living kingdom');
+    const cell=s.owners.findIndex(id=>id===p.id),nextOwners=s.owners.slice();nextOwners[cell]=0;
+    const snapshot={...s,owners:nextOwners,players:s.players.map(q=>q.id===p.id?{...q,capital:{x:cell%E.W,y:(cell/E.W)|0}}:q),
+     buildings:s.buildings.filter(b=>b.owner!==p.id||b.kind!=='capital'),territoryRevision:(s.territoryRevision||0)+1000};
+    const marker=L.nationLabelAnchors(snapshot).find(v=>v.id===p.id);
+    return {exists:!!marker,name:marker?.name,expected:p.name,cell:marker?.cell,owned:marker?nextOwners[marker.cell]===p.id:false,notLostCell:marker?.cell!==cell};
+   });
+   assert(nationFallback.exists&&nationFallback.owned&&nationFallback.notLostCell,label+' label remains over owned land after capital capture');
+   assert.equal(nationFallback.name,nationFallback.expected,label+' capital loss preserves exact nation name');
+
    const performanceChecks=await page.evaluate(()=>{
     const E=window.BKEngine,L=window.__layout,s=L.getState(),id=s.players.find(p=>!p.bot).id;
     const zone=s.tiles.flatMap((tile,i)=>tile&&s.owners[i]!==id?[i]:[]),i=zone[0];
@@ -296,6 +321,14 @@ const server=http.createServer((req,res)=>{
    await page.evaluate(()=>window.__layout.closePanel());
    await page.locator('#warChip').click();
    assert.equal(await page.locator('#warTabNations').getAttribute('aria-selected'),'true',label+' Nations opens Military in Nations tab');
+   const nationFocus=await page.evaluate(()=>{
+    const el=document.querySelector('#warPanelList .nation-row'),dot=el.querySelector('.nation-color'),before=dot.getBoundingClientRect();
+    el.classList.add('focused');
+    const after=dot.getBoundingClientRect(),style=getComputedStyle(el);el.classList.remove('focused');
+    return {move:Math.abs(before.x-after.x),left:style.borderLeftWidth};
+   });
+   assert(nationFocus.move<1&&nationFocus.left==='0px',label+' chosen nation remains aligned with other rows');
+
    await page.locator('#warTabThreats').click();
    assert.equal(await page.locator('#warTabThreats').getAttribute('aria-selected'),'true',label+' Attacks tab is operable');
    assert(await page.locator('#warThreatEmpty').isVisible(),label+' no attacks gives an explicit empty state');
