@@ -9,7 +9,7 @@
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
 <link rel="stylesheet" href="styles/legacy.css?v=49-visible-camp"/>
-<link rel="stylesheet" href="styles/theme.css?v=89-live-paint-clarity-r3"/>
+<link rel="stylesheet" href="styles/theme.css?v=90-stable-hud-grid"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -56,10 +56,10 @@
 
 </header>
 <div aria-label="Resources and income" class="top-resources resource-hud" id="resourceSummary" role="group">
-<div data-resource="food" role="button" tabindex="0" aria-pressed="false" aria-label="Prioritize food production"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#grains"></use></svg><span>FOOD</span><b id="resFood">0</b><small aria-label="Change per second" id="incFood">+0</small></div>
-<div data-resource="wood" role="button" tabindex="0" aria-pressed="false" aria-label="Prioritize wood production"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#tree"></use></svg><span>WOOD</span><b id="resWood">0</b><small aria-label="Change per second" id="incWood">+0</small></div>
-<div data-resource="stone" role="button" tabindex="0" aria-pressed="false" aria-label="Prioritize stone production"><img class="ui-icon res-icon" src="assets/shapes/stone.svg" alt="" aria-hidden="true"/><span>STONE</span><b id="resStone">0</b><small aria-label="Change per second" id="incStone">+0</small></div>
-<div data-resource="gold" role="button" tabindex="0" aria-pressed="false" aria-label="Prioritize gold production"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#coins"></use></svg><span>GOLD</span><b id="resGold">0</b><small aria-label="Change per second" id="incGold">+0</small></div>
+<div data-resource="food" role="button" tabindex="0" aria-pressed="false" aria-label="Prioritize food production"><span class="resource-heading"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#grains"></use></svg><span>FOOD</span></span><b id="resFood">0</b><small aria-label="Change per second" id="incFood">+0</small></div>
+<div data-resource="wood" role="button" tabindex="0" aria-pressed="false" aria-label="Prioritize wood production"><span class="resource-heading"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#tree"></use></svg><span>WOOD</span></span><b id="resWood">0</b><small aria-label="Change per second" id="incWood">+0</small></div>
+<div data-resource="stone" role="button" tabindex="0" aria-pressed="false" aria-label="Prioritize stone production"><span class="resource-heading"><img class="ui-icon res-icon" src="assets/shapes/stone.svg" alt="" aria-hidden="true"/><span>STONE</span></span><b id="resStone">0</b><small aria-label="Change per second" id="incStone">+0</small></div>
+<div data-resource="gold" role="button" tabindex="0" aria-pressed="false" aria-label="Prioritize gold production"><span class="resource-heading"><svg class="ui-icon res-icon" viewBox="0 0 256 256" aria-hidden="true" focusable="false"><use href="assets/icons/game.svg#coins"></use></svg><span>GOLD</span></span><b id="resGold">0</b><small aria-label="Change per second" id="incGold">+0</small></div>
 </div>
 
 <div aria-live="assertive" class="sr-only" id="incomingAnnouncement" role="alert"></div>
@@ -185,8 +185,8 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="server-config.js?v=89-live-paint-clarity-r3"></script>
-<script src="engine.js?v=89-live-paint-clarity-r3"></script>
+<script src="server-config.js?v=90-stable-hud-grid"></script>
+<script src="engine.js?v=90-stable-hud-grid"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=89-live-paint-clarity-r3"></script>
+<script src="game.js?v=90-stable-hud-grid"></script>
 </body></html>

@@ -596,3 +596,6 @@ buildingLevelColor supplies the shared map/detail level palette. drawHarvestSite
 
 ### v89 live painting and map layers
 syncPaintEligibility prunes invalid draft cells when ownership or saved-plan geometry changes; brushAt skips owned/already covered/duplicate cells before checking cached strokeLimit. drawAttackPlanning caches only saved regions and renders the live draft separately. Buildings render above planning and troops; buildingCells caches occupied structure cells so troop/harvest marks skip them. drawHarvestSites no longer creates labels. Type-specific tier palettes and tier marks distinguish upgrades. Resource/building selected backgrounds fill rectangular cells. #productionPriority stays hidden; resource HUD handles priority. Flat #planGuide matches bottom HUD; controls do not transform on press.
+
+### v90 fixed HUD grid
+.resource-heading wraps each resource icon/name. --bottom-hud-size and --bottom-hud-half define equal normal/paint bottom HUD geometry and usable-map control centering. Header/value/income rows are fixed independently of text length. ThreatExpand remains hidden compatibility DOM; incomingAttack now opens the flat list for multiple threats, or focuses the sole threat. No simulation changes.

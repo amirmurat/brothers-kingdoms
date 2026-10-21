@@ -112,9 +112,16 @@ const server=http.createServer((req,res)=>{
    await page.evaluate(()=>{const L=window.__layout,s=L.getState();L.contextual(s.buildings.find(b=>b.kind==='capital'&&!s.players.find(p=>p.id===b.owner).bot));});
    assert((await page.locator('#contextBody').textContent()).includes('Garrison nearby'),label+' base tap reveals stationed troops');
    await page.evaluate(()=>window.__layout.hideAux());
+   const bottomBefore=await page.locator('#buildDock').boundingBox();
    const toolBefore=await page.locator('#planToolPaint').boundingBox();
    await page.locator('#planToolPaint').click();
    const toolAfter=await page.locator('#planToolPaint').boundingBox();
+   const bottomAfter=await page.locator('#planGuide').boundingBox();
+   assert.equal(bottomAfter.height,bottomBefore.height,label+' normal and planning HUD have identical height');
+   assert.equal(bottomAfter.y,bottomBefore.y,label+' switching mode never grows the bottom panel');
+   const controls=await page.evaluate(()=>{const map=document.getElementById('mapView').getBoundingClientRect(),bottom=document.getElementById('planGuide').getBoundingClientRect(),tools=document.getElementById('planToolSwitch').getBoundingClientRect(),brush=document.getElementById('planControls').getBoundingClientRect();return {expected:map.y+(64+map.height-bottom.height)/2,tools:tools.y+tools.height/2,brush:brush.y+brush.height/2};});
+   assert(Math.abs(controls.tools-controls.expected)<1&&Math.abs(controls.brush-controls.expected)<1,label+' both side controls are centered in usable map space');
+
    assert(Math.abs(toolBefore.x-toolAfter.x)<1&&Math.abs(toolBefore.y-toolAfter.y)<1,label+' selecting attack keeps side tool position stable');
    assert.equal(await page.locator('#planTroopsControl').isVisible(),false,label+' no troop percentage slider');
    assert.equal(await page.locator('#planBrushSize').isVisible(),true,label+' brush sizing remains available');
@@ -140,6 +147,16 @@ const server=http.createServer((req,res)=>{
    const tiers=await page.evaluate(()=>['city','barracks','fort'].map(kind=>new Set([1,2,3,4,5].map(level=>window.__layout.buildingLevelColor({kind,level}))).size));
    assert(tiers.every(n=>n===5),label+' every building type has five distinct tier colors');
    assert.equal(new Set(typeColors).size,3,label+' map building types have distinct colors');
+   const hudStability=await page.evaluate(()=>{
+    const ids=['troopCount','workerCount','landCount','frontCount','resFood','resWood','resStone','resGold'];
+    const nodes=ids.map(id=>document.getElementById(id)),old=nodes.map(n=>n.textContent);
+    const boxes=()=>nodes.map(n=>{const r=n.getBoundingClientRect();return [r.x,r.y,r.width,r.height];});
+    nodes.forEach(n=>n.textContent='1');const short=boxes();nodes.forEach(n=>n.textContent='102.8k');const long=boxes();nodes.forEach((n,i)=>n.textContent=old[i]);
+    const resource=document.getElementById('resourceSummary').getBoundingClientRect(),cells=[...document.querySelectorAll('#resourceSummary > [data-resource]')].map(n=>n.getBoundingClientRect());
+    return {short,long,flush:cells.every(r=>r.y===resource.y&&r.height===resource.height)&&cells[0].x===resource.x&&Math.abs(cells.at(-1).right-resource.right)<1};
+   });
+   assert.deepEqual(hudStability.short,hudStability.long,label+' changing numbers never shifts HUD geometry');
+   assert(hudStability.flush,label+' resource backgrounds fill their complete grid cells');
    const dock=await page.locator('#buildDock').boundingBox();
    assert(dock&&dock.width<=viewport.width&&dock.x>=0&&dock.y+dock.height<=viewport.height+1,label+' strategic dock fits');
    assert.equal(await page.locator('#developButton').isVisible(),false,label+' no construction catalogue toggle');

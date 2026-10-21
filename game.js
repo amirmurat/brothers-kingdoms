@@ -140,7 +140,7 @@ function threatDistance(a,p){
 function setThreatList(open){
  const expanded=!!open&&activeThreats.length>1;
  $('threatList').classList.toggle('hidden',!expanded);
- $('threatExpand').setAttribute('aria-expanded',String(expanded));
+ $('threatExpand').setAttribute('aria-expanded',String(expanded));$('incomingAttack').setAttribute('aria-expanded',String(expanded));
 }
 function updateIncomingAttack(p){
  const threats=hostileAttacks(p).sort((a,b)=>threatDistance(a,p)-threatDistance(b,p)||b.strength-a.strength);
@@ -154,7 +154,7 @@ function updateIncomingAttack(p){
  $('incomingTitle').textContent=threats.length===1?'Under attack':`Under attack · ${threats.length} fronts`;
  $('incomingDetail').textContent=`${attackers.join(', ')} · ${number(force)} enemy troops`;
  $('threatCount').textContent=threats.length;
- $('incomingAttack').setAttribute('aria-label',threats.length>1?'Go to next of '+threats.length+' threats':'Go to attack location');
+ $('incomingAttack').setAttribute('aria-label',threats.length>1?'View '+threats.length+' incoming attacks':'Go to attack location');
  const list=$('threatItems'),structure=threats.map(a=>a.id).join('|');
  if(list.dataset.structure!==structure){
   list.innerHTML=threats.map(a=>'<button type="button" data-focus-threat="'+esc(a.id)+'" class="threat-item"><i></i><span><strong></strong><small></small></span><b></b></button>').join('');
@@ -182,7 +182,8 @@ function updateIncomingAttack(p){
 }
 $('incomingAttack').onclick=()=>{
  if(!activeThreats.length)return;
- focusThreat(activeThreats[attackFocusIndex++%activeThreats.length]);setThreatList(false);
+ if(activeThreats.length>1){setThreatList($('threatList').classList.contains('hidden'));return;}
+ focusThreat(activeThreats[0]);setThreatList(false);
 };
 $('threatExpand').onclick=()=>setThreatList($('threatList').classList.contains('hidden'));
 $('threatClose').onclick=()=>setThreatList(false);
