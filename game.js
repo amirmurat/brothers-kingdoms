@@ -316,14 +316,14 @@ function renderWars(){
  const me=mine(),chip=$('warChip');
  if(!state||!me)return;
  chip.classList.remove('hidden');
- const wars=(state.wars||[]).filter(k=>k.split(':').map(Number).includes(myId));
+ const wars=(state.wars||[]).filter(k=>{const ids=k.split(':').map(Number);return ids.includes(myId)&&ids.every(id=>{const n=E.person(state,id);return n&&!n.eliminated&&n.land>0;});});
  const nations=state.players.filter(p=>p.id!==myId&&!p.eliminated&&p.land>0).sort((a,b)=>a.name.localeCompare(b.name));
  const incoming=(state.peaceOffers||[]).some(o=>o.to===myId)||nations.some(n=>(n.offers||[]).includes(myId));
  $('warChipLabel').textContent='NATIONS';
- $('nationWarCount').textContent=wars.length?String(wars.length):'';
+ $('nationWarCount').textContent=wars.length?(wars.length>9?'9+':String(wars.length)):'';
  $('nationWarCount').classList.toggle('hidden',!wars.length);
  chip.setAttribute('aria-label','Nations and diplomacy · '+wars.length+' wars'+(incoming?' · offers pending':''));
- chip.classList.toggle('nations-pending',incoming);
+ chip.classList.toggle('nations-pending',incoming||activeThreats.length>0);
  const chosen=selectedNationTargets();
  const html=nations.map(n=>{
   const atWar=fighting(n.id),ally=me.allies.includes(n.id),targeted=chosen.includes(n.id);
@@ -331,11 +331,11 @@ function renderWars(){
   const peaceOut=(state.peaceOffers||[]).some(o=>o.from===myId&&o.to===n.id);
   const allianceIn=(n.offers||[]).includes(myId),allianceOut=(me.offers||[]).includes(n.id);
   const status=ally?'ALLIED':atWar?'AT WAR':'PEACE';
-  const relation=atWar?(n.bot?'Bots do not sign peace':peaceIn?'Accept peace':peaceOut?'Peace proposed':'Propose peace'):
-   ally?'End alliance':n.bot?'Bot alliances unavailable':allianceIn?'Accept alliance':allianceOut?'Offer pending':'Offer alliance';
-  const relationDisabled=atWar?(n.bot||peaceOut):(!ally&&(n.bot||allianceOut));
+  const relation=atWar?(peaceIn?'Accept peace':peaceOut?'Peace proposed':n.bot?'Request peace':'Propose peace'):
+   ally?'End alliance':allianceIn?'Accept alliance':allianceOut?'Offer pending':n.bot?'Request alliance':'Offer alliance';
+  const relationDisabled=atWar?peaceOut:(!ally&&allianceOut);
   const relationAction=atWar?'peace':'diplomacy';
-  return '<div class="nation-row"><div class="nation-identity"><span class="nation-color" style="background:'+esc(n.color)+'"></span>'+
+  return '<div class="nation-row" data-nation-id="'+n.id+'"><div class="nation-identity"><span class="nation-color" style="background:'+esc(n.color)+'"></span>'+
    '<span class="nation-name">'+esc(n.name)+'</span><span class="nation-status '+(ally?'allied':atWar?'hostile':'neutral')+'">'+status+'</span></div>'+
    '<div class="nation-details" data-nation-land="'+n.id+'"></div>'+
    '<div class="nation-actions"><button type="button" class="nation-attack'+(targeted?' chosen':'')+'" data-nation-attack="'+n.id+
@@ -367,7 +367,7 @@ function beginAttackPlanner(existing=null){
  $('planGuide').classList.remove('hidden');$('planReview').classList.add('hidden');
  $('planControls').classList.remove('hidden');$('planControls').classList.remove('erase-only');$('planEraseHint').classList.add('hidden');
  $('planReviewButton').textContent=existing?'Save changes':'Start offensive';
- $('planPaintClear').textContent=existing?'Reset':'Clear';
+ $('planPaintClear').textContent=existing?'Reset plan':'Clear';
  setPaintTool('paint');
  $('planHeading').textContent=existing?'EDIT PLAN':'ATTACK PLAN';
  $('planGuide').setAttribute('aria-label','Attack plan controls');
@@ -485,9 +485,11 @@ function refreshPaintGuide(){
 }
 function clearPaintedZone(){
  const plan=attackPlanner;if(plan?.mode!=='paint'||pressed.size>0)return;
- if(plan.editId){plan.cells=new Set(plan.originalCells);plan.targets=new Set(plan.originalTargets);plan.removedTargets.clear();percent=plan.originalPercent;
-  $('planTroopsPercent').value=String(percent);$('attackPercent').value=String(percent);$('percentLabel').textContent=percent+'%';}
- else plan.cells.clear();
+ if(plan.editId&&!plan.workResource){
+  if(command({type:'cancelPlan',id:plan.editId})){resetAttackPlanner();toast('Selected offensive zone removed');}
+  return;
+ }
+ plan.cells.clear();
  plan.lastPoint=null;plan.brushPoint=null;plan.zoneCells=null;plan.optionsKey='';
  refreshPaintGuide();queueDraw();
 }
@@ -1184,7 +1186,11 @@ function selectMap(clientX,clientY){
   if(!E.tile(state,p.x,p.y))return toast('You cannot conquer the sea. Choose land.');
   selected=null;contextual(null);
   const opponent=E.person(state,clickedOwner);
-  if(opponent&&!opponent.bot)setPreview({type:'send',x:p.x,y:p.y,valid:true});else setPreview(null);
+  if(opponent&&!opponent.eliminated){
+   openMilitary('nations');
+   const row=$('warPanelList').querySelector('[data-nation-id="'+clickedOwner+'"]');
+   if(row){row.classList.add('focused');row.scrollIntoView({block:'nearest',behavior:'instant'});}
+  }else setPreview(null);
   return;
  }
  const a=nearestObject(pt.x,pt.y,'army');
