@@ -586,6 +586,8 @@ function workforceStep(s){
   for(let n=0;n<p.workers.length;n++){
    const g=p.workers[n],current=idx(g.x,g.y),component=components[current];
    let job=s.buildJobs.find(j=>j.id===g.job&&j.owner===p.id);
+   if(job&&components[idx(job.x,job.y)]!==component){g.job=null;g.route=null;job=null;}
+   if(g.roadTask&&(!inside(g.tx,g.ty)||components[idx(g.tx,g.ty)]!==component)){g.roadTask=false;g.route=null;}
    if(g.resource&&!sites.some(t=>t.i===idx(g.tx,g.ty)&&t.resource===g.resource)){occupied.delete(idx(g.tx,g.ty));g.resource=null;g.route=null;}
    if(g.job&&!job){g.job=null;g.route=null;}
    // Construction gets priority, but only one group can occupy a job.

@@ -69,4 +69,11 @@ function fixture(){const s=E.lobby(41),id=E.addPlayer(s,'Builder'),enemy=E.addPl
  const old=JSON.parse(JSON.stringify(s));delete old.players[0].workers;delete old.roads;delete old.workZones;delete old.buildJobs;
  E.workforceStep(old);assert(E.workforceStats(old,id).groups>0,'Old saves migrate without removing old buildings');
 }
+{
+ const {s,id,p,enemy}=fixture();E.workforceStep(s);
+ const g=p.workers[0];g.roadTask=true;g.tx=40;g.ty=20;g.route=[E.idx(11,20)];
+ s.owners[E.idx(40,20)]=enemy;s.territoryRevision++;
+ E.workforceStep(s);assert.equal(g.roadTask,false,'A captured road destination releases its workers');
+ assert(g.tx!==40||g.ty!==20,'Workers can choose safe work or home after a route is cut');
+}
 console.log('PASS workforce: painted resources, terrain/authority, real travel, local harvest, queued construction, city capacity, roads, bounded groups and wire/save migration');
