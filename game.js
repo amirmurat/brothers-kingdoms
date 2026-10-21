@@ -1579,7 +1579,7 @@ function assembleTownSprites(){
  }
  if(changed)queueDraw();
 }
-for(const id of new Set(Object.values(townRecipes).flatMap(r=>[...r.parts,r.deco]))){
+if(typeof Image==='function')for(const id of new Set(Object.values(townRecipes).flatMap(r=>[...r.parts,r.deco]))){
  const tile=new Image();townTiles[id]=tile;tile.onload=assembleTownSprites;
  tile.src='assets/tiny-town/tile_'+String(id).padStart(4,'0')+'.png';
 }
