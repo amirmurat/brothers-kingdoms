@@ -169,7 +169,7 @@ function start(s,bots=0){if(s.phase!=='lobby'||!s.players.length)return {ok:fals
 function buildingCount(s,id,kind){return s.buildings.filter(b=>b.owner===id&&b.kind===kind).length;}
 function costBuilding(s,id,kind){
  const base=KINDS[kind]?.cost;if(!base)return null;
- const count=buildingCount(s,id,kind)+(s.buildJobs||[]).filter(j=>j.owner===id&&j.kind===kind).length;
+ const count=buildingCount(s,id,kind)+(s.buildJobs||[]).filter(j=>j.owner===id&&!j.upgradeOf&&j.kind===kind).length;
  return Object.fromEntries(Object.entries(base).map(([resource,value])=>[resource,Math.ceil(value*(100+5*count)/100)]));
 }
 function costUpgrade(b){
@@ -404,8 +404,8 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
   if(fail)return {ok:false,error:fail};
   if(!['city','barracks','fort'].includes(kind))return {ok:false,error:'Use a resource zone for production.'};
   s.buildJobs??=[];if(s.buildJobs.some(j=>j.x===x&&j.y===y))return {ok:false,error:'Construction already queued here.'};
-  if(s.buildJobs.filter(j=>j.owner===id).length>=24)return {ok:false,error:'Finish queued construction first.'};
-  const count=s.buildJobs.filter(j=>j.owner===id&&j.kind===kind).length;
+  if(s.buildJobs.filter(j=>j.owner===id&&!j.upgradeOf).length>=24)return {ok:false,error:'Finish queued construction first.'};
+  const count=s.buildJobs.filter(j=>j.owner===id&&!j.upgradeOf&&j.kind===kind).length;
   const cost=Object.fromEntries(Object.entries(KINDS[kind].cost).map(([k,v])=>[k,Math.ceil(v*(1+.05*(buildingCount(s,id,kind)+count)))]));
   if(!available(p,cost))return {ok:false,error:'Not enough resources.'};
   charge(p,cost);s.buildJobs.push({id:'j'+(++s.nonce),owner:id,kind,x,y,cost,progress:0});return {ok:true};
@@ -519,7 +519,11 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
  }
  if(a.type==='upgrade'){
   const b=s.buildings.find(v=>v.id===a.id&&v.owner===id);if(b?.upgrade)return {ok:false,error:'Upgrade already in progress.'};if(s.buildings.filter(b=>b.owner===id&&b.upgrade).length>=2)return {ok:false,error:'Finish one of your two active upgrades first.'};if(!b||b.level>=4)return {ok:false,error:'Maximum level reached.'};const price=costUpgrade(b);
-  if(!available(p,price))return {ok:false,error:'Not enough resources.'};charge(p,price);b.upgrade={owner:id,level:b.level+1,readyTick:s.tick+upgradeTime(b)};return {ok:true};
+  if(!available(p,price))return {ok:false,error:'Not enough resources.'};
+  charge(p,price);s.buildJobs??=[];
+  const job={id:'j'+(++s.nonce),owner:id,kind:b.kind,x:b.x,y:b.y,upgradeOf:b.id,targetLevel:b.level+1,progress:0,cost:price};
+  b.upgrade={owner:id,level:b.level+1,jobId:job.id,progress:0,total:upgradeTime(b)};
+  s.buildJobs.push(job);return {ok:true};
  }
  if(a.type==='research'){
   const key=String(a.key);if(!TECH[key])return {ok:false,error:'Unknown research.'};const l=p.tech[key];if(l>=3)return {ok:false,error:'Research complete.'};const c=costTech(key,l);
@@ -613,7 +617,8 @@ function workforceStats(s,id){
  const capacity=bases.reduce((n,b)=>n+24*b.level,0),groups=person(s,id)?.workers||[];
  const working=groups.filter(g=>g.resource&&g.progress>=3&&g.x===g.tx&&g.y===g.ty);
  return {capacity,groups:groups.length,working:working.reduce((n,g)=>n+g.count,0),
-  building:(s.buildJobs||[]).filter(j=>j.owner===id).length};
+  building:(s.buildJobs||[]).filter(j=>j.owner===id).length,
+  upgrading:(s.buildJobs||[]).filter(j=>j.owner===id&&j.upgradeOf).length};
 }
 function paintWorkZone(s,p,a){
  const resource=String(a.resource);if(!WORK_RESOURCES[resource])return {ok:false,error:'Choose a resource.'};
@@ -666,9 +671,26 @@ function moveOnRoute(s,id,g){
 }
 function workforceStep(s){
  s.workZones??=[];s.buildJobs??=[];s.roads??=[];
- // Paid sites lost to an enemy are cancelled once; refund unspent materials.
- for(const j of [...s.buildJobs])if(s.owners[idx(j.x,j.y)]!==j.owner||buildingAt(s,j.x,j.y)){
-  const p=person(s,j.owner);if(p)for(const [k,n] of Object.entries(j.cost))p.res[k]=Math.min(resourceCapacity(s,p.id),p.res[k]+n);
+ // Migrate already-paid v102 timers into real builder tasks on old saves.
+ // Progress remains earned, but cannot continue before a worker arrives.
+ for(const b of s.buildings)if(b.upgrade){
+  if(b.upgrade.owner!==b.owner||owner(s,b.x,b.y)!==b.owner){delete b.upgrade;continue;}
+  if(!b.upgrade.jobId){
+   const total=upgradeTime(b),remaining=Math.max(1,(b.upgrade.readyTick||s.tick+total)-s.tick);
+   const progress=Math.max(0,Math.min(total-1,total-remaining));
+   const job={id:'j'+(++s.nonce),owner:b.owner,kind:b.kind,x:b.x,y:b.y,upgradeOf:b.id,targetLevel:b.upgrade.level,progress,cost:{}};
+   b.upgrade={owner:b.owner,level:job.targetLevel,jobId:job.id,progress,total};
+   s.buildJobs.push(job);
+  }
+ }
+ // Cancel invalid work. An upgrade is on an existing building, unlike a new build.
+ for(const j of [...s.buildJobs]){
+  const target=j.upgradeOf?s.buildings.find(b=>b.id===j.upgradeOf):null;
+  const invalid=j.upgradeOf?(!target||target.owner!==j.owner||owner(s,j.x,j.y)!==j.owner||target.upgrade?.jobId!==j.id):
+   (owner(s,j.x,j.y)!==j.owner||!!buildingAt(s,j.x,j.y));
+  if(!invalid)continue;
+  if(!j.upgradeOf){const p=person(s,j.owner);if(p)for(const [k,n] of Object.entries(j.cost||{}))p.res[k]=Math.min(resourceCapacity(s,p.id),p.res[k]+n);}
+  if(target?.upgrade?.jobId===j.id)delete target.upgrade;
   s.buildJobs=s.buildJobs.filter(q=>q!==j);
  }
  for(const p of s.players){if(!alive(p))continue;
@@ -747,7 +769,17 @@ function workforceStep(s){
    }
    g.route=[];
    layRoad(s,p,current);
-   if(job){job.progress=(job.progress||0)+1;g.status='Building';if(job.progress>=constructionTime(job.kind)){building(s,p.id,job.kind,job.x,job.y);s.buildJobs=s.buildJobs.filter(j=>j!==job);g.job=null;g.progress=0;}}
+   if(job){
+    job.progress=(job.progress||0)+1;g.status=job.upgradeOf?'Upgrading':'Building';
+    const target=job.upgradeOf?s.buildings.find(b=>b.id===job.upgradeOf):null;
+    if(target?.upgrade)target.upgrade.progress=job.progress;
+    const required=job.upgradeOf?upgradeTime({level:job.targetLevel-1}):constructionTime(job.kind);
+    if(job.progress>=required){
+     if(job.upgradeOf){if(target&&target.owner===p.id&&target.upgrade?.jobId===job.id){target.level=job.targetLevel;delete target.upgrade;}}
+     else building(s,p.id,job.kind,job.x,job.y);
+     s.buildJobs=s.buildJobs.filter(j=>j!==job);g.job=null;g.progress=0;
+    }
+   }
    else if(g.resource){g.progress=Math.min(3,(g.progress||0)+1);g.status=g.progress<3?'Preparing':'Harvesting';if(g.progress>=3)p.workIncome[g.resource]+=g.count*.8;}
    else{g.status=g.roadTask?'Road complete':'Home';g.roadTask=false;}
   }
@@ -828,7 +860,6 @@ function fortSees(s,f,b){const r=fortRadius(f,s);return (f.x-b.x)**2+(f.y-b.y)**
 function focusStatus(s,id,f=person(s,id)?.armyFocus){if(!f||!inside(f.x,f.y)||!tile(s,f.x,f.y))return 'invalid';const p=person(s,id),i=idx(f.x,f.y);if(s.owners[i]===id)return 'defend';if(p?.allies.includes(s.owners[i]))return 'invalid';return [...(s.attackPlans||[]),...(s.recoveryPlans||[])].some(q=>q.owner===id&&q.zoneCells?.includes(i))?'attack':'invalid';}
 function constructionTime(kind){return {city:35,barracks:30,fort:25}[kind]||20;}
 function upgradeTime(b){return 30*2**Math.max(0,b.level-1);}
-function finishUpgrades(s){for(const b of s.buildings)if(b.upgrade){if(b.upgrade.owner!==b.owner||owner(s,b.x,b.y)!==b.owner)delete b.upgrade;else if(s.tick>=b.upgrade.readyTick){b.level=b.upgrade.level;delete b.upgrade;}}}
 const fortIntel=new WeakMap();
 function visibleBuilding(s,id,b){
  if(b.owner===id||person(s,id)?.allies.includes(b.owner))return true;
@@ -1542,7 +1573,7 @@ function combatStep(s){if(s.phase!=='playing')return;
  for(const a of [...s.armies])if(a.strength>0)advance(s,a);
  s.armies=s.armies.filter(a=>a.strength>=8||a.awaitingReinforcements||a.waitingForRoute);
 }
-function tick(s){if(s.phase!=='playing')return;s.tick++;finishUpgrades(s);
+function tick(s){if(s.phase!=='playing')return;s.tick++;
  adoptLegacyOffensives(s);
  workforceStep(s);
  for(const p of s.players){if(!alive(p))continue;income(s,p);}
@@ -1605,5 +1636,5 @@ function restoreNetworkState(s){
  delete s.armyPacked;return s;
 }
 
-return{BUILD:'v102',focusStatus,constructionTime,upgradeTime,fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v103',focusStatus,constructionTime,upgradeTime,fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });
