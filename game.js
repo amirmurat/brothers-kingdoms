@@ -1502,6 +1502,39 @@ function drawArmyDisplay(w,h){
  ctx.restore();
 }
 
+// Labels follow the country's remaining owned land after its capital falls.
+let nationLabelCache=null;
+function nationLabelAnchors(snapshot=state){
+ if(nationLabelCache?.state===snapshot&&nationLabelCache.owners===snapshot.owners&&
+  nationLabelCache.revision===snapshot.territoryRevision&&nationLabelCache.players===snapshot.players.length)return nationLabelCache.anchors;
+ const owners=snapshot.owners,seen=new Uint8Array(owners.length),regions=new Map(),anchors=[];
+ for(let start=0;start<owners.length;start++){
+  const id=owners[start];if(!id||seen[start])continue;
+  const cells=[start];seen[start]=1;let sx=0,sy=0;
+  for(let k=0;k<cells.length;k++){
+   const i=cells[k],x=i%E.W,y=(i/E.W)|0;sx+=x;sy+=y;
+   for(const n of [x>0?i-1:-1,x<E.W-1?i+1:-1,y>0?i-E.W:-1,y<E.H-1?i+E.W:-1])
+    if(n>=0&&!seen[n]&&owners[n]===id){seen[n]=1;cells.push(n);}
+  }
+  if(cells.length>(regions.get(id)?.cells.length||0))regions.set(id,{cells,cx:sx/cells.length,cy:sy/cells.length});
+ }
+ for(const p of snapshot.players){
+  if(p.eliminated||!p.land)continue;
+  const group=regions.get(p.id);if(!group)continue;
+  const cap=p.capital,capIndex=cap&&E.inside(cap.x,cap.y)?cap.y*E.W+cap.x:-1;
+  const intact=capIndex>=0&&owners[capIndex]===p.id&&snapshot.buildings.some(b=>b.kind==='capital'&&b.owner===p.id&&b.x===cap.x&&b.y===cap.y);
+  let index=capIndex;
+  if(!intact){
+   let best=Infinity;
+   for(const i of group.cells){const dx=i%E.W-group.cx,dy=((i/E.W)|0)-group.cy,d=dx*dx+dy*dy;
+    if(d<best){best=d;index=i;}
+   }
+  }
+  anchors.push({id:p.id,name:p.name,color:p.color,x:(index%E.W+.5)*TILE,y:(((index/E.W)|0)+.5)*TILE});
+ }
+ nationLabelCache={state:snapshot,owners,revision:snapshot.territoryRevision,players:snapshot.players.length,anchors};
+ return anchors;
+}
 function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr=canvas.width/Math.max(1,canvas.clientWidth);const w=canvas.clientWidth,h=canvas.clientHeight;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#080a0e';ctx.fillRect(0,0,w,h);
  ctx.save();ctx.translate(camX,camY);ctx.scale(zoom,zoom);ctx.imageSmoothingEnabled=true;ctx.drawImage(worldLayer,0,0,worldLayer.width,worldLayer.height,0,0,E.W*TILE,E.H*TILE);
  // Draw vector borders only when zoomed in sufficiently; avoid per-tile work otherwise.
@@ -1543,7 +1576,6 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
  drawInfrastructure();drawAttackPlanning();drawArmyDisplay(w,h);drawHarvestSites(w,h);
  // One-cell geometric landmarks; catalogue and map use identical silhouettes.
  ctx.textAlign='center';ctx.textBaseline='middle';
- const capitalLabels=[];
  for(const b of state.buildings){
   const x=(b.x+.5)*TILE,y=(b.y+.5)*TILE;
   if(x*zoom+camX<-55||x*zoom+camX>w+55||y*zoom+camY<-55||y*zoom+camY>h+55)continue;
@@ -1557,22 +1589,23 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   const licensedIcon=b.kind!=='capital';
   ctx.strokeStyle='#101923';ctx.lineWidth=licensedIcon?8:3;ctx.stroke(buildingPaths[b.kind]||buildingPaths.city);ctx.restore();
   if(b.level>1){ctx.fillStyle='#fff0b5';for(let n=0;n<Math.min(5,b.level);n++)ctx.fillRect(b.x*TILE+1+n*(TILE-2)/5,b.y*TILE+TILE-2,(TILE-2)/6,1.4);}
-  if(b.kind==='capital'&&zoom>.39){
-   capitalLabels.push({b,x,footY,spriteH,ownerColor});
-  }
  }
- // Labels are drawn after all buildings, below their bases, with collision culling.
+ // Draw one name per surviving country, even after the capital becomes a city.
+ // Full territorial flood-fill runs only when the territory revision changes.
  const labelBoxes=[];
- for(const {b,x,footY,spriteH,ownerColor} of capitalLabels){
-   const p=E.person(state,b.owner),label=(p?.id||'?')+' · '+(p?.name||'').slice(0,20);
-   ctx.font='750 '+Math.max(9,11/zoom)+'px system-ui';
-   const tw=ctx.measureText(label).width+20/zoom,lh=20/zoom,ly=footY-spriteH-15/zoom;
-   const box={x:x-tw/2,y:ly-lh/2,w:tw,h:lh};
-   if(labelBoxes.some(r=>box.x<r.x+r.w&&box.x+box.w>r.x&&box.y<r.y+r.h&&box.y+box.h>r.y))continue;
-   labelBoxes.push(box);
-   ctx.fillStyle='#101218f2';ctx.strokeStyle=ownerColor;ctx.lineWidth=1.2/Math.max(.5,zoom);
-   ctx.beginPath();ctx.roundRect(x-tw/2,ly-lh/2,tw,lh,8/Math.max(.5,zoom));ctx.fill();ctx.stroke();
-   ctx.fillStyle='#f1f5fa';ctx.fillText(label,x,ly);
+ for(const place of nationLabelAnchors()){
+  if(zoom<=.31)continue;
+  const {x,y}=place;
+  if(x*zoom+camX<-20||x*zoom+camX>w+20||y*zoom+camY<-20||y*zoom+camY>h+20)continue;
+  const label=place.id+' · '+place.name.slice(0,20);
+  ctx.font='750 '+Math.max(9,11/zoom)+'px system-ui';
+  const tw=ctx.measureText(label).width+20/zoom,lh=20/zoom,ly=y-14/zoom;
+  const box={x:x-tw/2,y:ly-lh/2,w:tw,h:lh};
+  if(labelBoxes.some(r=>box.x<r.x+r.w&&box.x+box.w>r.x&&box.y<r.y+r.h&&box.y+box.h>r.y))continue;
+  labelBoxes.push(box);
+  ctx.fillStyle='#101218f2';ctx.strokeStyle=place.color;ctx.lineWidth=1.2/Math.max(.5,zoom);
+  ctx.beginPath();ctx.roundRect(box.x,box.y,tw,lh,8/Math.max(.5,zoom));ctx.fill();ctx.stroke();
+  ctx.fillStyle='#f1f5fa';ctx.fillText(label,x,ly);
  }
 
  if(selected?.kind==='building'){const b=selected.kind==='building'?state.buildings.find(v=>v.id===selected.id):state.armies.find(v=>v.id===selected.id);if(b){ctx.strokeStyle='#ffffff';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.strokeRect(b.x*TILE-5,b.y*TILE-5,TILE+10,TILE+10);ctx.setLineDash([]);}}
