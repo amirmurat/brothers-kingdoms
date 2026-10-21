@@ -56,7 +56,7 @@ let attackPlanner=null,planCancelArmy=null;
 let defeatDismissed=false,menuPausedSolo=false;
 let state=null,myId=null,host=false,demo=false,peer=null,upstream=null,code='',connections=new Map(),lastSendTime=new Map(),phaseShown='',timer=0;
 let lastHudPlayer=null,lastHudTick=-1,lastHudLand=null,lastHudOwners=null,lastHudArmies=new Map(),hudNotice=null,hudAlertAction=null;
-let activeThreats=[],announcedThreats=new Set(),lastThreatSignature="",attackFocusIndex=0;
+let activeThreats=[],announcedThreats=new Set(),lastThreatSignature="",attackFocusIndex=0,threatBannerUntil=0;
 let quickBuildOpen=false,buildPlacementChecks=0;
 let zoom=1.05,camX=0,camY=0,terrainSeed=null,pressed=new Map(),pointerStart=null,gesture=null,selected=null,buildMode=null,percent=30,tooltipTimer=null,worldLayer=null,paintedRevision=-1,miniRevision=-1,renderQueued=false,panelOpen=false;let toastTimeout=null,target=null,redirectArmy=null,pauseSolo=false,moveCursor=null,lastTap=0,lastStateAt=Date.now(),pendingOrders=new Map(),seq=0,readyLocal=false,reconnectTries=0,reconnectTimer=null,connectTimer=null,tokenStore=new Map(),previousFocus=null,showTutorialOnce=true,lastRoster='',previousOwners=new Map(),previousRevs=new Map(),lastSaveTick=-1,oldArmyPositions=new Map(),movementStart=0,lastAnnounced='';
 const TILE=14;const mine=()=>state?.players.find(p=>p.id===myId);const color=id=>state?.players.find(p=>p.id===id)?.color||'#e8f3f3';
@@ -181,9 +181,8 @@ function setThreatList(open){
 function updateIncomingAttack(p){
  const threats=hostileAttacks(p).sort((a,b)=>threatDistance(a,p)-threatDistance(b,p)||b.strength-a.strength);
  activeThreats=threats;
- $('threatRail').classList.toggle('hidden',!threats.length);
  $('threatExpand').classList.toggle('hidden',threats.length<2);
- if(!threats.length){lastThreatSignature='';announcedThreats.clear();syncMilitaryThreats();return;}
+ if(!threats.length){lastThreatSignature='';threatBannerUntil=0;announcedThreats.clear();$('threatRail').classList.add('hidden');syncMilitaryThreats();return;}
  const attackers=[...new Set(threats.map(a=>a.owner))].map(id=>E.person(state,id)?.name||'Enemy');
  const force=threats.reduce((sum,a)=>sum+Math.max(0,a.strength),0);
  const signature=threats.map(a=>a.id).sort().join(',');
@@ -208,6 +207,8 @@ function updateIncomingAttack(p){
  if(signature!==lastThreatSignature){
   const fresh=threats.filter(a=>!announcedThreats.has(a.id));
   if(fresh.length){
+   // Warn briefly on a NEW attack; persistent threat details live in Military.
+   threatBannerUntil=Date.now()+9000;
    const name=E.person(state,fresh[0].owner)?.name||'Enemy';
    $('incomingAnnouncement').textContent=`Warning! ${name} is attacking your territory. Tap the alert to jump to the battle.`;
   }
@@ -215,6 +216,7 @@ function updateIncomingAttack(p){
   announcedThreats=new Set(threats.map(a=>a.id));
   lastThreatSignature=signature;
  }
+ $('threatRail').classList.toggle('hidden',Date.now()>=threatBannerUntil);
 }
 $('incomingAttack').onclick=()=>{if(activeThreats.length)openMilitary('threats');};
 $('threatExpand').onclick=()=>openMilitary('threats');
@@ -277,7 +279,7 @@ function updateHudSignals(p){
  $('landCount').title=`Land: ${number(p.land)} of ${number(state.landTotal)} cells. To 100%: ${Math.max(0,100-share).toFixed(1)} pp`;
  $('frontCount').textContent=number([...(state.attackPlans||[]),...(state.recoveryPlans||[])].filter(p=>p.owner===myId).length);
  document.querySelector('.clock-stat')?.classList.remove('is-urgent');
- if(lastHudPlayer!==myId||state.tick<lastHudTick){lastHudPlayer=myId;lastHudLand=null;lastHudOwners=null;lastHudArmies=new Map();hudNotice=null;activeThreats=[];announcedThreats.clear();lastThreatSignature="";}
+ if(lastHudPlayer!==myId||state.tick<lastHudTick){lastHudPlayer=myId;lastHudLand=null;lastHudOwners=null;lastHudArmies=new Map();hudNotice=null;activeThreats=[];announcedThreats.clear();lastThreatSignature="";threatBannerUntil=0;}
  const currentArmies=new Map(state.armies.filter(a=>a.owner===myId).map(a=>[a.id,a]));
  if(lastHudLand!==null&&p.land<lastHudLand){
   let lost=null;
