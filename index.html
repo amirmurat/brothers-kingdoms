@@ -9,7 +9,7 @@
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
 <link rel="stylesheet" href="styles/legacy.css?v=49-visible-camp"/>
-<link rel="stylesheet" href="styles/theme.css?v=88-resource-priority-hud"/>
+<link rel="stylesheet" href="styles/theme.css?v=89-live-paint-clarity"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -167,7 +167,7 @@
 <button id="sessionPause" class="hidden">Pause</button>
 <button id="sessionReconnect" class="session-action hidden">Reconnect</button>
 </div>
-<label class="production-setting">Production priority<select id="productionPriority"><option value="balanced">Balanced</option><option value="food">Food</option><option value="wood">Wood</option><option value="stone">Stone</option><option value="gold">Gold</option></select></label><p id="workforceSummary" class="workforce-summary" role="status"></p><p id="storageSummary" class="workforce-summary"></p>
+<label class="production-setting hidden" aria-hidden="true">Production priority<select id="productionPriority"><option value="balanced">Balanced</option><option value="food">Food</option><option value="wood">Wood</option><option value="stone">Stone</option><option value="gold">Gold</option></select></label><p id="workforceSummary" class="workforce-summary" role="status"></p><p id="storageSummary" class="workforce-summary"></p>
 <button id="exitMatch">Leave match</button>
 <p id="sessionHint"></p></div>
 <div id="exitPanel" class="session-panel hidden" role="dialog" aria-modal="true" aria-labelledby="exitTitle"><h2 id="exitTitle">Leave match?</h2><p id="exitExplanation"></p><div class="exit-actions"><button id="cancelExit">Stay</button><button id="confirmExit">Leave</button></div></div>
@@ -185,8 +185,8 @@
 </section></div>
 </div>
 <div aria-live="polite" class="toast hidden" id="toast" role="status"></div><div class="sr-only" id="gameError" role="alert"></div>
-<script src="server-config.js?v=88-resource-priority-hud"></script>
-<script src="engine.js?v=88-resource-priority-hud"></script>
+<script src="server-config.js?v=89-live-paint-clarity"></script>
+<script src="engine.js?v=89-live-paint-clarity"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=88-resource-priority-hud"></script>
+<script src="game.js?v=89-live-paint-clarity"></script>
 </body></html>

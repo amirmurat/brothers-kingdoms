@@ -8,7 +8,7 @@ const server=http.createServer((req,res)=>{
  try{
   let body=fs.readFileSync(file);
   if(name==='/'||name==='/index.html')body=body.toString().split('\n').filter(line=>!line.includes('unpkg.com/peerjs')).join('\n');
-  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={buildingLevelColor,repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
+  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={beginAttackPlanner,brushAt,syncPaintEligibility,resetAttackPlanner,getPlanner:()=>attackPlanner,buildingCells,drawHarvestSites,buildingLevelColor,repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
   res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream'});res.end(body);
  }catch(_){res.writeHead(404);res.end();}
 });
@@ -48,6 +48,23 @@ const server=http.createServer((req,res)=>{
    assert(performanceChecks.opened>0,label+' opening army panel still renders live estimates');
    assert(performanceChecks.first>0,label+' initial planned geometry is drawn');
    assert.equal(performanceChecks.second,performanceChecks.first,label+' repeated frames reuse plan geometry');
+   const paintRules=await page.evaluate(()=>{
+    const L=window.__layout,s=L.getState(),id=s.players.find(p=>!p.bot).id;
+    const saved=s.attackPlans,rev=s.territoryRevision;
+    const owned=s.owners.findIndex((v,i)=>v===id&&s.tiles[i]);
+    const foreign=s.tiles.flatMap((v,i)=>v&&s.owners[i]!==id?[i]:[]),blocked=foreign[0],free=foreign[1],old=s.owners[free];
+    s.attackPlans=[{id:'existing-test',owner:id,zoneCells:[blocked],targets:[0]}];
+    L.beginAttackPlanner();const plan=L.getPlanner();plan.brushRadius=0;plan.strokeLimit=10;
+    const paint=i=>L.brushAt({x:i%160,y:(i/160)|0});
+    paint(owned);paint(blocked);const excluded=plan.cells.size===0;
+    paint(free);paint(free);const counted=plan.cells.size;
+    s.owners[free]=id;s.territoryRevision++;L.syncPaintEligibility(plan);const reclaimed=plan.cells.size;
+    L.resetAttackPlanner();s.attackPlans=saved;s.owners[free]=old;s.territoryRevision=rev+2;
+    return {excluded,counted,reclaimed};
+   });
+   assert(paintRules.excluded,label+' own and already planned cells never consume paint capacity');
+   assert.equal(paintRules.counted,1,label+' repeated strokes count a cell once');
+   assert.equal(paintRules.reclaimed,0,label+' newly captured cells free painting capacity immediately');
    const mapWork=await page.evaluate(()=>{
     const L=window.__layout,s=L.getState();L.repaintWorld();const i=s.owners.findIndex(v=>v===1),old=s.owners[i];
     s.owners[i]=0;s.territoryRevision++;const changed=L.repaintWorld(),unchanged=L.repaintWorld();
@@ -59,6 +76,16 @@ const server=http.createServer((req,res)=>{
    assert(mapWork.changed>0&&mapWork.changed<=5,label+' one capture repaints at most five terrain cells');
    assert.equal(mapWork.unchanged,0,label+' unchanged ownership repaints nothing');
    assert.equal(mapWork.frames,0,label+' static cell display does not run a perpetual animation loop');
+   const noMapLabels=await page.evaluate(()=>{
+    const L=window.__layout,s=L.getState(),p=s.players.find(p=>!p.bot),b=s.buildings.find(b=>b.owner===p.id),saved=p.workers,c=document.getElementById('mapCanvas').getContext('2d');
+    const text=c.fillText,stroke=c.strokeRect;let labels=0,markers=0;
+    p.workers=[{x:b.x,y:b.y,tx:b.x,ty:b.y,resource:'food',progress:3,count:6}];
+    c.fillText=()=>labels++;c.strokeRect=()=>markers++;
+    try{L.drawHarvestSites(innerWidth,innerHeight);}finally{c.fillText=text;c.strokeRect=stroke;p.workers=saved;}
+    return {labels,markers};
+   });
+   assert.equal(noMapLabels.labels,0,label+' production never covers map cells with labels');
+   assert.equal(noMapLabels.markers,0,label+' production does not cover a building cell');
    const visualBudget=await page.evaluate(()=>{
     const L=window.__layout,E=window.BKEngine,s=L.getState(),id=s.players.find(p=>!p.bot).id;
     const saved=s.armies,owned=s.owners.flatMap((v,i)=>v===id?[i]:[]);
@@ -106,6 +133,8 @@ const server=http.createServer((req,res)=>{
    assert(navigation.sameParent&&navigation.separate,label+' map and Nations sit together');
    assert.equal(navigation.menuTop,navigation.mapTop+10,label+' menu occupies former Nations corner');
    const typeColors=await page.evaluate(()=>['city','barracks','fort'].map(kind=>window.__layout.buildingLevelColor({kind,level:1})));
+   const tiers=await page.evaluate(()=>['city','barracks','fort'].map(kind=>new Set([1,2,3,4,5].map(level=>window.__layout.buildingLevelColor({kind,level}))).size));
+   assert(tiers.every(n=>n===5),label+' every building type has five distinct tier colors');
    assert.equal(new Set(typeColors).size,3,label+' map building types have distinct colors');
    const dock=await page.locator('#buildDock').boundingBox();
    assert(dock&&dock.width<=viewport.width&&dock.x>=0&&dock.y+dock.height<=viewport.height+1,label+' strategic dock fits');
@@ -184,6 +213,7 @@ const server=http.createServer((req,res)=>{
    await page.locator('#warPanelClose').click();
    assert.equal(await page.locator('#nationsBackdrop').isVisible(),false,label+' closing Nations removes its backdrop');
    await page.evaluate(()=>window.__layout.showAux('sessionPanel'));
+   assert.equal(await page.locator('#productionPriority').isVisible(),false,label+' resource priority is removed from Match menu');
    const close=page.locator('#closeSession');await close.click();
    await page.evaluate(()=>window.__layout.goHome());
    assert(await page.locator('#lobby').isVisible(),label+' home visible');

@@ -17,10 +17,9 @@ const BUILDING_PATHS={"farm":"M256 23.38L89.844 89.845l-64.9 162.254 14.85 5.943
 const buildingPaths=Object.fromEntries(Object.entries(BUILDING_PATHS).map(([id,d])=>[id,new Path2D(d)]));
 const BUILDING_PALETTE={farm:'#F0AD6D',lumber:'#69D9A4',quarry:'#B6BFCF',mine:'#F5D45A',barracks:'#85B4FF',fort:'#FF8188',city:'#C49BFF',capital:'#f1f5fa'};
 const BUILDING_LEVEL_COLORS=['#bdc9d6','#72d8b0','#70caff','#c49bff','#ffd477'];
-const buildingLevelColor=b=>{
- const base=BUILDING_PALETTE[b.kind]||'#6e93b4',mix=Math.min(.44,Math.max(0,(b.level||1)-1)*.11);
- const rgb=[1,3,5].map(i=>{const c=parseInt(base.slice(i,i+2),16);return Math.round(c+(255-c)*mix);});return 'rgb('+rgb.join(',')+')';
-};
+const BUILDING_TIERS={city:['#bd88ed','#e572cd','#ee82a3','#efb15b','#ffe69a'],barracks:['#729be9','#4dc7d4','#67dfab','#a4e568','#e1f2aa'],fort:['#eb737c','#ed9762','#e5bf62','#dfd38f','#fff0bb']};
+const buildingLevelColor=b=>(BUILDING_TIERS[b.kind]||BUILDING_LEVEL_COLORS)[Math.min(4,Math.max(0,(b.level||1)-1))];
+
 const buildingArt=kind=>`<img class="building-art" src="assets/shapes/${kind}.svg" alt="" aria-hidden="true"/>`;
 const buildingInfo={
  farm:{short:'Feeds your army.',detail:'+8 food/s per level',place:'Your land, excluding mountain summits',resource:'food',perLevel:8},
@@ -380,9 +379,18 @@ function setPaintTool(tool){
  $('planToolErase').setAttribute('aria-pressed',String(tool==='erase'));
  $('planToolPaint').classList.toggle('chosen',tool==='paint');$('planToolErase').classList.toggle('chosen',tool==='erase');queueDraw();
 }
+function syncPaintEligibility(plan){
+ if(!plan||plan.mode!=='paint'||plan.workResource)return;
+ const sources=[...(state.attackPlans||[]),...(state.recoveryPlans||[])].filter(p=>p.owner===myId&&p.id!==plan.editId);
+ const same=plan.eligibilityRevision===state.territoryRevision&&plan.eligibilitySources?.length===sources.length&&sources.every((p,i)=>p.zoneCells===plan.eligibilitySources[i]);
+ if(same)return;
+ plan.blocked=new Set();for(const p of sources)for(const i of p.zoneCells||[])plan.blocked.add(i);
+ for(const cells of [plan.cells,plan.originalCells])for(const i of cells)if(!state.tiles[i]||state.owners[i]===myId||plan.blocked.has(i))cells.delete(i);
+ plan.eligibilityRevision=state.territoryRevision;plan.eligibilitySources=sources.map(p=>p.zoneCells);
+}
 function brushAt(pt){
  const plan=attackPlanner;if(!plan||!['paint','erase'].includes(plan.mode))return;
- const radius=plan.brushRadius;
+ syncPaintEligibility(plan);const radius=plan.brushRadius,limit=plan.strokeLimit??Math.max(E.planCellLimit(state,myId),plan.editId?plan.originalCells.size:0);
  for(let dy=-radius;dy<=radius;dy++)for(let dx=-radius;dx<=radius;dx++){
   if(dx*dx+dy*dy>radius*radius)continue;
   const x=pt.x+dx,y=pt.y+dy;if(!E.inside(x,y)||!E.tile(state,x,y))continue;
@@ -390,7 +398,7 @@ function brushAt(pt){
   if(plan.workResource&&!E.workSuitable(state,myId,plan.workResource,cell))continue;
   if(plan.mode==='erase'){if(plan.erasable.has(cell))plan.cells.add(cell);continue;}
   if(plan.tool==='erase'){plan.cells.delete(cell);continue;}
-  if(plan.cells.size>=Math.max(E.planCellLimit(state,myId),plan.editId?plan.originalCells.size:0))continue;
+  if(state.owners[cell]===myId||plan.blocked?.has(cell)||plan.cells.has(cell)||plan.cells.size>=limit)continue;
   plan.cells.add(cell);
  }
 }
@@ -405,7 +413,7 @@ function paintLine(from,to){
 }
 function paintAtPointer(pt){
  const plan=attackPlanner;if(!plan||!['paint','erase'].includes(plan.mode))return;
- plan.brushPoint=pt;
+ syncPaintEligibility(plan);plan.strokeLimit=Math.max(E.planCellLimit(state,myId),plan.editId?plan.originalCells.size:0);plan.brushPoint=pt;
  if(plan.lastPoint)paintLine(plan.lastPoint,pt);else brushAt(pt);
  plan.lastPoint=pt;
 }
@@ -422,7 +430,7 @@ function overlappingPlans(plan){
 function refreshPaintTargets(plan){plan.targets=new Set(selectedNationTargets());}
 function refreshPaintGuide(){
  planningVisualCache=null;
- const plan=attackPlanner;if(plan?.mode!=='paint')return;
+ const plan=attackPlanner;if(plan?.mode!=='paint')return;syncPaintEligibility(plan);
  const checked=checkPaintZone(plan),count=plan.cells.size;
  if(plan.workResource){
   const stats=E.workforceStats(state,myId);
@@ -504,7 +512,7 @@ function drawAttackPlanning(){
  // Union all saved and in-progress zones before tracing boundaries. A newly
  // painted stroke above an old plan has exactly one contour, never two seams.
  const sources=[...(state.attackPlans||[]),...(state.recoveryPlans||[]),...state.armies.filter(a=>a.strength>0&&!a.planId&&Array.isArray(a.zoneCells))].filter(p=>p.owner===myId);
- const visualKey=state.territoryRevision+'|'+sources.map(p=>p.id+':'+(p.targets||[p.targetOwner]).join(',')+':'+state.armies.some(a=>a.planId===p.id)).join('|');
+ const visualKey=(attackPlanner?.editId||'')+'|'+state.territoryRevision+'|'+sources.map(p=>p.id+':'+(p.targets||[p.targetOwner]).join(',')+':'+state.armies.some(a=>a.planId===p.id)).join('|');
  if(planningVisualCache&&(planningVisualCache.visualKey!==visualKey||sources.length!==planningVisualCache.sources.length||sources.some((p,i)=>p.zoneCells!==planningVisualCache.sources[i])))
   planningVisualCache=null;
  const visual=planningVisualCache||new Map(),editId=attackPlanner?.mode==='paint'?attackPlanner.editId:null;
@@ -530,8 +538,7 @@ function drawAttackPlanning(){
   collect(army);
  if(attackPlanner?.mode==='review'&&attackPlanner.zoneCells)
   collect({zoneCells:attackPlanner.zoneCells,targets:[attackPlanner.targetOwner]},true);
- if(attackPlanner?.mode==='paint'&&!attackPlanner.workResource&&attackPlanner.cells.size)
-  collect({zoneCells:attackPlanner.cells,targets:[...attackPlanner.targets]},true);
+
  visual.visualKey=visualKey;visual.sources=sources.map(p=>p.zoneCells);planningVisualCache=visual;
  }
  const left=Math.max(0,Math.floor(-camX/(TILE*zoom))-2),right=Math.min(E.W-1,Math.ceil((canvas.clientWidth-camX)/(TILE*zoom))+2),
@@ -539,7 +546,7 @@ function drawAttackPlanning(){
  const T=TILE,hasPreview=[...visual.values()].some(v=>v.preview);
  if(visual.size){
   ctx.save();
-  ctx.strokeStyle=hasPreview?'#a7eeff':'#77cdec';
+  ctx.strokeStyle='#ffef79';
   ctx.lineWidth=Math.max(1.15,1.9/zoom);
   if(!hasPreview)ctx.setLineDash([4/zoom,5/zoom]);
   ctx.beginPath();
@@ -548,16 +555,27 @@ function drawAttackPlanning(){
    if(x<left||x>right||y<top||y>bottom)continue;
    const permitted=cell.targets.has(state.owners[i]);
    ctx.fillStyle=!permitted?'rgba(134,149,166,.085)':
-    cell.preview?'rgba(94,228,255,.30)':
+    cell.preview?'rgba(255,234,72,.35)':
     cell.recovery?'rgba(255,174,115,.23)':
-    cell.waiting?'rgba(91,210,245,.18)':'rgba(95,200,255,.15)';
+    cell.waiting?'rgba(255,224,65,.20)':'rgba(255,224,65,.24)';
    ctx.fillRect(x*T,y*T,T,T);
    if(!visual.has(i-E.W)){ctx.moveTo(x*T,y*T);ctx.lineTo((x+1)*T,y*T);}
    if(!visual.has(i+E.W)){ctx.moveTo(x*T,(y+1)*T);ctx.lineTo((x+1)*T,(y+1)*T);}
    if(x===0||!visual.has(i-1)){ctx.moveTo(x*T,y*T);ctx.lineTo(x*T,(y+1)*T);}
    if(x===E.W-1||!visual.has(i+1)){ctx.moveTo((x+1)*T,y*T);ctx.lineTo((x+1)*T,(y+1)*T);}
   }
-  ctx.stroke();ctx.restore();
+  ctx.strokeStyle='#121722';ctx.lineWidth=4/zoom;ctx.stroke();ctx.strokeStyle='#fff39c';ctx.lineWidth=1.8/zoom;ctx.stroke();ctx.restore();
+ }
+ if(attackPlanner?.mode==='paint'&&!attackPlanner.workResource&&attackPlanner.cells.size){
+  ctx.save();ctx.fillStyle='rgba(255,233,65,.4)';ctx.strokeStyle='#fff39c';ctx.lineWidth=1.8/zoom;ctx.beginPath();
+  const cells=attackPlanner.cells;
+  for(const i of cells){const x=i%E.W,y=(i/E.W)|0;if(x<left||x>right||y<top||y>bottom)continue;
+   ctx.fillRect(x*T,y*T,T,T);
+   if(!cells.has(i-E.W)){ctx.moveTo(x*T,y*T);ctx.lineTo((x+1)*T,y*T);}
+   if(!cells.has(i+E.W)){ctx.moveTo(x*T,(y+1)*T);ctx.lineTo((x+1)*T,(y+1)*T);}
+   if(x===0||!cells.has(i-1)){ctx.moveTo(x*T,y*T);ctx.lineTo(x*T,(y+1)*T);}
+   if(x===E.W-1||!cells.has(i+1)){ctx.moveTo((x+1)*T,y*T);ctx.lineTo((x+1)*T,(y+1)*T);}
+  }ctx.stroke();ctx.restore();
  }
  if(attackPlanner?.mode==='erase'&&attackPlanner.cells.size){
   ctx.save();ctx.fillStyle='rgba(255,158,109,.44)';
@@ -822,7 +840,7 @@ function render(){if(!state)return;
 }
 function setRate(node,value){const rate=Math.round(Number(value)||0);node.dataset.trend=rate>0?'positive':rate<0?'negative':'neutral';node.textContent=(rate>0?'+':rate<0?'−':'')+number(Math.abs(rate))+'/s';}
 function updateUI(){const p=mine();if(!p)return;
- renderWars();if(attackPlanner?.mode==='review')refreshPlanReview();else if(attackPlanner?.mode==='paint'&&attackPlanner.pointerId===null)refreshPaintGuide();
+ renderWars();syncPaintEligibility(attackPlanner);if(attackPlanner?.mode==='review')refreshPlanReview();else if(attackPlanner?.mode==='paint'&&attackPlanner.pointerId===null)refreshPaintGuide();
  // Before the first economy tick, derive the same production formula as the engine,
  // rather than showing a misleading +0/s for every resource.
  const {gross,recruited,foodNet}=resourceRates(p);
@@ -1286,7 +1304,7 @@ function repaintWorld(){
  const wc=worldLayer.getContext('2d',{alpha:false}),colors=Object.fromEntries(state.players.map(p=>{const v=parseInt(p.color.slice(1),16);return[p.id,[(v>>>16)&255,(v>>>8)&255,v&255]];}));
  // Paint only changed ownership cells and adjacent boundary cells. The resource
  // pattern is deterministic, so overwriting a cell restores its exact terrain.
- for(const i of dirty){const x=i%E.W,y=(i/E.W)|0,t=tiles[i],terr=TERRAIN_RGB[t]||TERRAIN_RGB[1],col=colors[owners[i]],k=col?(t===1?.32:.12):0;
+ for(const i of dirty){const x=i%E.W,y=(i/E.W)|0,t=tiles[i],terr=TERRAIN_RGB[t]||TERRAIN_RGB[1],col=colors[owners[i]],k=col?(t===1?.52:.32):0;
   let h=Math.imul(x+state.seed*3,374761393)^Math.imul(y,668265263);h=Math.imul(h^(h>>>13),1274126177);
   const shade=(((h>>>24)&15)-7)*(t===0?.08:.20);
   wc.fillStyle='rgb('+terr.map((v,j)=>Math.max(0,Math.min(255,Math.round(v*(1-k)+(col?.[j]||0)*k+shade)))).join(',')+')';wc.fillRect(x*6,y*6,6,6);
@@ -1398,26 +1416,15 @@ function drawInfrastructure(){
  ctx.globalAlpha=.65;ctx.fillStyle='#bdad92';ctx.fill(infrastructureCache.roadPath);ctx.restore();
 }
 function drawHarvestSites(w,h){
- const p=mine();if(!p)return;
- const colors={food:'#d6e88c',wood:'#7ae0aa',stone:'#d8e2ee',gold:'#ffdc71'};
- const names={food:'Food',wood:'Wood',stone:'Stone',gold:'Gold'},boxes=[];
- ctx.save();let labels=0;
- for(const g of p.workers||[]){
-  if(!colors[g.resource]||(g.progress||0)<3||g.x!==g.tx||g.y!==g.ty||g.job||E.owner(state,g.x,g.y)!==myId)continue;
-  const x=(g.x+.5)*TILE,y=(g.y+.5)*TILE,sx=x*zoom+camX,sy=y*zoom+camY;
-  if(sx<0||sy<0||sx>w||sy>h)continue;
-  ctx.globalAlpha=.85;ctx.strokeStyle=colors[g.resource];ctx.lineWidth=1.5/zoom;
-  ctx.strokeRect(g.x*TILE+1,g.y*TILE+1,TILE-2,TILE-2);
-  if(zoom<.65||labels>=12)continue;
-  const text=names[g.resource]+' +',font=11/zoom;
-  ctx.font='650 '+font+'px system-ui';const width=ctx.measureText(text).width+12/zoom,height=20/zoom;
-  const box={x:x-width/2,y:y-TILE*.6-height,w:width,h:height};
-  if(box.x*zoom+camX<0||(box.x+width)*zoom+camX>w||box.y*zoom+camY<0||boxes.some(b=>box.x<b.x+b.w+4/zoom&&box.x+width>b.x-4/zoom&&box.y<b.y+b.h+4/zoom&&box.y+height>b.y-4/zoom))continue;
-  boxes.push(box);labels++;ctx.globalAlpha=.95;ctx.fillStyle='#111923';ctx.fillRect(box.x,box.y,width,height);
-  ctx.fillStyle=colors[g.resource];ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,x,box.y+height/2);
- }
- ctx.restore();
+ const p=mine();if(!p)return;const colors={food:'#d6e88c',wood:'#7ae0aa',stone:'#d8e2ee',gold:'#ffdc71'};
+ ctx.save();for(const g of p.workers||[]){
+  if(!colors[g.resource]||(g.progress||0)<3||g.x!==g.tx||g.y!==g.ty||g.job||E.owner(state,g.x,g.y)!==myId||buildingCells().has(g.y*E.W+g.x))continue;
+  const x=g.x*TILE,y=g.y*TILE;if(x*zoom+camX>w||y*zoom+camY>h||(x+TILE)*zoom+camX<0||(y+TILE)*zoom+camY<0)continue;
+  ctx.globalAlpha=.9;ctx.strokeStyle=colors[g.resource];ctx.lineWidth=1.5/zoom;ctx.strokeRect(x+1,y+1,TILE-2,TILE-2);
+ }ctx.restore();
 }
+let buildingCellCache=null;
+function buildingCells(){if(!buildingCellCache||buildingCellCache.source!==state.buildings||buildingCellCache.length!==state.buildings.length)buildingCellCache={source:state.buildings,length:state.buildings.length,cells:new Set(state.buildings.map(b=>b.y*E.W+b.x))};return buildingCellCache.cells;}
 function drawArmyDisplay(w,h){
  // Shade occupied cells. One draw per group/cell; no icons or animated arrows.
  ctx.save();
@@ -1431,6 +1438,7 @@ function drawArmyDisplay(w,h){
  unitCellCache={state,armies:state.armies,tick:state.tick,cells};
  }
  for(const c of cells.values()){
+  if(buildingCells().has(c.y*E.W+c.x))continue;
   const x=c.x*TILE,y=c.y*TILE;if(x*zoom+camX>w||y*zoom+camY>h||(x+TILE)*zoom+camX<0||(y+TILE)*zoom+camY<0)continue;
   ctx.fillStyle=c.civilian?'#e9d6a0':color(c.owner);ctx.globalAlpha=c.civilian?.85:Math.min(.95,.4+Math.log2(1+c.strength)/24);
   const inset=c.civilian?.28:.08;ctx.fillRect(x+TILE*inset,y+TILE*inset,TILE*(1-2*inset),TILE*(1-2*inset));
@@ -1465,11 +1473,11 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   }
   ctx.stroke();
  }
- drawInfrastructure();
+ drawInfrastructure();drawAttackPlanning();drawArmyDisplay(w,h);drawHarvestSites(w,h);
  // One-cell geometric landmarks; catalogue and map use identical silhouettes.
  ctx.textAlign='center';ctx.textBaseline='middle';
  const capitalLabels=[];
- for(const b of [...state.buildings].sort((a,b)=>a.y-b.y)){
+ for(const b of state.buildings){
   const x=(b.x+.5)*TILE,y=(b.y+.5)*TILE;
   if(x*zoom+camX<-55||x*zoom+camX>w+55||y*zoom+camY<-55||y*zoom+camY>h+55)continue;
   const ownerColor=color(b.owner);
@@ -1481,6 +1489,7 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   // Licensed silhouettes keep thin white outlines proportional to zoom.
   const licensedIcon=b.kind!=='capital';
   ctx.strokeStyle='#101923';ctx.lineWidth=licensedIcon?8:3;ctx.stroke(buildingPaths[b.kind]||buildingPaths.city);ctx.restore();
+  if(b.level>1){ctx.fillStyle='#fff0b5';for(let n=0;n<Math.min(5,b.level);n++)ctx.fillRect(b.x*TILE+1+n*(TILE-2)/5,b.y*TILE+TILE-2,(TILE-2)/6,1.4);}
   if(b.kind==='capital'&&zoom>.39){
    capitalLabels.push({b,x,footY,spriteH,ownerColor});
   }
@@ -1498,8 +1507,7 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
    ctx.beginPath();ctx.roundRect(x-tw/2,ly-lh/2,tw,lh,8/Math.max(.5,zoom));ctx.fill();ctx.stroke();
    ctx.fillStyle='#f1f5fa';ctx.fillText(label,x,ly);
  }
- drawAttackPlanning();
- drawArmyDisplay(w,h);drawHarvestSites(w,h);
+
  if(selected?.kind==='building'){const b=selected.kind==='building'?state.buildings.find(v=>v.id===selected.id):state.armies.find(v=>v.id===selected.id);if(b){ctx.strokeStyle='#ffffff';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.strokeRect(b.x*TILE-5,b.y*TILE-5,TILE+10,TILE+10);ctx.setLineDash([]);}}
  if(buildMode){
   const minX=Math.max(0,Math.floor(-camX/(TILE*zoom))-1),maxX=Math.min(E.W-1,Math.ceil((w-camX)/(TILE*zoom))+1);

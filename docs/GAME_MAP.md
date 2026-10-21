@@ -593,3 +593,6 @@ buildingLevelColor supplies the shared map/detail level palette. drawHarvestSite
 
 ### v88 HUD navigation and production
 #hudWorkers/#workerCount/#workerStatus show workforce capacity/active harvesters; Reserve uses crossed swords. #menuToggle lives inside .map-toolbar; #warChip moves into #mapNavigation beside #minimapWrap. Resource [data-resource] controls call chooseResource with setWorkPriority, toggling active resource back to balanced. refreshQuickBuild updates pressed styles/counts. Bottom buttons use buildingArt; buildingLevelColor now derives from building type plus level shade and feeds both map and details.
+
+### v89 live painting and map layers
+syncPaintEligibility prunes invalid draft cells when ownership or saved-plan geometry changes; brushAt skips owned/already covered/duplicate cells before checking cached strokeLimit. drawAttackPlanning caches only saved regions and renders the live draft separately. Buildings render above planning and troops; buildingCells caches occupied structure cells so troop/harvest marks skip them. drawHarvestSites no longer creates labels. Type-specific tier palettes and tier marks distinguish upgrades. Resource/building selected backgrounds fill rectangular cells. #productionPriority stays hidden; resource HUD handles priority. Flat #planGuide matches bottom HUD; controls do not transform on press.

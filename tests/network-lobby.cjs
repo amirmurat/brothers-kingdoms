@@ -75,7 +75,7 @@ server.on('upgrade',(req,socket,head)=>{
    assert.deepEqual(await a.evaluate(()=>window.__net.get().state.players.find(p=>p.name==='Creator').capital),chosen,name+' chosen point becomes actual capital');
    for(const page of [a,b])assert(await page.evaluate(()=>window.__net.get().state.players.every(p=>Array.isArray(p.garrisons)&&Math.abs(p.garrisons.reduce((n,g)=>n+g.strength,0)-p.troops)<.001)),name+' both clients receive consistent spatial army');
    for(const page of [a,b])await page.waitForFunction(()=>window.__net.get().state.players.every(p=>Array.isArray(p.workers)&&p.workers.length<=24));
-   await a.click('#menuToggle');await a.selectOption('#productionPriority','gold');await a.click('#closeSession');
+   await a.click('#resourceSummary [data-resource="gold"]');
    for(const page of [a,b])await page.waitForFunction(()=>window.__net.get().state.players.find(p=>p.name==='Creator').workPriority==='gold');
    for(const page of [a,b])assert(await page.evaluate(()=>!JSON.stringify(window.__net.get().state.players).includes('"route"')),name+' route internals remain off the wire');
    console.log('PASS '+name+' two-client lobby: owner, reconnect, touch spawn, shared state, rejoin and actual capital');
