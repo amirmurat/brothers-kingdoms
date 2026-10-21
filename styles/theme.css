@@ -2651,3 +2651,69 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
 }
 /* Legacy detail surfaces must never appear as independent overlays. */
 #game#game#game #armiesPanel{display:none!important}
+
+
+/* v96 map geometry: fixed actions; expanded minimap grows UP, never
+   reflows Nations or leaves a large empty title band. */
+#game#game#game#game .map-toolbar{right:12px!important;left:auto!important;top:10px!important;width:48px!important;min-width:48px!important;max-width:48px!important}
+#game#game#game#game #planToolSwitch{
+ right:12px!important;left:auto!important;
+ margin-right:0!important;transform:translateY(-50%);
+}
+#game#game#game#game #mapNavigation{
+ position:absolute!important;left:12px!important;right:auto!important;
+ width:97px!important;min-width:97px!important;height:48px!important;
+ display:block!important;gap:0!important;
+ background:transparent!important;border:0!important;overflow:visible!important;
+}
+#game#game#game#game #mapNavigation #warChip{
+ position:absolute!important;bottom:0!important;left:49px!important;right:auto!important;z-index:3!important;
+ margin:0!important;padding:0!important;width:48px!important;height:48px!important;
+ background:#151c26!important;border:0!important;border-radius:0!important;
+}
+#game#game#game#game #mapNavigation #minimapWrap{
+ position:absolute!important;bottom:0!important;left:0!important;right:auto!important;
+ width:48px!important;height:48px!important;min-width:48px!important;max-width:none!important;
+ padding:0!important;margin:0!important;display:flex!important;flex-direction:column-reverse!important;align-items:flex-start!important;
+ overflow:visible!important;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;
+}
+#game#game#game#game #mapNavigation #minimapWrap #minimapToggle{
+ position:relative!important;inset:auto!important;order:0!important;
+ width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;max-width:48px!important;
+ padding:0!important;margin:0!important;display:grid!important;place-items:center!important;
+ background:#151c26!important;border:0!important;border-radius:0!important;box-shadow:none!important;
+}
+#game#game#game#game #mapNavigation #minimapWrap #minimapToggle :is(.minimap-label,.minimap-chevron){
+ display:none!important;
+}
+#game#game#game#game #mapNavigation #minimapWrap:not(.minimized){
+ height:48px!important;width:48px!important;
+}
+#game#game#game#game #mapNavigation #minimapWrap:not(.minimized) #minimap{
+ position:absolute!important;bottom:54px!important;left:0!important;right:auto!important;
+ width:176px!important;height:auto!important;aspect-ratio:160/104!important;
+ max-height:120px!important;
+ margin:0!important;padding:0!important;background:#10141c!important;
+ border:1px solid #354151!important;border-radius:0!important;box-shadow:none!important;
+ display:block!important;pointer-events:auto!important;
+}
+#game#game#game#game #mapNavigation #minimapWrap.minimized #minimap{display:none!important}
+#game#game#game#game #warChip .nation-war-count{
+ position:absolute!important;top:-4px!important;right:-5px!important;
+ display:grid!important;place-items:center!important;
+ min-width:16px!important;max-width:22px!important;height:16px!important;
+ margin:0!important;padding:0 2px!important;
+ color:#e3eef6!important;background:#263c4a!important;
+ border:1px solid #4d7184!important;border-radius:3px!important;
+ box-shadow:none!important;font:700 10px/16px system-ui!important;font-variant-numeric:tabular-nums!important;
+}
+#game#game#game#game #warChip .nation-war-count.hidden{display:none!important}
+#game#game#game#game #warPanel .nation-row.focused{
+ background:#202b39!important;box-shadow:inset 3px 0 #74dbf5!important;
+}
+/* Threat banner and unrelated messages share a slot; a fresh order toast
+   can replace the banner without hiding the ongoing attack in Military. */
+#game#game#game#game #notificationStack:has(#gameToast:not(.hidden)) #threatRail{display:none!important}
+#game#game#game#game #notificationStack:has(#gameToast:not(.hidden)) #gameFeedback{display:block!important}
+#game#game#game#game #notificationStack:has(#hudAlert.danger:not(.hidden)) #threatRail{display:none!important}
+#game#game#game#game #notificationStack:has(#hudAlert.danger:not(.hidden)) #gameFeedback{display:block!important}
