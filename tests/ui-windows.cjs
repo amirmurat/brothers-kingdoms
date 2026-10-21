@@ -5,7 +5,7 @@ function el(id=''){
  if(elements.has(id))return elements.get(id);
  const attrs=[...html.matchAll(/<[^>]+\bid="([^"]+)"[^>]*>/g)].find(m=>m[1]===id)?.[0]||'';
  const classes=new Set((attrs.match(/\bclass="([^"]*)"/)?.[1]||'').split(' '));
- const e={id,value:'',textContent:'',innerHTML:'',dataset:{},style:{},tagName:'DIV',disabled:false,options:[],classList:{add(...a){a.forEach(x=>classes.add(x))},remove(...a){a.forEach(x=>classes.delete(x))},contains(x){return classes.has(x)},toggle(x,b){const v=b===undefined?!classes.has(x):b;v?classes.add(x):classes.delete(x);return v}},setAttribute(){},getAttribute(){return null},addEventListener(){},focus(){},querySelector(sel){return el(id+sel)},querySelectorAll(){return []},getBoundingClientRect(){return {width:390,height:650,left:0,top:0}},getContext(){return context},closest(){return el(id+'parent')},contains(){return false}};
+ const e={id,value:'',textContent:'',innerHTML:'',dataset:{},style:{},tagName:'DIV',disabled:false,options:[],classList:{add(...a){a.forEach(x=>classes.add(x))},remove(...a){a.forEach(x=>classes.delete(x))},contains(x){return classes.has(x)},toggle(x,b){const v=b===undefined?!classes.has(x):b;v?classes.add(x):classes.delete(x);return v}},setAttribute(){},getAttribute(){return null},appendChild(child){child.parent=this;return child},addEventListener(){},focus(){},querySelector(sel){return el(id+sel)},querySelectorAll(){return []},getBoundingClientRect(){return {width:390,height:650,left:0,top:0}},getContext(){return context},closest(){return el(id+'parent')},contains(){return false}};
  elements.set(id,e);return e;
 }
 const context=new Proxy({createImageData(w,h){return {data:new Uint8ClampedArray(w*h*4)}},measureText(){return {width:30}}},{get(t,k){return t[k]||(()=>{})}});
@@ -28,8 +28,10 @@ assert.equal(t.get().attackPlanner,plan,'Nations preserves the drawing');assert(
 assert.equal(plan.pointerId,null,'Nations safely ends active gesture');assert.equal(t.get().pressed.size,0);
 el('warPanelClose').onclick();assert(!t.mapInputBlocked());
 t.toggleQuickBuild(false);assert.equal(t.get().attackPlanner,plan,'closing build palette cannot delete draft');
-t.showAux('armiesPanel');assert.equal(t.get().attackPlanner,null);assert(el('warPanel').classList.contains('hidden'));
-t.openPanel();assert(el('armiesPanel').classList.contains('hidden'));assert(!document.body.classList.contains('aux-open'));
+t.showAux('armiesPanel');assert.equal(t.get().attackPlanner,plan,'Military tabs preserve unfinished attack drawings');assert(!el('warPanel').classList.contains('hidden'));assert(el('warHubArmy').classList.contains('hidden')===false);
+el('warTabThreats').onclick();assert(!el('warHubThreats').classList.contains('hidden'));assert(el('warHubArmy').classList.contains('hidden'));
+el('warTabNations').onclick();assert(!el('warHubNations').classList.contains('hidden'));
+t.openPanel();assert(el('warPanel').classList.contains('hidden'));assert(!document.body.classList.contains('aux-open'));
 el('helpButton').onclick();assert(!t.get().panelOpen);assert(!el('tutorial').classList.contains('hidden'));assert(t.mapInputBlocked());
 el('closeTutorial').onclick();assert(!t.mapInputBlocked());
 t.beginAttackPlanner();el('warChip').onclick();t.goHome();
