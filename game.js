@@ -1504,6 +1504,18 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
    if(y===0||o[i-E.W]!==id){ctx.moveTo(x*TILE,y*TILE);ctx.lineTo((x+1)*TILE,y*TILE);}if(x===E.W-1||o[i+1]!==id){ctx.moveTo((x+1)*TILE,y*TILE);ctx.lineTo((x+1)*TILE,(y+1)*TILE);}if(y===E.H-1||o[i+E.W]!==id){ctx.moveTo(x*TILE,(y+1)*TILE);ctx.lineTo((x+1)*TILE,(y+1)*TILE);}
   }
   ctx.stroke();
+  // Dashed red shared borders identify active wars, without changing ownership.
+  if(state.wars?.length){
+   const wars=new Set(state.wars),atWar=(a,b)=>a&&b&&a!==b&&wars.has(Math.min(a,b)+':'+Math.max(a,b));
+   ctx.beginPath();ctx.strokeStyle='#ff7488e6';ctx.lineWidth=Math.max(1.2,2.3/zoom);
+   ctx.setLineDash([3/zoom,2/zoom]);ctx.lineCap='butt';
+   for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
+    const i=y*E.W+x,id=o[i];if(!id)continue;
+    if(x<E.W-1&&atWar(id,o[i+1])){ctx.moveTo((x+1)*TILE,y*TILE);ctx.lineTo((x+1)*TILE,(y+1)*TILE);}
+    if(y<E.H-1&&atWar(id,o[i+E.W])){ctx.moveTo(x*TILE,(y+1)*TILE);ctx.lineTo((x+1)*TILE,(y+1)*TILE);}
+   }
+   ctx.stroke();ctx.setLineDash([]);ctx.lineCap='round';
+  }
   // Thin coast outline separates land and sea without heavy biome gridlines.
   ctx.beginPath();ctx.strokeStyle='#7b849355';ctx.lineWidth=Math.max(.55,1.2/zoom);
   const tiles=state.tiles;
