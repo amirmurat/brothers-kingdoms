@@ -183,6 +183,15 @@ const server=http.createServer((req,res)=>{
    assert(contextFlat.costs.every(c=>c.radius==='0px'&&c.fill==='rgba(0, 0, 0, 0)'),label+' costs have no pills');
    await page.evaluate(()=>window.__layout.hideAux());
 
+   await page.locator('#planToolFocus').click();
+   assert(await page.locator('#armyFocusGuide').isVisible(),label+' focus has a bottom panel');
+   assert.equal(await page.locator('#buildDock').evaluate(e=>getComputedStyle(e).visibility),'hidden',label+' focus never overlaps construction');
+   assert.equal(await page.locator('#armyFocusGuide button').count(),2,label+' focus exposes Exit and Clear');
+   const focusBounds=await page.locator('#armyFocusGuide').evaluate(e=>{const r=e.getBoundingClientRect();return [...e.querySelectorAll('button,span,strong')].every(c=>{const b=c.getBoundingClientRect();return b.left>=r.left&&b.right<=r.right+1&&b.bottom<=r.bottom+1;});});
+   assert(focusBounds,label+' focus content fits bottom surface');
+   await page.screenshot({path:'/tmp/bk-v102-focus-'+name+'-'+viewport.width+'.png'});
+   await page.locator('#exitArmyFocus').click();
+   assert.equal(await page.locator('#buildDock').evaluate(e=>getComputedStyle(e).visibility),'visible',label+' exiting focus restores construction');
    await page.locator('#planToolPaint').click();
    await page.locator('#planToolErase').click();
    assert(await page.locator('#planGuide').evaluate(e=>e.classList.contains('hidden')),label+' brush to eraser closes planning panel');
@@ -193,9 +202,11 @@ const server=http.createServer((req,res)=>{
       right:mr.right-r.right,left:r.left-mr.left,bottom:mr.bottom-r.bottom,display:s.display,
       title:h.querySelector('strong')?.textContent,detail:h.querySelector('span')?.textContent};
    });
-   assert(eraseHud.visible&&eraseHud.display==='flex',label+' eraser appears as a permanent HUD status, not a floating toast');
+   assert(eraseHud.visible&&eraseHud.display==='grid',label+' eraser appears as a permanent HUD status, not a floating toast');
    assert.equal(eraseHud.radius,'0px',label+' eraser HUD has square panel geometry');
    assert(Math.abs(eraseHud.left)<1&&Math.abs(eraseHud.right)<1&&Math.abs(eraseHud.bottom)<1,label+' eraser strip fills map width at bottom');
+   assert.equal(await page.locator('#planEraseHint button').count(),3,label+' eraser exposes Exit, Reset and Erase selected');
+   assert.equal(await page.locator('#buildDock').evaluate(e=>getComputedStyle(e).visibility),'hidden',label+' eraser never overlaps construction');
    assert.equal(eraseHud.title,'ERASER',label+' eraser has distinct mode title');
    await page.locator('#planToolErase').click();
    const bottomBefore=await page.locator('#buildDock').boundingBox();
@@ -291,7 +302,7 @@ const server=http.createServer((req,res)=>{
    const buttons=await page.locator('#buildDock button').evaluateAll(els=>els.map(el=>{const r=el.getBoundingClientRect(),icon=el.querySelector(':scope > img').getBoundingClientRect();return {width:r.width,height:r.height,centerError:Math.abs(icon.x+icon.width/2-r.x-r.width/2)};}));
    assert(buttons.every(b=>Math.abs(b.width-buttons[0].width)<.5&&Math.abs(b.height-buttons[0].height)<.5&&b.centerError<1),label+' bottom actions share dimensions and centered icons '+JSON.stringify(buttons));
    assert.equal(await page.locator('#buildDock').evaluate(el=>getComputedStyle(el).borderRadius),'0px',label+' bottom HUD has no floating frame');
-   await page.evaluate(()=>{window.__layout.warnHud('Offensive ended');window.__layout.toast('Order completed','success');});
+   await page.evaluate(()=>{window.__layout.warnHud('Offensive ended');window.__layout.toast('Connection restored','success');});
    assert.equal(await page.locator('#hudAlert').isVisible(),false,label+' ordinary notice hidden behind toast');
    assert.equal(await page.locator('#gameToast').isVisible(),true,label+' toast visible');
    const statusRects=await page.evaluate(()=>{const a=document.getElementById('gameToast').getBoundingClientRect(),b=document.getElementById('warChip').getBoundingClientRect();return {separate:a.right<=b.left||a.left>=b.right||a.bottom<=b.top||a.top>=b.bottom,nationWidth:b.width,nationHeight:b.height};});
@@ -379,6 +390,10 @@ const server=http.createServer((req,res)=>{
    await page.evaluate(()=>window.__layout.closePanel());
    await page.locator('#warChip').click();
    assert.equal(await page.locator('#warTabNations').getAttribute('aria-selected'),'true',label+' Nations opens Military in Nations tab');
+   await page.evaluate(()=>document.querySelector('#warPanelList .nation-row')?.classList.add('focused'));
+   await page.evaluate(()=>window.__layout.hideAux());
+   await page.locator('#warChip').click();
+   assert.equal(await page.locator('#warPanelList .focused').count(),0,label+' ordinary Military open clears stale map highlights');
    const nationFocus=await page.evaluate(()=>{
     const el=document.querySelector('#warPanelList .nation-row'),dot=el.querySelector('.nation-color'),before=dot.getBoundingClientRect();
     el.classList.add('focused');

@@ -5,7 +5,7 @@ const TROOPS_PER_PLAN_CELL=10,STORAGE_PER_CELL=50;
 function planCellLimit(s,id){return Math.min(W*H,Math.max(0,Math.floor(militaryStrength(s,id).total/TROOPS_PER_PLAN_CELL)));}
 const W=160,H=104,MAX=4,LAND=[1,2,3,4,5,6];
 const COLORS=['#39D5FF','#B6F36A','#FFAE57','#FF5D80','#B38CFF','#59E2C5','#FFE66B','#88A4FF','#EF96E6','#FF885D','#8CE3A1','#C3B5FF','#F8B9CA','#B7CCD9'];
-const KINDS={farm:{name:'Farm',cost:{wood:45,stone:10},income:'food'},lumber:{name:'Lumber Mill',cost:{wood:40,stone:15},income:'wood'},quarry:{name:'Quarry',cost:{wood:45,stone:20},income:'stone'},mine:{name:'Mine',cost:{wood:55,stone:55},income:'gold'},barracks:{name:'Barracks',cost:{wood:100,stone:65,gold:35}},fort:{name:'Fort',cost:{wood:105,stone:130,gold:55}},city:{name:'City',cost:{wood:165,stone:150,gold:100}}};
+const KINDS={farm:{name:'Farm',cost:{wood:45,stone:10},income:'food'},lumber:{name:'Lumber Mill',cost:{wood:40,stone:15},income:'wood'},quarry:{name:'Quarry',cost:{wood:45,stone:20},income:'stone'},mine:{name:'Mine',cost:{wood:55,stone:55},income:'gold'},barracks:{name:'Barracks',cost:{wood:300,stone:195,gold:105}},fort:{name:'Fort',cost:{wood:315,stone:390,gold:165}},city:{name:'City',cost:{wood:495,stone:450,gold:300}}};
 const TECH={economy:{name:'Economy',base:{gold:120,wood:80}},war:{name:'Warfare',base:{gold:135,stone:75}},logistics:{name:'Logistics',base:{gold:100,wood:80}}};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const idx=(x,y)=>y*W+x;
@@ -173,7 +173,7 @@ function costBuilding(s,id,kind){
  return Object.fromEntries(Object.entries(base).map(([resource,value])=>[resource,Math.ceil(value*(100+5*count)/100)]));
 }
 function costUpgrade(b){
- const base=KINDS[b.kind]?.cost||KINDS.city.cost,factor=1.2+.6*(b.level-1);
+ const base=KINDS[b.kind]?.cost||KINDS.city.cost,factor=1.8+1.2*(b.level-1);
  return Object.fromEntries(Object.entries(base).map(([k,v])=>[k,Math.ceil(v*factor)]));
 }
 function costTech(key,l){const base=TECH[key].base;return Object.fromEntries(Object.entries(base).map(([k,v])=>[k,Math.round(v*(l+1)*1.4)]));}
@@ -369,7 +369,7 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
  }
  if(a.type==='armyFocus'){
   if(a.clear){p.armyFocus=null;autoDemandCache.delete(s);return {ok:true};}
-  if(!Number.isInteger(a.x)||!Number.isInteger(a.y)||!inside(a.x,a.y)||!tile(s,a.x,a.y)||p.allies.includes(owner(s,a.x,a.y)))return {ok:false,error:'Choose your land or an attack location outside allied land.'};
+  if(!Number.isInteger(a.x)||!Number.isInteger(a.y)||!inside(a.x,a.y))return {ok:false,error:'Choose your land or an attack location outside allied land.'};
   p.defendPriority=null;p.armyFocus={x:a.x,y:a.y};autoDemandCache.delete(s);return {ok:true};
  }
  if(a.type==='planStrategy'){
@@ -511,14 +511,15 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
   if(plan){cancelOffensivePlan(s,plan);return {ok:true};}
   finishWave(s,army,p);s.armies=s.armies.filter(v=>v!==army);return {ok:true};
  }
+ if(a.type==='build'&&['city','barracks','fort'].includes(a.kind))return action(s,id,{...a,type:'queueBuild'});
  if(a.type==='build'){
   const kind=String(a.kind),x=Math.floor(a.x),y=Math.floor(a.y),fail=canBuild(s,id,kind,x,y);if(fail)return {ok:false,error:fail};
   const price=costBuilding(s,id,kind);
   if(!available(p,price))return {ok:false,error:'Not enough resources.'};charge(p,price);building(s,id,kind,x,y);return {ok:true,cost:price};
  }
  if(a.type==='upgrade'){
-  const b=s.buildings.find(v=>v.id===a.id&&v.owner===id);if(!b||b.level>=4)return {ok:false,error:'Maximum level reached.'};const price=costUpgrade(b);
-  if(!available(p,price))return {ok:false,error:'Not enough resources.'};charge(p,price);b.level++;log(s,p.name+' upgraded '+(KINDS[b.kind]?.name||'capital')+' to '+b.level+' lvl.');return {ok:true};
+  const b=s.buildings.find(v=>v.id===a.id&&v.owner===id);if(b?.upgrade)return {ok:false,error:'Upgrade already in progress.'};if(s.buildings.filter(b=>b.owner===id&&b.upgrade).length>=2)return {ok:false,error:'Finish one of your two active upgrades first.'};if(!b||b.level>=4)return {ok:false,error:'Maximum level reached.'};const price=costUpgrade(b);
+  if(!available(p,price))return {ok:false,error:'Not enough resources.'};charge(p,price);b.upgrade={owner:id,level:b.level+1,readyTick:s.tick+upgradeTime(b)};return {ok:true};
  }
  if(a.type==='research'){
   const key=String(a.key);if(!TECH[key])return {ok:false,error:'Unknown research.'};const l=p.tech[key];if(l>=3)return {ok:false,error:'Research complete.'};const c=costTech(key,l);
@@ -746,7 +747,7 @@ function workforceStep(s){
    }
    g.route=[];
    layRoad(s,p,current);
-   if(job){job.progress=(job.progress||0)+1;g.status='Building';if(job.progress>=5){building(s,p.id,job.kind,job.x,job.y);s.buildJobs=s.buildJobs.filter(j=>j!==job);g.job=null;g.progress=0;}}
+   if(job){job.progress=(job.progress||0)+1;g.status='Building';if(job.progress>=constructionTime(job.kind)){building(s,p.id,job.kind,job.x,job.y);s.buildJobs=s.buildJobs.filter(j=>j!==job);g.job=null;g.progress=0;}}
    else if(g.resource){g.progress=Math.min(3,(g.progress||0)+1);g.status=g.progress<3?'Preparing':'Harvesting';if(g.progress>=3)p.workIncome[g.resource]+=g.count*.8;}
    else{g.status=g.roadTask?'Road complete':'Home';g.roadTask=false;}
   }
@@ -822,26 +823,31 @@ function fieldRoute(field,start,destination){
  return route;
 }
 // Fort intelligence is current visibility, never knowledge of hidden enemy bases.
-function fortRadius(b){return 8+6*Math.max(1,b.level||1);}
+function fortRadius(b,s=null){const terrain=s?tile(s,b.x,b.y):1;return Math.round((8+6*Math.max(1,b.level||1))*(terrain===6?1.5:terrain===3?1.25:1));}
+function fortSees(s,f,b){const r=fortRadius(f,s);return (f.x-b.x)**2+(f.y-b.y)**2<=r*r;}
+function focusStatus(s,id,f=person(s,id)?.armyFocus){if(!f||!inside(f.x,f.y)||!tile(s,f.x,f.y))return 'invalid';const p=person(s,id),i=idx(f.x,f.y);if(s.owners[i]===id)return 'defend';if(p?.allies.includes(s.owners[i]))return 'invalid';return [...(s.attackPlans||[]),...(s.recoveryPlans||[])].some(q=>q.owner===id&&q.zoneCells?.includes(i))?'attack':'invalid';}
+function constructionTime(kind){return {city:35,barracks:30,fort:25}[kind]||20;}
+function upgradeTime(b){return 30*2**Math.max(0,b.level-1);}
+function finishUpgrades(s){for(const b of s.buildings)if(b.upgrade){if(b.upgrade.owner!==b.owner||owner(s,b.x,b.y)!==b.owner)delete b.upgrade;else if(s.tick>=b.upgrade.readyTick){b.level=b.upgrade.level;delete b.upgrade;}}}
 const fortIntel=new WeakMap();
 function visibleBuilding(s,id,b){
- if(b.owner===id)return true;
+ if(b.owner===id||person(s,id)?.allies.includes(b.owner))return true;
  let cache=fortIntel.get(s);if(!cache||cache.source!==s.buildings||cache.length!==s.buildings.length||cache.revision!==s.territoryRevision){cache={source:s.buildings,length:s.buildings.length,revision:s.territoryRevision,players:new Map()};fortIntel.set(s,cache);}
  let forts=cache.players.get(id);if(!forts){forts=s.buildings.filter(f=>f.owner===id&&f.kind==='fort'&&owner(s,f.x,f.y)===id);cache.players.set(id,forts);}
- return forts.some(f=>near(f,b)<=fortRadius(f));
+ return forts.some(f=>fortSees(s,f,b));
 }
 const strategyMaps=new WeakMap();
 function strategicWeight(s,id,x,y){
  const p=person(s,id),key=[s.tick,s.territoryRevision,s.buildings.length,JSON.stringify(p?.armyFocus)].join(':');
  let cache=strategyMaps.get(s);if(!cache){cache=new Map();strategyMaps.set(s,cache);}
  let entry=cache.get(id);
- if(entry?.key!==key){const forts=s.buildings.filter(b=>b.owner===id&&b.kind==='fort'&&owner(s,b.x,b.y)===id);entry={key,buildings:s.buildings.filter(b=>b.owner===id||forts.some(f=>near(f,b)<=fortRadius(f))),values:new Map()};cache.set(id,entry);}
+ if(entry?.key!==key){const forts=s.buildings.filter(b=>b.owner===id&&b.kind==='fort'&&owner(s,b.x,b.y)===id);entry={key,buildings:s.buildings.filter(b=>(b.owner===id||p?.allies.includes(b.owner))||forts.some(f=>fortSees(s,f,b))),values:new Map(),focusValid:focusStatus(s,id)!=='invalid'};cache.set(id,entry);}
  const cell=idx(x,y);if(entry.values.has(cell))return entry.values.get(cell);
  let weight=1;
  for(const b of entry.buildings){const d=Math.abs(b.x-x)+Math.abs(b.y-y);
   if(d<=12)weight+=({capital:8,city:5,barracks:4,fort:3}[b.kind]||2)*(b.level||1)*(1-d/13);
  }
- const f=p?.armyFocus;if(f){const d=Math.abs(f.x-x)+Math.abs(f.y-y);weight+=1000/(1+d/5);}
+ const f=p?.armyFocus;if(f&&entry.focusValid){const d=Math.abs(f.x-x)+Math.abs(f.y-y);weight+=1000/(1+d/5);}
  entry.values.set(cell,weight);return weight;
 }
 function reserveShare(p){return p?.armyPosture==='aggressive'?.2:p?.armyPosture==='defensive'?.6:.35;}
@@ -1536,7 +1542,7 @@ function combatStep(s){if(s.phase!=='playing')return;
  for(const a of [...s.armies])if(a.strength>0)advance(s,a);
  s.armies=s.armies.filter(a=>a.strength>=8||a.awaitingReinforcements||a.waitingForRoute);
 }
-function tick(s){if(s.phase!=='playing')return;s.tick++;
+function tick(s){if(s.phase!=='playing')return;s.tick++;finishUpgrades(s);
  adoptLegacyOffensives(s);
  workforceStep(s);
  for(const p of s.players){if(!alive(p))continue;income(s,p);}
@@ -1599,5 +1605,5 @@ function restoreNetworkState(s){
  delete s.armyPacked;return s;
 }
 
-return{BUILD:'v101',fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v102',focusStatus,constructionTime,upgradeTime,fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });

@@ -32,7 +32,7 @@ const buildingInfo={
 };
 const nameResource={food:'Food',wood:'Wood',stone:'Stone',gold:'Gold'};
 const briefCost=c=>Object.entries(c||{}).map(([k,v])=>`<span class="cost-unit">${uiIcon(k)}${number(v)}</span>`).join(' ');
-function buildingBenefit(id,p,level=1){const b=buildingInfo[id];if(!b)return '';if(b.resource)return `+${Math.round(b.perLevel*level*(1+.25*(p?.tech?.economy||0)))}/s ${({food:'food',wood:'wood',stone:'stone',gold:'gold'})[b.resource]}`;if(id==='city')return `+${24*level} workers · +${Math.round(5*level*(1+.25*(p?.tech?.economy||0)))}/s food and gold · +${260*level} capacity · +${3*level} recruitment/s`;if(id==='barracks')return `+${430*level} capacity · up to +${5*level} recruits/s · ${level} food/s at full output`;if(id==='fort')return `up to +${(18.5*level).toFixed(1)} defense within radius 4 · enemy building sight ${E.fortRadius({level})} tiles`;return b.detail;}
+function buildingBenefit(id,p,level=1){const b=buildingInfo[id];if(!b)return '';if(b.resource)return `+${Math.round(b.perLevel*level*(1+.25*(p?.tech?.economy||0)))}/s ${({food:'food',wood:'wood',stone:'stone',gold:'gold'})[b.resource]}`;if(id==='city')return `+${24*level} workers · +${Math.round(5*level*(1+.25*(p?.tech?.economy||0)))}/s food and gold · +${260*level} capacity · +${3*level} recruitment/s`;if(id==='barracks')return `+${430*level} capacity · up to +${5*level} recruits/s · ${level} food/s at full output`;if(id==='fort')return `up to +${(18.5*level).toFixed(1)} defense within radius 4 · base sight ${E.fortRadius({level})} tiles · hills +25% · mountains +50%`;return b.detail;}
 function techBenefit(id,level){if(id==='economy')return `Income multiplier ×${(1+level*.25).toFixed(2)}`;if(id==='war')return `Stronger attacks · defense +${(1.9*level).toFixed(1)} · recruitment +${2*level} troops/s`;if(id==='logistics')return `Conquest troop losses −${8*level}%`;return '';}
 function resourceRates(p){
  const c=E.counts(state,p.id),land=p.land||0,m=1+(p.tech.economy||0)*.25;
@@ -62,8 +62,9 @@ let zoom=1.05,camX=0,camY=0,terrainSeed=null,pressed=new Map(),pointerStart=null
 const TILE=14;const mine=()=>state?.players.find(p=>p.id===myId);const color=id=>state?.players.find(p=>p.id===id)?.color||'#e8f3f3';
 function toast(msg,kind){
  const inGame=!$('game').classList.contains('hidden');
+ if(inGame&&kind!=='error'&&/^(Order completed|Erased |Army focus|Focus selection|Tap your land|Construction queued|Offensive plan (created|updated)|Work zone saved)/i.test(String(msg)))return;
  const t=inGame?$('gameToast'):$('toast');
- const severity=kind||(/missing|rejected|error|no connection|cannot|failed|unavailable|disconnected|outdated/i.test(String(msg))?'error':/ready|completed|victor|started|researched/i.test(String(msg))?'success':'info');
+ const severity=kind||(/missing|not enough|rejected|error|no connection|cannot|failed|unavailable|disconnected|outdated/i.test(String(msg))?'error':/ready|completed|victor|started|researched/i.test(String(msg))?'success':'info');
  t.dataset.kind=severity;t.textContent=msg;t.title=msg;if(inGame)t.innerHTML='<span class="notification-text">'+esc(msg)+'</span>';$('gameError').textContent=severity==='error'?msg:'';
  $('toast').classList.add('hidden');
  t.classList.remove('hidden');
@@ -103,7 +104,9 @@ function chooseMilitaryTab(tab){
  if(militaryTab==='army')renderArmies();if(defensePicking)refreshArmyFocus();
  if(militaryTab==='threats')syncMilitaryThreats();
 }
-function openMilitary(tab='nations'){defensePicking=false;$('armyFocusGuide').classList.add('hidden');$('planToolFocus').classList.remove('chosen');
+function openMilitary(tab='nations'){
+ $('warPanelList').querySelectorAll('.focused').forEach(el=>el.classList.remove('focused'));
+defensePicking=false;$('armyFocusGuide').classList.add('hidden');$('planToolFocus').classList.remove('chosen');
  if($('warPanel').classList.contains('hidden')){
   hideAux();closePanelIfOpen();toggleQuickBuild(false);
   selected=null;setPreview(null);buildMode=null;refreshQuickBuild();suspendMapGesture();
@@ -112,10 +115,10 @@ function openMilitary(tab='nations'){defensePicking=false;$('armyFocusGuide').cl
  $('warChip').setAttribute('aria-expanded','true');
  chooseMilitaryTab(tab);
 }
-function closeNations(){ $('warPanel').classList.add('hidden');$('warChip').setAttribute('aria-expanded','false'); }
+function closeNations(){ $('warPanelList').querySelectorAll('.focused').forEach(el=>el.classList.remove('focused')); $('warPanel').classList.add('hidden');$('warChip').setAttribute('aria-expanded','false'); }
 function suspendMapGesture(){
  pressed.clear();pointerStart=null;gesture=null;
- if(attackPlanner){const plan=attackPlanner;plan.pointerId=null;plan.lastPoint=null;plan.strokeStart=null;plan.strokeOrigin=null;plan.brushPoint=null;plan.touchLocked=false;if(plan.mode==='erase')plan.cells.clear();}
+ if(attackPlanner){const plan=attackPlanner;plan.pointerId=null;plan.lastPoint=null;plan.strokeStart=null;plan.strokeOrigin=null;plan.brushPoint=null;plan.touchLocked=false;}
 }
 function mapInputBlocked(){return panelOpen||document.body.classList.contains('aux-open')||!$('warPanel').classList.contains('hidden')||!$('tutorial').classList.contains('hidden')||!$('victory').classList.contains('hidden')||quickBuildOpen;}
 function hideAux(){
@@ -242,14 +245,10 @@ function refreshHudAlert(p){
    const id=E.owner(state,x,y);
    if(id!==0&&id!==myId&&!p.allies.includes(id)){hostileBorder=true;break;}
   }
-  if(attackers||hostileBorder){text='Capital threatened · defend';kind='danger';action='capital';}
+  if(attackers){text='Capital threatened · defend';kind='danger';action='capital';}
  }
  if(!text&&hudNotice&&Date.now()<hudNotice.until){text=hudNotice.text;kind=hudNotice.kind;action=hudNotice.action;}
  if(!text&&p.troopIncome===0&&p.troops<p.troopCap&&p.res.food<1){text='No food — recruitment stopped';kind='notice';action='build';}
- if(!text){
-  const weak=state.armies.find(a=>a.owner===myId&&a.initialStrength>0&&a.strength/a.initialStrength<.15);
-  if(weak){text='An offensive is nearly depleted';kind='notice';action='armies';}
- }
  if(!text){box.classList.add('hidden');hudAlertAction=null;return;}
  box.classList.remove('hidden');box.classList.toggle('danger',kind==='danger');box.dataset.actionable=String(Boolean(action));
   // A notice without a destination is not a fake button.
@@ -289,10 +288,6 @@ function updateHudSignals(p){
   if(lastHudOwners){for(let i=0;i<state.owners.length;i++)if(lastHudOwners[i]&&state.owners[i]!==myId){lost={x:i%E.W,y:Math.floor(i/E.W)};break;}}
   warnHud(`Lost ${number(lastHudLand-p.land)} cells`, 'danger',lost,7);
  }
- if(lastHudLand!==null&&lastHudArmies.size){for(const [id,a] of lastHudArmies)if(!currentArmies.has(id)){
-  const taken=Number(a.captured||0);
-  warnHud(`Offensive ended${taken?' · conquered '+number(taken)+' cells':''}`, 'notice',null,3);break;
- }}
  if(lastHudLand===null||state.territoryRevision!==updateHudSignals.lastRevision){
   lastHudOwners=Uint8Array.from(state.owners,v=>v===myId?1:0);updateHudSignals.lastRevision=state.territoryRevision;
  }
@@ -413,7 +408,7 @@ function beginGlobalEraser(){
  $('planEraseHint').classList.remove('hidden');
  $('planBrushValue').textContent=String(attackPlanner.brushRadius);
  $('mapHint').classList.add('hidden');
- setPaintTool('erase');queueDraw();
+ setPaintTool('erase');refreshPaintGuide();queueDraw();
 }
 function togglePaintTool(tool){
  if(!attackPlanner){if(tool==='erase')beginGlobalEraser();else beginAttackPlanner();return;}
@@ -478,7 +473,7 @@ function overlappingPlans(plan){
 function refreshPaintTargets(plan){plan.targets=new Set(selectedNationTargets());}
 function refreshPaintGuide(){
  planningVisualCache=null;
- const plan=attackPlanner;if(plan?.mode!=='paint')return;syncPaintEligibility(plan);
+ const plan=attackPlanner;if(plan?.mode==='erase'){$('eraseCount').textContent=number(plan.cells.size)+' cells';$('eraseApply').disabled=!plan.cells.size;$('eraseReset').disabled=!plan.cells.size;return;}if(plan?.mode!=='paint')return;syncPaintEligibility(plan);
  const checked=checkPaintZone(plan),count=plan.cells.size;
  if(plan.workResource){
   const stats=E.workforceStats(state,myId);
@@ -678,15 +673,16 @@ function contextual(item){
  const box=$('contextCard'),content=$('contextBody');if(!item){if(!box.classList.contains('hidden'))hideAux();return;}
  const me=mine(),own=item.owner===myId,other=E.person(state,item.owner);let html='';
  if(item.kind&&item.kind!=='army'){
-  const details=buildingInfo[item.kind],cost=E.costUpgrade(item),maxed=item.level>=4;
+  const details=buildingInfo[item.kind],cost=E.costUpgrade(item),maxed=item.level>=4,upgrading=item.upgrade,remaining=Math.max(0,(upgrading?.readyTick||0)-state.tick);
   const effect=details?buildingBenefit(item.kind,me,item.level):'Capital defense improves at each level';
   const next=details?buildingBenefit(item.kind,me,item.level+1):'Capital defense will increase';
   const stationed=own&&['capital','city','barracks'].includes(item.kind)?(me.garrisons||[]).filter(c=>!c.returning&&(!Number.isFinite(c.tx)||c.x===c.tx&&c.y===c.ty)&&Math.abs(c.x-item.x)+Math.abs(c.y-item.y)<=2).reduce((n,c)=>n+c.strength,0):null;
   html=`<div class="context-heading"><strong><i class="building-level-swatch" style="background:${buildingLevelColor(item)}" aria-hidden="true"></i>${esc(E.KINDS[item.kind]?.name||'Capital')} · lvl. ${item.level}</strong><small>${esc(other?.name||'')}</small></div>
    <div class="context-effect"><small>Current</small><span>${esc(effect)}</span></div>
+   ${own&&item.kind==='fort'?`<div class="context-effect"><small>Scouting range</small><span>${E.fortRadius(item,state)} tiles · ${esc(terrainNames[E.tile(state,item.x,item.y)])}</span></div>`:''}
    ${stationed===null?'':`<div class="context-effect"><small>Garrison nearby</small><span>${number(stationed)} troops</span></div>`}
    ${maxed?'':`<div class="context-effect context-effect-next"><small>After upgrade</small><span>${esc(next)}</span></div>`}
-   ${own&&!maxed?`<div class="context-upgrade-price"><small>Upgrade cost</small><div>${briefCost(cost)}</div></div><button data-context-upgrade="${esc(item.id)}" ${!canPay(me,cost)?'disabled':''}>Upgrade</button>${!canPay(me,cost)?`<small class="context-shortage">Missing: ${deficit(me,cost)}</small>`:''}`:own?'<small>Maximum level</small>':''}`;
+   ${own&&upgrading?`<div class="context-effect"><small>Upgrading to level ${upgrading.level}</small><span>${remaining}s remaining · current output until complete</span></div>`:own&&!maxed?`<div class="context-upgrade-price"><small>Upgrade cost</small><div>${briefCost(cost)}</div></div><button data-context-upgrade="${esc(item.id)}" ${!canPay(me,cost)?'disabled':''}>Upgrade · ${E.upgradeTime(item)}s</button>${!canPay(me,cost)?`<small class="context-shortage">Missing: ${deficit(me,cost)}</small>`:''}`:own?'<small>Maximum level</small>':''}`;
 
  }else html=`<strong>Army · ${esc(other?.name||'')}</strong><span>${number(item.strength)} troops · ${item.tx},${item.ty}</span>${own?`${!Array.isArray(item.zoneCells)?`<button data-context-redirect="${esc(item.id)}">Change target</button>`:''}<button data-context-return="${esc(item.id)}">Retreat</button>`:''}`;
  if(content.__last!==html){content.innerHTML=html;content.__last=html;}if(box.classList.contains('hidden'))showAux('contextCard');
@@ -954,8 +950,8 @@ function updateSelection(){const item=selected?.kind==='army'?state.armies.find(
 function refreshQuickBuild(){
  const p=mine();if(!p||!state)return;
  const dock=$('buildDock');
- if(!dock.dataset.ready){dock.innerHTML=['city','barracks','fort'].map(id=>'<button type="button" data-place-building="'+id+'" aria-label="Place '+E.KINDS[id].name+'" aria-pressed="false">'+buildingArt(id)+'<span>'+E.KINDS[id].name+'</span><small class="dock-cost"></small></button>').join('');dock.dataset.ready='yes';}
- for(const id of ['city','barracks','fort']){const b=dock.querySelector('[data-place-building="'+id+'"]');b.classList.toggle('chosen',buildMode===id);b.setAttribute('aria-pressed',String(buildMode===id));const cost=E.costBuilding(state,myId,id);b.title=E.KINDS[id].name+' · '+costText(cost);const price=b.querySelector('.dock-cost'),key=JSON.stringify(cost);if(price.dataset.cost!==key){price.innerHTML=briefCost(cost);price.dataset.cost=key;}}
+ if(!dock.dataset.ready){dock.innerHTML=['city','barracks','fort'].map(id=>'<button type="button" data-place-building="'+id+'" aria-label="Place '+E.KINDS[id].name+'" aria-pressed="false">'+buildingArt(id)+'<span>'+E.KINDS[id].name+'</span><small class="dock-time">'+E.constructionTime(id)+'s build</small><small class="dock-cost"></small></button>').join('');dock.dataset.ready='yes';}
+ for(const id of ['city','barracks','fort']){const b=dock.querySelector('[data-place-building="'+id+'"]');b.classList.toggle('chosen',buildMode===id);b.setAttribute('aria-pressed',String(buildMode===id));const cost=E.costBuilding(state,myId,id);b.title=E.KINDS[id].name+' · '+costText(cost)+' · '+E.constructionTime(id)+'s construction after builders arrive';const price=b.querySelector('.dock-cost'),key=JSON.stringify(cost);if(price.dataset.cost!==key){price.innerHTML=briefCost(cost);price.dataset.cost=key;}}
  $('placingBuild').classList.add('hidden');
  if(buildMode){$('placingBuildName').textContent=E.KINDS[buildMode].name;$('placingBuildCost').textContent=costText(E.costBuilding(state,myId,buildMode));$('placingBuildIcon').innerHTML=uiIcon(buildMode);}
  const workers=E.workforceStats(state,myId);
@@ -1031,14 +1027,21 @@ $('planDiscard').onclick=editPaintedZone;
 $('planPaintClear').onclick=clearPaintedZone;
 function refreshArmyFocus(){
  $('armyFocusGuide').classList.toggle('hidden',!defensePicking);
- const f=mine()?.armyFocus;if(!f){$('armyFocusDetail').textContent='Tap your land to defend or an attack location to concentrate troops';return;}
- const own=E.owner(state,f.x,f.y)===myId;
+ const f=mine()?.armyFocus;if(!f){$('armyFocusDetail').textContent='Tap your land or a planned attack area';$('armyFocusGuide').dataset.valid='true';return;}
+ const status=E.focusStatus(state,myId,f),own=status==='defend';
+ if(status==='invalid'){$('armyFocusDetail').textContent='Outside your land or plans · army will not follow this point';$('armyFocusGuide').dataset.valid='false';return;}
+ $('armyFocusGuide').dataset.valid='true';
  const squads=own?(mine()?.garrisons||[]).filter(g=>g.tx===f.x&&g.ty===f.y):state.armies.filter(a=>a.owner===myId).flatMap(a=>a.columns||[]).filter(c=>Math.abs((c.tx??c.x)-f.x)+Math.abs((c.ty??c.y)-f.y)<=24);
  const assigned=squads.reduce((n,g)=>n+g.strength,0),moving=squads.filter(g=>g.x!==g.tx||g.y!==g.ty).reduce((n,g)=>n+g.strength,0);
- $('armyFocusDetail').textContent=(own?'Defend':'Attack')+' · '+number(assigned)+' assigned · '+number(moving)+' en route · '+(assigned?'Following routes':own?'Waiting for reachable reserve':'Needs a reachable planned front')+' · tap to move';
+ $('armyFocusDetail').textContent=(own?'Defend':'Attack')+' · '+number(assigned)+' assigned · '+number(moving)+' en route'+(assigned?'':own?' · waiting for reserve':' · waiting for a reachable front');
 }
-$('planToolFocus').onclick=()=>{const wasPicking=defensePicking;if(attackPlanner)resetAttackPlanner();closeNations();hideAux();setBuildingMode(null);defensePicking=!wasPicking;$('planToolFocus').classList.toggle('chosen',defensePicking);$('planToolFocus').setAttribute('aria-pressed',String(defensePicking));refreshArmyFocus();toast(defensePicking?'Tap your land to defend or an attack location to concentrate troops.':'Focus selection cancelled');};
-$('clearArmyFocus').onclick=()=>{command({type:'armyFocus',clear:true});refreshArmyFocus();};
+function exitArmyFocus(){defensePicking=false;focusHover=null;$('planToolFocus').classList.remove('chosen');$('planToolFocus').setAttribute('aria-pressed','false');refreshArmyFocus();queueDraw();}
+$('planToolFocus').onclick=()=>{const wasPicking=defensePicking;if(attackPlanner)resetAttackPlanner();closeNations();hideAux();setBuildingMode(null);defensePicking=!wasPicking;focusHover=null;$('planToolFocus').classList.toggle('chosen',defensePicking);$('planToolFocus').setAttribute('aria-pressed',String(defensePicking));refreshArmyFocus();queueDraw();};
+$('exitArmyFocus').onclick=exitArmyFocus;
+$('clearArmyFocus').onclick=()=>{command({type:'armyFocus',clear:true});focusHover=null;refreshArmyFocus();queueDraw();};
+$('eraseExit').onclick=resetAttackPlanner;
+$('eraseReset').onclick=()=>{if(attackPlanner?.mode==='erase'){attackPlanner.cells.clear();refreshPaintGuide();queueDraw();}};
+$('eraseApply').onclick=()=>{const p=attackPlanner;if(p?.mode==='erase'&&p.cells.size&&command({type:'erasePlanCells',cells:[...p.cells]})){p.cells.clear();refreshPaintGuide();queueDraw();}};
 $('planToolPaint').onclick=()=>togglePaintTool('paint');
 $('planToolErase').onclick=()=>togglePaintTool('erase');
 $('planReviewButton').onclick=reviewPaintedZone;
@@ -1207,19 +1210,14 @@ function zoomAt(factor,cx,cy){const old=zoom;zoom=Math.max(.14,Math.min(5,zoom*f
 function pixelAt(clientX,clientY){const r=canvas.getBoundingClientRect();return {x:clientX-r.left,y:clientY-r.top};}
 function gridAt(clientX,clientY){const p=pixelAt(clientX,clientY);return {x:Math.floor((p.x-camX)/(TILE*zoom)),y:Math.floor((p.y-camY)/(TILE*zoom))};}
 function nearestObject(px,py,kind){const arr=kind==='army'?state.armies:state.buildings.filter(b=>E.visibleBuilding(state,myId,b)),worldX=(px-camX)/(TILE*zoom),worldY=(py-camY)/(TILE*zoom);let nearest=null,best=Infinity;for(const v of arr){const d=Math.hypot(v.x+.5-worldX,v.y+.5-worldY)*TILE*zoom;if(d<best&&d<(kind==='army'?23:25)){best=d;nearest=v;}}return nearest;}
-let defensePicking=false;
+let defensePicking=false,focusHover=null;
 function selectMap(clientX,clientY){
  if(mapInputBlocked())return;
  if(state?.phase!=='playing'||mine()?.eliminated)return;
  const pt=pixelAt(clientX,clientY),p=gridAt(clientX,clientY);
  if(!E.inside(p.x,p.y))return;
- if(defensePicking){if(!E.tile(state,p.x,p.y)||(mine()?.allies||[]).includes(E.owner(state,p.x,p.y)))return toast('Choose your land or an attack location outside allied land','error');command({type:'armyFocus',x:p.x,y:p.y});defensePicking=false;$('planToolFocus').classList.remove('chosen');refreshArmyFocus();toast('Army focus set · movement follows routes and country posture');queueDraw();return;}
+ if(defensePicking){command({type:'armyFocus',x:p.x,y:p.y});focusHover=null;refreshArmyFocus();queueDraw();return;}
  if(attackPlanner)return;
- const regionIndex=p.y*E.W+p.x;
- const savedPlan=(state.attackPlans||[]).find(p=>p.owner===myId&&state.owners[regionIndex]!==myId&&p.zoneCells.includes(regionIndex));
- if(savedPlan){beginAttackPlanner();return;}
- const activePlan=state.armies.find(a=>a.owner===myId&&a.strength>0&&Array.isArray(a.zoneCells)&&!a.planId&&a.zoneCells.includes(regionIndex));
- if(activePlan){openCancelPlan(activePlan);return;}
  inspectCell(p.x,p.y);$('mapHint').classList.add('hidden');
  if(buildMode){
   moveCursor=p;if(E.owner(state,p.x,p.y)!==myId)return toast('Must be your territory','error');
@@ -1274,13 +1272,7 @@ function finishPaintPointer(e,cancelled=false){
   if(!plan.lastPoint&&plan.strokeStart)paintAtPointer(plan.strokeStart);
   else if(plan.lastPoint)paintAtPointer(gridAt(e.clientX,e.clientY));
  }
- if(plan.mode==='erase'){
-  if(!cancelled&&wasSingle&&plan.cells.size){
-   const cells=[...plan.cells];
-   if(command({type:'erasePlanCells',cells}))toast('Erased '+number(cells.length)+' marked cells');
-  }
-  plan.cells.clear();
- }
+ if(plan.mode==='erase'&&cancelled&&plan.eraseBefore)plan.cells=new Set(plan.eraseBefore);
  pressed.delete(e.pointerId);
  plan.pointerId=null;plan.lastPoint=null;plan.strokeStart=null;plan.strokeOrigin=null;plan.brushPoint=null;
  if(pressed.size>=2){plan.touchLocked=true;beginPaintNavigation();}
@@ -1295,12 +1287,12 @@ function onPointerDown(e){
   canvas.setPointerCapture(e.pointerId);
   pressed.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pressed.size>=2){
-   plan.touchLocked=true;if(plan.mode==='erase')plan.cells.clear();plan.pointerId=null;plan.lastPoint=null;
+   plan.touchLocked=true;if(plan.mode==='erase'&&plan.eraseBefore)plan.cells=new Set(plan.eraseBefore);plan.pointerId=null;plan.lastPoint=null;
    plan.strokeStart=null;plan.strokeOrigin=null;plan.brushPoint=null;
    if(pressed.size===2)beginPaintNavigation();
   }else if(!plan.touchLocked){
    if(plan.mode==='erase'){
-    plan.cells.clear();plan.erasable=new Set([...(state.attackPlans||[]),...(state.recoveryPlans||[])].filter(p=>p.owner===myId).flatMap(p=>p.zoneCells));
+    plan.eraseBefore=new Set(plan.cells);plan.erasable=new Set([...(state.attackPlans||[]),...(state.recoveryPlans||[])].filter(p=>p.owner===myId).flatMap(p=>p.zoneCells));
    }
    const pt=gridAt(e.clientX,e.clientY);
    plan.pointerId=e.pointerId;plan.lastPoint=null;
@@ -1331,6 +1323,7 @@ function onPointerMove(e){
   if(!plan.lastPoint&&plan.strokeStart)paintAtPointer(plan.strokeStart);
   paintAtPointer(gridAt(e.clientX,e.clientY));queueDraw();return;
  }
+ if(defensePicking&&!pressed.size){focusHover=gridAt(e.clientX,e.clientY);queueDraw();}
  if(buildMode&&state?.phase==='playing'){
   const cell=gridAt(e.clientX,e.clientY);
   if(E.inside(cell.x,cell.y)&&(moveCursor?.x!==cell.x||moveCursor?.y!==cell.y)){
@@ -1359,7 +1352,7 @@ function onPointerUp(e){
  pressed.delete(e.pointerId);
  if(touch===1){
   pointerStart=null;
-  if(was&&!was.moved){const now=Date.now(),g=gridAt(e.clientX,e.clientY),friendly=E.inside(g.x,g.y)&&E.owner(state,g.x,g.y)===myId;if(friendly&&!target&&!buildMode&&now-lastTap<280){const p=pixelAt(e.clientX,e.clientY);zoomAt(1.45,p.x,p.y);lastTap=0;}else{selectMap(e.clientX,e.clientY);lastTap=friendly?now:0;}}
+  if(was&&!was.moved){const now=Date.now(),g=gridAt(e.clientX,e.clientY),friendly=E.inside(g.x,g.y)&&E.owner(state,g.x,g.y)===myId;if(friendly&&!defensePicking&&!target&&!buildMode&&now-lastTap<280){const p=pixelAt(e.clientX,e.clientY);zoomAt(1.45,p.x,p.y);lastTap=0;}else{selectMap(e.clientX,e.clientY);lastTap=friendly?now:0;}}
  }else{pointerStart=null;gesture=null;}
 }
 // Prevent accidental text selection during tap, long-press, and drag gameplay.
@@ -1419,14 +1412,16 @@ function repaintWorld(){
 }
 
 function hexAlpha(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;}
+let fortCoverage=null;
+function drawOwnedFortRanges(){
+ const forts=state.buildings.filter(b=>b.owner===myId&&b.kind==='fort'),key=state.seed+':'+myId+':'+forts.map(b=>b.x+','+b.y+','+E.fortRadius(b,state)).join(';');
+ if(fortCoverage?.key!==key){const path=new Path2D();for(const b of forts){const x=(b.x+.5)*TILE,y=(b.y+.5)*TILE,r=E.fortRadius(b,state)*TILE;path.moveTo(x+r,y);path.arc(x,y,r,0,Math.PI*2);}fortCoverage={key,path};}
+ if(!forts.length)return;ctx.save();ctx.lineWidth=1/zoom;ctx.strokeStyle='#77c4df77';ctx.fillStyle='#64c9e508';ctx.fill(fortCoverage.path);ctx.stroke(fortCoverage.path);ctx.restore();
+}
 function drawFortRange(x,y,preview){
- const t=TILE,r=4;
- ctx.save();ctx.fillStyle=preview?'rgba(255,210,71,.23)':'rgba(255,211,95,.18)';
- ctx.strokeStyle=preview?'#ffe3a6':'#eec05e';ctx.lineWidth=Math.max(2/Math.max(.5,zoom),1);
- ctx.beginPath();ctx.moveTo((x+.5)*t,(y-r)*t);ctx.lineTo((x+r+1)*t,(y+.5)*t);
- ctx.lineTo((x+.5)*t,(y+r+1)*t);ctx.lineTo((x-r)*t,(y+.5)*t);ctx.closePath();
- ctx.fill();ctx.stroke();
- const sight=E.fortRadius(state.buildings.find(b=>b.x===x&&b.y===y&&b.kind==='fort')||{level:1});ctx.strokeStyle='#64c9e5';ctx.setLineDash([5/zoom,4/zoom]);ctx.beginPath();ctx.moveTo((x+.5)*t,(y+.5-sight)*t);ctx.lineTo((x+.5+sight)*t,(y+.5)*t);ctx.lineTo((x+.5)*t,(y+.5+sight)*t);ctx.lineTo((x+.5-sight)*t,(y+.5)*t);ctx.closePath();ctx.stroke();ctx.restore();
+ const b=state.buildings.find(b=>b.kind==='fort'&&b.x===x&&b.y===y)||{x,y,level:1};
+ ctx.save();ctx.strokeStyle=preview?'#93e3f0':'#77c4df88';ctx.lineWidth=1/zoom;ctx.fillStyle=preview?'#64c9e51c':'#64c9e508';
+ ctx.beginPath();ctx.arc((x+.5)*TILE,(y+.5)*TILE,E.fortRadius(b,state)*TILE,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.restore();
 }
 function queueDraw(){if(renderQueued)return;renderQueued=true;requestAnimationFrame(()=>{renderQueued=false;draw();});}
 
@@ -1615,9 +1610,10 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   ctx.strokeStyle='#ff7488e6';ctx.lineWidth=Math.max(1.2,2.3/zoom);ctx.setLineDash([3/zoom,2/zoom]);ctx.lineCap='butt';ctx.stroke(paths.wars);ctx.setLineDash([]);
   ctx.strokeStyle='#7b849355';ctx.lineWidth=Math.max(.55,1.2/zoom);ctx.stroke(paths.coast);
  }
- const defense=mine()?.armyFocus;
- if(defense){ctx.strokeStyle='#39d5ff';ctx.lineWidth=2/zoom;ctx.strokeRect((defense.x-1)*TILE,(defense.y-1)*TILE,TILE*3,TILE*3);}
+ const defense=defensePicking&&focusHover&&E.inside(focusHover.x,focusHover.y)?focusHover:mine()?.armyFocus;
+ if(defense){ctx.strokeStyle=E.focusStatus(state,myId,defense)==='invalid'?'#ff617b':'#39d5ff';ctx.lineWidth=2/zoom;ctx.beginPath();ctx.arc((defense.x+.5)*TILE,(defense.y+.5)*TILE,TILE*1.5,0,Math.PI*2);ctx.moveTo((defense.x-2)*TILE,(defense.y+.5)*TILE);ctx.lineTo((defense.x+3)*TILE,(defense.y+.5)*TILE);ctx.moveTo((defense.x+.5)*TILE,(defense.y-2)*TILE);ctx.lineTo((defense.x+.5)*TILE,(defense.y+3)*TILE);ctx.stroke();}
 
+ drawOwnedFortRanges();
  drawInfrastructure();drawAttackPlanning();drawArmyDisplay(w,h);drawHarvestSites(w,h);
  // One-cell geometric landmarks; catalogue and map use identical silhouettes.
  ctx.textAlign='center';ctx.textBaseline='middle';
@@ -1673,7 +1669,7 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
  // Display the selected existing fort's real defence range without entering build mode.
  if(selected?.kind==='building'){
   const b=state.buildings.find(v=>v.id===selected.id);
-  if(b?.kind==='fort')drawFortRange(b.x,b.y,false);
+  
  }
  if(moveCursor){ctx.strokeStyle='#2c3139';ctx.lineWidth=1.5/Math.max(.5,zoom);ctx.strokeRect(moveCursor.x*TILE,moveCursor.y*TILE,TILE,TILE);}
  ctx.restore();drawMini();}

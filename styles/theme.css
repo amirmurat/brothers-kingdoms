@@ -3157,7 +3157,34 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
 #armiesList button { min-height:44px; }
 #armiesList input[hidden] { display:none; }
 
-/* v101: independent map focus, same flat bottom HUD geometry. */
-#armyFocusGuide{position:absolute;bottom:0;left:0;right:0;z-index:32;min-height:var(--bottom-hud-size,72px);padding:8px 12px;background:var(--sheet-flat,#151b24);display:flex;align-items:center;gap:10px;box-sizing:border-box}
-#armyFocusGuide strong{font-size:10px;letter-spacing:.08em}#armyFocusGuide span{flex:1;font-size:11px;line-height:1.4}#armyFocusGuide button{min-width:48px;min-height:48px;border-radius:0}
+/* v102: one bottom tool surface, shared geometry and explicit actions. */
+#game#game#game#game :is(#armyFocusGuide,#planEraseHint):not(.hidden){position:absolute!important;inset:auto 0 0!important;display:grid!important;grid-template-rows:16px minmax(0,1fr) 44px!important;gap:4px!important;width:100%!important;height:var(--bottom-hud-size)!important;min-height:0!important;padding:8px 12px!important;box-sizing:border-box!important;background:var(--sheet-flat,#151b24)!important;color:var(--text,#edf2f7)!important;border:0!important;border-radius:0!important;box-shadow:none!important;z-index:var(--layer-map-plan)!important;pointer-events:auto!important;font:500 11px/16px system-ui!important;transform:none!important;overflow:hidden!important}
+#game#game#game#game :is(#armyFocusGuide,#planEraseHint) .paint-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+#game#game#game#game :is(#armyFocusGuide,#planEraseHint)>.plan-guide-actions{display:grid!important;grid-auto-flow:column!important;grid-auto-columns:minmax(0,1fr)!important;gap:8px!important;padding:0!important;margin:0!important}
+#game#game#game#game :is(#armyFocusGuide,#planEraseHint) button{height:44px!important;min-height:44px!important;min-width:0!important;border:0!important;border-radius:0!important;background:#263242!important;color:#f0f4f8!important;font:700 12px system-ui!important;white-space:normal!important}
+#game#game#game#game :is(#armyFocusGuide,#planEraseHint) button:disabled{opacity:.4!important}
+#game#game#game#game #eraseApply{background:#57313a!important;color:#ffd6de!important}
+#game#game#game#game #armyFocusGuide[data-valid="false"] strong{color:#ff718b!important}
+#game#game#game#game:has(:is(#armyFocusGuide,#planEraseHint):not(.hidden)) #buildDock{visibility:hidden!important;pointer-events:none!important}
 #planToolFocus.chosen{color:#39d5ff!important}
+/* One notification slot with deterministic priority: danger, toast, attack, notice. */
+#game#game#game#game#game #notificationStack:has(#hudAlert.danger:not(.hidden)) :is(#gameToast,#threatRail){display:none!important}
+#game#game#game#game#game #notificationStack:has(#hudAlert.danger:not(.hidden)) #hudAlert{display:flex!important}
+#game#game#game#game#game #notificationStack:has(#hudAlert.danger:not(.hidden)) #gameFeedback{display:block!important}
+#game#game#game#game#game #notificationStack:not(:has(#hudAlert.danger:not(.hidden))):has(#gameToast:not(.hidden)) :is(#hudAlert,#threatRail){display:none!important}
+#game#game#game#game#game #notificationStack:not(:has(#hudAlert.danger:not(.hidden))):has(#gameToast:not(.hidden)) #gameToast{display:flex!important}
+#game#game#game#game#game #notificationStack:not(:has(#hudAlert.danger:not(.hidden))):has(#gameToast.hidden):has(#threatRail:not(.hidden)) #gameFeedback{display:none!important}
+#game#game#game#game#game #notificationStack:not(:has(#hudAlert.danger:not(.hidden))):has(#gameToast.hidden):has(#threatRail:not(.hidden)) #threatRail{display:flex!important}
+/* The cancel sheet uses the same flat match surface as Military. */
+#game#game#game#game #planCancelDialog{background:#07101ab3!important;backdrop-filter:blur(4px)!important}
+#game#game#game#game .plan-cancel-card{background:#151c26!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:20px!important;max-width:440px!important;box-sizing:border-box!important}
+#game#game#game#game .plan-cancel-card h3{font-size:21px!important;line-height:1.25!important;margin:12px 0!important}
+#game#game#game#game .plan-cancel-actions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
+#game#game#game#game .plan-cancel-actions button{min-height:48px!important;border:0!important;border-radius:0!important;background:#263242!important;font-size:12px!important}
+#game#game#game#game #planCancelYes{background:#57313a!important;color:#ffd6de!important}
+
+#game#game#game#game :is(#armyFocusGuide,#planEraseHint)>span{font:500 11px/14px system-ui!important;min-width:0;overflow:hidden}
+@media(max-height:480px) and (orientation:landscape){
+ #game#game#game#game :is(#armyFocusGuide,#planEraseHint):not(.hidden){grid-template-columns:140px minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr) 44px!important;padding:4px 12px!important}
+ #game#game#game#game :is(#armyFocusGuide,#planEraseHint)>.plan-guide-actions{grid-column:1/-1!important}
+}

@@ -11,7 +11,7 @@ function fixture(){const s=E.lobby(19),id=E.addPlayer(s,'A'),foe=E.addPlayer(s,'
  s.owners[E.idx(fort.x,fort.y)]=foe;s.territoryRevision++;assert(!E.visibleBuilding(s,id,enemy),'Captured fort loses intelligence');
  for(const value of ['aggressive','balanced','defensive'])assert(E.action(s,id,{type:'armyPosture',value}).ok);
  assert(E.reserveShare({armyPosture:'aggressive'})<E.reserveShare({armyPosture:'balanced'}));assert(E.reserveShare({armyPosture:'balanced'})<E.reserveShare({armyPosture:'defensive'}));
- p.allies=[foe];s.owners[E.idx(72,40)]=foe;assert(!E.action(s,id,{type:'armyFocus',x:72,y:40}).ok);
+ p.allies=[foe];s.owners[E.idx(72,40)]=foe;assert(E.action(s,id,{type:'armyFocus',x:72,y:40}).ok);assert.equal(E.focusStatus(s,id),'invalid');
  assert(!E.action(s,id,{type:'send',x:70,y:40,zone:[E.idx(72,40)]}).ok);assert(E.action(s,id,{type:'send',x:70,y:40,zone:[E.idx(72,40),E.idx(70,40)]}).ok);assert(s.attackPlans.every(q=>!q.zoneCells.includes(E.idx(72,40))));
  const r={id:'recover',owner:id,targetOwner:foe,targets:[foe],autoRecovery:true,zoneCells:[E.idx(72,41),E.idx(73,41),E.idx(74,41)]};s.recoveryPlans=[r];
  assert(E.action(s,id,{type:'erasePlanCells',cells:[E.idx(73,41)]}).ok);assert.equal(s.recoveryPlans.length,2);assert(s.recoveryPlans.every(q=>!q.zoneCells.includes(E.idx(73,41))));
