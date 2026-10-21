@@ -15,19 +15,29 @@ function fixture(){const s=E.lobby(7),id=E.addPlayer(s,'Builder'),foe=E.addPlaye
 }
 {
  const {s,id,p}=fixture();const base={id:'b',owner:id,kind:'city',level:1,x:20,y:20};s.buildings=[base];
- const cost=E.costUpgrade(base),old=p.res.wood;assert(E.action(s,id,{type:'upgrade',id:base.id}).ok);assert.equal(p.res.wood,old-cost.wood);assert.equal(base.level,1,'Upgrade gives no instant output');assert.equal(base.upgrade.readyTick,30);
+ const cost=E.costUpgrade(base),old=p.res.wood;assert(E.action(s,id,{type:'upgrade',id:base.id}).ok);assert.equal(p.res.wood,old-cost.wood);assert.equal(base.level,1,'Upgrade gives no instant output');assert.equal(base.upgrade.total,30);
  const paid=p.res.wood;assert(!E.action(s,id,{type:'upgrade',id:base.id}).ok);assert.equal(p.res.wood,paid,'Duplicate upgrade cannot charge twice');
- s.tick=28;E.tick(s);assert.equal(base.level,1);E.tick(s);assert.equal(base.level,2);assert(!base.upgrade);assert.equal(E.upgradeTime(base),60);assert(E.action(s,id,{type:'upgrade',id:base.id}).ok);s.tick+=59;E.tick(s);assert.equal(base.level,3);assert.equal(E.upgradeTime(base),120);
+ assert.equal(s.buildJobs[0].upgradeOf,base.id,'Upgrade uses a physical worker job');
+ for(let n=0;n<29;n++){s.tick++;E.workforceStep(s);}
+ assert.equal(base.level,1,'No automatic upgrade completion by the clock');
+ assert(base.upgrade.progress>0,'Workers must make actual progress');
+ for(let n=0;n<100&&base.level===1;n++){s.tick++;E.workforceStep(s);}
+ assert.equal(base.level,2);assert(!base.upgrade);assert.equal(E.upgradeTime(base),60);
+ assert(E.action(s,id,{type:'upgrade',id:base.id}).ok);
+ for(let n=0;n<120&&base.level===2;n++){s.tick++;E.workforceStep(s);}
+ assert.equal(base.level,3);assert.equal(E.upgradeTime(base),120);
  const saved=JSON.parse(JSON.stringify(s));assert.equal(saved.buildings[0].level,3);
  assert(E.action(s,id,{type:'build',kind:'barracks',x:21,y:20}).ok);assert(!E.buildingAt(s,21,20),'Legacy strategic build cannot bypass worker construction');
  assert.equal(s.buildJobs[0].progress,0);assert(E.constructionTime('barracks')>=25);
  assert(E.costBuilding(s,id,'city').wood>=495,'Development uses meaningful capital costs');
 }
-console.log('PASS v102: circular terrain scouting, allied visibility, invalid focus safety, delayed upgrades, duplicate charge prevention and physical construction');
+console.log('PASS v102: circular terrain scouting, allied visibility, invalid focus safety, worker-built upgrades, duplicate charge prevention and physical construction');
 
 {
- const {s,id,foe,p}=fixture();s.buildings=Array.from({length:3},(_,n)=>({id:'u'+n,owner:id,kind:'fort',level:1,x:20+n,y:20}));
+ const {s,id,foe,p}=fixture();s.buildings=[...Array.from({length:3},(_,n)=>({id:'u'+n,owner:id,kind:'fort',level:1,x:20+n,y:20})),{id:'base',owner:id,kind:'capital',level:1,x:19,y:20}];
  assert(E.action(s,id,{type:'upgrade',id:'u0'}).ok);assert(E.action(s,id,{type:'upgrade',id:'u1'}).ok);const paid=p.res.gold;assert(!E.action(s,id,{type:'upgrade',id:'u2'}).ok);assert.equal(p.res.gold,paid,'Concurrency refusal never charges');
- s.buildings[0].owner=foe;s.owners[E.idx(20,20)]=foe;s.territoryRevision++;E.tick(s);assert(!s.buildings[0].upgrade,'Captured building cannot inherit a paid upgrade');assert.equal(s.buildings[0].level,1);
- const save=JSON.parse(JSON.stringify(s));assert(save.buildings[1].upgrade);save.tick=29;E.tick(save);assert.equal(save.buildings[1].level,2,'In-progress upgrade survives saved state');
+ s.buildings[0].owner=foe;s.owners[E.idx(20,20)]=foe;s.territoryRevision++;s.tick++;E.workforceStep(s);assert(!s.buildings[0].upgrade,'Captured building cannot inherit a paid upgrade');assert.equal(s.buildings[0].level,1);
+ const save=JSON.parse(JSON.stringify(s));assert(save.buildings[1].upgrade);
+ for(let n=0;n<100&&save.buildings[1].level===1;n++){save.tick++;E.workforceStep(save);}
+ assert.equal(save.buildings[1].level,2,'Workers complete in-progress upgrade after save/restore');
 }
