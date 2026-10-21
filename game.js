@@ -988,7 +988,21 @@ function setBuildingMode(kind){defensePicking=false;
  refreshQuickBuild();updateUI();queueDraw();
 }
 const chooseResource=r=>{const p=mine();if(p&&['food','wood','stone','gold'].includes(r)){command({type:'setWorkPriority',priority:p.workPriority===r?'balanced':r});refreshQuickBuild();}};
-$('resourceSummary').addEventListener('click',e=>{const item=e.target.closest('[data-resource]');if(item)chooseResource(item.dataset.resource);});
+let resourcePress=null,lastResourcePointer=null;
+$('resourceSummary').addEventListener('pointerdown',e=>{const item=e.target.closest('[data-resource]');resourcePress=item&&e.isPrimary!==false?{id:e.pointerId,resource:item.dataset.resource,x:e.clientX,y:e.clientY}:null;});
+$('resourceSummary').addEventListener('pointercancel',()=>{resourcePress=null;});
+$('resourceSummary').addEventListener('pointerup',e=>{
+ const item=e.target.closest('[data-resource]'),press=resourcePress;resourcePress=null;
+ if(!item||!press||press.id!==e.pointerId)return;
+ lastResourcePointer={resource:item.dataset.resource,at:Date.now()};
+ if(press.resource===item.dataset.resource&&Math.hypot(e.clientX-press.x,e.clientY-press.y)<10)chooseResource(item.dataset.resource);
+});
+$('resourceSummary').addEventListener('click',e=>{const item=e.target.closest('[data-resource]');if(!item)return;
+ // Pointer activation is immediate; a delayed compatibility click cannot
+ // toggle it a second time. Keyboard/programmatic clicks remain supported.
+ if(e.detail&&lastResourcePointer?.resource===item.dataset.resource&&Date.now()-lastResourcePointer.at<800)return;
+ chooseResource(item.dataset.resource);
+});
 $('resourceSummary').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const item=e.target.closest('[data-resource]');if(item){e.preventDefault();chooseResource(item.dataset.resource);}}});
 $('productionPriority').onchange=e=>command({type:'setWorkPriority',priority:e.target.value});
 $('buildDock').addEventListener('click',e=>{const b=e.target.closest('[data-place-building]');if(b)setBuildingMode(buildMode===b.dataset.placeBuilding?null:b.dataset.placeBuilding);});

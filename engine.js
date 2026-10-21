@@ -746,10 +746,30 @@ function reserveSquad(s,p,x,y,strength,returning=false){
  if(same){same.strength+=strength;return same;}
  const g={id:'g'+(++s.nonce),x,y,strength,returning};p.garrisons.push(g);return g;
 }
+function coalesceGarrisons(p){
+ const groups=new Map(),squads=[],limit=Math.max(35,p.troops/8)*1.5;
+ for(const g of p.garrisons||[]){
+  if(g.strength<=1e-7)continue;
+  const key=[g.x,g.y,!!g.returning,g.role||'',g.tx??'',g.ty??''].join(':');
+  const first=groups.get(key);
+  if(first&&first.strength+g.strength<limit-1e-7){first.strength+=g.strength;first.moveCredit=Math.min(first.moveCredit||0,g.moveCredit||0);}
+  else{groups.set(key,g);squads.push(g);}
+ }
+ p.garrisons=squads;
+}
+function recruitmentBase(s,p){
+ const bases=homeSites(s,p.id);if(!bases.length)return null;
+ // Migration keeps the historical start. New recruits rotate across actual
+ // production bases, weighted by their contribution, never appearing at a front.
+ if(!s.tick)return bases[0];
+ const weight=b=>b.kind==='barracks'?5*(b.level||1):b.kind==='city'?3*(b.level||1):4+p.land/100+p.tech.war*2;
+ let ticket=hash(s.tick,p.id,s.seed+197)*bases.reduce((n,b)=>n+weight(b),0);
+ for(const b of bases){ticket-=weight(b);if(ticket<0)return b;}return bases[bases.length-1];
+}
 function syncGarrisons(s,p){
  p.garrisons??=[];p.garrisons=p.garrisons.filter(g=>g.strength>1e-7&&inside(g.x,g.y));
  const sum=p.garrisons.reduce((n,g)=>n+g.strength,0),delta=p.troops-sum;
- if(delta>1e-7){const base=homeSites(s,p.id)[0];if(base)reserveSquad(s,p,base.x,base.y,delta);}
+ if(delta>1e-7){const base=recruitmentBase(s,p);if(base)reserveSquad(s,p,base.x,base.y,delta);}
  else if(delta< -1e-7){const factor=Math.max(0,p.troops)/Math.max(1e-7,sum);for(const g of p.garrisons)g.strength*=factor;}
 }
 function loseReserve(s,p,amount,x,y){
@@ -823,7 +843,7 @@ function defensePosts(s,p){
 }
 function spatialArmyStep(s,move=true){
  for(const p of s.players){
-  if(!alive(p))continue;syncGarrisons(s,p);
+  if(!alive(p))continue;coalesceGarrisons(p);syncGarrisons(s,p);
   // A captured position retreats one adjacent friendly tile; encircled squads
   // are lost. This cannot jump across hostile territory to another province.
   for(const g of p.garrisons)if(s.owners[idx(g.x,g.y)]!==p.id){

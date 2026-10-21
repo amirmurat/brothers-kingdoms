@@ -1,6 +1,10 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 _Обновлено: 22 октября 2026 года. Рабочий код v100; итог проверки и публикации — в последней записи START HERE._
 
+## v100 recruitment locations / long-session squads / rapid resource input
+- Confirmed code issue behind camp confusion: `syncGarrisons` always spawned every recruit at `homeSites()[0]`. New recruitment chooses an actual owned base deterministically, weighted by barracks/city/background recruitment contribution. Initial old-save migration remains at the historical base. No recruits appear remotely on a front. Same-position/same-order cohorts now coalesce conservatively below the existing split threshold to avoid both indefinite group accumulation and merge/split order oscillation. Added 240-tick conservation/multiple-base/group-count regression.
+- Dense-renderer CI 39676242659 passed engine + Chromium but hit the pre-existing intermittent WebKit resource-toggle miss (`gold !== balanced`), also observed on initial v99. Resource HUD now activates once on valid pointerup, suppresses delayed compatibility click, retains keyboard/programmatic clicks, and ignores dragged/cancelled presses. Browser regression records pointer/click traces on failure. New cache r4; rerun all checks.
+
 ## v100 dense late-game renderer follow-up
 - Code a184b38a7ab1f16b70f0643130bae508bd0c5eca passed full CI 39675483644 including actual defense map tap in Chromium and WebKit. Public `/api/health` = v100; HTML/loaded browser script tags r2; public engine.js and game.js SHA-256 matched local files byte-for-byte. Two actual public Cloudflare WebSockets joined, started and synchronized a defense priority. Main remains untouched.
 - Additional audit found detailed licensed building paths were still filled/stroked for every visible structure on every camera frame. `buildingGlyph` now renders those exact paths/colors once into bounded 128px Canvas glyphs; per-frame structures use one drawImage. Type/level/background marks/appearance remain; cache <=32 entries (~2 MiB). No external/generated artwork.

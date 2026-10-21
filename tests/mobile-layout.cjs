@@ -216,11 +216,12 @@ const server=http.createServer((req,res)=>{
    assert.equal(await page.evaluate(()=>window.__layout.getState().players.find(p=>!p.bot).workPriority),'wood',label+' extraction priority selected');
    const levelColors=await page.evaluate(()=>[1,2,3,4,5].map(level=>window.__layout.buildingLevelColor({level})));
    assert.equal(new Set(levelColors).size,5,label+' building upgrades have distinct level colors');
+   await page.evaluate(()=>{window.__resourceEvents=[];for(const type of ['pointerdown','pointerup','click','dblclick'])document.getElementById('resourceSummary').addEventListener(type,e=>window.__resourceEvents.push({type,resource:e.target.closest('[data-resource]')?.dataset.resource,detail:e.detail,pointer:e.pointerType}),true);});
    await page.locator('#resourceSummary [data-resource="gold"]').click();
    assert.equal(await page.evaluate(()=>window.__layout.getState().players.find(p=>!p.bot).workPriority),'gold',label+' resource HUD selects production priority');
    assert.equal(await page.locator('#resourceSummary [data-resource="gold"]').getAttribute('aria-pressed'),'true',label+' priority is visibly selected');
    await page.locator('#resourceSummary [data-resource="gold"]').click();
-   assert.equal(await page.evaluate(()=>window.__layout.getState().players.find(p=>!p.bot).workPriority),'balanced',label+' second resource tap restores balance');
+   assert.equal(await page.evaluate(()=>window.__layout.getState().players.find(p=>!p.bot).workPriority),'balanced',label+' second resource tap restores balance; events='+JSON.stringify(await page.evaluate(()=>window.__resourceEvents)));
    await page.locator('#resourceSummary [data-resource="food"]').press('Enter');
    assert.equal(await page.evaluate(()=>window.__layout.getState().players.find(p=>!p.bot).workPriority),'food',label+' resource priority supports keyboard');
    const flatMapTools=await page.evaluate(()=>{
