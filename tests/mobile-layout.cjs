@@ -169,6 +169,26 @@ const server=http.createServer((req,res)=>{
    const navigation=await page.evaluate(()=>{const m=document.getElementById('minimapToggle').getBoundingClientRect(),n=document.getElementById('warChip').getBoundingClientRect(),menu=document.getElementById('menuToggle').getBoundingClientRect(),map=document.getElementById('mapView').getBoundingClientRect();return {sameParent:document.getElementById('warChip').parentElement.id==='mapNavigation',separate:n.left>=m.right,menuTop:menu.top,mapTop:map.top};});
    assert(navigation.sameParent&&navigation.separate,label+' map and Nations sit together');
    assert.equal(navigation.menuTop,navigation.mapTop+10,label+' menu occupies former Nations corner');
+   const minimapGeometry=await page.evaluate(()=>{
+    const rect=id=>document.getElementById(id).getBoundingClientRect();
+    const toggle=document.getElementById('minimapToggle'),wrap=document.getElementById('minimapWrap');
+    const wasOpen=!wrap.classList.contains('minimized');
+    if(wasOpen)toggle.click();
+    const before=rect('warChip'),menu=rect('menuToggle'),tools=rect('planToolSwitch');
+    toggle.click();
+    const after=rect('warChip'),map=rect('minimap'),button=rect('minimapToggle'),wrapRect=rect('minimapWrap');
+    const bg=getComputedStyle(wrap).backgroundColor;
+    toggle.click();
+    if(wasOpen)toggle.click();
+    return {shift:Math.abs(before.x-after.x)+Math.abs(before.y-after.y),mapAbove:map.bottom<=button.top+1,
+     wrapperHeight:wrapRect.height,background:bg,rightGap:Math.abs(menu.right-tools.right),warRight:before.right};
+   });
+   assert(minimapGeometry.shift<1,label+' opening minimap does not shift Military shortcut');
+   assert(minimapGeometry.mapAbove,label+' expanded minimap opens above map shortcut, never over Military');
+   assert(minimapGeometry.wrapperHeight<=49,label+' expanded minimap has no oversized blank header');
+   assert.equal(minimapGeometry.background,'rgba(0, 0, 0, 0)',label+' expanded minimap has no gray filler');
+   assert(minimapGeometry.rightGap<1,label+' right-side tools and menu have same right inset');
+
    const typeColors=await page.evaluate(()=>['city','barracks','fort'].map(kind=>window.__layout.buildingLevelColor({kind,level:1})));
    const tiers=await page.evaluate(()=>['city','barracks','fort'].map(kind=>new Set([1,2,3,4,5].map(level=>window.__layout.buildingLevelColor({kind,level}))).size));
    assert(tiers.every(n=>n===5),label+' every building type has five distinct tier colors');
