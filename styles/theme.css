@@ -2785,3 +2785,205 @@ html,body,#lobby,#waiting,#game,#victory{touch-action:manipulation}
 button,a,summary,select,[role="button"],[role="tab"],[data-resource],
 #game #hudTroops,#game #warPanel .nation-row{touch-action:manipulation!important}
 #game #mapCanvas,#game #minimap{touch-action:none!important}
+
+
+/* v98 — HUD actions, honest notification affordances, unified results sheet.
+   Kept at the one active theme tail so historical skins cannot take precedence. */
+
+/* LAND is a genuine interactive HUD cell, with no decorative button framing. */
+#game#game#game#game #hudLand{
+ cursor:pointer!important;touch-action:manipulation!important;
+ -webkit-tap-highlight-color:transparent!important;
+}
+#game#game#game#game #hudLand:focus-visible{
+ outline:2px solid #7ee4fb!important;outline-offset:-3px!important;
+}
+#game#game#game#game #hudLand:active{
+ background:#202b39!important;
+}
+
+/* Alerts have the same 48px row geometry and one centred baseline. */
+#game#game#game#game #notificationStack #gameFeedback #hudAlert,
+#game#game#game#game #notificationStack #threatRail #incomingAttack{
+ display:flex!important;flex-direction:row!important;
+ align-items:center!important;justify-content:stretch!important;
+ gap:10px!important;
+ height:48px!important;min-height:48px!important;max-height:48px!important;
+ box-sizing:border-box!important;padding:0 12px!important;margin:0!important;
+ line-height:20px!important;border:0!important;border-radius:0!important;
+ box-shadow:none!important;text-align:left!important;
+}
+#game#game#game#game #notificationStack #gameFeedback #hudAlert #hudAlertIcon,
+#game#game#game#game #notificationStack #threatRail #incomingAttack .incoming-icon{
+ position:static!important;transform:none!important;
+ display:grid!important;place-items:center!important;align-self:center!important;
+ flex:0 0 20px!important;width:20px!important;min-width:20px!important;height:20px!important;
+ margin:0!important;padding:0!important;font:700 13px/20px system-ui!important;
+}
+#game#game#game#game #notificationStack #gameFeedback #hudAlert #hudAlertText,
+#game#game#game#game #notificationStack #threatRail #incomingAttack .incoming-body{
+ flex:1 1 auto!important;min-width:0!important;align-self:center!important;
+ margin:0!important;padding:0!important;font:500 13px/20px system-ui!important;
+ white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+}
+#game#game#game#game #notificationStack #gameFeedback #hudAlert .hud-alert-arrow,
+#game#game#game#game #notificationStack #threatRail #incomingAttack .incoming-action{
+ position:static!important;transform:none!important;
+ display:grid!important;place-items:center!important;align-self:center!important;
+ flex:0 0 20px!important;width:20px!important;min-width:20px!important;height:20px!important;
+ padding:0!important;margin:0!important;font:650 21px/20px system-ui!important;
+ color:#b9c8d9!important;
+}
+#game#game#game#game #notificationStack #gameFeedback #hudAlert .hud-alert-arrow.hidden,
+#game#game#game#game #notificationStack #gameFeedback #hudAlert[data-actionable="false"] .hud-alert-arrow{
+ display:none!important;
+}
+#game#game#game#game #notificationStack #gameFeedback #hudAlert:disabled{
+ opacity:1!important;cursor:default!important;
+ background:#302029!important;color:#ffd8e2!important;
+ -webkit-text-fill-color:#ffd8e2!important;
+}
+#game#game#game#game #notificationStack #gameFeedback #hudAlert:not(:disabled),
+#game#game#game#game #notificationStack #threatRail #incomingAttack{cursor:pointer!important}
+#game#game#game#game #notificationStack #gameFeedback #gameToast{
+ display:flex!important;align-items:center!important;justify-content:flex-start!important;
+ gap:10px!important;height:48px!important;min-height:48px!important;
+ box-sizing:border-box!important;padding:0 12px!important;
+ font:500 13px/20px system-ui!important;
+}
+#game#game#game#game #notificationStack #gameFeedback #gameToast::before{
+ display:grid!important;place-items:center!important;align-self:center!important;
+ width:20px!important;height:20px!important;flex:0 0 20px!important;
+ margin:0!important;padding:0!important;font:700 13px/20px system-ui!important;
+}
+#game#game#game#game #notificationStack #threatRail #incomingAttack .incoming-body strong{
+ display:block!important;margin:0!important;font:500 13px/20px system-ui!important;
+ white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+}
+
+/* Full-screen result dialog uses the exact same flat surfaces, metrics and
+   primary/secondary control sizes as Military and the rest of the match HUD. */
+#game#game#game#game #victory{
+ box-sizing:border-box!important;position:absolute!important;inset:0!important;
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ overflow-y:auto!important;overscroll-behavior:contain!important;
+ padding:12px!important;background:rgba(5,9,14,.82)!important;
+}
+#game#game#game#game #victory.hidden{display:none!important}
+#game#game#game#game #victory #resultSheet{
+ display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:0!important;
+ position:relative!important;box-sizing:border-box!important;
+ width:min(440px,100%)!important;max-width:440px!important;min-width:0!important;
+ height:auto!important;max-height:calc(100dvh - 24px)!important;
+ overflow-y:auto!important;overscroll-behavior:contain!important;
+ margin:auto!important;padding:20px!important;
+ background:#151c26!important;background-image:none!important;
+ color:#edf2f8!important;border:0!important;border-radius:0!important;
+ box-shadow:none!important;text-align:left!important;
+}
+#game#game#game#game #victory #resultSheet[data-outcome="loss"],
+#game#game#game#game #victory #resultSheet[data-outcome="win"],
+#game#game#game#game #victory #resultSheet[data-outcome="draw"]{
+ background:#151c26!important;border:0!important;box-shadow:none!important;
+}
+#game#game#game#game #victory .result-header{
+ display:grid!important;grid-template-columns:44px minmax(0,1fr)!important;
+ align-items:center!important;gap:12px!important;
+ margin:0!important;padding:0 0 16px!important;border-bottom:1px solid #354151!important;
+}
+#game#game#game#game #victory .result-emblem{
+ display:grid!important;place-items:center!important;align-self:center!important;
+ width:44px!important;height:44px!important;min-width:44px!important;
+ margin:0!important;padding:0!important;
+ background:#202b39!important;background-image:none!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+ font:700 24px/1 system-ui!important;color:#a2c9db!important;text-shadow:none!important;
+}
+#game#game#game#game #victory #resultSheet[data-outcome="loss"] .result-emblem{color:#ff9bad!important;background:#33232d!important}
+#game#game#game#game #victory #resultSheet[data-outcome="win"] .result-emblem{color:#b6f3cd!important;background:#18352f!important}
+#game#game#game#game #victory .result-heading{display:flex!important;flex-direction:column!important;min-width:0!important;gap:3px!important}
+#game#game#game#game #victory #victoryEyebrow{
+ margin:0!important;color:#aebbc9!important;letter-spacing:.08em!important;
+ font:700 10px/14px system-ui!important;text-align:left!important;
+}
+#game#game#game#game #victory #victoryName{
+ margin:0!important;padding:0!important;
+ font:750 26px/30px system-ui!important;letter-spacing:-.025em!important;
+ text-align:left!important;color:#edf2f8!important;
+}
+#game#game#game#game #victory #victoryDesc{
+ margin:0!important;padding:14px 0 4px!important;
+ color:#d9e1eb!important;font:600 14px/20px system-ui!important;text-align:left!important;
+}
+#game#game#game#game #victory #victoryReason{
+ margin:0!important;padding:0 0 14px!important;
+ background:transparent!important;background-image:none!important;color:#aebbc9!important;
+ border:0!important;border-bottom:1px solid #354151!important;border-radius:0!important;
+ box-shadow:none!important;font:400 12px/18px system-ui!important;text-align:left!important;
+}
+#game#game#game#game #victory #victoryStats{
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ gap:0!important;margin:0 0 12px!important;padding:0!important;
+ color:#edf2f8!important;
+}
+#game#game#game#game #victory #victoryStats .result-stat{
+ display:flex!important;flex-direction:column!important;gap:6px!important;min-width:0!important;
+ margin:0!important;padding:14px 10px 12px 0!important;
+ background:transparent!important;background-image:none!important;
+ border:0!important;border-bottom:1px solid #354151!important;border-radius:0!important;
+ box-shadow:none!important;
+}
+#game#game#game#game #victory #victoryStats .result-stat:nth-child(2n){padding-left:12px!important;border-left:1px solid #354151!important}
+#game#game#game#game #victory #victoryStats .result-stat small{
+ display:block!important;margin:0!important;
+ color:#aebbc9!important;font:700 10px/14px system-ui!important;
+ letter-spacing:.05em!important;
+}
+#game#game#game#game #victory #victoryStats .result-stat b{
+ display:block!important;white-space:normal!important;overflow-wrap:anywhere!important;
+ color:#edf2f8!important;font:750 21px/26px system-ui!important;
+ font-variant-numeric:tabular-nums!important;
+}
+#game#game#game#game #victory #resultSheet :is(#restart,#spectateMatch,#resultExit){
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ width:100%!important;min-width:0!important;height:48px!important;min-height:48px!important;
+ margin:0 0 8px!important;padding:10px!important;
+ font:700 14px/20px system-ui!important;text-decoration:none!important;text-align:center!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+}
+#game#game#game#game #victory #resultSheet #restart{
+ background:#39d5ff!important;color:#061923!important;
+}
+#game#game#game#game #victory #resultSheet #restart:disabled{
+ background:#232c37!important;color:#9aa9bb!important;
+}
+#game#game#game#game #victory #resultSheet #spectateMatch{
+ background:#202b39!important;color:#edf2f8!important;
+}
+#game#game#game#game #victory #resultSheet #resultExit{
+ background:transparent!important;color:#adb9c9!important;
+ border-bottom:1px solid #354151!important;
+}
+#game#game#game#game #victory #resultSheet .result-export{
+ margin:0!important;padding:0!important;
+ background:transparent!important;border:0!important;color:#aebbc9!important;
+ font:500 11px/16px system-ui!important;text-align:left!important;
+}
+#game#game#game#game #victory #resultSheet .result-export summary{
+ display:flex!important;align-items:center!important;justify-content:space-between!important;
+ min-height:40px!important;margin:0!important;padding:8px 0!important;
+ color:#aebbc9!important;background:transparent!important;border:0!important;border-radius:0!important;
+}
+#game#game#game#game #victory #resultSheet .result-export button{
+ width:100%!important;min-height:44px!important;margin:0!important;padding:10px!important;
+ background:#202b39!important;color:#edf2f8!important;border:0!important;border-radius:0!important;
+}
+#game#game#game#game #victory :is(button,summary):focus-visible{
+ outline:2px solid #79dfff!important;outline-offset:-2px!important;
+}
+@media(max-height:480px) and (orientation:landscape){
+ #game#game#game#game #victory{align-items:flex-start!important}
+ #game#game#game#game #victory #resultSheet{max-height:calc(100dvh - 12px)!important;padding:12px!important}
+ #game#game#game#game #victory .result-header{padding-bottom:8px!important}
+ #game#game#game#game #victory #victoryStats .result-stat{padding:8px!important}
+}
