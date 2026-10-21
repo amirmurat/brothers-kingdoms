@@ -2029,3 +2029,6 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
 #game#game#game :is(#sidebar,#sessionPanel,#exitPanel,#armiesPanel,#quickLeadersPanel,#contextCard,#warPanel) button{min-height:44px!important}
 #game#game#game :is(#sidebar,#sessionPanel,#exitPanel,#armiesPanel,#quickLeadersPanel,#contextCard,#warPanel) :is(input,select){border-radius:0!important}
 #game#game#game :is(.aux-head,.panel-head,.war-panel-head) button{display:grid!important;place-items:center!important;padding:0!important;background:#202a38!important}
+
+/* Explicit action geometry wins over historical per-button skins. */
+#game#game#game#game#game#game button{border-radius:0!important;box-shadow:none!important;border:0!important}
