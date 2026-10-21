@@ -143,6 +143,7 @@ const server=http.createServer((req,res)=>{
     assert(sheet.x>=0&&sheet.bottom<=viewport.height+1,label+' '+kind+' fits viewport');
    }
    assert.equal(await page.locator('#nationsBackdrop').isVisible(),true,label+' Nations has a modal backdrop');
+   assert.notEqual(await page.locator('#nationsBackdrop').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)',label+' Nations backdrop actually dims the map');
    assert.equal(await page.locator('#buildDock').isVisible(),false,label+' Nations hides placement tools');
    await page.locator('#warPanelClose').click();
    assert.equal(await page.locator('#nationsBackdrop').isVisible(),false,label+' closing Nations removes its backdrop');

@@ -1752,7 +1752,7 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
  #game#game#game:has(#hudAlert:not(.hidden),#gameToast:not(.hidden)) #threatRail{top:66px!important}
 }
 #game#game#game #warPanel{z-index:var(--layer-dialog)!important}
-#game#game#game #nationsBackdrop{display:none;position:fixed;inset:0;z-index:var(--layer-dialog-backdrop);background:#0009}
+#game#game#game #nationsBackdrop{display:none;position:fixed;inset:0;z-index:var(--layer-dialog-backdrop);background:#0009!important;backdrop-filter:blur(4px)}
 #game#game#game:has(#warPanel:not(.hidden)) #nationsBackdrop{display:block}
 #game#game#game:has(#warPanel:not(.hidden)) :is(.map-toolbar,#gameFeedback,#threatRail){visibility:hidden!important;pointer-events:none!important}
 #game#game#game #tutorial section{width:min(var(--sheet-width),calc(100vw - 24px))!important;max-height:min(640px,calc(100dvh - 24px))!important;padding:16px!important;border:1px solid var(--line)!important;border-radius:16px!important;background:var(--surface)!important;margin:0!important}
