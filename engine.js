@@ -328,8 +328,12 @@ function upsertPaintedPlan(s,id,request,rawTargets,percent,editId=null,excludeTa
   s.armies=s.armies.filter(w=>!removedIds.has(w.planId));
   s.attackPlans=s.attackPlans.filter(pl=>!removedIds.has(pl.id));
  }
+ const strategy={focus:plan.focus,allocationMode:plan.allocationMode,allocationValue:plan.allocationValue};
+ const partTotal=parts.reduce((n,c)=>n+c.length,0);
  const plans=parts.map((zoneCells,i)=>{
   const item=i===0?plan:{id:'p'+(++s.nonce),owner:id,waves:0,initialStrength:Math.max(35,Math.floor(p.troops*percent/100))};
+  if(strategy.allocationMode&&strategy.allocationMode!=='auto'){item.allocationMode=strategy.allocationMode;item.allocationValue=strategy.allocationValue*zoneCells.length/partTotal;}
+  item.focus=i===0&&!!strategy.focus;
   item.zoneCells=zoneCells;item.targets=targets.slice();item.targetOwner=targets[0]??0;item.percent=percent;
   item.nextWaveTick=merged.size?s.tick+1:s.tick;
   s.attackPlans??=[];s.attackPlans.push(item);
@@ -470,9 +474,11 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
    for(const army of s.armies.filter(w=>w.planId===plan.id))finishWave(s,army,p);
    s.armies=s.armies.filter(w=>w.planId!==plan.id);
    const parts=paintedComponents(remainder);
+   const value=plan.allocationValue,manual=plan.allocationMode&&plan.allocationMode!=='auto',total=parts.reduce((n,c)=>n+c.length,0);
    plan.zoneCells=parts[0];plan.nextWaveTick=Math.max(plan.nextWaveTick||0,s.tick+1);
-   for(const cells of parts.slice(1))s.attackPlans.push({...plan,id:'p'+(++s.nonce),zoneCells:cells,
-    waves:0,nextWaveTick:s.tick+1});
+   if(manual)plan.allocationValue=value*parts[0].length/total;
+   for(const cells of parts.slice(1))s.attackPlans.push({...plan,id:'p'+(++s.nonce),zoneCells:cells,focus:false,
+    ...(manual?{allocationValue:value*cells.length/total}:{}),waves:0,nextWaveTick:s.tick+1});
   }
   return {ok:true,erased:changed,affected,deleted};
  }
@@ -1001,15 +1007,18 @@ function mobilize(s,p,strength,src,front,partial=false){
  syncGarrisons(s,p);
  const sectors=frontSectors(s,p.id,front),components=ownedComponents(s,p.id),connected=new Set(sectors.map(t=>components[t.anchor]));
  const eligible=p.garrisons.filter(g=>!g.returning&&g.strength>1e-7&&components[idx(g.x,g.y)]&&connected.has(components[idx(g.x,g.y)]));
+ const protectedSquads=p.garrisons.filter(g=>!g.returning&&g.role==='Priority defense'),protectedTotal=protectedSquads.reduce((n,g)=>n+g.strength,0),protectedBudget=Math.min(protectedTotal,militaryStrength(s,p.id).total*.15);
+ const usable=g=>Math.max(0,g.strength-(protectedTotal&&g.role==='Priority defense'?protectedBudget*g.strength/protectedTotal:0));
+
  // Take nearby available soldiers first instead of requiring a small
  // contribution from every distant squad before the whole line can attack.
  const distance=g=>Math.min(...sectors.map(t=>near(g,{x:t.anchor%W,y:(t.anchor/W)|0})));
  eligible.sort((a,b)=>distance(a)-distance(b)||a.id.localeCompare(b.id));
- const accessible=eligible.reduce((n,g)=>n+g.strength,0);
+ const accessible=eligible.reduce((n,g)=>n+usable(g),0);
  if(partial)strength=Math.min(strength,accessible);
  if(strength<35||accessible+1e-7<strength)return null;
  const drawn=[];let left=strength;
- for(const g of eligible){const n=Math.min(left,g.strength);if(n>1e-7)drawn.push({g,n});left-=n;if(left<1e-7)break;}
+ for(const g of eligible){const n=Math.min(left,usable(g));if(n>1e-7)drawn.push({g,n});left-=n;if(left<1e-7)break;}
  const wave={owner:p.id,strength,columns:drawn.map(({g,n})=>({x:g.x,y:g.y,strength:n}))};
  if(!positionAttack(s,wave,front,partial))return null;
  for(const {g,n} of drawn)g.strength-=n;
@@ -1393,8 +1402,8 @@ function income(s,p){const c=counts(s,p.id),l=p.land,e=1+p.tech.economy*.25;
  const income={food:Math.round((2+l/100+c.farm*8+c.city*5+(p.workIncome?.food||0))*e),wood:Math.round((1+l/180+c.lumber*7+(p.workIncome?.wood||0))*e),stone:Math.round((1+l/200+c.quarry*7+(p.workIncome?.stone||0))*e),gold:Math.round((1+l/220+c.mine*7+c.city*5+(p.workIncome?.gold||0))*e)};
  for(const k of Object.keys(income))p.res[k]=Math.min(resourceCapacity(s,p.id),p.res[k]+income[k]);
  p.troopCap=Math.floor(900+l*2.4+c.barracks*430+c.city*260);
- const newTroops=Math.max(0,Math.min(p.troopCap-militaryStrength(s,p.id).total,Math.round(4+l/100+c.barracks*5+c.city*3+p.tech.war*2)));const supply=Math.max(0,Math.min(newTroops,Math.floor(p.res.food/0.20)));
- p.recruitment={potential:newTroops,actual:supply,reason:militaryStrength(s,p.id).total>=p.troopCap?'Army capacity reached':supply<newTroops?'Food limits recruitment':'Recruiting',foodPerTroop:.2};p.troopIncome=supply;p.troops+=supply;p.res.food=Math.max(0,p.res.food-Math.ceil(supply*.20));p.income=income;
+ const potential=Math.round(4+l/100+c.barracks*5+c.city*3+p.tech.war*2),room=Math.max(0,p.troopCap-militaryStrength(s,p.id).total),newTroops=Math.max(0,Math.min(room,potential));const supply=Math.max(0,Math.min(newTroops,Math.floor(p.res.food/0.20)));
+ p.recruitment={potential,actual:supply,reason:room===0?'Army capacity reached':supply<newTroops?'Food limits recruitment':room<potential?'Army capacity limits recruitment':'Recruiting',foodPerTroop:.2};p.troopIncome=supply;p.troops+=supply;p.res.food=Math.max(0,p.res.food-Math.ceil(supply*.20));p.income=income;
 }
 function bot(s,id){const p=person(s,id);if(!alive(p)||s.phase!=='playing')return;
  if(s.tick%4===id%4){

@@ -34,3 +34,19 @@ function fixture(){const s=E.lobby(19),id=E.addPlayer(s,'A'),foe=E.addPlayer(s,'
  for(const kind of ['barracks','city','fort']){const base=E.KINDS[kind].cost;for(const level of [1,2,3]){const price=E.costUpgrade({kind,level});for(const k in base)assert(price[k]>=base[k]);}assert(E.costUpgrade({kind,level:3}).wood>E.costUpgrade({kind,level:1}).wood);}
 }
 console.log('PASS strategic priorities: authority, focus, bounded shared budgets, physical defense/reserve, snapshots, local column defense and economy limits');
+{
+ const {s,id,p,plans:[a,b]}=fixture();
+ for(const [q,value] of [[a,20],[b,80]])assert(E.action(s,id,{type:'planStrategy',id:q.id,mode:'percent',value}).ok);
+ assert.equal(E.automaticAllocation(s,b).target/E.automaticAllocation(s,a).target,4,'Oversized explicit requests scale proportionally');
+ const c={x:69,y:25,tx:69,ty:25,strength:2000,sector:'test',route:[]};
+ s.armies=[{id:'wave',planId:a.id,owner:id,strength:2000,columns:[c]}];p.troops-=2000;p.garrisons[0].strength-=2000;
+ const before=E.militaryStrength(s,id).total;assert(E.action(s,id,{type:'planStrategy',id:a.id,mode:'troops',value:0}).ok);
+ assert.equal(E.militaryStrength(s,id).total,before,'Reduced budget conserves soldiers');
+ assert.equal(s.armies[0].strength,0);assert(p.garrisons.some(g=>g.returning&&g.x===69&&g.y===25&&g.strength===2000),'Released soldiers return at their actual position');
+ assert.equal(E.planAllocation(s,a),0,'Zero budget cannot relaunch an offensive');
+}
+{
+ const {s,id,plans}=fixture();s.attackPlans=[{...plans[0],zoneCells:[E.idx(70,25),E.idx(71,25),E.idx(72,25)],allocationMode:'troops',allocationValue:1000,focus:true}];
+ assert(E.action(s,id,{type:'erasePlanCells',cells:[E.idx(71,25)]}).ok);
+ assert.equal(s.attackPlans.length,2);assert.equal(s.attackPlans.reduce((n,p)=>n+p.allocationValue,0),1000,'Splitting a plan divides its budget instead of cloning it');assert.equal(s.attackPlans.filter(p=>p.focus).length,1,'Only the retained main region keeps focus');
+}
