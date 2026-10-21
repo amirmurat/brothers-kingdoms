@@ -24,3 +24,10 @@ function fixture(){const s=E.lobby(7),id=E.addPlayer(s,'Builder'),foe=E.addPlaye
  assert(E.costBuilding(s,id,'city').wood>=495,'Development uses meaningful capital costs');
 }
 console.log('PASS v102: circular terrain scouting, allied visibility, invalid focus safety, delayed upgrades, duplicate charge prevention and physical construction');
+
+{
+ const {s,id,foe,p}=fixture();s.buildings=Array.from({length:3},(_,n)=>({id:'u'+n,owner:id,kind:'fort',level:1,x:20+n,y:20}));
+ assert(E.action(s,id,{type:'upgrade',id:'u0'}).ok);assert(E.action(s,id,{type:'upgrade',id:'u1'}).ok);const paid=p.res.gold;assert(!E.action(s,id,{type:'upgrade',id:'u2'}).ok);assert.equal(p.res.gold,paid,'Concurrency refusal never charges');
+ s.buildings[0].owner=foe;s.owners[E.idx(20,20)]=foe;s.territoryRevision++;E.tick(s);assert(!s.buildings[0].upgrade,'Captured building cannot inherit a paid upgrade');assert.equal(s.buildings[0].level,1);
+ const save=JSON.parse(JSON.stringify(s));assert(save.buildings[1].upgrade);save.tick=29;E.tick(save);assert.equal(save.buildings[1].level,2,'In-progress upgrade survives saved state');
+}

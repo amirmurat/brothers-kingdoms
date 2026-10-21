@@ -8,7 +8,7 @@ const server=http.createServer((req,res)=>{
  try{
   let body=fs.readFileSync(file);
   if(name==='/'||name==='/index.html')body=body.toString().split('\n').filter(line=>!line.includes('unpkg.com/peerjs')).join('\n');
-  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={beginAttackPlanner,brushAt,syncPaintEligibility,resetAttackPlanner,getPlanner:()=>attackPlanner,buildingCells,drawHarvestSites,buildingLevelColor,repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,nationLabelAnchors,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
+  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={focusCandidate:()=>{const p=mine().capital,r=canvas.getBoundingClientRect();for(let dy=-12;dy<=12;dy++)for(let dx=-12;dx<=12;dx++){const x=p.x+dx,y=p.y+dy,px=r.left+camX+(x+.5)*TILE*zoom,py=r.top+camY+(y+.5)*TILE*zoom;if(E.inside(x,y)&&E.tile(state,x,y)&&E.owner(state,x,y)===0&&px>r.left+60&&px<r.right-70&&py>r.top+100&&py<r.bottom-120)return {x:px,y:py};}return null;},beginAttackPlanner,brushAt,syncPaintEligibility,resetAttackPlanner,getPlanner:()=>attackPlanner,buildingCells,drawHarvestSites,buildingLevelColor,repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,nationLabelAnchors,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
   res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream'});res.end(body);
  }catch(_){res.writeHead(404);res.end();}
 });
@@ -190,6 +190,7 @@ const server=http.createServer((req,res)=>{
    const focusBounds=await page.locator('#armyFocusGuide').evaluate(e=>{const r=e.getBoundingClientRect();return [...e.querySelectorAll('button,span,strong')].every(c=>{const b=c.getBoundingClientRect();return b.left>=r.left&&b.right<=r.right+1&&b.bottom<=r.bottom+1;});});
    assert(focusBounds,label+' focus content fits bottom surface');
    await page.screenshot({path:'/tmp/bk-v102-focus-'+name+'-'+viewport.width+'.png'});
+   if(viewport.height>480){const point=await page.evaluate(()=>window.__layout.focusCandidate());assert(point,label+' invalid neutral point available');await page.mouse.click(point.x,point.y);assert.equal(await page.locator('#armyFocusGuide').getAttribute('data-valid'),'false',label+' focus outside land/plans reports invalid');await page.screenshot({path:'/tmp/bk-v102-invalid-focus-'+name+'-'+viewport.width+'.png'});await page.locator('#clearArmyFocus').click();}
    await page.locator('#exitArmyFocus').click();
    assert.equal(await page.locator('#buildDock').evaluate(e=>getComputedStyle(e).visibility),'visible',label+' exiting focus restores construction');
    await page.locator('#planToolPaint').click();

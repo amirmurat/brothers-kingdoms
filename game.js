@@ -62,7 +62,7 @@ let zoom=1.05,camX=0,camY=0,terrainSeed=null,pressed=new Map(),pointerStart=null
 const TILE=14;const mine=()=>state?.players.find(p=>p.id===myId);const color=id=>state?.players.find(p=>p.id===id)?.color||'#e8f3f3';
 function toast(msg,kind){
  const inGame=!$('game').classList.contains('hidden');
- if(inGame&&kind!=='error'&&/^(Order completed|Erased |Army focus|Focus selection|Tap your land|Construction queued|Offensive plan (created|updated)|Work zone saved)/i.test(String(msg)))return;
+ if(inGame&&kind!=='error'&&/^(Order completed|Erased |Army focus|Focus selection|Tap your land|Construction queued|Offensive started|Offensive plan (created|updated)|Work zone saved)/i.test(String(msg)))return;
  const t=inGame?$('gameToast'):$('toast');
  const severity=kind||(/missing|not enough|rejected|error|no connection|cannot|failed|unavailable|disconnected|outdated/i.test(String(msg))?'error':/ready|completed|victor|started|researched/i.test(String(msg))?'success':'info');
  t.dataset.kind=severity;t.textContent=msg;t.title=msg;if(inGame)t.innerHTML='<span class="notification-text">'+esc(msg)+'</span>';$('gameError').textContent=severity==='error'?msg:'';
@@ -755,7 +755,7 @@ function joinRoom(){if(serverEnabled())return joinServerRoom();if(!getPeer())ret
 }
 function connectUpstream(){if(!peer||peer.destroyed)return;upstream=peer.connect('bk-'+code,{reliable:true});const activeConnection=upstream;
  upstream.on('open',()=>{if(upstream!==activeConnection)return;upstream.send({t:'join',name:name(),token:getToken()});});
- upstream.on('data',m=>{if(upstream!==activeConnection)return;if(!m||typeof m!=='object')return;if(m.t==='room-closed'){goHome();error('Host closed the room. Create or join another.');return;}if(m.t==='welcome'){clearTimeout(connectTimer);setBusy(false);reconnectTries=0;myId=m.id;state=unpack(m.state);lastStateAt=Date.now();phaseShown=state.phase==='playing'?'':phaseShown;setNetwork('ONLINE');render();}else if(m.t==='state'){if(m.state?.ownerDelta&&m.state.ownerBaseRev!==state?.territoryRevision){upstream.send({t:'resync'});setNetwork('SYNCING');return;}const before=state?.armies||[];oldArmyPositions=new Map(before.map(a=>[a.id,{x:a.x,y:a.y}]));movementStart=performance.now();state=unpack(m.state);lastStateAt=Date.now();setNetwork('ONLINE');render();}else if(m.t==='ack'){pendingOrders.delete(m.id);toast(m.ok?'Order completed':m.error||'Order rejected');if(m.ok&&m.action==='build'){toast('Built · you can place another');refreshQuickBuild();}}else if(m.t==='error'){clearTimeout(connectTimer);setBusy(false);if(!state)error(m.message);else toast(m.message);}});
+ upstream.on('data',m=>{if(upstream!==activeConnection)return;if(!m||typeof m!=='object')return;if(m.t==='room-closed'){goHome();error('Host closed the room. Create or join another.');return;}if(m.t==='welcome'){clearTimeout(connectTimer);setBusy(false);reconnectTries=0;myId=m.id;state=unpack(m.state);lastStateAt=Date.now();phaseShown=state.phase==='playing'?'':phaseShown;setNetwork('ONLINE');render();}else if(m.t==='state'){if(m.state?.ownerDelta&&m.state.ownerBaseRev!==state?.territoryRevision){upstream.send({t:'resync'});setNetwork('SYNCING');return;}const before=state?.armies||[];oldArmyPositions=new Map(before.map(a=>[a.id,{x:a.x,y:a.y}]));movementStart=performance.now();state=unpack(m.state);lastStateAt=Date.now();setNetwork('ONLINE');render();}else if(m.t==='ack'){pendingOrders.delete(m.id);toast(m.ok?'Order completed':m.error||'Order rejected');if(m.ok&&m.action==='build'){toast('Construction queued');refreshQuickBuild();}}else if(m.t==='error'){clearTimeout(connectTimer);setBusy(false);if(!state)error(m.message);else toast(m.message);}});
  upstream.on('close',()=>{if(upstream!==activeConnection)return;setNetwork('RECONNECTING');retryUpstream();});upstream.on('error',()=>{if(upstream!==activeConnection)return;setNetwork('OFFLINE');});
 }
 function retryUpstream(){if(serverActive)return openServerSocket();if(host||demo||!peer||peer.destroyed)return;clearTimeout(reconnectTimer);if(++reconnectTries>8){setNetwork('OFFLINE');toast('Host not responding. The host must keep their tab open.');return;}reconnectTimer=setTimeout(connectUpstream,Math.min(12000,1000*reconnectTries));}
@@ -789,7 +789,7 @@ function createDemo(resume=false){
 function startGame(){if(serverActive){if(host)serverSend({t:'start'});return;}if(!host)return;const waiting=state.players.filter(p=>!p.bot&&p.connected!==false&&!p.ready);if(waiting.length)return toast('Waiting for: '+waiting.map(p=>p.name).join(', '));state.settings={bots:Number($('botCount').value)};const res=E.start(state,state.settings.bots);if(!res.ok)return toast(res.error);broadcast(true);showTutorial();}
 function command(a){if(!state||state.phase!=='playing')return false;
  if(serverActive){if(Date.now()-lastStateAt>4500){toast('Wait for the server connection.','error');return false;}const id=++seq;if(!serverSend({t:'action',id,action:a})){toast('Server connection lost.','error');return false;}pendingOrders.set(id,Date.now());return true;}
- if(host){const r=E.action(state,myId,a);if(!r.ok){toast(r.error);return false;}broadcast();if(a.type==='build'){toast('Built · you can place another');refreshQuickBuild();}else if(a.type==='send'){toast('Offensive started');}return true;}
+ if(host){const r=E.action(state,myId,a);if(!r.ok){toast(r.error);return false;}broadcast();if(a.type==='build'){toast('Construction queued');refreshQuickBuild();}else if(a.type==='send'){toast('Offensive started');}return true;}
  if(upstream?.open){if(Date.now()-lastStateAt>4500){setNetwork('OFFLINE');toast('Data is outdated. Wait for reconnection before issuing an order.');return false;}const id=++seq;pendingOrders.set(id,Date.now());upstream.send({t:'action',id,action:a});return true;}toast('Room connection lost.');return false;}
 function showTutorial(){if(!showTutorialOnce)return;try{localStorage.setItem('bk-v9-tutorial','yes');}catch(_){}showTutorialOnce=false;}
 
@@ -1669,7 +1669,7 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
  // Display the selected existing fort's real defence range without entering build mode.
  if(selected?.kind==='building'){
   const b=state.buildings.find(v=>v.id===selected.id);
-  
+
  }
  if(moveCursor){ctx.strokeStyle='#2c3139';ctx.lineWidth=1.5/Math.max(.5,zoom);ctx.strokeRect(moveCursor.x*TILE,moveCursor.y*TILE,TILE,TILE);}
  ctx.restore();drawMini();}
