@@ -2223,3 +2223,349 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
  }
  #game#game#game #planToolSwitch button{height:48px!important}
 }
+
+
+/* v94 visual alignment pass: enforce one actual HUD geometry for gameplay,
+   room and title screens. Scope selectors beat legacy per-component skins. */
+:root {
+ --bk94-bg:#090c11;
+ --bk94-hud:#10141c;
+ --bk94-sheet:#151c26;
+ --bk94-cell:#202b39;
+ --bk94-active:#203e49;
+ --bk94-line:#354151;
+ --bk94-copy:#edf2f8;
+ --bk94-secondary:#acb8c8;
+ --bk94-cyan:#39d5ff;
+ --bk94-space:12px;
+}
+/* Screens use one content column and no floating rounded cards. */
+#lobby#lobby#lobby#lobby .start-screen,
+#waiting#waiting#waiting#waiting .waiting-card{
+ width:min(100%,440px)!important;max-width:440px!important;
+ margin-inline:auto!important;box-sizing:border-box!important;
+ padding:20px 16px calc(28px + env(safe-area-inset-bottom,0px))!important;
+ background:var(--bk94-bg)!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+}
+#lobby#lobby#lobby#lobby :is(.start-emblem,.choice-symbol,.start-choice,.start-settings,.join-direct),
+#waiting#waiting#waiting#waiting :is(.entry-card,.waiting-card,.room-invite,.room-settings,.room-rules,.player-row,.room-share,.spawn-picker){
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+}
+#lobby#lobby#lobby#lobby .start-brand{
+ display:flex!important;align-items:center!important;justify-content:flex-start!important;
+ gap:12px!important;padding:0 0 16px!important;margin:0 0 28px!important;
+ border-bottom:1px solid var(--bk94-line)!important;
+}
+#lobby#lobby#lobby#lobby .start-emblem{
+ flex:0 0 48px!important;width:48px!important;height:48px!important;
+ padding:10px!important;background:var(--bk94-cell)!important;display:grid!important;place-items:center!important;
+}
+#lobby#lobby#lobby#lobby .start-brand strong{
+ font-size:16px!important;letter-spacing:.075em!important;line-height:1.2!important;white-space:normal!important;
+}
+#lobby#lobby#lobby#lobby .start-actions{
+ display:flex!important;flex-direction:column!important;gap:8px!important;
+ padding:0!important;min-width:0!important;
+}
+#lobby#lobby#lobby#lobby .start-actions h1{
+ font-size:29px!important;line-height:1.15!important;margin:0 0 12px!important;
+}
+/* A full-width field is a single cell, with label above. */
+#lobby#lobby#lobby#lobby .home-name{
+ display:flex!important;flex-direction:column!important;align-items:stretch!important;
+ width:100%!important;gap:6px!important;margin:0 0 8px!important;
+ color:var(--bk94-secondary)!important;
+}
+#lobby#lobby#lobby#lobby :is(#nickname,#roomCode,#soloBots){
+ width:100%!important;min-width:0!important;height:48px!important;min-height:48px!important;
+ padding:10px 12px!important;margin:0!important;box-sizing:border-box!important;
+ background:var(--bk94-sheet)!important;border:1px solid var(--bk94-line)!important;
+ border-radius:0!important;box-shadow:none!important;font-size:15px!important;
+ color:var(--bk94-copy)!important;
+}
+/* Three choices: equal grid, left icon cell, text and right arrow. */
+#lobby#lobby#lobby#lobby .start-choice{
+ display:grid!important;grid-template-columns:44px minmax(0,1fr) 24px!important;
+ gap:12px!important;align-items:center!important;
+ width:100%!important;min-height:76px!important;
+ padding:12px!important;margin:0!important;box-sizing:border-box!important;
+ border:0!important;border-radius:0!important;background:var(--bk94-sheet)!important;
+ text-align:left!important;box-shadow:none!important;
+}
+#lobby#lobby#lobby#lobby .start-choice .choice-symbol{
+ display:grid!important;place-items:center!important;
+ width:44px!important;height:44px!important;margin:0!important;padding:8px!important;
+ background:transparent!important;border:0!important;border-radius:0!important;
+}
+#lobby#lobby#lobby#lobby .start-choice .choice-symbol svg{width:26px!important;height:26px!important}
+#lobby#lobby#lobby#lobby .start-choice>span:not(.choice-symbol){
+ display:flex!important;flex-direction:column!important;justify-content:center!important;
+ gap:4px!important;min-width:0!important;
+}
+#lobby#lobby#lobby#lobby .start-choice :is(strong,small){
+ display:block!important;max-width:100%!important;line-height:1.25!important;
+}
+#lobby#lobby#lobby#lobby .start-choice>.choice-arrow{
+ width:24px!important;height:24px!important;margin:0!important;justify-self:center!important;
+}
+#lobby#lobby#lobby#lobby .start-choice-primary{
+ background:var(--bk94-cyan)!important;color:#08131b!important;
+}
+#lobby#lobby#lobby#lobby .start-choice:not(.start-choice-primary){
+ border-bottom:1px solid var(--bk94-line)!important;
+}
+#lobby#lobby#lobby#lobby .join-direct{
+ display:block!important;width:100%!important;padding:12px 0 0!important;margin:0!important;
+ background:transparent!important;
+}
+#lobby#lobby#lobby#lobby .join-direct>label{margin:0 0 6px!important;display:block!important}
+#lobby#lobby#lobby#lobby .join-inputs{
+ display:grid!important;grid-template-columns:minmax(0,1fr) 80px!important;
+ gap:8px!important;min-width:0!important;width:100%!important;margin:0!important;padding:0!important;
+ border:0!important;background:transparent!important;
+}
+#lobby#lobby#lobby#lobby #joinButton{
+ min-width:0!important;width:80px!important;height:48px!important;
+ margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
+ background:var(--bk94-cyan)!important;color:#08131b!important;
+}
+#lobby#lobby#lobby#lobby .start-settings{
+ width:100%!important;margin:8px 0 0!important;padding:0!important;
+ background:var(--bk94-sheet)!important;box-sizing:border-box!important;
+}
+#lobby#lobby#lobby#lobby .start-settings summary{
+ display:flex!important;align-items:center!important;min-height:48px!important;
+ padding:12px!important;box-sizing:border-box!important;
+ border:0!important;border-radius:0!important;
+ color:var(--bk94-copy)!important;background:var(--bk94-cell)!important;
+}
+#lobby#lobby#lobby#lobby .start-settings[open] summary{border-bottom:1px solid var(--bk94-line)!important}
+#lobby#lobby#lobby#lobby .start-settings>label{display:block!important;margin:12px 12px 6px!important;color:var(--bk94-secondary)!important}
+#lobby#lobby#lobby#lobby .start-settings #soloBots{
+ display:block!important;width:calc(100% - 24px)!important;margin:0 12px 12px!important;
+ appearance:auto!important;-webkit-appearance:menulist!important;
+}
+#lobby#lobby#lobby#lobby :is(button,input,select,summary):focus-visible{
+ outline:2px solid var(--bk94-cyan)!important;outline-offset:-2px!important;
+}
+/* Room layout uses full-width sections with one consistent horizontal gutter. */
+#waiting#waiting#waiting#waiting .room-heading{
+ margin:0!important;padding:0 0 16px!important;border-bottom:1px solid var(--bk94-line)!important;
+}
+#waiting#waiting#waiting#waiting .room-heading h2{
+ margin:0!important;font-size:26px!important;line-height:1.2!important;
+}
+#waiting#waiting#waiting#waiting .room-heading .card-subtitle{margin:8px 0 0!important}
+#waiting#waiting#waiting#waiting .room-invite{
+ display:block!important;margin:0!important;padding:16px 0!important;
+ background:transparent!important;border-bottom:1px solid var(--bk94-line)!important;
+}
+#waiting#waiting#waiting#waiting .room-token{
+ display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;
+ gap:8px!important;align-items:center!important;min-width:0!important;
+}
+#waiting#waiting#waiting#waiting #showCode{
+ min-width:0!important;font-size:28px!important;line-height:1.2!important;
+ letter-spacing:.08em!important;overflow-wrap:anywhere!important;
+}
+#waiting#waiting#waiting#waiting #copyCode{
+ display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;
+ min-height:44px!important;width:auto!important;margin:0!important;
+ padding:8px 12px!important;background:var(--bk94-cell)!important;
+ border:0!important;border-radius:0!important;
+}
+#waiting#waiting#waiting#waiting #copyLink{
+ display:flex!important;justify-content:center!important;align-items:center!important;gap:8px!important;
+ width:100%!important;min-height:48px!important;margin:12px 0 0!important;
+ padding:10px!important;background:var(--bk94-cyan)!important;color:#08131b!important;
+ border:0!important;border-radius:0!important;
+}
+#waiting#waiting#waiting#waiting :is(.room-roster-heading,.room-settings>summary,.room-rules>summary){
+ display:flex!important;align-items:center!important;justify-content:space-between!important;
+ gap:12px!important;width:100%!important;min-height:48px!important;
+ padding:10px 12px!important;margin:0!important;box-sizing:border-box!important;
+ background:var(--bk94-cell)!important;
+ border:0!important;border-radius:0!important;
+}
+#waiting#waiting#waiting#waiting .room-roster-heading{margin-top:8px!important}
+#waiting#waiting#waiting#waiting #waitingPlayers{
+ padding:0!important;margin:0 0 8px!important;min-width:0!important;
+}
+#waiting#waiting#waiting#waiting #waitingPlayers .player-row{
+ display:grid!important;grid-template-columns:12px minmax(0,1fr) auto!important;
+ gap:8px!important;align-items:center!important;
+ padding:12px!important;min-height:48px!important;
+ background:var(--bk94-sheet)!important;
+ border:0!important;border-bottom:1px solid var(--bk94-line)!important;
+ border-radius:0!important;
+}
+#waiting#waiting#waiting#waiting .room-settings,
+#waiting#waiting#waiting#waiting .room-rules{
+ width:100%!important;margin:0!important;padding:0!important;
+ background:var(--bk94-sheet)!important;
+}
+#waiting#waiting#waiting#waiting .room-settings[open]{
+ padding-bottom:12px!important;
+}
+#waiting#waiting#waiting#waiting .room-settings :is(label,select){
+ margin:8px 12px!important;
+}
+#waiting#waiting#waiting#waiting .room-settings select{
+ display:block!important;width:calc(100% - 24px)!important;
+ height:48px!important;min-height:48px!important;
+ background:var(--bk94-sheet)!important;
+ border:1px solid var(--bk94-line)!important;border-radius:0!important;
+}
+#waiting#waiting#waiting#waiting .spawn-picker{
+ width:100%!important;min-width:0!important;box-sizing:border-box!important;
+ margin:8px 0!important;padding:0!important;
+ background:var(--bk94-sheet)!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+}
+#waiting#waiting#waiting#waiting .spawn-picker-head{
+ display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;
+ min-height:52px!important;padding:8px 12px!important;
+ background:var(--bk94-cell)!important;
+}
+#waiting#waiting#waiting#waiting .spawn-picker-head strong{
+ min-width:0!important;font-size:14px!important;
+}
+#waiting#waiting#waiting#waiting #spawnAuto{
+ min-height:44px!important;min-width:92px!important;padding:8px 12px!important;margin:0!important;
+ background:var(--bk94-sheet)!important;border:0!important;border-radius:0!important;
+}
+#waiting#waiting#waiting#waiting #spawnHint{
+ margin:12px 12px!important;font-size:12px!important;line-height:1.45!important;
+}
+#waiting#waiting#waiting#waiting #spawnMap{
+ display:block!important;width:calc(100% - 24px)!important;max-width:calc(100% - 24px)!important;
+ height:auto!important;aspect-ratio:640/416;box-sizing:border-box!important;
+ margin:0 12px!important;padding:0!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+}
+#waiting#waiting#waiting#waiting #spawnLegend{
+ margin:0!important;padding:12px!important;min-width:0!important;
+}
+#waiting#waiting#waiting#waiting .room-rules{margin:8px 0 0!important}
+#waiting#waiting#waiting#waiting #roomRules{padding:12px!important;margin:0!important}
+#waiting#waiting#waiting#waiting #startButton,
+#waiting#waiting#waiting#waiting #leaveRoom{
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ gap:12px!important;width:100%!important;min-height:48px!important;
+ box-sizing:border-box!important;padding:12px!important;margin:8px 0 0!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+}
+#waiting#waiting#waiting#waiting #startButton{
+ background:var(--bk94-cyan)!important;color:#08131b!important;
+}
+#waiting#waiting#waiting#waiting #leaveRoom{background:var(--bk94-cell)!important;color:var(--bk94-copy)!important}
+#waiting#waiting#waiting#waiting #waitingHint{
+ text-align:center!important;margin:12px 0!important;padding:0 4px!important;
+}
+#waiting#waiting#waiting#waiting :is(button,input,select,summary):focus-visible{
+ outline:2px solid var(--bk94-cyan)!important;outline-offset:-2px!important;
+}
+/* Modal header close controls have identical 48px boxes and anchor lines. */
+#game#game#game#game :is(.sidebar-heading,.aux-head,.armies-panel-head,.war-panel-title){
+ display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;
+ min-height:56px!important;margin:0 0 16px!important;padding:0 0 8px!important;
+ border-bottom:1px solid var(--bk94-line)!important;
+}
+#game#game#game#game #contextCard #closeContext{
+ position:absolute!important;top:16px!important;right:16px!important;
+ width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;
+ margin:0!important;padding:0!important;border:0!important;border-radius:0!important;
+ background:var(--bk94-cell)!important;display:grid!important;place-items:center!important;
+}
+#game#game#game#game #contextBody{
+ display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:0!important;
+}
+#game#game#game#game #contextBody .context-heading{
+ padding:0 56px 16px 0!important;margin:0!important;min-height:56px!important;
+ border-bottom:1px solid var(--bk94-line)!important;
+}
+#game#game#game#game #contextBody .context-effect{
+ padding:14px 0!important;margin:0!important;
+ background:transparent!important;border:0!important;border-bottom:1px solid var(--bk94-line)!important;
+ border-radius:0!important;box-shadow:none!important;
+}
+#game#game#game#game #contextBody .context-upgrade-price{
+ display:grid!important;grid-template-columns:minmax(0,1fr)!important;align-items:start!important;gap:8px!important;
+ padding:14px 0!important;min-width:0!important;
+ border-bottom:1px solid var(--bk94-line)!important;
+}
+#game#game#game#game #contextBody .context-upgrade-price>div{
+ display:flex!important;align-items:center!important;flex-wrap:wrap!important;gap:10px!important;
+}
+#game#game#game#game #contextBody .cost-unit{
+ display:inline-flex!important;align-items:center!important;gap:4px!important;
+ padding:0!important;margin:0!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+ background:transparent!important;color:var(--bk94-secondary)!important;
+}
+#game#game#game#game #contextBody button[data-context-upgrade]{
+ min-height:48px!important;margin:12px 0 0!important;
+ border:0!important;border-radius:0!important;
+ background:var(--bk94-cyan)!important;color:#08131b!important;
+}
+/* Army actions use a full row, avoiding the previous half-width Locate tile. */
+#game#game#game#game #armiesList .army-line button{
+ grid-column:1/-1!important;width:100%!important;min-height:44px!important;
+ margin:0!important;background:var(--bk94-cell)!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+}
+/* The selected country occupies its entire leaderboard row, not an inset card. */
+#game#game#game#game #quickLeadersPanel .quick-row{
+ border:0!important;border-bottom:1px solid var(--bk94-line)!important;
+ border-radius:0!important;box-shadow:none!important;
+ padding:12px!important;min-height:48px!important;
+}
+#game#game#game#game #quickLeadersPanel .quick-row.is-me{
+ background:var(--bk94-active)!important;
+ border-radius:0!important;
+}
+/* The same two-column diplomacy action grid is used for every nation. */
+#game#game#game#game #warPanel .nation-row{
+ padding:14px 0!important;margin:0!important;gap:8px!important;
+ border-bottom:1px solid var(--bk94-line)!important;
+}
+#game#game#game#game #warPanel .nation-identity{
+ display:grid!important;grid-template-columns:12px minmax(0,1fr) auto!important;
+ gap:8px!important;align-items:center!important;
+}
+#game#game#game#game #warPanel .nation-status{
+ margin:0!important;justify-self:end!important;text-align:right!important;
+}
+#game#game#game#game #warPanel .nation-actions{
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;
+}
+#game#game#game#game #warPanel .nation-actions button{
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ min-height:44px!important;margin:0!important;padding:8px!important;border:0!important;border-radius:0!important;
+}
+#game#game#game#game #notificationStack #threatList{
+ padding:0!important;border:0!important;border-radius:0!important;
+ background:var(--bk94-sheet)!important;
+}
+#game#game#game#game #notificationStack #threatList header{
+ display:flex!important;align-items:center!important;justify-content:space-between!important;
+ min-height:48px!important;padding:0 12px!important;border-bottom:1px solid var(--bk94-line)!important;
+}
+#game#game#game#game #notificationStack #threatClose{
+ display:grid!important;place-items:center!important;
+ width:48px!important;height:48px!important;min-width:48px!important;padding:0!important;
+ border:0!important;border-radius:0!important;background:var(--bk94-cell)!important;
+}
+/* All close buttons share their header's right edge (no nested inset). */
+#game#game#game#game :is(#closePanel,#closeArmies,#closeQuickLeaders,#closeSession,#warPanelClose,#closeTutorial){
+ width:48px!important;height:48px!important;padding:0!important;margin:0!important;
+ display:grid!important;place-items:center!important;
+ border:0!important;border-radius:0!important;background:var(--bk94-cell)!important;
+}
+/* Only flat selected-state accents: preserve existing HUD sizing. */
+#game#game#game#game #buildDock .dock-cost .cost-unit,
+#game#game#game#game #techPanel .cost-unit{
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+ background:transparent!important;
+}
