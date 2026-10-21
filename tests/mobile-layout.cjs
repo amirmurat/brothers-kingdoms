@@ -127,7 +127,7 @@ const server=http.createServer((req,res)=>{
    assert.equal(noticeLayout.x,noticeLayout.threatX,label+' all notifications share the corner alignment');
    assert.equal(noticeLayout.width,noticeLayout.threatWidth,label+' all notifications share card width');
    assert.equal(noticeLayout.radius,noticeLayout.threatRadius,label+' all notifications share card shape');
-   assert(noticeLayout.y>=noticeLayout.threatBottom+7,label+' notifications stack without overlap');
+   assert(noticeLayout.y>=noticeLayout.threatBottom+7,label+' notifications stack without overlap '+JSON.stringify(noticeLayout));
    assert(noticeLayout.y<noticeLayout.mapTop+130,label+' notifications stay in the upper corner');
    assert.equal(statusRects.nationWidth,48,label+' diplomacy is a compact icon action');
    assert(statusRects.nationHeight>=44,label+' diplomacy keeps a touch target');
