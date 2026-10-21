@@ -1,6 +1,11 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 _Обновлено: 22 октября 2026 года. Рабочий код v100; итог проверки и публикации — в последней записи START HERE._
 
+## v100 final verification follow-up
+- Game-code follow-up `bd511a2cee8abff46e96e2bb0945ab6c666e8061`: priority defender protection, capped recruitment reason, conserved split budgets/focus. Engine and mobile/network regressions passed in Actions 39674896936. Its new end-to-end defense map tap assertion failed because the benchmark hook changed zoom *after* centering, placing the selected capital outside the viewport; actual game coordinates/commands were not implicated. Hook now sets zoom before centering; re-run required and do not hide the failed check.
+- Final cache tag `100-strategy-r2` ensures intermediate v100 assets cannot remain selected by Safari. Current final CI/deploy result must be checked against the newest branch HEAD.
+- Extended local four-bot stress: 400 economy/1,600 combat steps, six wars, max 425 columns; reserve/garrison conservation held throughout. Local execution ~15.5s, no frame-rate claim. Competitive long-match balance and physical iPhone performance remain unproven.
+
 ## START HERE — v100 Performance, Combat & Balance (22.10.2026)
 
 Work continues only on `design/visual-review-v26`; main remains `8ed0f5662df723fe64bb6fe263b45b8d4781bd60`. Initial branch HEAD `e8a8856a65baa35168785be14bc4a0aed80b8a07`. Live `/api/health` actually returned v99 before edits. Initial Actions 39671440928 failed WebKit landscape resource priority click (`wood !== gold`), while Cloudflare check succeeded; do not assume a documentation-only commit was green.
