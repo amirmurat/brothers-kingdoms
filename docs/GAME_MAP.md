@@ -581,3 +581,6 @@ repaintWorld returns the number of painted terrain cells and retains mapPaintOwn
 
 ### v84 production readability
 buildingLevelColor supplies the shared map/detail level palette. drawHarvestSites runs after unit shading; reads only actual own harvesting positions, culls offscreen/overlapping labels and caps at 12; no scheduling or simulation change. Nations label stays in DOM but is visually hidden; flag square retains aria-label/dynamic wars. Feedback and Nations occupy one top row, threats the next.
+
+### v85 feedback placement
+#gameFeedback is now a content-sized bottom toast above #buildDock, raised further by :has(#placingBuild:not(.hidden)) and .plan-drawing. Neutral messages pass pointer input through; #hudAlert remains actionable. Threat shortcut stays top-left. No game or network logic change.

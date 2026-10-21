@@ -115,8 +115,11 @@ const server=http.createServer((req,res)=>{
    await page.evaluate(()=>{window.__layout.warnHud('Offensive ended');window.__layout.toast('Order completed','success');});
    assert.equal(await page.locator('#hudAlert').isVisible(),false,label+' ordinary notice hidden behind toast');
    assert.equal(await page.locator('#gameToast').isVisible(),true,label+' toast visible');
-   const statusRects=await page.evaluate(()=>{const a=document.getElementById('gameToast').getBoundingClientRect(),b=document.getElementById('warChip').getBoundingClientRect();return {right:a.right,left:b.left,nationWidth:b.width,nationHeight:b.height};});
-   assert(statusRects.right<=statusRects.left,label+' feedback does not overlap diplomacy');
+   const statusRects=await page.evaluate(()=>{const a=document.getElementById('gameToast').getBoundingClientRect(),b=document.getElementById('warChip').getBoundingClientRect();return {separate:a.right<=b.left||a.left>=b.right||a.bottom<=b.top||a.top>=b.bottom,nationWidth:b.width,nationHeight:b.height};});
+   assert(statusRects.separate,label+' feedback does not overlap diplomacy');
+   const toastPosition=await page.locator('#gameToast').evaluate(el=>{const r=el.getBoundingClientRect(),b=document.getElementById('placingBuild').getBoundingClientRect();return {bottom:r.bottom,top:r.top,buildTop:b.top,width:r.width,screen:innerWidth};});
+   assert(toastPosition.bottom<=toastPosition.buildTop-4,label+' notification clears active placement bar');
+   assert(toastPosition.top>=0&&toastPosition.width<=toastPosition.screen-24,label+' compact notification fits');
    assert.equal(statusRects.nationWidth,48,label+' diplomacy is a compact icon action');
    assert(statusRects.nationHeight>=44,label+' diplomacy keeps a touch target');
    await page.evaluate(()=>window.__layout.warnHud('Capital threatened','danger'));
