@@ -2216,6 +2216,10 @@ body.aux-open #game#game#game #planToolSwitch{visibility:hidden!important}
  border-bottom:1px solid #354151!important;
 }
 @media(max-height:480px) and (orientation:landscape){
- #game#game#game #planToolSwitch{width:48px!important;min-width:48px!important}
+ /* The usable map is shorter here: two columns keep every action reachable. */
+ #game#game#game #planToolSwitch{
+  display:grid!important;grid-template-columns:repeat(2,48px)!important;
+  width:97px!important;min-width:97px!important;gap:1px!important;
+ }
  #game#game#game #planToolSwitch button{height:48px!important}
 }
