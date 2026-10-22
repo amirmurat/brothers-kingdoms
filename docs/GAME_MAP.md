@@ -1,5 +1,12 @@
 # Brothers Kingdoms — карта интерфейса и исходников (v25)
 
+## v111 — Static independent Fort towers (current `design/visual-review-v26`)
+
+Every `fort` building draws separately, using a strict top-down 32×32 sprite from `assets/player/fort-levels/level-1.png`, `level-2.png`, or `level-3.png`. Level 4+ currently looks like level 3 but retains the real engine level until game rules are explicitly changed later. The canvas displays each Fort at `(b.x*TILE, b.y*TILE, TILE, TILE)`, with world camera zoom; sprites never enlarge/shrink relative to map tiles. No `buildingConnectMask`, 16-mask autotile decision, or adjacent-wall merging remains. The red accent colors are replaced by faction hue at cached image loading; pixel symmetry and neutral materials are retained. The old `assets/player/fort-tiles/` segment images are archived but unused. Client asset version `111-independent-fort-towers-r1`. No server or engine balance changes.
+
+---
+
+
 ## v109 — Fort exterior wall autotiles
 
 Native new original PNGs: `assets/player/fort-tiles/{single,cap,straight,corner,tee}.png`. `assets/player/fort.png` is archived and no longer the active Fort sprite. Fort is one terrain cell, unchanged size relative to map zoom. `buildingConnectMask` sets N/E/S/W bits 1/2/4/8 if neighbor is the same Fort type and owner. `fortTileSpec` chooses art and exact 90° clockwise rotation for the 16 masks: single 0; one neighbor → cap; adjacent two → corner; opposite two → straight; three → tee; all four → empty interior. Base art is oriented east-open cap (2), north/east-open corner (3), east/west straight (10), north/east/west tee (11). `fortConnectedSprite` caches colored pixel-exact rotations. Only red/terracotta pigment indices are recolored by owner+level; neutral metal remains unchanged. The additional UI labels inside connected Fort sprites are omitted. HTML asset version `109-fort-wall-autotile-r1`. No engine rule changes.
