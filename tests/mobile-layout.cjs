@@ -367,6 +367,21 @@ const server=http.createServer((req,res)=>{
      const img=new Image();img.onload=()=>resolve(img.naturalWidth===32&&img.naturalHeight===32);img.onerror=()=>resolve(false);img.src=src;
     })));
     const allLoaded=Object.values(L.fortTileImages).every(img=>img.complete&&img.naturalWidth===32);
+    // Distinguish the newly uploaded DOUBLE-LINE corner from the original
+    // single-line L tile. The second interior run must exist in the NE quadrant.
+    const cc=document.createElement('canvas');cc.width=32;cc.height=32;
+    const cp=cc.getContext('2d');cp.drawImage(L.fortTileImages.corner,0,0);
+    const upperInner=Array.from(cp.getImageData(24,3,1,1).data);
+    const outerCorner=Array.from(cp.getImageData(3,26,1,1).data);
+    const corner90a=L.fortConnectedSprite(3,p.id,1);
+    const corner90b=L.fortConnectedSprite(6,p.id,1);
+    const pA=corner90a.getContext('2d').getImageData(0,0,32,32).data;
+    const pB=corner90b.getContext('2d').getImageData(0,0,32,32).data;
+    let cornerRotationMismatch=0;
+    for(let y=0;y<32;y++)for(let x=0;x<32;x++){
+     const i=(y*32+x)*4,j=(x*32+(31-y))*4;
+     for(let ch=0;ch<4;ch++)if(pA[i+ch]!==pB[j+ch])cornerRotationMismatch++;
+    }
     const allSpecs=Array.from({length:16},(_,m)=>L.fortTileSpec(m));
     const expected=['single','cap','cap','corner','cap','straight','corner','tee','cap','corner','straight','tee','corner','tee','tee','empty'];
     const single=L.roofSprite('fort',p.id,1),high=L.roofSprite('fort',p.id,4);
@@ -394,7 +409,7 @@ const server=http.createServer((req,res)=>{
      const tile=L.fortConnectedSprite(m,p.id,1),sp=allSpecs[m];
      counts[m]={type:sp.type,rotation:sp.rot,draws:m===15?tile===null:!!(tile?.width||tile?.naturalWidth)};
     }
-    return {source:L.buildingSpritePath('fort'),bounds,east,mask,different,loaded:allLoaded,
+    return {source:L.buildingSpritePath('fort'),bounds,east,mask,different,loaded:allLoaded,upperInner,outerCorner,cornerRotationMismatch,cornerSrc:L.fortTileImages.corner.src,
      typesMatch:allSpecs.every((spec,i)=>spec.type===expected[i]),
      distinctMasks:allSpecs.length,counts,rotateMismatch,tinted,foreign,leveled,metalChanged,alphaChanged,
      hasEnemy:!!other,maskSize:maskSet.size,
@@ -406,6 +421,10 @@ const server=http.createServer((req,res)=>{
    assert.equal(tileSystem.mask,2,label+' adjacent same-owner forts connect to the east');
    assert.equal(tileSystem.different,0,label+' neighboring other building types never join');
    assert(tileSystem.typesMatch&&tileSystem.distinctMasks===16,label+' all 16 join masks are mapped correctly');
+   assert.deepEqual(tileSystem.upperInner,[150,66,83,255],label+' two-line corner has the new NE interior masonry, not the old single-line art');
+   assert.deepEqual(tileSystem.outerCorner,[227,105,86,255],label+' two-line corner retains the SW outer masonry');
+   assert.equal(tileSystem.cornerRotationMismatch,0,label+' the two-line corner rotates with exact RGBA pixels');
+   assert(tileSystem.cornerSrc.includes('corner.png?v=110'),label+' refreshed corner bypasses stale mobile image cache');
    assert(Object.values(tileSystem.counts).every(v=>v.draws),label+' all wall variants resolve to a sprite, including empty surrounded interior');
    assert(tileSystem.surroundedEmpty,label+' fully surrounded Fort hides the internal wall');
    assert.equal(tileSystem.rotateMismatch,0,label+' 90-degree wall rotation preserves every pixel and alpha');
