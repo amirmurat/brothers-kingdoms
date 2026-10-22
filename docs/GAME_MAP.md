@@ -1,5 +1,12 @@
 # Brothers Kingdoms — карта интерфейса и исходников (v25)
 
+## v112 — 3-tier farm preview and legacy building renderer
+
+`buildingSpritePath('farm',level)` points to `assets/player/drafts/farm/level-{1,2,3}.png`. `farmLevelSprites` loads all tiers; `roofSprite` for Farm leaves harvest colors untouched. Legacy farm cells display each selected tier without changing their world-cell size. The third artwork is reused visually at fourth level and higher, with no engine changes. The match's current build dock is only City/Barracks/Fort, so the gallery `/assets/player/drafts/farm/preview.html` on the Cloudflare Worker provides an immediate art comparison. `index.html` version `112-topdown-farm-tiers-r1`. GitHub branch update and Cloudflare Worker deployment are distinct events.
+
+---
+
+
 ## v111 — Static independent Fort towers (current `design/visual-review-v26`)
 
 Every `fort` building draws separately, using a strict top-down 32×32 sprite from `assets/player/fort-levels/level-1.png`, `level-2.png`, or `level-3.png`. Level 4+ currently looks like level 3 but retains the real engine level until game rules are explicitly changed later. The canvas displays each Fort at `(b.x*TILE, b.y*TILE, TILE, TILE)`, with world camera zoom; sprites never enlarge/shrink relative to map tiles. No `buildingConnectMask`, 16-mask autotile decision, or adjacent-wall merging remains. The red accent colors are replaced by faction hue at cached image loading; pixel symmetry and neutral materials are retained. The old `assets/player/fort-tiles/` segment images are archived but unused. Client asset version `111-independent-fort-towers-r1`. No server or engine balance changes.
