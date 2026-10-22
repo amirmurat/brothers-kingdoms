@@ -1,5 +1,11 @@
 # Brothers Kingdoms — карта интерфейса и исходников (v25)
 
+## v109 — Fort exterior wall autotiles
+
+Native new original PNGs: `assets/player/fort-tiles/{single,cap,straight,corner,tee}.png`. `assets/player/fort.png` is archived and no longer the active Fort sprite. Fort is one terrain cell, unchanged size relative to map zoom. `buildingConnectMask` sets N/E/S/W bits 1/2/4/8 if neighbor is the same Fort type and owner. `fortTileSpec` chooses art and exact 90° clockwise rotation for the 16 masks: single 0; one neighbor → cap; adjacent two → corner; opposite two → straight; three → tee; all four → empty interior. Base art is oriented east-open cap (2), north/east-open corner (3), east/west straight (10), north/east/west tee (11). `fortConnectedSprite` caches colored pixel-exact rotations. Only red/terracotta pigment indices are recolored by owner+level; neutral metal remains unchanged. The additional UI labels inside connected Fort sprites are omitted. HTML asset version `109-fort-wall-autotile-r1`. No engine rule changes.
+
+---
+
 ## v108 — art tile renderer (active branch `design/visual-review-v26`)
 
 The `game.js` tile-art layer now uses **world-cell fixed geometry**, not a screen-size icon overlay. `TILE=14` is the world grid size; every building renders in the rectangle `[b.x*TILE,b.y*TILE,TILE,TILE]`, and zoom is applied only by the parent camera transform. All buildings remain distinct individual cells even when zoomed out; map image smoothing is disabled for the sprite draw. For future connectable city blocks and fort/wall segments, `buildingConnectMask(b,byCell)` computes same-faction, same-type N/E/S/W presence as a 4-bit mask (1,2,4,8). Future connection graphics must be painted to the sprite's matching tile edges; the current 32×32 Fort source has transparent margins and is not yet a seamless connected wall variant.
