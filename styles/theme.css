@@ -3379,3 +3379,132 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
   right:calc(var(--map-tool-gutter) + env(safe-area-inset-right,0px))!important;
  }
 }
+
+/* v116: Building upgrade UI shares the same flat charcoal / cyan map HUD.
+   No floating toy cards or colored type labels. Fully responsive on iPhone. */
+#game#game#game#game#game #contextCard{
+ background:#151c26!important;color:#edf2f8!important;
+ border:1px solid #354151!important;border-radius:0!important;
+ box-shadow:none!important;padding:16px!important;
+ max-height:min(72dvh,620px)!important;overflow:auto!important;
+}
+#game#game#game#game#game #contextBody{
+ display:grid!important;gap:0!important;min-width:0!important;
+}
+#game#game#game#game#game #contextBody .context-building-header{
+ padding:0 56px 14px 0!important;border-bottom:1px solid #354151!important;
+ min-width:0!important;
+}
+#game#game#game#game#game #contextBody .context-eyebrow,
+#game#game#game#game#game #contextBody .context-stat>small,
+#game#game#game#game#game #contextBody .context-upgrade-price>small{
+ display:block!important;color:#91a4b7!important;
+ font:700 10px/16px system-ui!important;letter-spacing:.1em!important;
+}
+#game#game#game#game#game #contextBody .context-building-identity{
+ display:flex!important;gap:12px!important;align-items:center!important;
+ margin:9px 0 13px!important;min-width:0!important;
+}
+#game#game#game#game#game #contextBody .context-building-identity .context-building-art{
+ display:block!important;flex:0 0 52px!important;width:52px!important;height:52px!important;
+ min-width:52px!important;margin:0!important;object-fit:contain!important;
+ image-rendering:pixelated!important;background:#24313c!important;border:1px solid #354151!important;
+}
+#game#game#game#game#game #contextBody .context-building-title{
+ display:flex!important;flex-direction:column!important;gap:4px!important;
+ min-width:0!important;
+}
+#game#game#game#game#game #contextBody .context-building-title strong{
+ font:750 19px/23px system-ui!important;color:#f1f5fa!important;
+}
+#game#game#game#game#game #contextBody .context-building-title small{
+ color:#acb8c8!important;font:500 12px/16px system-ui!important;overflow-wrap:anywhere!important;
+}
+#game#game#game#game#game #contextBody .context-level-track{
+ display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ gap:4px!important;width:100%!important;
+}
+#game#game#game#game#game #contextBody .context-level-track span{
+ display:grid!important;place-items:center!important;height:22px!important;
+ font:750 11px/16px system-ui!important;background:#25303f!important;
+ color:#70869c!important;border-bottom:2px solid #39495b!important;
+}
+#game#game#game#game#game #contextBody .context-level-track span.complete{
+ background:#193743!important;color:#a1eafb!important;border-bottom-color:#39d5ff!important;
+}
+#game#game#game#game#game #contextBody .context-level-track span.current{
+ background:#214857!important;color:#fff!important;border-bottom-color:#b4f2ff!important;
+}
+#game#game#game#game#game #contextBody .context-stats-row{
+ display:grid!important;grid-template-columns:repeat(auto-fit,minmax(135px,1fr))!important;
+ gap:0!important;border-bottom:1px solid #354151!important;min-width:0!important;
+}
+#game#game#game#game#game #contextBody .context-stat{
+ padding:14px 12px 14px 0!important;min-width:0!important;
+ display:flex!important;flex-direction:column!important;gap:7px!important;
+}
+#game#game#game#game#game #contextBody .context-stat>span{
+ color:#edf2f8!important;font:600 13px/18px system-ui!important;overflow-wrap:anywhere!important;
+}
+#game#game#game#game#game #contextBody .context-meta,
+#game#game#game#game#game #contextBody .context-builder-status{
+ padding:12px 0!important;border-bottom:1px solid #354151!important;
+ font:500 12px/18px system-ui!important;color:#acb8c8!important;
+}
+#game#game#game#game#game #contextBody .context-builder-status{
+ display:flex!important;justify-content:space-between!important;gap:12px!important;
+}
+#game#game#game#game#game #contextBody .context-builder-status>span{
+ font:700 10px/16px system-ui!important;letter-spacing:.1em!important;
+}
+#game#game#game#game#game #contextBody .context-builder-status strong{
+ color:#edf2f8!important;font:750 12px/16px system-ui!important;font-variant-numeric:tabular-nums!important;
+}
+#game#game#game#game#game #contextBody .context-upgrade-price{
+ display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:6px!important;
+ padding:14px 0 11px!important;margin:0!important;
+ border:0!important;min-width:0!important;
+}
+#game#game#game#game#game #contextBody .context-upgrade-price>div{
+ display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:10px!important;
+}
+#game#game#game#game#game #contextBody button.context-upgrade-action{
+ min-height:48px!important;border:0!important;border-radius:0!important;margin:0!important;
+ width:100%!important;display:grid!important;place-items:center!important;
+ padding:9px 12px!important;white-space:normal!important;
+ font:750 12px/17px system-ui!important;letter-spacing:.025em!important;
+ background:#39d5ff!important;color:#08131b!important;
+}
+#game#game#game#game#game #contextBody button.context-upgrade-action:disabled{
+ background:#25303f!important;color:#8393a6!important;opacity:1!important;
+}
+#game#game#game#game#game #contextBody .context-shortage{
+ display:block!important;padding:8px 0!important;color:#ffb5b9!important;
+ font:500 12px/16px system-ui!important;
+}
+#game#game#game#game#game #contextBody .context-progress{
+ display:flex!important;flex-direction:column!important;gap:9px!important;padding:15px 0!important;
+}
+#game#game#game#game#game #contextBody .context-progress-heading{
+ display:flex!important;justify-content:space-between!important;gap:8px!important;
+ color:#b4e9f7!important;font:750 11px/16px system-ui!important;
+}
+#game#game#game#game#game #contextBody .context-progress-track{
+ height:6px!important;background:#354151!important;overflow:hidden!important;
+}
+#game#game#game#game#game #contextBody .context-progress-track i{
+ display:block!important;height:100%!important;background:#39d5ff!important;
+}
+#game#game#game#game#game #contextBody .context-progress>small,
+#game#game#game#game#game #contextBody .context-max-level{
+ color:#aab8c8!important;font:600 12px/18px system-ui!important;
+}
+#game#game#game#game#game #contextBody .context-max-level{padding:16px 0!important}
+@media(max-width:355px){
+ #game#game#game#game#game #contextBody .context-stats-row{
+  grid-template-columns:minmax(0,1fr)!important;
+ }
+ #game#game#game#game#game #contextBody .context-stat{
+  padding:10px 0!important;
+ }
+}
