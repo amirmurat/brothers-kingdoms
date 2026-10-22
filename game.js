@@ -12,7 +12,7 @@ const BUILDING_SPRITE_FILES={city:'capital',barracks:'city'};
 const buildingSpriteFile=kind=>BUILDING_SPRITE_FILES[kind]||kind;
 const buildingSpritePath=kind=>OLD_CC0+'buildings/'+buildingSpriteFile(kind)+'.png';
 const uiIcon=name=>{
- if(CC0_BUILDINGS.has(name))return `<img class="ui-icon tiny-building-art" src="${buildingSpritePath(name)}" alt="" aria-hidden="true"/>`;
+ if(CC0_BUILDINGS.has(name))return `<img class="ui-icon tiny-building-art" src="${buildingRoofUrl(name,state?.phase==='playing'?myId:null,1)}" alt="" aria-hidden="true"/>`;
  if(CC0_RESOURCES.has(name))return `<img class="ui-icon tiny-resource-art" src="${OLD_CC0}resources/${name}.png" alt="" aria-hidden="true"/>`;
  const id=UI_ICON_NAMES[name]||name;
  const set=id==='flag-banner'?'controls':'game';
@@ -25,6 +25,13 @@ const BUILDING_PATHS={"farm":"M256 23.38L89.844 89.845l-64.9 162.254 14.85 5.943
 const buildingPaths=Object.fromEntries(Object.entries(BUILDING_PATHS).map(([id,d])=>[id,new Path2D(d)]));
 const BUILDING_PALETTE={farm:'#F0AD6D',lumber:'#69D9A4',quarry:'#B6BFCF',mine:'#F5D45A',barracks:'#85B4FF',fort:'#FF8188',city:'#C49BFF',capital:'#f1f5fa'};
 const BUILDING_KINDS=['capital','city','barracks','fort','farm','lumber','quarry','mine'];
+// Stable ownership/level palette shared across types; never encode type by hue.
+const buildingLevelColor=b=>{
+ const hex=b.owner==null?'#829bb8':color(b.owner);
+ const rr=parseInt(hex.slice(1,3),16),gg=parseInt(hex.slice(3,5),16),bb=parseInt(hex.slice(5,7),16);
+ const hue=rgbHue(rr,gg,bb),level=Math.max(1,Math.min(5,b.level||1));
+ return `hsl(${Math.round(hue)} 75% ${Math.round(37+level*9)}%)`;
+};
 const BUILDING_PRIORITY={capital:9,fort:8,barracks:7,city:6,mine:3,quarry:3,lumber:3,farm:3};
 
 const buildingArt=(kind,owner=null,level=1)=>`<img class="building-art tiny-building-art" src="${buildingRoofUrl(kind,owner,level)}" alt="" aria-hidden="true"/>`;
@@ -954,7 +961,7 @@ function updateSelection(){const item=selected?.kind==='army'?state.armies.find(
 function refreshQuickBuild(){
  const p=mine();if(!p||!state)return;
  const dock=$('buildDock');
- if(!dock.dataset.ready){dock.innerHTML=['city','barracks','fort'].map(id=>'<button type="button" data-place-building="'+id+'" aria-label="Place '+E.KINDS[id].name+'" aria-pressed="false">'+buildingArt(id,myId,1)+'<span>'+E.KINDS[id].name+'</span><small class="dock-time">'+E.constructionTime(id)+'s build</small><small class="dock-cost"></small></button>').join('');dock.dataset.ready='yes';}
+ if(!dock.dataset.ready||dock.dataset.roofOwner!==String(myId)){dock.innerHTML=['city','barracks','fort'].map(id=>'<button type="button" data-place-building="'+id+'" aria-label="Place '+E.KINDS[id].name+'" aria-pressed="false">'+buildingArt(id,myId,1)+'<span>'+E.KINDS[id].name+'</span><small class="dock-time">'+E.constructionTime(id)+'s build</small><small class="dock-cost"></small></button>').join('');dock.dataset.ready='yes';dock.dataset.roofOwner=String(myId);}
  for(const id of ['city','barracks','fort']){const b=dock.querySelector('[data-place-building="'+id+'"]');b.classList.toggle('chosen',buildMode===id);b.setAttribute('aria-pressed',String(buildMode===id));const cost=E.costBuilding(state,myId,id);b.title=E.KINDS[id].name+' · '+costText(cost)+' · '+E.constructionTime(id)+'s construction after builders arrive';const price=b.querySelector('.dock-cost'),key=JSON.stringify(cost);if(price.dataset.cost!==key){price.innerHTML=briefCost(cost);price.dataset.cost=key;}}
  $('placingBuild').classList.add('hidden');
  if(buildMode){$('placingBuildName').textContent=E.KINDS[buildMode].name;$('placingBuildCost').textContent=costText(E.costBuilding(state,myId,buildMode));$('placingBuildIcon').innerHTML=uiIcon(buildMode);}
@@ -1686,8 +1693,8 @@ function buildingRoofUrl(kind,owner=null,level=1){
  if(result?.toDataURL){try{return result.toDataURL('image/png');}catch(e){}}
  return buildingSpritePath(kind);
 }
-// Building identity relies on silhouette and its text label. Levels have a separate
-// numeric rank and a shared rank color, so neither identity relies on color alone.
+// Building type remains identifiable by shape and text. Country hue and level
+// tint the original roof pigment only; level numbers remain readable without color.
 const buildingTypeMarkers=new Map();
 function drawUpgradeWork(b,x,y){
  if(!b.upgrade||b.owner!==myId)return;
