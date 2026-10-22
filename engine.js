@@ -708,9 +708,9 @@ function workforceStep(s){
   if(!count)continue;
   const components=ownedComponents(s,p.id),occupied=new Set(),roads=roadSet(s);
   const sites=automaticWorkSites(s,p.id),siteMap=new Map(sites.map(t=>[t.i,t.resource]));
-  // New conquests enter the job pool automatically. Rotate one group every
-  // eight ticks so idle deposits get workers without continual mass reshuffles.
-  if(s.tick%8===0&&p.lastWorkBalance!==s.tick){p.lastWorkBalance=s.tick;const g=p.workers[Math.floor(s.tick/8)%count];if(g.resource&&g.x===g.tx&&g.y===g.ty&&g.progress>=3){g.resource=null;g.route=null;g.progress=0;}}
+  // Preserve productive assignments. The former forced reassignment every
+  // eight ticks made workers abandon deposits despite no better available job.
+  // New owned deposits are considered when a group actually becomes free.
   const assigned={food:0,wood:0,stone:0,gold:0},availableResources=new Set(sites.map(t=>t.resource));
   for(const g of p.workers)if(g.resource)assigned[g.resource]++;
   const resourceWeight=r=>r===p.workPriority?4:1;
@@ -726,14 +726,23 @@ function workforceStep(s){
    if(g.roadTask&&(!inside(g.tx,g.ty)||components[idx(g.tx,g.ty)]!==component)){g.roadTask=false;g.route=null;}
    if(g.resource&&siteMap.get(idx(g.tx,g.ty))!==g.resource){occupied.delete(idx(g.tx,g.ty));g.resource=null;g.route=null;}
    if(g.job&&!job){g.job=null;g.route=null;}
-   // Construction gets priority, but only one group can occupy a job.
-   if(!job){const reserved=new Set(p.workers.filter(w=>w!==g).map(w=>w.job));
-    job=s.buildJobs.filter(j=>j.owner===p.id&&!reserved.has(j.id)&&components[idx(j.x,j.y)]===component).sort((a,b)=>near(g,a)-near(g,b))[0];
-    if(job){occupied.delete(idx(g.tx,g.ty));g.resource=null;g.job=job.id;g.tx=job.x;g.ty=job.y;g.route=null;g.progress=0;}
+   // Reserve one build/upgrade task per group. Keep a valid assignment until
+   // completion or loss of a safe route, instead of changing jobs each tick.
+   // Use distance plus urgency: nearby work wins, upgrades win close ties.
+   if(!job){
+    const reserved=new Set(p.workers.filter(w=>w!==g).map(w=>w.job).filter(Boolean));
+    const candidate=s.buildJobs.filter(j=>j.owner===p.id&&!reserved.has(j.id)&&components[idx(j.x,j.y)]===component)
+     .sort((a,b)=>{
+      const score=j=>near(g,j)*2-(j.upgradeOf?6:0)-Math.min(12,(j.progress||0)/8);
+      return score(a)-score(b)||String(a.id).localeCompare(String(b.id));
+     })[0];
+    if(candidate){
+     job=candidate;occupied.delete(idx(g.tx,g.ty));g.resource=null;g.roadTask=false;
+     g.job=job.id;g.tx=job.x;g.ty=job.y;g.route=null;g.progress=0;
+    }
    }
-   if(n===0&&!job&&!g.roadTask&&roadEnds.some(b=>inside(b.x,b.y)&&components[idx(b.x,b.y)]===component&&!roads.has(idx(b.x,b.y))&&near(g,b)>0)){
-    occupied.delete(idx(g.tx,g.ty));g.resource=null;g.route=null;
-   }
+   // Roadwork is opportunistic: never interrupt productive harvesting simply
+   // because a distant base is missing a road. Workers lay roads while moving.
    if(!job&&!g.resource&&!(g.roadTask&&current!==idx(g.tx,g.ty))&&routes<2){
     g.roadTask=false;
     // One group connects bases and active front supply endpoints. Other groups
@@ -747,7 +756,7 @@ function workforceStep(s){
       const d=Math.abs(g.x-t.i%W)+Math.abs(g.y-((t.i/W)|0));
       // A scarce resource gets preference; distance still favours local jobs.
       const desired=count*resourceWeight(t.resource)/Math.max(1,totalWeight);
-      const value=d*.06+assigned[t.resource]/Math.max(.25,desired)*4+Math.min(1,(p.res[t.resource]||0)/10000);
+      const value=d*.22+assigned[t.resource]/Math.max(.25,desired)*4+Math.min(1,(p.res[t.resource]||0)/10000);
       if(value<score){score=value;best=t;}
      }
      if(best){g.tx=best.i%W;g.ty=(best.i/W)|0;g.resource=best.resource;assigned[best.resource]++;g.progress=0;g.route=null;occupied.add(best.i);}
