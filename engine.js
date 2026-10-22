@@ -3,7 +3,7 @@
 'use strict';
 const TROOPS_PER_PLAN_CELL=10,STORAGE_PER_CELL=50;
 function planCellLimit(s,id){return Math.min(W*H,Math.max(0,Math.floor(militaryStrength(s,id).total/TROOPS_PER_PLAN_CELL)));}
-const W=160,H=104,MAX=4,LAND=[1,2,3,4,5,6];
+const W=160,H=104,MAX=4,MAX_BUILDING_LEVEL=3,LAND=[1,2,3,4,5,6];
 const COLORS=['#39D5FF','#B6F36A','#FFAE57','#FF5D80','#B38CFF','#59E2C5','#FFE66B','#88A4FF','#EF96E6','#FF885D','#8CE3A1','#C3B5FF','#F8B9CA','#B7CCD9'];
 const KINDS={farm:{name:'Farm',cost:{wood:45,stone:10},income:'food'},lumber:{name:'Lumber Mill',cost:{wood:40,stone:15},income:'wood'},quarry:{name:'Quarry',cost:{wood:45,stone:20},income:'stone'},mine:{name:'Mine',cost:{wood:55,stone:55},income:'gold'},barracks:{name:'Barracks',cost:{wood:300,stone:195,gold:105}},fort:{name:'Fort',cost:{wood:315,stone:390,gold:165}},city:{name:'City',cost:{wood:495,stone:450,gold:300}}};
 const TECH={economy:{name:'Economy',base:{gold:120,wood:80}},war:{name:'Warfare',base:{gold:135,stone:75}},logistics:{name:'Logistics',base:{gold:100,wood:80}}};
@@ -66,7 +66,7 @@ function person(s,id){return s.players.find(p=>p.id===id);}
 const available=(p,c)=>Object.entries(c||{}).every(([k,v])=>(p.res[k]||0)>=v);
 const charge=(p,c)=>Object.entries(c).forEach(([k,v])=>p.res[k]-=v);
 function log(s,msg){s.log.unshift(msg);if(s.log.length>8)s.log.length=8;}
-function lobby(seed=57283){return {version:14,settings:{bots:0},phase:'lobby',seed:Math.floor(seed),tick:0,tiles:[],owners:[],players:[],buildings:[],armies:[],attackPlans:[],recoveryPlans:[],workZones:[],buildJobs:[],roads:[],workRevision:0,roadRevision:0,log:['Conquer land, develop your economy, and defend your capital.'],winner:null,mode:'conquest',duration:null,nonce:0,landTotal:0,territoryRevision:0,wars:[],peaceOffers:[]};}
+function lobby(seed=57283){return {version:14,settings:{bots:0},phase:'lobby',seed:Math.floor(seed),tick:0,tiles:[],owners:[],players:[],buildings:[],armies:[],attackPlans:[],recoveryPlans:[],workZones:[],buildJobs:[],roads:[],workRevision:0,roadRevision:0,log:['Conquer land, develop your economy, and defend your territory.'],winner:null,mode:'conquest',duration:null,nonce:0,landTotal:0,territoryRevision:0,wars:[],peaceOffers:[]};}
 function addPlayer(s,name,isBot=false){if(s.phase!=='lobby'||s.players.filter(p=>!p.bot).length>=MAX&&!isBot||s.players.length>=COLORS.length)return null;
  let id=1;while(s.players.some(p=>p.id===id))id++;let safe=String(name||('Kingdom '+id)).trim().slice(0,18)||('Player '+id);
  s.players.push({id,name:safe,bot:!!isBot,color:COLORS[(id-1)%COLORS.length],res:{food:650,wood:390,stone:310,gold:260},troops:450,troopCap:1700,land:0,ready:!!isBot,connected:true,spawnPreference:'auto',eliminated:false,attackTargets:[],tech:{economy:0,war:0,logistics:0},offers:[],allies:[],capital:null,kills:0});
@@ -127,7 +127,7 @@ function spawnError(s,id,x,y){
  if(!terrain[idx(x,y)]||terrain[idx(x,y)]===6)return 'Choose land outside mountain peaks.';
  for(const p of s.players){
   if(p.id===id||!p.spawnPoint)continue;
-  if((p.spawnPoint.x-x)**2+(p.spawnPoint.y-y)**2<14*14)return 'Choose a point farther from another capital.';
+  if((p.spawnPoint.x-x)**2+(p.spawnPoint.y-y)**2<14*14)return 'Choose a point farther from another starting position.';
  }
  return null;
 }
@@ -158,7 +158,7 @@ function start(s,bots=0){if(s.phase!=='lobby'||!s.players.length)return {ok:fals
   if(p.spawnPoint)placement.push({...p.spawnPoint});
   else{const pos=safeSpawn(s,positions[best],used);used.push(pos);placement.push(pos);}
  }
- placement.forEach((pos,i)=>{const p=s.players[i];claim(s,pos.x,pos.y,p.id,4);p.capital={x:pos.x,y:pos.y};building(s,p.id,'capital',pos.x,pos.y);
+ placement.forEach((pos,i)=>{const p=s.players[i];claim(s,pos.x,pos.y,p.id,4);p.capital={x:pos.x,y:pos.y};building(s,p.id,'city',pos.x,pos.y);
 
  });
  for(let i=0;i<2;i++)sealTerritories(s);
@@ -221,14 +221,6 @@ function nearestBorderLand(s,id,tx,ty){
  }
  return null;
 }
-function takeCapital(s,attacker,defender){
- const p=person(s,defender);if(!p||p.eliminated)return;
- // Losing the capital is a major setback, but never teleports distant provinces.
- const lost=Math.min(p.troops,Math.max(90,Math.floor(p.troops*.25)));
- p.troops-=lost;
- log(s,'Capital '+p.name+' captured! The remaining territory still resists.');
-}
-
 function parseTargets(s,id,values){
  if(!Array.isArray(values))return [];
  const p=person(s,id),targets=new Set();
@@ -354,7 +346,7 @@ function changePaintedPlan(s,id,a){
  return upsertPaintedPlan(s,id,a.zone??plan.zoneCells,a.targets??plan.targets??[plan.targetOwner],
   clamp(Number(a.percent)||plan.percent,5,95),plan.id,a.excludeTargets);
 }
-function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is not active.'};const p=person(s,id);
+function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is not active.'};normalizeBuildingRules(s);const p=person(s,id);
  if(!alive(p)||!a||typeof a!=='object')return {ok:false,error:'Command unavailable.'};
  if(a.type==='armyPosture'){
   if(!['aggressive','balanced','defensive'].includes(a.value))return {ok:false,error:'Choose an army posture.'};
@@ -518,7 +510,7 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
   if(!available(p,price))return {ok:false,error:'Not enough resources.'};charge(p,price);building(s,id,kind,x,y);return {ok:true,cost:price};
  }
  if(a.type==='upgrade'){
-  const b=s.buildings.find(v=>v.id===a.id&&v.owner===id);if(b?.upgrade)return {ok:false,error:'Upgrade already in progress.'};if(s.buildings.filter(b=>b.owner===id&&b.upgrade).length>=2)return {ok:false,error:'Finish one of your two active upgrades first.'};if(!b||b.level>=4)return {ok:false,error:'Maximum level reached.'};const price=costUpgrade(b);
+  const b=s.buildings.find(v=>v.id===a.id&&v.owner===id);if(b?.upgrade)return {ok:false,error:'Upgrade already in progress.'};if(s.buildings.filter(b=>b.owner===id&&b.upgrade).length>=2)return {ok:false,error:'Finish one of your two active upgrades first.'};if(!b||b.level>=MAX_BUILDING_LEVEL)return {ok:false,error:'Maximum level reached.'};const price=costUpgrade(b);
   if(!available(p,price))return {ok:false,error:'Not enough resources.'};
   charge(p,price);s.buildJobs??=[];
   const job={id:'j'+(++s.nonce),owner:id,kind:b.kind,x:b.x,y:b.y,upgradeOf:b.id,targetLevel:b.level+1,progress:0,cost:price};
@@ -613,7 +605,7 @@ function layRoad(s,p,i){
 }
 function workSuitable(s,id,resource,i){return Number.isInteger(i)&&i>=0&&i<W*H&&s.owners[i]===id&&WORK_RESOURCES[resource]?.includes(s.tiles[i]);}
 function workforceStats(s,id){
- const bases=s.buildings.filter(b=>b.owner===id&&['capital','city'].includes(b.kind));
+ const bases=s.buildings.filter(b=>b.owner===id&&b.kind==='city');
  const capacity=bases.reduce((n,b)=>n+24*b.level,0),groups=person(s,id)?.workers||[];
  const working=groups.filter(g=>g.resource&&g.progress>=3&&g.x===g.tx&&g.y===g.ty);
  return {capacity,groups:groups.length,working:working.reduce((n,g)=>n+g.count,0),
@@ -694,7 +686,7 @@ function workforceStep(s){
   s.buildJobs=s.buildJobs.filter(q=>q!==j);
  }
  for(const p of s.players){if(!alive(p))continue;
-  const bases=s.buildings.filter(b=>b.owner===p.id&&['capital','city'].includes(b.kind)),capacity=bases.reduce((n,b)=>n+b.level*24,0);
+  const bases=s.buildings.filter(b=>b.owner===p.id&&b.kind==='city'),capacity=bases.reduce((n,b)=>n+b.level*24,0);
   p.workers??=[];
   // Overrun civilians retreat locally; they never cross enemy land.
   p.workers=p.workers.filter(g=>{if(s.owners[idx(g.x,g.y)]===p.id)return true;
@@ -743,7 +735,7 @@ function workforceStep(s){
   const resourceWeight=r=>r===p.workPriority?4:1;
   const totalWeight=[...availableResources].reduce((n,r)=>n+resourceWeight(r),0);
   for(const g of p.workers)if(g.resource)occupied.add(idx(g.tx,g.ty));
-  const roadEnds=[...s.buildings.filter(b=>b.owner===p.id&&['city','barracks','capital'].includes(b.kind)),
+  const roadEnds=[...s.buildings.filter(b=>b.owner===p.id&&['city','barracks'].includes(b.kind)),
    ...s.armies.filter(a=>a.owner===p.id).flatMap(a=>(a.columns||[]).map(c=>({x:c.tx,y:c.ty})))];
   let routes=0;
   for(let n=0;n<p.workers.length;n++){
@@ -808,7 +800,7 @@ function workforceStep(s){
 }
 
 function homeSites(s,id){
- const bases=s.buildings.filter(b=>b.owner===id&&owner(s,b.x,b.y)===id&&['barracks','capital','city'].includes(b.kind));
+ const bases=s.buildings.filter(b=>b.owner===id&&owner(s,b.x,b.y)===id&&['barracks','city'].includes(b.kind));
  if(bases.length)return bases.sort((a,b)=>(a.kind==='barracks'?0:1)-(b.kind==='barracks'?0:1)||a.y-b.y||a.x-b.x);
  const i=s.owners.findIndex(v=>v===id);return i<0?[]:[{x:i%W,y:(i/W)|0,kind:'camp'}];
 }
@@ -897,7 +889,7 @@ function strategicWeight(s,id,x,y){
  const cell=idx(x,y);if(entry.values.has(cell))return entry.values.get(cell);
  let weight=1;
  for(const b of entry.buildings){const d=Math.abs(b.x-x)+Math.abs(b.y-y);
-  if(d<=12)weight+=({capital:8,city:5,barracks:4,fort:3}[b.kind]||2)*(b.level||1)*(1-d/13);
+  if(d<=12)weight+=({city:5,barracks:4,fort:3}[b.kind]||2)*(b.level||1)*(1-d/13);
  }
  const f=p?.armyFocus;if(f&&entry.focusValid){const d=Math.abs(f.x-x)+Math.abs(f.y-y);weight+=1000/(1+d/5);}
  entry.values.set(cell,weight);return weight;
@@ -925,7 +917,7 @@ function defensePosts(s,p){
   for(const c of threats){const d=near(b,c);
    if(d<=12)weight+=Math.min(40,Math.sqrt(c.strength/25))*Math.pow(1-d/13,2);
   }
-  if(s.buildings.some(base=>base.owner===p.id&&['city','capital'].includes(base.kind)&&near(base,b)<=8))weight+=2;
+  if(s.buildings.some(base=>base.owner===p.id&&base.kind==='city'&&near(base,b)<=8))weight+=2;
   if(s.buildings.some(base=>base.owner===p.id&&base.kind==='fort'&&near(base,b)<=4))weight+=1;
   candidates.push({...b,weight,role:'Guard'});
  }
@@ -1191,7 +1183,7 @@ function tileDefense(s,id,x,y){let n=3;const defender=person(s,id);if(!defender)
  n+=(local+deployed)/25;
  n+=defender.tech.war*1.9;
  for(const b of s.buildings){if(b.owner!==id)continue;const d=Math.abs(b.x-x)+Math.abs(b.y-y);
-  if(b.kind==='capital'&&d<=3)n+=(d===0?90:11)*Math.sqrt(b.level);
+  // No special capital-defense bonus.
   if(b.kind==='fort'&&d<=4)n+=Math.max(0,5-d)*b.level*3.7;
   if(b.kind==='city'&&d<=2)n+=b.level*4;
  }
@@ -1205,7 +1197,7 @@ function capture(s,a,x,y){const old=owner(s,x,y),p=person(s,a.owner);if(old===a.
  if(old){const def=person(s,old);loseReserve(s,def,Math.max(0.8,cost*.43),x,y);}
  gainTile(s,x,y,p.id);a.captured=(a.captured||0)+1;
  const b=buildingAt(s,x,y);
- if(b&&b.owner!==p.id){if(b.kind==='capital'){takeCapital(s,p.id,b.owner);b.kind='city';}b.owner=p.id;b.level=Math.max(1,b.level-1);}
+ if(b&&b.owner!==p.id){b.owner=p.id;b.level=Math.max(1,b.level-1);}
  return true;
 }
 // Territorial-style front propagation: conquer COMPLETE BORDER LAYERS, not the
@@ -1393,7 +1385,7 @@ function advancePlannedWave(s,a,plan){
   }
   gainTile(s,x,y,p.id);a.captured=(a.captured||0)+1;
   const b=buildingAt(s,x,y);
-  if(b&&b.owner!==p.id){if(b.kind==='capital'){takeCapital(s,p.id,b.owner);b.kind='city';}b.owner=p.id;b.level=Math.max(1,b.level-1);}
+  if(b&&b.owner!==p.id){b.owner=p.id;b.level=Math.max(1,b.level-1);}
  }
  const next=planFrontier(s,plan);
  a.frontCells=next;a.turns++;a.stuck=0;a.rebalanceAttempt=null;
@@ -1594,7 +1586,17 @@ function combatStep(s){if(s.phase!=='playing')return;
  for(const a of [...s.armies])if(a.strength>0)advance(s,a);
  s.armies=s.armies.filter(a=>a.strength>=8||a.awaitingReinforcements||a.waitingForRoute);
 }
-function tick(s){if(s.phase!=='playing')return;s.tick++;
+// Upgrade old saved matches without deleting the player's spawn anchor.
+function normalizeBuildingRules(s){
+ if(!s?.buildings)return;
+ for(const b of s.buildings){
+  if(b.kind==='capital')b.kind='city';
+  b.level=clamp(Math.floor(b.level||1),1,MAX_BUILDING_LEVEL);
+  if(b.upgrade?.level>MAX_BUILDING_LEVEL)delete b.upgrade;
+ }
+ s.buildJobs=(s.buildJobs||[]).filter(j=>!j.upgradeOf||j.targetLevel<=MAX_BUILDING_LEVEL);
+}
+function tick(s){if(s.phase!=='playing')return;normalizeBuildingRules(s);s.tick++;
  adoptLegacyOffensives(s);
  workforceStep(s);
  for(const p of s.players){if(!alive(p))continue;income(s,p);}
