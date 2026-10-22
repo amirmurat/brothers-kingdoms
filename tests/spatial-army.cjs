@@ -30,7 +30,7 @@ const sum=p=>p.garrisons.reduce((n,g)=>n+g.strength,0);
  assert(t.p.garrisons.every(g=>E.homeSites(t.s,t.id).some(b=>b.x===g.x&&b.y===g.y)),'Peaceful squads return to bases');
 }
 {
- const t=fixture();t.s.buildings=t.s.buildings.filter(b=>b.kind==='capital');
+ const t=fixture();t.s.buildings=t.s.buildings.filter(b=>b.kind==='city');
  const i=E.idx(71,30);E.action(t.s,t.id,{type:'setNationTarget',target:t.enemy,enabled:true});
  assert(E.action(t.s,t.id,{type:'send',x:71,y:30,zone:[i],percent:50}).ok);
  const a=t.s.armies[0];assert(a?.marching,'Attack starts with physical march from home');
@@ -46,7 +46,7 @@ const sum=p=>p.garrisons.reduce((n,g)=>n+g.strength,0);
  assert(t.p.garrisons.every(g=>!g.returning),'Survivors physically reach home');
 }
 {
- const t=fixture();t.s.buildings=t.s.buildings.filter(b=>b.kind==='capital');
+ const t=fixture();t.s.buildings=t.s.buildings.filter(b=>b.kind==='city');
  for(let y=20;y<=40;y++)t.s.owners[E.idx(45,y)]=0;
  E.action(t.s,t.id,{type:'setNationTarget',target:t.enemy,enabled:true});
  const result=E.action(t.s,t.id,{type:'send',x:71,y:30,zone:[E.idx(71,30)],percent:50});
