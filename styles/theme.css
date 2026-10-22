@@ -3332,3 +3332,50 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
  #game#game#game#game #buildDock button>.building-art{width:27px!important;height:27px!important;flex-basis:27px!important}
  #game#game#game#game #resourceSummary.resource-hud>[data-resource]>.resource-heading>img.tiny-resource-art{width:16px!important;height:16px!important;flex-basis:16px!important}
 }
+
+
+/* v107 — symmetric map gutters and single-toggle tactical tools.
+   The right tools and the left brush rail use the same 12px safe-area inset. */
+#game#game#game#game#game {
+ --map-tool-gutter:12px;
+}
+#game#game#game#game#game #planToolSwitch{
+ left:auto!important;
+ right:calc(var(--map-tool-gutter) + env(safe-area-inset-right,0px))!important;
+ margin-right:0!important;
+}
+#game#game#game#game#game #planControls{
+ left:calc(var(--map-tool-gutter) + env(safe-area-inset-left,0px))!important;
+ right:auto!important;margin-left:0!important;
+ padding:0!important;
+}
+#game#game#game#game#game #mapNavigation{
+ left:calc(var(--map-tool-gutter) + env(safe-area-inset-left,0px))!important;
+ right:auto!important;
+}
+/* Paint = Clear / Launch; Focus = Clear; Eraser = Reset / Apply. */
+#game#game#game#game#game :is(#planGuide,#armyFocusGuide,#planEraseHint)>.plan-guide-actions{
+ grid-auto-flow:row!important;
+ grid-template-columns:minmax(0,1fr) minmax(0,2fr)!important;
+ gap:8px!important;
+}
+#game#game#game#game#game #armyFocusGuide>.plan-guide-actions{
+ grid-template-columns:minmax(0,1fr)!important;
+}
+#game#game#game#game#game :is(#planGuide,#armyFocusGuide,#planEraseHint)>.plan-guide-actions>button{
+ width:100%!important;min-width:0!important;margin:0!important;
+}
+#game#game#game#game#game #planGuide #planPaintClear:not(:disabled){
+ background:#4b363d!important;color:#ffe1e5!important;
+}
+#game#game#game#game#game #planGuide #planPaintClear:disabled{
+ background:#222b35!important;color:#8592a0!important;
+}
+@media(max-height:480px) and (orientation:landscape){
+ #game#game#game#game#game #planControls{
+  left:calc(var(--map-tool-gutter) + env(safe-area-inset-left,0px))!important;
+ }
+ #game#game#game#game#game #planToolSwitch{
+  right:calc(var(--map-tool-gutter) + env(safe-area-inset-right,0px))!important;
+ }
+}
