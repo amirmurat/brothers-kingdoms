@@ -8,7 +8,7 @@ const server=http.createServer((req,res)=>{
  try{
   let body=fs.readFileSync(file);
   if(name==='/'||name==='/index.html')body=body.toString().split('\n').filter(line=>!line.includes('unpkg.com/peerjs')).join('\n');
-  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={focusCandidate:()=>{const p=mine().capital,r=canvas.getBoundingClientRect();for(let dy=-12;dy<=12;dy++)for(let dx=-12;dx<=12;dx++){const x=p.x+dx,y=p.y+dy;if(E.inside(x,y)&&x>10&&x<E.W-10&&y>10&&y<E.H-10&&E.tile(state,x,y)&&E.owner(state,x,y)===0){zoom=.55;camX=canvas.clientWidth/2-(x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(y+.5)*TILE*zoom;clampCamera();draw();return {x:r.left+camX+(x+.5)*TILE*zoom,y:r.top+camY+(y+.5)*TILE*zoom};}}return null;},beginAttackPlanner,brushAt,refreshPaintGuide,syncPaintEligibility,resetAttackPlanner,getPlanner:()=>attackPlanner,buildingCells,drawHarvestSites,buildingLevelColor,roofSprite,roofBase,buildingSpritePath,buildingTileBounds,fortLevelSprites,farmLevelSprites,drawMapBuilding,repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,nationLabelAnchors,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
+  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={focusCandidate:()=>{const p=mine().capital,r=canvas.getBoundingClientRect();for(let dy=-12;dy<=12;dy++)for(let dx=-12;dx<=12;dx++){const x=p.x+dx,y=p.y+dy;if(E.inside(x,y)&&x>10&&x<E.W-10&&y>10&&y<E.H-10&&E.tile(state,x,y)&&E.owner(state,x,y)===0){zoom=.55;camX=canvas.clientWidth/2-(x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(y+.5)*TILE*zoom;clampCamera();draw();return {x:r.left+camX+(x+.5)*TILE*zoom,y:r.top+camY+(y+.5)*TILE*zoom};}}return null;},beginAttackPlanner,brushAt,refreshPaintGuide,syncPaintEligibility,resetAttackPlanner,getPlanner:()=>attackPlanner,buildingCells,drawHarvestSites,buildingLevelColor,roofSprite,roofBase,buildingSpritePath,buildingTileBounds,ownedLevelSprites,farmLevelSprites,drawMapBuilding,repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,nationLabelAnchors,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
   res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream'});res.end(body);
  }catch(_){res.writeHead(404);res.end();}
 });
@@ -322,89 +322,57 @@ const server=http.createServer((req,res)=>{
    const tiers=await page.evaluate(()=>['city','barracks','fort'].map(kind=>new Set([1,2,3,4,5].map(level=>window.__layout.buildingLevelColor({kind,level}))).size));
    assert(tiers.every(n=>n===5),label+' roof levels have five distinct owner-color shades');
    assert.equal(new Set(typeColors).size,1,label+' building type never changes the nation/level color');
-   const roofs=await page.evaluate(async()=>{
+   const ownedArt=await page.evaluate(async()=>{
     const L=window.__layout,s=L.getState(),me=s.players.find(p=>!p.bot),enemy=s.players.find(p=>p.id!==me.id);
-    await Promise.all(['capital','city','barracks'].map(kind=>new Promise(resolve=>{
-     const img=new Image();img.onload=resolve;img.onerror=resolve;img.src=L.buildingSpritePath(kind);
-    })));
-    const sourceCity=L.buildingSpritePath('city'),sourceCapital=L.buildingSpritePath('capital'),sourceBarracks=L.buildingSpritePath('barracks');
-    const first=L.roofSprite('city',me.id,1),high=L.roofSprite('city',me.id,4);
-    const second=enemy?L.roofSprite('city',enemy.id,1):null;
-    const base=L.roofBase('city'),original=base?.pixels.data;
-    const p1=first?.getContext?.('2d')?.getImageData(0,0,first.width,first.height).data;
-    const p4=high?.getContext?.('2d')?.getImageData(0,0,high.width,high.height).data;
-    const pe=second?.getContext?.('2d')?.getImageData(0,0,second.width,second.height).data;
-    const mask=new Set(base?.mask||[]);
-    let tinted=0,graded=0,owners=0,nonRoofChanges=0;
-    for(let i=0;i<(original?.length||0);i+=4){
-     const changed=p1&&[0,1,2].some(k=>p1[i+k]!==original[i+k]);
-     if(!changed)continue;
-     tinted++;
-     if(p4&&[0,1,2].some(k=>p4[i+k]!==p1[i+k]))graded++;
-     if(pe&&[0,1,2].some(k=>pe[i+k]!==p1[i+k]))owners++;
-     if(!mask.has(i))nonRoofChanges++;
-    }
-    return {sourceCity,sourceCapital,sourceBarracks,tinted,graded,owners,nonRoofChanges,enemy:!!enemy,
-      contextTint:!!first?.toDataURL,keepsAlpha:p1&&p1[3]===original[3]};
-   });
-   assert.equal(roofs.sourceCity,roofs.sourceCapital,label+' city uses the former capital artwork');
-   assert(roofs.sourceBarracks.endsWith('/city.png'),label+' barracks uses the former city artwork');
-   assert(roofs.tinted>0&&roofs.graded>0,label+' actual roof pixels recolor and gain levels');
-   if(roofs.enemy)assert(roofs.owners>0,label+' the roof changes with country');
-   assert.equal(roofs.nonRoofChanges,0,label+' wall, wood and ground pixels remain unchanged');
-   assert(roofs.keepsAlpha&&roofs.contextTint,label+' roof transparency is preserved and can be shown in context');
-   const classicFort=await page.evaluate(async()=>{
-    const L=window.__layout,s=L.getState(),me=s.players.find(p=>!p.bot),enemy=s.players.find(p=>p.id!==me.id);
-    const urls=[1,2,3,4].map(level=>L.buildingSpritePath('fort',level));
-    const img=L.fortLevelSprites[1];
-    const loaded=await new Promise(resolve=>{
-      if(img?.complete&&img.naturalWidth)return resolve(true);
-      if(!img)return resolve(false);
-      img.addEventListener('load',()=>resolve(true),{once:true});
-      img.addEventListener('error',()=>resolve(false),{once:true});
-    });
-    const original=L.roofBase('fort',1),base=original?.pixels.data;
-    const pixels=im=>{
-      if(!im)return null;
-      const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
-      const ct=c.getContext('2d');ct.drawImage(im,0,0);
-      return ct.getImageData(0,0,c.width,c.height).data;
-    };
-    const own=pixels(L.roofSprite('fort',me.id,1)),
-      foreign=enemy?pixels(L.roofSprite('fort',enemy.id,1)):null,
-      tier3=pixels(L.roofSprite('fort',me.id,3));
-    const mask=new Set(original?.mask||[]);
-    let colored=0,otherChanged=0,alphaChanged=0,countryDiff=0,levelDiff=0;
-    for(let i=0;i<(base?.length||0);i+=4){
-      if(own&&[0,1,2].some(ch=>own[i+ch]!==base[i+ch])){
-        colored++;if(!mask.has(i))otherChanged++;
+    await Promise.all(['city','barracks','fort'].flatMap(kind=>[1,2,3].map(level=>new Promise(resolve=>{
+     const img=L.ownedLevelSprites[kind]?.[level];if(img?.complete&&img.naturalWidth)return resolve();
+     img?.addEventListener('load',resolve,{once:true});img?.addEventListener('error',resolve,{once:true});
+     if(!img)resolve();
+    }))));
+    let variants=0,wrongSize=0,wrongPath=0,identical=0,colored=0,neutralModified=0,countryDifferent=0;
+    const pix=im=>{if(!im)return null;const canvas=document.createElement('canvas');canvas.width=32;canvas.height=32;canvas.getContext('2d').drawImage(im,0,0);return canvas.getContext('2d').getImageData(0,0,32,32).data;};
+    const diff=(a,b)=>a&&b&&a.some((v,i)=>v!==b[i]);
+    for(const kind of ['city','barracks','fort']){
+     const images=[1,2,3].map(level=>L.ownedLevelSprites[kind][level]),originals=images.map(pix);
+     if(!diff(originals[0],originals[1])||!diff(originals[1],originals[2]))identical++;
+     for(const level of [1,2,3]){
+      const img=images[level-1],url=L.buildingSpritePath(kind,level);
+      if(img?.naturalWidth!==32||img?.naturalHeight!==32)wrongSize++;
+      if(!url.endsWith('assets/player/owned/'+kind+'/level-'+level+'.png'))wrongPath++;
+      if(L.roofSprite(kind,me.id,level))variants++;
+      const orig=originals[level-1],tinted=pix(L.roofSprite(kind,me.id,level));
+      const mask=new Set(L.roofBase(kind,level)?.mask||[]);
+      for(let i=0;i<orig.length;i+=4)if([0,1,2,3].some(j=>orig[i+j]!==tinted[i+j])){
+       if(!mask.has(i)||orig[i+3]!==tinted[i+3])neutralModified++;
+       else colored++;
       }
-      if(own&&own[i+3]!==base[i+3])alphaChanged++;
-      if(foreign&&mask.has(i)&&[0,1,2].some(ch=>foreign[i+ch]!==own[i+ch]))countryDiff++;
-      if(tier3&&mask.has(i)&&[0,1,2].some(ch=>tier3[i+ch]!==own[i+ch]))levelDiff++;
+     }
+     if(enemy){
+      const a=pix(L.roofSprite(kind,me.id,1)),b=pix(L.roofSprite(kind,enemy.id,1));
+      if(diff(a,b))countryDifferent++;
+     }
     }
-    const context=document.getElementById('mapCanvas').getContext('2d');
-    const before=context.drawImage;let drawn=0;
-    try{
-      context.drawImage=function(...args){drawn++;return before.apply(this,args);};
-      for(const [x,y,level] of [[20,20,1],[21,20,2],[20,21,3],[21,21,4]])
-        L.drawMapBuilding({kind:'fort',x,y,owner:me.id,level});
-    }finally{context.drawImage=before;}
-    const bounds=L.buildingTileBounds({x:10,y:15}),neighbor=L.buildingTileBounds({x:11,y:15});
-    return {urls,loaded,sourceSize:[img?.naturalWidth,img?.naturalHeight],colored,
-     maskCount:mask.size,otherChanged,alphaChanged,countryDiff,levelDiff,
-     hasEnemy:!!enemy,drawn,bounds,neighbor};
+    const engine=window.BKEngine,lobby=engine.lobby(8127);
+    engine.addPlayer(lobby,'Alpha');engine.addPlayer(lobby,'Beta');
+    const started=engine.start(lobby,0);
+    const spawnIsCity=started.ok&&lobby.players.every(p=>lobby.buildings.some(b=>b.kind==='city'&&b.owner===p.id&&b.x===p.capital.x&&b.y===p.capital.y));
+    const noCapitals=lobby.buildings.every(b=>b.kind!=='capital');
+    const p=lobby.players[0],b=lobby.buildings.find(b=>b.owner===p.id&&b.kind==='city');
+    b.level=3;
+    const upgrade=engine.action(lobby,p.id,{type:'upgrade',id:b.id});
+    b.level=4;engine.tick(lobby);const migrated=b.level===3;
+    return {variants,wrongSize,wrongPath,identical,colored,neutralModified,countryDifferent,
+     enemy:!!enemy,spawnIsCity,noCapitals,maxStopped:!upgrade.ok&&upgrade.error==='Maximum level reached.',migrated,
+     noCapitalSource:!L.buildingSpritePath('city',1).includes('capital.png')};
    });
-   assert(classicFort.loaded&&classicFort.sourceSize.every(n=>n>0),label+' original Tiny Swords Fort image loads');
-   assert(classicFort.urls.every(url=>url.endsWith('/tiny-swords-cc0/buildings/fort.png')),label+' every Fort level uses the original shared building set');
-   assert.equal(classicFort.neighbor.x-classicFort.bounds.x,classicFort.bounds.width,label+' fixed cell dimensions for classic Fort');
-   assert.equal(classicFort.bounds.width,classicFort.bounds.height,label+' zoom does not change Fort cell geometry');
-   assert(classicFort.colored>0&&classicFort.maskCount>0,label+' classic Fort blue roof picks up country hue');
-   assert.equal(classicFort.otherChanged,0,label+' non-roof pixels are unchanged');
-   assert.equal(classicFort.alphaChanged,0,label+' classic Fort transparency is unchanged');
-   if(classicFort.hasEnemy)assert(classicFort.countryDiff>0,label+' Fort roof follows country color');
-   assert(classicFort.levelDiff>0,label+' Fort upgrade tint still has distinct variants');
-   assert.equal(classicFort.drawn,4,label+' each fort renders independently, no adjoining wall sprites');
+   assert.equal(ownedArt.variants,9,label+' all nine original owner sprites render at their three levels');
+   assert.equal(ownedArt.wrongSize,0,label+' all new sprites are native 32x32');
+   assert.equal(ownedArt.wrongPath,0,label+' all city, barracks and fort levels use the owner PNGs');
+   assert.equal(ownedArt.identical,0,label+' upgrade levels have distinct pixel silhouettes');
+   assert(ownedArt.colored>0&&ownedArt.neutralModified===0,label+' faction color modifies only the precise lime pixels');
+   if(ownedArt.enemy)assert.equal(ownedArt.countryDifferent,3,label+' each building changes lime accent by country');
+   assert(ownedArt.spawnIsCity&&ownedArt.noCapitals&&ownedArt.noCapitalSource,label+' start uses City not Capital building');
+   assert(ownedArt.maxStopped&&ownedArt.migrated,label+' level 4 is blocked and old saves are capped at level 3');
    const farmArt=await page.evaluate(async()=>{
     const L=window.__layout,s=L.getState(),me=s.players.find(p=>!p.bot);
     const paths=[1,2,3,4].map(level=>L.buildingSpritePath('farm',level));
