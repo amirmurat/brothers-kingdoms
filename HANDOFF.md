@@ -1,5 +1,18 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 
+## START HERE — v108 owner Fort & tile-locked building art (22.10.2026)
+
+**Correct working branch:** `design/visual-review-v26`, continuing v107. Do NOT update old `main` or claim old GitHub Pages reflects this branch. Client cache: `108-grid-sprites-fort-r1`.
+
+**Owner upload:** `Fort(3).png` was supplied as a revised 32×32 original PNG; imported **byte-identically** to `assets/player/fort.png` (SHA-256 `ffa229732c1d026e02a940fe7b76122dba9a2ca5ecfd2d777638f44981e54d0a`). Unlike questionable third-party old-version provenance, this Fort is user-created. The **exact lime `#CFFF70`** is 132 opaque pixels and is *the only palette region* recolored to country hue, with level brightness/saturation variation. The 6 other original palette entries including transparent background remain unchanged. Do not publish this art as Pixel Frog / CC0; ownership terms in `assets/player/README.md`.
+
+**Rendering contract:** `buildingTileBounds(b)` returns `{x:b.x*TILE,y:b.y*TILE,width:TILE,height:TILE}`. Every building renders to **exactly one world cell**, independent of zoom; ONLY the camera zooms the entire terrain+sprite layer. Never apply reciprocal zoom (`screenH/zoom`), screen-sized marker cards, enlarged sprites, or zoom-triggered building aggregation. `drawMapBuilding` uses pixelated nearest neighbor; label overlay appears only on deep zoom `zoom>=2.35`. Capital's pennant stays inside its cell. World-space 1-cell anchors ensure future neighboring art joins without disconnected pixel offsets. `buildingConnectMask(b,byCell)` provides stable four-direction adjacency N=1/E=2/S=4/W=8, requiring identical type **and** same faction/owner, with all 16 combinations; it is **the topology API** for future user-drawn connected wall/city tile variants, not a claim those variant PNGs already exist. Current Fort frame still has transparent margins, so **truly seamless joined edges require future tiles with painted pixels up to the appropriate border**.
+
+**Code:** `game.js` routes only Fort to `assets/player/fort.png`, retaining other building file paths; matches lime exactly in `roofBase`; caches owner/level variants by full asset URL. No changes to gameplay rules. `index.html` assets bust; `tests/mobile-layout.cjs` checks 32×32 source, 132-pixel lime-only recolor, 1-tile bounding box, same-owner Fort east adjacency, different-type exclusion. All existing world/road/render/UI code left in place. Recheck GitHub Actions after final docs changes; no real iPhone verification or Cloudflare publish confirmed.
+
+---
+
+
 ## START HERE — v107 mobile map clarity, mode UI and builder scheduling (22.10.2026)
 
 **Working code** remains on `design/visual-review-v26` (Cloudflare Workers version lineage v106, not old `main`). Current cache key `107-map-tools-workers-r1`. Owner provided five physical iPhone screenshots showing shimmer in close/low-zoom Tiny Swords buildings, obstructed borders, redundant bottom Exit buttons, asymmetric brush rail versus right toolbar, dead Clear All plan action, disappearing saved army focus after leaving the mode, and unintelligent builders.
