@@ -732,6 +732,53 @@ function repaintWorld(){
  terrainSeed=state.seed;paintedRevision=revision;miniRevision=-1;
 }
 function hexAlpha(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;}
+// v27: visual treatment only. Cache a dark pixel-perfect silhouette around the ORIGINAL art.
+const outlinedBuildingCache=new WeakMap();
+function outlinedBuildingSprite(source){
+ if(!source?.width||('naturalWidth' in source&&!source.naturalWidth))return null;
+ const cached=outlinedBuildingCache.get(source);if(cached)return cached;
+ const pad=2,surface=document.createElement('canvas');
+ surface.width=source.width+pad*2;surface.height=source.height+pad*2;
+ const ink=surface.getContext('2d');ink.imageSmoothingEnabled=false;
+ for(const [dx,dy] of [[-2,-2],[0,-2],[2,-2],[-2,0],[2,0],[-2,2],[0,2],[2,2]]){
+  ink.drawImage(source,pad+dx,pad+dy);
+ }
+ ink.globalCompositeOperation='source-in';ink.fillStyle='#10251c';
+ ink.fillRect(0,0,surface.width,surface.height);
+ ink.globalCompositeOperation='source-over';ink.drawImage(source,pad,pad);
+ outlinedBuildingCache.set(source,surface);return surface;
+}
+function drawVisibleBuilding(b,x,footY,ownerColor){
+ ctx.save();ctx.translate(x,footY);ctx.scale(1/zoom,1/zoom);
+ const overview=zoom<.40,isCapital=b.kind==='capital';
+ if(overview){
+  // Detail cannot survive this zoom. A small contrast marker stays recognizable as a building.
+  const radius=zoom<.24?5:(isCapital?8:6.5);
+  ctx.beginPath();ctx.arc(0,-6,radius+2,0,Math.PI*2);
+  ctx.fillStyle='rgba(12,26,23,.95)';ctx.fill();
+  ctx.strokeStyle='#fff6d8';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.beginPath();ctx.arc(0,-6,radius-1,0,Math.PI*2);
+  ctx.fillStyle=isCapital?'#f4cf7a':ownerColor;ctx.fill();
+  ctx.fillStyle='#fffdf1';ctx.fillRect(-1.2,-7.2,2.4,2.4);
+ }else{
+  // A neutral base separates the building from similarly coloured terrain and player land.
+  ctx.beginPath();ctx.ellipse(0,-4,16.5,7.5,0,0,Math.PI*2);
+  ctx.fillStyle='rgba(12,26,23,.86)';ctx.fill();
+  ctx.strokeStyle=ownerColor;ctx.lineWidth=2;ctx.stroke();
+  const source=townSprites[b.kind]||iconImages[b.kind],sprite=outlinedBuildingSprite(source);
+  if(sprite){
+   const size=Math.max(34,Math.min(39,31+zoom*7)),drawSize=size+4;
+   const smoothing=ctx.imageSmoothingEnabled;ctx.imageSmoothingEnabled=false;
+   ctx.drawImage(sprite,-drawSize/2,-drawSize*1.08+1,drawSize,drawSize*1.08);
+   ctx.imageSmoothingEnabled=smoothing;
+  }
+ }
+ if(selected?.kind==='building'&&selected.id===b.id){
+  ctx.beginPath();ctx.arc(0,-6,overview?13:22,0,Math.PI*2);
+  ctx.strokeStyle='#ffffff';ctx.lineWidth=2;ctx.stroke();
+ }
+ ctx.restore();
+}
 function drawFortRange(x,y,preview){
  const t=TILE,r=4;
  ctx.save();ctx.fillStyle=preview?'rgba(255,210,71,.23)':'rgba(255,211,95,.18)';
@@ -767,24 +814,13 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   }
   ctx.stroke();
  }
- // Logical footprint is exactly one cell; 3/4 roofs rise above it uncropped.
+ // Building art is unchanged; its contrast treatment and distant markers depend on zoom.
  ctx.textAlign='center';ctx.textBaseline='middle';
  for(const b of [...state.buildings].sort((a,b)=>a.y-b.y)){
   const x=(b.x+.5)*TILE,y=(b.y+.5)*TILE;
   if(x*zoom+camX<-55||x*zoom+camX>w+55||y*zoom+camY<-55||y*zoom+camY>h+55)continue;
-  const ownerColor=color(b.owner);
-  ctx.save();ctx.globalAlpha=.22;ctx.fillStyle=ownerColor;
-  ctx.fillRect(b.x*TILE+.8,b.y*TILE+.8,TILE-1.6,TILE-1.6);ctx.restore();
-  ctx.strokeStyle=ownerColor;ctx.lineWidth=1.5/Math.max(.7,zoom);
-  ctx.strokeRect(b.x*TILE+.8,b.y*TILE+.8,TILE-1.6,TILE-1.6);
-  const spriteW=Math.min(32/Math.max(.3,zoom),Math.max(TILE*1.22,24/Math.max(.3,zoom)));
-  const spriteH=spriteW*1.08,footY=y+TILE*.49;
-  const sprite=townSprites[b.kind]||iconImages[b.kind];
-  if(sprite?.width&&(!('naturalWidth' in sprite)||sprite.naturalWidth)){
-   const smoothing=ctx.imageSmoothingEnabled;ctx.imageSmoothingEnabled=false;
-   ctx.drawImage(sprite,x-spriteW*.5,footY-spriteH,spriteW,spriteH);
-   ctx.imageSmoothingEnabled=smoothing;
-  }
+  const ownerColor=color(b.owner),footY=y+TILE*.49;
+  drawVisibleBuilding(b,x,footY,ownerColor);
   if(b.kind==='capital'&&zoom>.39){
    const p=E.person(state,b.owner),label=(p?.id||'?')+' · '+(p?.name||'');
    ctx.font='750 '+Math.max(9,11/zoom)+'px system-ui';
