@@ -12,8 +12,13 @@ const BUILDING_SPRITE_FILES={city:'capital',barracks:'city'};
 const buildingSpriteFile=kind=>BUILDING_SPRITE_FILES[kind]||kind;
 // Player-authored sprite is stored separately from third-party art.
 const FORT_LEVEL_PATH='assets/player/fort-levels/';
+const FARM_LEVEL_PATH='assets/player/drafts/farm/';
 const fortArtLevel=level=>Math.min(3,Math.max(1,Math.floor(level||1)));
-const buildingSpritePath=(kind,level=1)=>kind==='fort'?FORT_LEVEL_PATH+'level-'+fortArtLevel(level)+'.png':OLD_CC0+'buildings/'+buildingSpriteFile(kind)+'.png';
+const farmArtLevel=level=>Math.min(3,Math.max(1,Math.floor(level||1)));
+const buildingSpritePath=(kind,level=1)=>
+ kind==='fort'?FORT_LEVEL_PATH+'level-'+fortArtLevel(level)+'.png':
+ kind==='farm'?FARM_LEVEL_PATH+'level-'+farmArtLevel(level)+'.png':
+ OLD_CC0+'buildings/'+buildingSpriteFile(kind)+'.png';
 const uiIcon=name=>{
  if(CC0_BUILDINGS.has(name))return `<img class="ui-icon tiny-building-art" src="${buildingRoofUrl(name,state?.phase==='playing'?myId:null,1)}" alt="" aria-hidden="true"/>`;
  if(CC0_RESOURCES.has(name))return `<img class="ui-icon tiny-resource-art" src="${OLD_CC0}resources/${name}.png" alt="" aria-hidden="true"/>`;
@@ -1634,6 +1639,15 @@ if(typeof Image==='function')for(const level of [2,3]){
  img.onload=()=>{roofSpriteCache.clear();roofBasePixels.clear();queueDraw();};
  img.src=buildingSpritePath('fort',level);
 }
+// Three authored farm designs progress visibly from soil to growing crops
+// to mature wheat. All are 32x32, top-down, and occupy one fixed map tile.
+const farmLevelSprites=Object.create(null);
+farmLevelSprites[1]=mapBuildingSprites.farm;
+if(typeof Image==='function')for(const level of [2,3]){
+ const img=new Image();farmLevelSprites[level]=img;
+ img.onload=()=>{roofSpriteCache.clear();roofBasePixels.clear();queueDraw();};
+ img.src=buildingSpritePath('farm',level);
+}
 // Tiny Swords old CC0 terrain sheets; no new mechanics. Off-screen world bitmap
 // is repainted only for changed cells, never per animation frame.
 const tinyTerrain=Object.create(null);
@@ -1679,8 +1693,10 @@ function fortBrickColor(r,g,b,hue,saturation,level){
  return hsvRGB(hue,sat,value);
 }
 function roofBase(kind,level=1){
- const visualLevel=kind==='fort'?fortArtLevel(level):1;
- const src=kind==='fort'?(fortLevelSprites[visualLevel]||mapBuildingSprites.fort):mapBuildingSprites[kind];
+ const visualLevel=kind==='fort'?fortArtLevel(level):kind==='farm'?farmArtLevel(level):1;
+ const src=kind==='fort'?(fortLevelSprites[visualLevel]||mapBuildingSprites.fort):
+  kind==='farm'?(farmLevelSprites[visualLevel]||mapBuildingSprites.farm):
+  mapBuildingSprites[kind];
  const file=buildingSpritePath(kind,visualLevel);
  if(!src?.naturalWidth||!src.naturalHeight)return null;
  const known=roofBasePixels.get(file);
@@ -1703,9 +1719,14 @@ function roofBase(kind,level=1){
  roofBasePixels.set(file,base);return base;
 }
 function roofSprite(kind,owner,level=1){
- const visualLevel=kind==='fort'?fortArtLevel(level):level;
- const src=kind==='fort'?(fortLevelSprites[fortArtLevel(level)]||mapBuildingSprites.fort):mapBuildingSprites[kind];
- if(!src?.naturalWidth||owner==null)return src;
+ const visualLevel=kind==='fort'?fortArtLevel(level):kind==='farm'?farmArtLevel(level):level;
+ const src=kind==='fort'?(fortLevelSprites[fortArtLevel(level)]||mapBuildingSprites.fort):
+  kind==='farm'?(farmLevelSprites[farmArtLevel(level)]||mapBuildingSprites.farm):
+  mapBuildingSprites[kind];
+ // Farm color indicates agriculture stage, not a country or building type.
+ // Do not recolor green crops, golden wheat, or water to ownership hues;
+ // political territory borders already show country ownership on the map.
+ if(kind==='farm'||!src?.naturalWidth||owner==null)return src;
  const hex=color(owner),key=buildingSpritePath(kind,visualLevel)+'|'+hex+'|'+Math.min(4,Math.max(1,visualLevel|0));
  if(roofSpriteCache.has(key))return roofSpriteCache.get(key);
  try{
