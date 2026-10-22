@@ -1784,20 +1784,60 @@ function buildingTypeMarker(kind,owner){
 function buildingTileBounds(b){
  return {x:b.x*TILE,y:b.y*TILE,width:TILE,height:TILE};
 }
+// v118: visual enhancement only. Never modify the original owner's PNG pixels.
+const buildingOutlineCache=new WeakMap();
+function outlinedMapBuilding(source){
+ if(!source)return null;
+ const width=source.naturalWidth||source.width,height=source.naturalHeight||source.height;
+ if(!width||!height)return null;
+ if(buildingOutlineCache.has(source))return buildingOutlineCache.get(source);
+ const pad=2,layer=document.createElement('canvas');
+ layer.width=width+pad*2;layer.height=height+pad*2;
+ const paint=layer.getContext('2d');paint.imageSmoothingEnabled=false;
+ // Alpha silhouette provides legibility on either pale or dark terrain.
+ for(const [dx,dy] of [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]]){
+  paint.drawImage(source,pad+dx,pad+dy,width,height);
+ }
+ paint.globalCompositeOperation='source-in';
+ paint.fillStyle='#0a1b23';paint.fillRect(0,0,layer.width,layer.height);
+ paint.globalCompositeOperation='source-over';paint.drawImage(source,pad,pad,width,height);
+ buildingOutlineCache.set(source,layer);
+ return layer;
+}
+function drawOverviewBuilding(b,cx,cy,opacity){
+ // One small high-contrast signal per building at distant zoom, never a new art asset.
+ const r=(zoom<.25?3.2:4.8)/zoom;
+ ctx.save();ctx.globalAlpha=opacity;ctx.translate(cx,cy);
+ ctx.beginPath();
+ if(b.kind==='fort')ctx.rect(-r,-r,r*2,r*2);
+ else if(b.kind==='barracks'){ctx.moveTo(0,-r*1.25);ctx.lineTo(r*1.2,r);ctx.lineTo(-r*1.2,r);ctx.closePath();}
+ else if(b.kind==='city'){ctx.moveTo(0,-r*1.3);ctx.lineTo(r*1.3,0);ctx.lineTo(0,r*1.3);ctx.lineTo(-r*1.3,0);ctx.closePath();}
+ else ctx.arc(0,0,r,0,Math.PI*2);
+ ctx.fillStyle=color(b.owner);ctx.strokeStyle='#0b1b25';ctx.lineWidth=3/zoom;
+ ctx.fill();ctx.stroke();ctx.strokeStyle='#f4f4e6';ctx.lineWidth=1.15/zoom;ctx.stroke();
+ ctx.restore();
+}
 // Neighbor shape selection was retired: Forts never join or disappear.
+// All sprite changes are screen-space presentation; selection and buildings stay one world cell.
 function drawMapBuilding(b){
  const bounds=buildingTileBounds(b);
- const source=roofSprite(b.kind,b.owner,b.level);
- const loaded=!!(source?.naturalWidth||source?.width);
  const centerX=bounds.x+bounds.width/2,centerY=bounds.y+bounds.height/2;
+ const source=roofSprite(b.kind,b.owner,b.level);
+ const outlined=outlinedMapBuilding(source);
+ const pixelCell=TILE*zoom;
+ const spriteOpacity=Math.max(0,Math.min(1,(pixelCell-5)/6));
  ctx.save();
- // No per-zoom size thresholds, screen-space icon backplates, or marker
- // aggregation. Source pixels remain nearest-neighbor for the entire tile.
- ctx.imageSmoothingEnabled=false;
- if(loaded)ctx.drawImage(source,bounds.x,bounds.y,bounds.width,bounds.height);
- else ctx.drawImage(buildingTypeMarker(b.kind,color(b.owner)),bounds.x,bounds.y,bounds.width,bounds.height);
- // Never obscure the 32px silhouette with BA/CT/FT or numeric badges.
- // Upgrade level and work progress are exposed in the contextual details.
+ if(spriteOpacity<1)drawOverviewBuilding(b,centerX,centerY,1-spriteOpacity);
+ if(spriteOpacity>0){
+  // Minimum readable on-screen area in portrait mode, restrained at closer zoom.
+  const spritePixels=Math.max(18,pixelCell),side=spritePixels/zoom;
+  ctx.globalAlpha=spriteOpacity;
+  ctx.fillStyle='rgba(10,23,29,.48)';
+  ctx.beginPath();ctx.roundRect(centerX-side*.45,centerY-side*.45,side*.9,side*.9,Math.max(1,2/zoom));ctx.fill();
+  ctx.imageSmoothingEnabled=false;
+  if(outlined)ctx.drawImage(outlined,centerX-side*.54,centerY-side*.54,side*1.08,side*1.08);
+  else ctx.drawImage(buildingTypeMarker(b.kind,color(b.owner)),centerX-side/2,centerY-side/2,side,side);
+ }
  ctx.restore();
 }
 let worldBordersCache=null;
@@ -1868,32 +1908,44 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   ctx.moveTo(fx,fy+6/zoom);ctx.lineTo(fx,fy+15/zoom);
   ctx.stroke();ctx.restore();
  }
- // Draw one name per surviving country, even after the capital becomes a city.
- // Full territorial flood-fill runs only when the territory revision changes.
+ // Country labels must never hide their actual buildings, at any portrait zoom.
+ // All collision placement is computed in CSS pixels so labels do not grow on pinch zoom.
  const labelBoxes=[];
+ const buildingObstacles=state.buildings.filter(b=>E.visibleBuilding(state,myId,b)).map(b=>({
+  x:(b.x+.5)*TILE*zoom+camX,y:(b.y+.5)*TILE*zoom+camY,
+  radius:Math.max(12,Math.max(18,TILE*zoom)*.6+3)
+ }));
  for(const place of nationLabelAnchors()){
   if(zoom<=.31)continue;
-  const {x,y}=place;
-  if(x*zoom+camX<-20||x*zoom+camX>w+20||y*zoom+camY<-20||y*zoom+camY>h+20)continue;
+  const anchorX=place.x*zoom+camX,anchorY=place.y*zoom+camY;
+  if(anchorX<-90||anchorX>w+90||anchorY<-90||anchorY>h+90)continue;
   const label=place.id+' · '+place.name.slice(0,20);
   ctx.save();
-  ctx.font='750 '+Math.max(9,11/zoom)+'px system-ui';
+  ctx.font='750 '+(13/zoom)+'px system-ui';
   ctx.textAlign='center';ctx.textBaseline='alphabetic';
   const metrics=ctx.measureText(label);
-  const tw=metrics.width+20/zoom;
-  // Derive the badge from the same glyph bounds we will draw, so the
-  // perceived center of the text and its dark backing never drift apart.
-  const asc=metrics.actualBoundingBoxAscent||8/zoom;
-  const desc=metrics.actualBoundingBoxDescent||2/zoom;
-  const glyphX=x+((metrics.actualBoundingBoxLeft||metrics.width/2)-(metrics.actualBoundingBoxRight||metrics.width/2))/2;
-  const glyphY=y+(asc-desc)/2;
-  const lh=Math.max(20/zoom,asc+desc+8/zoom);
-  const box={x:x-tw/2,y:y-lh/2,w:tw,h:lh};
-  if(labelBoxes.some(r=>box.x<r.x+r.w&&box.x+box.w>r.x&&box.y<r.y+r.h&&box.y+box.h>r.y)){ctx.restore();continue;}
-  labelBoxes.push(box);
-  ctx.fillStyle='#101218f2';ctx.strokeStyle=place.color;ctx.lineWidth=1.2/Math.max(.5,zoom);
-  ctx.beginPath();ctx.roundRect(box.x,box.y,tw,lh,Math.min(6/Math.max(.5,zoom),lh/2));ctx.fill();ctx.stroke();
-  ctx.fillStyle='#f1f5fa';ctx.fillText(label,glyphX,glyphY);
+  const boxW=metrics.width*zoom+18,boxH=23;
+  // Near the visual centroid whenever possible; alternate placements avoid the city.
+  const offsets=[[0,0],[0,-32],[0,32],[0,-58],[-44,-32],[44,-32],[0,58],[-60,0],[60,0]];
+  let found=null;
+  for(const [dx,dy] of offsets){
+   const sx=anchorX+dx,sy=anchorY+dy;
+   const test={x:sx-boxW/2,y:sy-boxH/2,w:boxW,h:boxH};
+   if(test.x<5||test.x+test.w>w-5||test.y<5||test.y+test.h>h-5)continue;
+   const gridX=Math.floor((sx-camX)/(TILE*zoom)),gridY=Math.floor((sy-camY)/(TILE*zoom));
+   if(!E.inside(gridX,gridY)||E.owner(state,gridX,gridY)!==place.id)continue;
+   if(labelBoxes.some(r=>test.x<r.x+r.w+4&&test.x+test.w+4>r.x&&test.y<r.y+r.h+4&&test.y+test.h+4>r.y))continue;
+   if(buildingObstacles.some(b=>Math.abs(b.x-sx)<boxW/2+b.radius&&Math.abs(b.y-sy)<boxH/2+b.radius))continue;
+   found={sx,sy,box:test};break;
+  }
+  if(!found){ctx.restore();continue;}
+  labelBoxes.push(found.box);
+  const x=(found.sx-camX)/zoom,y=(found.sy-camY)/zoom;
+  const tw=boxW/zoom,lh=boxH/zoom;
+  ctx.fillStyle='#101218ed';ctx.strokeStyle=place.color;ctx.lineWidth=1.1/zoom;
+  ctx.beginPath();ctx.roundRect(x-tw/2,y-lh/2,tw,lh,6/zoom);ctx.fill();ctx.stroke();
+  const asc=metrics.actualBoundingBoxAscent||10/zoom,desc=metrics.actualBoundingBoxDescent||3/zoom;
+  ctx.fillStyle='#f1f5fa';ctx.fillText(label,x,y+(asc-desc)/2);
   ctx.restore();
  }
 
