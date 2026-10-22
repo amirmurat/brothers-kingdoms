@@ -1,5 +1,18 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 
+## START HERE — v109 complete connected Fort walls (22.10.2026)
+
+**Correct working branch:** `design/visual-review-v26` (not the old `main`/GitHub Pages). Client asset version `109-fort-wall-autotile-r1`. The user reuploaded **five** independently drawn native 32×32 PNGs; these exact bytes are now stored at `assets/player/fort-tiles/{single,cap,straight,corner,tee}.png`. The previous `assets/player/fort.png` is archived and **not used by active game or HUD**. All art is user-authored, not Tiny Swords; do not assume CC0.
+
+**Behavior:** Adjacent Forts of the same owner join into one uninterrupted outer masonry perimeter at all zooms, each cell preserving the v108 exact `TILE×TILE` world rectangle. `buildingConnectMask` determines N/E/S/W (1/2/4/8); `fortTileSpec(mask)` maps all sixteen masks to the five uploads and 90° clockwise rotations, preserving exact RGBA pixels via direct pixel permutations. Base masks: single 0, cap 2 (opening E), straight 10 (opening E+W), corner 3 (opening N+E), tee 11 (opening N+E+W), 15 = empty surrounded interior with no wall. `fortConnectedSprite(mask,owner,level)` caches pre-colored, pre-rotated variants so no getImageData during ordinary frame draws. On build/capture/loss, masks are recomputed from visible buildings; no change to engine game mechanics or hit areas. Hide FT code overlays on Fort to avoid spoiling clean connected walls. For building palette and inspection cards, use the single Fort tile.
+
+**Country coloring:** These new files have **no `#CFFF70` lime**. Team color now replaces only the two pixel-exact red/orange brick colors `#964253` and `#E36956`. Three original neutral grays, transparency and all pixel boundaries stay byte-exact. Building level is shown through controlled lightness differences as before; other buildings use existing Tiny Swords roof recoloring, unchanged.
+
+**Validation:** `tests/mobile-layout.cjs` now checks complete 16-mask set, native-size PNG loads, owner/kind topology, zero-mismatch clockwise pixel rotation, red-only tint, correct ownership and level variants, and the original no-resize 1-cell contract. GitHub Actions on code/HTML commit must be checked independently before claiming green. No live Cloudflare upload confirmed. `assets/player/README.md` lists exact source sprites and mapping.
+
+---
+
+
 ## START HERE — v108 owner Fort & tile-locked building art (22.10.2026)
 
 **Correct working branch:** `design/visual-review-v26`, continuing v107. Do NOT update old `main` or claim old GitHub Pages reflects this branch. Client cache: `108-grid-sprites-fort-r1`.
