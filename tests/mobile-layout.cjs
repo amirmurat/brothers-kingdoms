@@ -353,76 +353,58 @@ const server=http.createServer((req,res)=>{
    if(roofs.enemy)assert(roofs.owners>0,label+' the roof changes with country');
    assert.equal(roofs.nonRoofChanges,0,label+' wall, wood and ground pixels remain unchanged');
    assert(roofs.keepsAlpha&&roofs.contextTint,label+' roof transparency is preserved and can be shown in context');
-   const towerSystem=await page.evaluate(async()=>{
+   const originalFort=await page.evaluate(async()=>{
     const L=window.__layout,s=L.getState(),me=s.players.find(p=>!p.bot),enemy=s.players.find(p=>p.id!==me.id);
-    const urls=[1,2,3,4,5].map(level=>L.buildingSpritePath('fort',level));
-    const waiting=await Promise.all([1,2,3].map(level=>new Promise(resolve=>{
-     const img=L.fortLevelSprites[level];
+    const urls=[1,2,3,4].map(level=>L.buildingSpritePath('fort',level));
+    const img=L.fortLevelSprites[1];
+    const loaded=await new Promise(resolve=>{
      if(img?.complete&&img.naturalWidth)return resolve(true);
      if(!img)return resolve(false);
      img.addEventListener('load',()=>resolve(true),{once:true});
      img.addEventListener('error',()=>resolve(false),{once:true});
-    })));
-    const bounds=L.buildingTileBounds({x:10,y:15}),east=L.buildingTileBounds({x:11,y:15});
-    const getData=im=>{
+    });
+    const pixels=im=>{
      if(!im)return null;
      const c=document.createElement('canvas');c.width=32;c.height=32;
-     c.getContext('2d').drawImage(im,0,0);
-     return c.getContext('2d').getImageData(0,0,32,32).data;
+     const ctx=c.getContext('2d');ctx.drawImage(im,0,0);
+     return ctx.getImageData(0,0,32,32).data;
     };
-    const sourcePixels=[1,2,3].map(level=>getData(L.fortLevelSprites[level]));
-    const symmetry=sourcePixels.map(p=>{
-     if(!p)return false;
-     for(let y=0;y<32;y++)for(let x=0;x<32;x++){
-      const i=(y*32+x)*4,lh=(y*32+31-x)*4,tb=((31-y)*32+x)*4;
-      for(let c=0;c<4;c++)if(p[i+c]!==p[lh+c]||p[i+c]!==p[tb+c])return false;
-     }
-     return true;
-    });
-    const differ=(a,b)=>{
-     if(!a||!b)return false;
-     for(let i=0;i<a.length;i++)if(a[i]!==b[i])return true;
-     return false;
-    };
-    const base=L.roofBase('fort',1),orig=base?.pixels.data;
-    const own=getData(L.roofSprite('fort',me.id,1));
-    const foreign=enemy?getData(L.roofSprite('fort',enemy.id,1)):null;
-    const allowed=new Set(base?.mask||[]);
-    let changed=0,changedOthers=0,changedAlpha=0,ownerDifference=0;
-    for(let i=0;i<(orig?.length||0);i+=4){
-     if([0,1,2].some(c=>own[i+c]!==orig[i+c])){changed++;if(!allowed.has(i))changedOthers++;}
-     if(own[i+3]!==orig[i+3])changedAlpha++;
-     if(foreign&&allowed.has(i)&&[0,1,2].some(c=>foreign[i+c]!==own[i+c]))ownerDifference++;
+    const original=L.roofBase('fort',1),base=original?.pixels.data,
+      own=pixels(L.roofSprite('fort',me.id,1)),
+      other=enemy?pixels(L.roofSprite('fort',enemy.id,1)):null,
+      higher=pixels(L.roofSprite('fort',me.id,3));
+    const mask=new Set(original?.mask||[]);
+    let recolored=0,untouchedChanged=0,alphaChanged=0,ownerDiff=0,tierDiff=0;
+    for(let i=0;i<(base?.length||0);i+=4){
+      const change=own&&[0,1,2].some(ch=>own[i+ch]!==base[i+ch]);
+      if(change){recolored++;if(!mask.has(i))untouchedChanged++;}
+      if(own&&own[i+3]!==base[i+3])alphaChanged++;
+      if(other&&mask.has(i)&&[0,1,2].some(ch=>other[i+ch]!==own[i+ch]))ownerDiff++;
+      if(higher&&mask.has(i)&&[0,1,2].some(ch=>higher[i+ch]!==own[i+ch]))tierDiff++;
     }
     const context=document.getElementById('mapCanvas').getContext('2d');
-    const originalDraw=context.drawImage;
-    let drawn=0;
+    const originalDraw=context.drawImage;let drawn=0;
     try{
-     context.drawImage=function(...args){drawn++;return originalDraw.apply(this,args);};
-     L.drawMapBuilding({kind:'fort',x:20,y:20,owner:me.id,level:1});
-     L.drawMapBuilding({kind:'fort',x:21,y:20,owner:me.id,level:2});
-     L.drawMapBuilding({kind:'fort',x:20,y:21,owner:me.id,level:3});
-     L.drawMapBuilding({kind:'fort',x:21,y:21,owner:me.id,level:4});
+      context.drawImage=function(...args){drawn++;return originalDraw.apply(this,args);};
+      for(const [x,y,level] of [[20,20,1],[21,20,2],[20,21,3],[21,21,4]])
+        L.drawMapBuilding({kind:'fort',x,y,owner:me.id,level});
     }finally{context.drawImage=originalDraw;}
-    return {urls,loaded:waiting.every(Boolean),width:L.fortLevelSprites[1]?.naturalWidth,
-      height:L.fortLevelSprites[1]?.naturalHeight,bounds,east,symmetry,
-      levelsDistinct:differ(sourcePixels[0],sourcePixels[1])&&differ(sourcePixels[1],sourcePixels[2]),
-      changed,changedOthers,changedAlpha,ownerDifference,hasEnemy:!!enemy,
-      colorMaskSize:allowed.size,drawn};
+    const tile=L.buildingTileBounds({x:10,y:15}),
+      next=L.buildingTileBounds({x:11,y:15});
+    return {urls,loaded,width:img?.naturalWidth,height:img?.naturalHeight,
+      maskCount:mask.size,recolored,untouchedChanged,alphaChanged,ownerDiff,tierDiff,
+      enemy:!!enemy,drawn,tile,next};
    });
-   assert(towerSystem.loaded&&towerSystem.width===32&&towerSystem.height===32,label+' all three native top-down tower PNGs load');
-   assert(towerSystem.urls.slice(0,3).every((url,i)=>url.endsWith('fort-levels/level-'+(i+1)+'.png')),label+' levels use their own top-down sprites');
-   assert.equal(towerSystem.urls[3],towerSystem.urls[2],label+' level 4 temporarily uses level 3 art without changing game rules');
-   assert.equal(towerSystem.urls[4],towerSystem.urls[2],label+' other higher levels temporarily use level 3 art');
-   assert(towerSystem.symmetry.every(Boolean),label+' all top-down towers have exact vertical and horizontal symmetry');
-   assert(towerSystem.levelsDistinct,label+' the three tower levels have different silhouettes');
-   assert.equal(towerSystem.bounds.width,towerSystem.east.x-towerSystem.bounds.x,label+' each tower remains exactly one terrain cell');
-   assert.equal(towerSystem.bounds.height,towerSystem.bounds.width,label+' tower dimensions never change with camera zoom');
-   assert(towerSystem.colorMaskSize>40&&towerSystem.changed>0,label+' red tower accents adopt player hue');
-   assert.equal(towerSystem.changedOthers,0,label+' stone and other tower pixels never recolor');
-   assert.equal(towerSystem.changedAlpha,0,label+' tower transparency stays exact');
-   if(towerSystem.hasEnemy)assert(towerSystem.ownerDifference>0,label+' different owners color tower accents differently');
-   assert.equal(towerSystem.drawn,4,label+' adjacent towers remain four independently drawn sprites');
+   assert(originalFort.loaded&&originalFort.width===32&&originalFort.height===32,label+' restored v110 single 32px Fort tile loads');
+   assert(originalFort.urls.every(url=>url.endsWith('/fort-tiles/single.png')),label+' every Fort level uses the same original single tile');
+   assert.equal(originalFort.next.x-originalFort.tile.x,originalFort.tile.width,label+' the tile remains world-grid aligned');
+   assert.equal(originalFort.tile.width,originalFort.tile.height,label+' there is no zoom-dependent sprite geometry');
+   assert(originalFort.maskCount>0&&originalFort.recolored>0,label+' red Fort bricks retain country coloring');
+   assert.equal(originalFort.untouchedChanged,0,label+' neutral Fort metal remains identical');
+   assert.equal(originalFort.alphaChanged,0,label+' original Fort alpha remains identical');
+   if(originalFort.enemy)assert(originalFort.ownerDiff>0,label+' different countries have different Fort hues');
+   assert(originalFort.tierDiff>0,label+' gameplay levels still change tint without changing the sprite shape');
+   assert.equal(originalFort.drawn,4,label+' four nearby Forts render independently, without connected-wall autotiling');
    const farmArt=await page.evaluate(async()=>{
     const L=window.__layout,s=L.getState(),me=s.players.find(p=>!p.bot);
     const paths=[1,2,3,4].map(level=>L.buildingSpritePath('farm',level));
