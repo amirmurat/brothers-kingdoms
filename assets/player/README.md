@@ -1,12 +1,17 @@
 # Original player-created pixel art
 
-`fort.png` is the owner's **revised 32×32 PNG** (uploaded as `Fort(3).png` on 22 Oct 2026). This is **not** part of Tiny Swords and must not be described as CC0 or bundled with third-party asset licenses. Copyright/licensing remains with its creator unless they explicitly choose another license.
+`fort.png` is the **archived previous** authored Fort (uploaded as `Fort(3).png` on 22 Oct 2026). It is no longer the active map/UI Fort sprite. The five new `fort-tiles/*.png` are the current original pixel art supplied by the same owner. This is **not** part of Tiny Swords and must not be described as CC0 or bundled with third-party asset licenses. Copyright/licensing remains with its creator unless they explicitly choose another license.
 
-- Original dimensions: 32 × 32; native RGBA, transparent background; 7 palette entries including transparency.
-- Lime team-color key: `#CFFF70` (RGB 207,255,112), 132 opaque pixels. Change **only** this exact key at runtime, keeping metal/red and transparency unchanged.
-- Game role: Fort (`fort` building type).
-- One sprite equals **one world terrain cell**, regardless of camera zoom. Do not export a 512×512 baked enlarged copy, upscale it with smoothing, apply reciprocal zoom, or render it on a screen-sized card.
-- Future connected tiles: prepare artwork in the same 32×32 local grid. Each cardinal boundary (top/right/bottom/left) must line up in the neighboring tile. The renderer's neighbor mask uses N=1, E=2, S=4, W=8, and connects only identical type+owner. Renderers must preserve world-tile dimensions at every zoom.
-- PNG is intentionally unmodified; ownership colors are applied in the Canvas image cache.
+- Five updated PNGs in `assets/player/fort-tiles/` are native **32×32 RGBA**, byte-identical to the author's five latest uploads. They form a 4-neighbor **fortress-perimeter autotile**.
+- `single.png`: isolated square Fort (neighbor mask `0`).
+- `cap.png`: U-shaped wall, open to the east; base mask `E=2` (the original source `Fort 1xn left right top bottom`).
+- `straight.png`: horizontal twin side walls, open east/west; base mask `E|W=10` (source `Fort middle 2 lines`).
+- `corner.png`: southwest L-shaped segment, open north/east; base mask `N|E=3` (source `Fort corner 1 line`).
+- `tee.png`: southern single wall, open N/E/W; base mask `N|E|W=11` (source `Fort middle 1 line`).
+- `E|W|N|S=15`: fully surrounded interior; no outer wall is drawn.
+- All other masks are one of those sprites rotated in **90° exact pixel permutations** (no interpolation or new image files). N=1, E=2, S=4, W=8. Neighbor must match both **Fort kind and owner**.
+- The new art has **no lime accents**. It contains two author-defined red masonry palette entries `#964253` and `#E36956`. The game recolors **only these two brick colors** according to nation and building level; neutral gray metal, transparent pixels and shading layout remain unchanged.
+- Every Fort remains one world terrain cell at every zoom; no zoom-based resize or cluster simplification. Neighbor removal, capture, and construction update the shape automatically at the next draw.
+- Do not convert the original PNGs to an upscaled 512px copy; the browser applies nearest-neighbor sampling to a 32px source.
 
 The historical `assets/tiny-swords-cc0` directory is separate and its CC0 provenance is not guaranteed. Do not classify this original Fort sprite under that directory.
