@@ -11,7 +11,10 @@ assert(build('farm',20,20).ok);assert.equal(p.res.wood,wood-45);assert.equal(p.r
 assert.deepEqual(E.costBuilding(s,id,'farm'),{wood:48,stone:11});
 wood=p.res.wood;assert(build('farm',21,20).ok);assert.equal(p.res.wood,wood-48);
 assert.deepEqual(E.costBuilding(s,id,'farm'),{wood:50,stone:11});
-const first=s.buildings[0];assert(E.action(s,id,{type:'upgrade',id:first.id}).ok);
+const first=s.buildings[0];
+// Upgrades now need an actual workforce: a level-1 city supplies builder crews.
+s.buildings.push({id:'worker-city',owner:id,kind:'city',level:1,x:10,y:10});
+assert(E.action(s,id,{type:'upgrade',id:first.id}).ok);
 assert.equal(E.buildingCount(s,id,'farm'),2,'levels do not count as extra buildings');
 assert.equal(E.costBuilding(s,id,'farm').wood,50);
 assert.deepEqual(E.costBuilding(s,id,'lumber'),E.KINDS.lumber.cost,'other types unaffected');
