@@ -1,3 +1,12 @@
+## v118 — Portrait map building readability (23.10.2026; unmerged preview)
+- Target: **Cloudflare production game**, active source branch `design/visual-review-v26`. Work-in-progress PR source: `ux/portrait-building-readability-v118`; do not use obsolete `main` / GitHub Pages or its unrelated v27.
+- User screenshots showed four simultaneous issues on iPhone **portrait**: tiny buildings at normal zoom, camouflage against terrain, near-invisibility when zoomed out, and giant nation labels covering cities when zoomed in.
+- Candidate solutions considered: simple enlarging, alpha-based silhouette/backplate, zoom-aware LOD markers, terrain muted near cities, and collision-aware country labels. First iteration combines **silhouette contrast, zoom transitions and label collision avoidance** without recoloring/replacing any source PNG, changing tile position/selection, battle, workers, or server state.
+- Client only: `game.js` caches dark silhouette canvases; zoomed-out compact type markers crossfade into the original image; a minimum on-screen size keeps individual artwork visible without changing world-cell coordinates. Country labels use fixed screen-space font and size, try several nearby owned-land positions away from all visible buildings and other labels, and hide rather than cover a building if space is unavailable. `index.html` cache tag `118-map-buildings-labels-r1`.
+- Source parsing succeeds. **Not yet deployed to Cloudflare**, physical iPhone Safari and in-game comparative visuals must be verified. Branch-only CDN preview is not the real Cloudflare multiplayer environment. Only say “fixed” after testing the actual main Workers URL.
+- Owner prefers **brief chat messages** and six-stage analysis before substantial changes; portrait is the only intended layout for now.
+---
+
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 
 ## v117 — Correct final Barracks PNG, label centering, regressions and new-chat handoff (22.10.2026)
