@@ -6,7 +6,7 @@ function setup(){
  for(let y=20;y<=60;y++)for(let x=20;x<=70;x++)s.owners[E.idx(x,y)]=id;
  const p=E.person(s,id),foe=E.person(s,enemy);p.land=2091;p.troops=2000;p.troopCap=10000;p.capital={x:22,y:40};
  p.garrisons=[{id:'home',x:22,y:40,strength:2000}];foe.troops=0;foe.garrisons=[];
- s.buildings=[{id:'base',owner:id,kind:'capital',x:22,y:40,level:1}];
+ s.buildings=[{id:'base',owner:id,kind:'city',x:22,y:40,level:1}];
  const zone=[];for(let y=20;y<=60;y++)for(let x=71;x<=73;x++)zone.push(E.idx(x,y));
  assert(E.action(s,id,{type:'send',x:71,y:40,zone,percent:60}).ok);
  return {s,id,p,zone,a:s.armies[0]};
