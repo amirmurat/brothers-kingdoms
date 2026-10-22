@@ -34,7 +34,7 @@ function fixture(){const s=E.lobby(7),id=E.addPlayer(s,'Builder'),foe=E.addPlaye
 console.log('PASS v102: circular terrain scouting, allied visibility, invalid focus safety, worker-built upgrades, duplicate charge prevention and physical construction');
 
 {
- const {s,id,foe,p}=fixture();s.buildings=[...Array.from({length:3},(_,n)=>({id:'u'+n,owner:id,kind:'fort',level:1,x:20+n,y:20})),{id:'base',owner:id,kind:'capital',level:1,x:19,y:20}];
+ const {s,id,foe,p}=fixture();s.buildings=[...Array.from({length:3},(_,n)=>({id:'u'+n,owner:id,kind:'fort',level:1,x:20+n,y:20})),{id:'base',owner:id,kind:'city',level:1,x:19,y:20}];
  assert(E.action(s,id,{type:'upgrade',id:'u0'}).ok);assert(E.action(s,id,{type:'upgrade',id:'u1'}).ok);const paid=p.res.gold;assert(!E.action(s,id,{type:'upgrade',id:'u2'}).ok);assert.equal(p.res.gold,paid,'Concurrency refusal never charges');
  s.buildings[0].owner=foe;s.owners[E.idx(20,20)]=foe;s.territoryRevision++;s.tick++;E.workforceStep(s);assert(!s.buildings[0].upgrade,'Captured building cannot inherit a paid upgrade');assert.equal(s.buildings[0].level,1);
  const save=JSON.parse(JSON.stringify(s));assert(save.buildings[1].upgrade);
@@ -45,7 +45,7 @@ console.log('PASS v102: circular terrain scouting, allied visibility, invalid fo
 
 {
  const {s,id}=fixture(),fort={id:'travel-fort',owner:id,kind:'fort',level:1,x:35,y:20};
- s.buildings=[fort,{id:'home',owner:id,kind:'capital',level:1,x:20,y:20}];
+ s.buildings=[fort,{id:'home',owner:id,kind:'city',level:1,x:20,y:20}];
  assert(E.action(s,id,{type:'upgrade',id:fort.id}).ok);
  s.tick+=200;E.workforceStep(s);
  assert.equal(fort.level,1,'Advancing the clock cannot instantly finish an upgrade');
@@ -61,13 +61,13 @@ console.log('PASS v102: circular terrain scouting, allied visibility, invalid fo
  s.tick+=300;E.workforceStep(s);
  assert.equal(fort.level,1,'No builders means no upgrade progress despite elapsed time');
  assert.equal(fort.upgrade.progress,0);
- s.buildings.push({id:'base',owner:id,kind:'capital',level:1,x:20,y:20});
+ s.buildings.push({id:'base',owner:id,kind:'city',level:1,x:20,y:20});
  for(let n=0;n<140&&fort.level===1;n++){s.tick++;E.workforceStep(s);}
  assert.equal(fort.level,2,'Building a worker base resumes previously queued upgrade');
 }
 {
  const {s,id}=fixture(),fort={id:'legacy',owner:id,kind:'fort',level:1,x:20,y:20};
- s.buildings=[fort,{id:'base',owner:id,kind:'capital',level:1,x:19,y:20}];
+ s.buildings=[fort,{id:'base',owner:id,kind:'city',level:1,x:19,y:20}];
  fort.upgrade={owner:id,level:2,readyTick:30};
  s.tick=20;E.workforceStep(s);
  assert(fort.upgrade.jobId,'Existing paid timed upgrades migrate to physical jobs');
