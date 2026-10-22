@@ -8,7 +8,7 @@ const server=http.createServer((req,res)=>{
  try{
   let body=fs.readFileSync(file);
   if(name==='/'||name==='/index.html')body=body.toString().split('\n').filter(line=>!line.includes('unpkg.com/peerjs')).join('\n');
-  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={focusCandidate:()=>{const p=mine().capital,r=canvas.getBoundingClientRect();for(let dy=-12;dy<=12;dy++)for(let dx=-12;dx<=12;dx++){const x=p.x+dx,y=p.y+dy;if(E.inside(x,y)&&x>10&&x<E.W-10&&y>10&&y<E.H-10&&E.tile(state,x,y)&&E.owner(state,x,y)===0){zoom=.55;camX=canvas.clientWidth/2-(x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(y+.5)*TILE*zoom;clampCamera();draw();return {x:r.left+camX+(x+.5)*TILE*zoom,y:r.top+camY+(y+.5)*TILE*zoom};}}return null;},beginAttackPlanner,brushAt,refreshPaintGuide,syncPaintEligibility,resetAttackPlanner,getPlanner:()=>attackPlanner,buildingCells,drawHarvestSites,buildingLevelColor,roofSprite,roofBase,buildingSpritePath,buildingTileBounds,fortLevelSprites,drawMapBuilding,repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,nationLabelAnchors,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
+  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={focusCandidate:()=>{const p=mine().capital,r=canvas.getBoundingClientRect();for(let dy=-12;dy<=12;dy++)for(let dx=-12;dx<=12;dx++){const x=p.x+dx,y=p.y+dy;if(E.inside(x,y)&&x>10&&x<E.W-10&&y>10&&y<E.H-10&&E.tile(state,x,y)&&E.owner(state,x,y)===0){zoom=.55;camX=canvas.clientWidth/2-(x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(y+.5)*TILE*zoom;clampCamera();draw();return {x:r.left+camX+(x+.5)*TILE*zoom,y:r.top+camY+(y+.5)*TILE*zoom};}}return null;},beginAttackPlanner,brushAt,refreshPaintGuide,syncPaintEligibility,resetAttackPlanner,getPlanner:()=>attackPlanner,buildingCells,drawHarvestSites,buildingLevelColor,roofSprite,roofBase,buildingSpritePath,buildingTileBounds,fortLevelSprites,farmLevelSprites,drawMapBuilding,repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,nationLabelAnchors,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
   res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream'});res.end(body);
  }catch(_){res.writeHead(404);res.end();}
 });
@@ -423,6 +423,36 @@ const server=http.createServer((req,res)=>{
    assert.equal(towerSystem.changedAlpha,0,label+' tower transparency stays exact');
    if(towerSystem.hasEnemy)assert(towerSystem.ownerDifference>0,label+' different owners color tower accents differently');
    assert.equal(towerSystem.drawn,4,label+' adjacent towers remain four independently drawn sprites');
+   const farmArt=await page.evaluate(async()=>{
+    const L=window.__layout,s=L.getState(),me=s.players.find(p=>!p.bot);
+    const paths=[1,2,3,4].map(level=>L.buildingSpritePath('farm',level));
+    const loaded=await Promise.all([1,2,3].map(level=>new Promise(resolve=>{
+     const image=L.farmLevelSprites[level];
+     if(image?.naturalWidth)return resolve(true);
+     if(!image)return resolve(false);
+     image.addEventListener('load',()=>resolve(true),{once:true});
+     image.addEventListener('error',()=>resolve(false),{once:true});
+    })));
+    const source=[1,2,3].map(level=>L.farmLevelSprites[level]);
+    const pixelArray=source.map(img=>{
+     const c=document.createElement('canvas');c.width=c.height=32;
+     c.getContext('2d').drawImage(img,0,0);
+     return c.getContext('2d').getImageData(0,0,32,32).data;
+    });
+    const diff=(a,b)=>{let count=0;for(let i=0;i<a.length;i+=4)if([0,1,2,3].some(k=>a[i+k]!==b[i+k]))count++;return count;};
+    const preview=await fetch('assets/player/drafts/farm/preview.html');
+    const html=preview.ok?await preview.text():'';
+    return {loaded:loaded.every(Boolean),paths,diff12:diff(pixelArray[0],pixelArray[1]),
+      diff23:diff(pixelArray[1],pixelArray[2]),sizes:source.map(img=>[img.naturalWidth,img.naturalHeight]),
+      ownerSame:[1,2,3].every(level=>L.roofSprite('farm',me.id,level)===L.farmLevelSprites[level]),
+      preview:preview.ok&&html.includes('Farm evolution')&&html.includes('level-3.png')};
+   });
+   assert(farmArt.loaded&&farmArt.sizes.every(([w,h])=>w===32&&h===32),label+' 3 native top-down farm PNGs load');
+   assert(farmArt.paths.slice(0,3).every((p,i)=>p.endsWith('drafts/farm/level-'+(i+1)+'.png')),label+' farm level art uses exact level-specific PNG');
+   assert.equal(farmArt.paths[3],farmArt.paths[2],label+' legacy farm level 4 uses last art tier');
+   assert(farmArt.diff12>150&&farmArt.diff23>150,label+' farm levels differ visibly, not just minor decoration');
+   assert(farmArt.ownerSame,label+' farm crop hue stays green/gold regardless of nation');
+   assert(farmArt.preview,label+' farm gallery is directly viewable on site');
    const hudStability=await page.evaluate(()=>{
     const ids=['troopCount','workerCount','landCount','frontCount','resFood','resWood','resStone','resGold'];
     const nodes=ids.map(id=>document.getElementById(id)),old=nodes.map(n=>n.textContent);
