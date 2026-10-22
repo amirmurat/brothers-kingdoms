@@ -1,5 +1,16 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 
+## v114 — Corrected Fort restoration: ORIGINAL Tiny Swords building (22.10.2026)
+
+Owner clarified: "Еще предыдущий. Который был из сета тайлов, который используются в других текущих зданиях." The required art is **`assets/tiny-swords-cc0/buildings/fort.png`**, the ORIGINAL third-party building sprite from the same set as City/Barracks/etc. NOT `assets/player/fort-tiles/single.png`, which had mistakenly been restored in v113.
+
+**Now active in `game.js`:** `FORT_CLASSIC_TILE=OLD_CC0+'buildings/fort.png'`. All Fort levels 1–4 use that source. Fort recoloring follows exactly the same original blue roof mask and brightness/saturation formulas as the other Tiny Swords buildings (not the two red-brick pigments from the player's later fort design). Country ownership is retained. No connection mechanics return; each Fort still occupies one fixed world cell at every zoom. `index.html` cache token `114-classic-tiny-swords-fort-r1`. The `tests/mobile-layout.cjs` suite asserts original source path, blue-shingle tint, unchanged non-roof pixels and alpha, all levels, and independent buildings.
+
+The user-created `fort-tiles/`, `fort-levels/`, and separately approved `approved-topdown/` originals remain fully preserved in GitHub, but unused as the active Fort. This is a visual-only correction: don't change the engine, other buildings or farm. The earlier v113 note below is historical, superseded by v114. Active branch `design/visual-review-v26` (production Cloudflare deploy unverified).
+
+---
+
+
 ## v113 — Restored original standalone Fort tile (22.10.2026)
 
 **User request:** "Лучше верни бывший тайл форта. @GitHub" after the iterative tower and farm art work became too slow. The **v109/v110 historical Fort 1×1 tile** `assets/player/fort-tiles/single.png` is now again the **active Fort sprite** for all building levels. The new v111 tower files in `assets/player/fort-levels/level-{1,2,3}.png` and separately approved hand-drawn rook/quarry art remain safely archived and untouched; do not delete them. The live code in `game.js` uses `FORT_SINGLE_TILE`, maps every Fort level to one fixed PNG, recolors only original dark/light red masonry pigments (RGB `150,66,83` and `227,105,86`) for the owning country, and maintains distinct upgrade tint cache entries. No neighbor joining, autotiling, 3-level visual tower selection, or layout changes; every Fort independently fills exactly one world cell. Game mechanics (four levels) and the active v112 farm artwork are unchanged.
