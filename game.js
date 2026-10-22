@@ -13,7 +13,8 @@ const OWNED_KINDS=new Set(['city','barracks','fort']);
 const farmArtLevel=level=>Math.min(3,Math.max(1,Math.floor(level||1)));
 const artLevel=level=>Math.min(3,Math.max(1,Math.floor(level||1)));
 const buildingSpritePath=(kind,level=1)=>
- OWNED_KINDS.has(kind)?OWNED_ART+kind+'/level-'+artLevel(level)+'.png':
+ (kind==='barracks'||kind==='fort')?'assets/player/owned-v116/'+kind+'/level-'+artLevel(level)+'.png':
+ kind==='city'?OWNED_ART+'city/level-'+artLevel(level)+'.png':
  kind==='farm'?'assets/player/drafts/farm/level-'+farmArtLevel(level)+'.png':
  OLD_CC0+'buildings/'+kind+'.png';
 const uiIcon=name=>{
@@ -990,7 +991,7 @@ function refreshQuickBuild(){
  const workers=E.workforceStats(state,myId);
  $('workerCount').textContent=hudNumber(workers.capacity);$('workerStatus').textContent=number(workers.working)+' working';
  for(const r of ['food','wood','stone','gold']){const node=$('resourceSummary').querySelector('[data-resource="'+r+'"]'),active=p.workPriority===r;node.setAttribute('aria-pressed',String(active));node.classList.toggle('priority-selected',active);}
- $('workforceSummary').textContent=number(workers.working)+' / '+number(workers.capacity)+' working · '+workers.building+' queued';
+ $('workforceSummary').textContent=number(workers.working)+' / '+number(workers.capacity)+' working · '+workers.building+'/'+workers.slots+' builder crews assigned';
  $('productionPriority').value=p.workPriority||'balanced';
  $('storageSummary').textContent='Storage: '+number(E.resourceCapacity(state,myId))+' per resource · '+number(p.land)+' land cells';
 }
@@ -1603,14 +1604,12 @@ function nationLabelAnchors(snapshot=state){
  for(const p of snapshot.players){
   if(p.eliminated||!p.land)continue;
   const group=regions.get(p.id);if(!group)continue;
-  const cap=p.capital,capIndex=cap&&E.inside(cap.x,cap.y)?cap.y*E.W+cap.x:-1;
-  const intact=capIndex>=0&&owners[capIndex]===p.id;
-  let index=capIndex;
-  if(!intact){
-   let best=Infinity;
-   for(const i of group.cells){const dx=i%E.W-group.cx,dy=((i/E.W)|0)-group.cy,d=dx*dx+dy*dy;
-    if(d<best){best=d;index=i;}
-   }
+  // Place the name in the center of the LARGEST connected territory.
+  // Never pin it to the starting city or former capital.
+  let best=Infinity,index=group.cells[0];
+  for(const i of group.cells){
+   const dx=i%E.W-group.cx,dy=((i/E.W)|0)-group.cy,d=dx*dx+dy*dy;
+   if(d<best){best=d;index=i;}
   }
   anchors.push({id:p.id,name:p.name,color:p.color,cell:index,x:(index%E.W+.5)*TILE,y:(((index/E.W)|0)+.5)*TILE});
  }
@@ -1691,10 +1690,10 @@ function roofBase(kind,level=1){
  const mask=[];
  for(let i=0;i<pixels.data.length;i+=4){
   const r=pixels.data[i],g=pixels.data[i+1],b=pixels.data[i+2],a=pixels.data[i+3];
-  // The owner's exact lime highlight is the faction-color key. Unlike blue
-  // roof detection, this preserves neutral stone, wood and all shading.
+  // All THREE green pigments (dark, mid and lime), plus matching green
+  // shades, follow the country. Keep neutral stone, red, gold and alpha.
   if(OWNED_KINDS.has(kind)){
-   if(a===255&&r===207&&g===255&&b===112)mask.push(i);
+   if(a>=96&&g>=90&&g>r*1.18&&g>b*1.13)mask.push(i);
   }else if(a>=96&&b>=64&&b>r+13&&b>g+2&&g>=r-28)mask.push(i);
  }
  const base={width:canvas.width,height:canvas.height,pixels,mask};
@@ -1716,7 +1715,7 @@ function roofSprite(kind,owner,level=1){
   for(const i of base.mask){
    const rr=out[i],gg=out[i+1],bb=out[i+2],originalMax=Math.max(rr,gg,bb);
    const next=OWNED_KINDS.has(kind)
-    ?hsvRGB(hue,clamp01(.75+.15*saturation),clamp01((.85+(visualLevel-1)*.055)))
+    ?hsvRGB(hue,clamp01(.68+.19*saturation),clamp01(originalMax/255*(.94+.025*(visualLevel-1))))
     :hsvRGB(hue,clamp01((.38+.36*saturation+.14*(originalMax-Math.min(rr,gg,bb))/255)*tier.saturation),clamp01(originalMax/255*tier.brightness));
    out[i]=next[0];out[i+1]=next[1];out[i+2]=next[2];
   }
@@ -1777,21 +1776,9 @@ function drawMapBuilding(b){
  ctx.imageSmoothingEnabled=false;
  if(loaded)ctx.drawImage(source,bounds.x,bounds.y,bounds.width,bounds.height);
  else ctx.drawImage(buildingTypeMarker(b.kind,color(b.owner)),bounds.x,bounds.y,bounds.width,bounds.height);
- // Labels are high-zoom inspection hints. Hide them during strategic zoom
- // and never enlarge buildings to compensate for a small map cell.
- if(zoom>=2.35&&b.kind!=='fort'){
-  const boxW=TILE*.54,boxH=TILE*.32;
-  ctx.fillStyle='#0c1923d9';ctx.fillRect(centerX-boxW/2,centerY-boxH/2,boxW,boxH);
-  ctx.fillStyle='#ffffff';ctx.font=`bold ${TILE*.23}px system-ui`;
-  ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText(BUILDING_CODES[b.kind]||'BL',centerX,centerY,boxW*.92);
-  if((b.level||1)>1){
-   ctx.fillStyle='#eef1ec';ctx.font=`bold ${TILE*.18}px system-ui`;
-   ctx.fillText(String(b.level),centerX,centerY+TILE*.38);
-  }
- }
+ // Never obscure the 32px silhouette with BA/CT/FT or numeric badges.
+ // Upgrade level and work progress are exposed in the contextual details.
  ctx.restore();
- drawUpgradeWork(b,centerX,centerY);
 }
 let worldBordersCache=null;
 function worldBorderPaths(){
@@ -1869,14 +1856,17 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   const {x,y}=place;
   if(x*zoom+camX<-20||x*zoom+camX>w+20||y*zoom+camY<-20||y*zoom+camY>h+20)continue;
   const label=place.id+' · '+place.name.slice(0,20);
+  ctx.save();
   ctx.font='750 '+Math.max(9,11/zoom)+'px system-ui';
-  const tw=ctx.measureText(label).width+20/zoom,lh=20/zoom,ly=y-14/zoom;
-  const box={x:x-tw/2,y:ly-lh/2,w:tw,h:lh};
-  if(labelBoxes.some(r=>box.x<r.x+r.w&&box.x+box.w>r.x&&box.y<r.y+r.h&&box.y+box.h>r.y))continue;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  const tw=ctx.measureText(label).width+20/zoom,lh=20/zoom;
+  const box={x:x-tw/2,y:y-lh/2,w:tw,h:lh};
+  if(labelBoxes.some(r=>box.x<r.x+r.w&&box.x+box.w>r.x&&box.y<r.y+r.h&&box.y+box.h>r.y)){ctx.restore();continue;}
   labelBoxes.push(box);
   ctx.fillStyle='#101218f2';ctx.strokeStyle=place.color;ctx.lineWidth=1.2/Math.max(.5,zoom);
-  ctx.beginPath();ctx.roundRect(box.x,box.y,tw,lh,8/Math.max(.5,zoom));ctx.fill();ctx.stroke();
-  ctx.fillStyle='#f1f5fa';ctx.fillText(label,x,ly);
+  ctx.beginPath();ctx.roundRect(box.x,box.y,tw,lh,Math.min(6/Math.max(.5,zoom),lh/2));ctx.fill();ctx.stroke();
+  ctx.fillStyle='#f1f5fa';ctx.fillText(label,x,y,tw-8/zoom);
+  ctx.restore();
  }
 
  if(selected?.kind==='building'){const b=selected.kind==='building'?state.buildings.find(v=>v.id===selected.id):state.armies.find(v=>v.id===selected.id);if(b){ctx.strokeStyle='#ffffff';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.strokeRect(b.x*TILE-5,b.y*TILE-5,TILE+10,TILE+10);ctx.setLineDash([]);}}
