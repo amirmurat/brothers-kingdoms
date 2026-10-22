@@ -13,7 +13,7 @@ const OWNED_KINDS=new Set(['city','barracks','fort']);
 const farmArtLevel=level=>Math.min(3,Math.max(1,Math.floor(level||1)));
 const artLevel=level=>Math.min(3,Math.max(1,Math.floor(level||1)));
 const buildingSpritePath=(kind,level=1)=>
- (kind==='barracks'||kind==='fort')?'assets/player/owned-v116/'+kind+'/level-'+artLevel(level)+'.png':
+ (kind==='barracks'||kind==='fort')?'assets/player/owned-v116/'+kind+'/level-'+artLevel(level)+'.png?v=117':
  kind==='city'?OWNED_ART+'city/level-'+artLevel(level)+'.png':
  kind==='farm'?'assets/player/drafts/farm/level-'+farmArtLevel(level)+'.png':
  OLD_CC0+'buildings/'+kind+'.png';
