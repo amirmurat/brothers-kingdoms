@@ -396,7 +396,7 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
   if(fail)return {ok:false,error:fail};
   if(!['city','barracks','fort'].includes(kind))return {ok:false,error:'Use a resource zone for production.'};
   s.buildJobs??=[];if(s.buildJobs.some(j=>j.x===x&&j.y===y))return {ok:false,error:'Construction already queued here.'};
-  if(s.buildJobs.filter(j=>j.owner===id&&!j.upgradeOf).length>=24)return {ok:false,error:'Finish queued construction first.'};
+  if(s.buildJobs.filter(j=>j.owner===id).length>=workforceStats(s,id).slots)return {ok:false,error:'All builder crews are assigned. Expand your cities or finish existing jobs.'};
   const count=s.buildJobs.filter(j=>j.owner===id&&!j.upgradeOf&&j.kind===kind).length;
   const cost=Object.fromEntries(Object.entries(KINDS[kind].cost).map(([k,v])=>[k,Math.ceil(v*(1+.05*(buildingCount(s,id,kind)+count)))]));
   if(!available(p,cost))return {ok:false,error:'Not enough resources.'};
@@ -510,7 +510,7 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
   if(!available(p,price))return {ok:false,error:'Not enough resources.'};charge(p,price);building(s,id,kind,x,y);return {ok:true,cost:price};
  }
  if(a.type==='upgrade'){
-  const b=s.buildings.find(v=>v.id===a.id&&v.owner===id);if(b?.upgrade)return {ok:false,error:'Upgrade already in progress.'};if(s.buildings.filter(b=>b.owner===id&&b.upgrade).length>=2)return {ok:false,error:'Finish one of your two active upgrades first.'};if(!b||b.level>=MAX_BUILDING_LEVEL)return {ok:false,error:'Maximum level reached.'};const price=costUpgrade(b);
+  const b=s.buildings.find(v=>v.id===a.id&&v.owner===id);if(b?.upgrade)return {ok:false,error:'Upgrade already in progress.'};if((s.buildJobs||[]).filter(j=>j.owner===id).length>=workforceStats(s,id).slots)return {ok:false,error:'All builder crews are assigned. Expand your cities or finish existing jobs.'};if(!b||b.level>=MAX_BUILDING_LEVEL)return {ok:false,error:'Maximum level reached.'};const price=costUpgrade(b);
   if(!available(p,price))return {ok:false,error:'Not enough resources.'};
   charge(p,price);s.buildJobs??=[];
   const job={id:'j'+(++s.nonce),owner:id,kind:b.kind,x:b.x,y:b.y,upgradeOf:b.id,targetLevel:b.level+1,progress:0,cost:price};
@@ -608,7 +608,7 @@ function workforceStats(s,id){
  const bases=s.buildings.filter(b=>b.owner===id&&b.kind==='city');
  const capacity=bases.reduce((n,b)=>n+24*b.level,0),groups=person(s,id)?.workers||[];
  const working=groups.filter(g=>g.resource&&g.progress>=3&&g.x===g.tx&&g.y===g.ty);
- return {capacity,groups:groups.length,working:working.reduce((n,g)=>n+g.count,0),
+ return {capacity,slots:Math.ceil(capacity/6),groups:groups.length,working:working.reduce((n,g)=>n+g.count,0),
   building:(s.buildJobs||[]).filter(j=>j.owner===id).length,
   upgrading:(s.buildJobs||[]).filter(j=>j.owner===id&&j.upgradeOf).length};
 }
@@ -692,7 +692,7 @@ function workforceStep(s){
   p.workers=p.workers.filter(g=>{if(s.owners[idx(g.x,g.y)]===p.id)return true;
    const exit=adjacentCells(idx(g.x,g.y)).find(i=>s.owners[i]===p.id&&s.tiles[i]);
    if(exit===undefined)return false;g.x=exit%W;g.y=(exit/W)|0;g.route=null;g.job=null;g.resource=null;return true;});
-  const count=Math.min(24,Math.ceil(capacity/6));
+  const count=Math.ceil(capacity/6);
   while(p.workers.length<count){const b=bases[p.workers.length%bases.length];p.workers.push({id:'c'+(++s.nonce),x:b.x,y:b.y,count:6,progress:0});}
   if(p.workers.length>count)p.workers.length=count;
   for(const g of p.workers)g.count=capacity/Math.max(1,count);
