@@ -1,5 +1,16 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 
+## v117 — Correct final Barracks PNG, label centering, regressions and new-chat handoff (22.10.2026)
+
+Read **`docs/NEXT_CHAT_2026-10-22_v117.md` FIRST** for current project status, exact active branch, asset paths, visual preferences and CI/deployment uncertainty. User is switching chats because this one lags severely.
+
+The user's six attached 32x32 PNGs were compared byte-for-byte with active `assets/player/owned-v116/`: all three Forts, Barracks L1 and L2 already matched, but Barracks L3 did NOT. Replaced `assets/player/owned-v116/barracks/level-3.png` with the exact new attachment Git blob `6045af5ee07b5a120ee03a337318b940d976afe4`. Green tinting, badge removal, level-up UI, workforce-based crew slots and territorial label centroid had already been implemented in the v116 branch source. In v117, improved label text/background glyph-center alignment in `game.js`, refreshed iOS `index.html` cache token `117-barracks3-country-label-r1`, and repaired stale test cases `tests/review-v102.cjs` and `tests/mobile-layout.cjs` that expected the obsolete artificial two-build cap and old PNG paths. The old approved `assets/player/approved-topdown/` files are preserved. No gameplay rebalance or source-asset generation.
+
+**Verification pending:** CI last known run `39828702072`; inspect latest result and logs before declaring success. Cloudflare live deployment and physical iPhone Safari are **not verified**.
+
+---
+
+
 ## v114 — Corrected Fort restoration: ORIGINAL Tiny Swords building (22.10.2026)
 
 Owner clarified: "Еще предыдущий. Который был из сета тайлов, который используются в других текущих зданиях." The required art is **`assets/tiny-swords-cc0/buildings/fort.png`**, the ORIGINAL third-party building sprite from the same set as City/Barracks/etc. NOT `assets/player/fort-tiles/single.png`, which had mistakenly been restored in v113.
