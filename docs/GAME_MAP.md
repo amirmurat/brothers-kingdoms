@@ -1,4 +1,13 @@
 # Brothers Kingdoms — карта интерфейса и исходников (v25)
+
+## v108 — art tile renderer (active branch `design/visual-review-v26`)
+
+The `game.js` tile-art layer now uses **world-cell fixed geometry**, not a screen-size icon overlay. `TILE=14` is the world grid size; every building renders in the rectangle `[b.x*TILE,b.y*TILE,TILE,TILE]`, and zoom is applied only by the parent camera transform. All buildings remain distinct individual cells even when zoomed out; map image smoothing is disabled for the sprite draw. For future connectable city blocks and fort/wall segments, `buildingConnectMask(b,byCell)` computes same-faction, same-type N/E/S/W presence as a 4-bit mask (1,2,4,8). Future connection graphics must be painted to the sprite's matching tile edges; the current 32×32 Fort source has transparent margins and is not yet a seamless connected wall variant.
+
+Owner-created updated Fort: `assets/player/fort.png`; see `assets/player/README.md`. Its lime RGB #CFFF70 is a precise re-color key, with 132 affected opaque pixels. Other art remains in `assets/tiny-swords-cc0/` pending separate third-party license provenance verification. The HTML cache-buster is `108-grid-sprites-fort-r1`. No road, collision, ownership or server-state mechanics change from v107.
+
+---
+
 _Актуальный реестр, извлечённый из `index.html` на 20.10.2026. Не путать с визуальным QA: места элементов подтверждены кодом, на физических устройствах не проверены._
 
 ## 1. Единственные активные источники
