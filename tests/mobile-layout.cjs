@@ -78,7 +78,7 @@ const server=http.createServer((req,res)=>{
    assert.equal(planStyle.pageTouch,'manipulation',label+' double-tap browser zoom disabled');
    assert.equal(planStyle.mapTouch,'none',label+' map retains custom touch gestures');
    assert(planStyle.rows.every(r=>r.touch==='manipulation'),label+' repeated action taps cannot trigger Safari zoom');
-   assert.equal(new Set(planStyle.rows.map(r=>r.background)).size,3,label+' plan Exit/Reset/Save have distinct backgrounds');
+   assert.equal(new Set(planStyle.rows.map(r=>r.background)).size,2,label+' plan Clear/Save have distinct backgrounds');
    assert(planStyle.rows.every(r=>Math.abs(r.top-planStyle.rows[0].top)<1&&Math.abs(r.bottom-planStyle.rows[0].bottom)<1),label+' plan buttons share same height and y position');
    assert(planStyle.rows.every((r,i,a)=>i===0||r.x>=a[i-1].right),label+' plan buttons do not overlap');
    const nationFallback=await page.evaluate(()=>{
@@ -186,7 +186,7 @@ const server=http.createServer((req,res)=>{
    await page.locator('#planToolFocus').click();
    assert(await page.locator('#armyFocusGuide').isVisible(),label+' focus has a bottom panel');
    assert.equal(await page.locator('#buildDock').evaluate(e=>getComputedStyle(e).visibility),'hidden',label+' focus never overlaps construction');
-   assert.equal(await page.locator('#armyFocusGuide button').count(),2,label+' focus exposes Exit and Clear');
+   assert.equal(await page.locator('#armyFocusGuide button').count(),1,label+' focus mode button itself toggles off; bottom only clears focus');
    const focusBounds=await page.locator('#armyFocusGuide').evaluate(e=>{const r=e.getBoundingClientRect();return [...e.querySelectorAll('button,span,strong')].every(c=>{const b=c.getBoundingClientRect();return b.left>=r.left&&b.right<=r.right+1&&b.bottom<=r.bottom+1;});});
    assert(focusBounds,label+' focus content fits bottom surface');
    await page.screenshot({path:'/tmp/bk-v102-focus-'+name+'-'+viewport.width+'.png'});
@@ -194,20 +194,20 @@ const server=http.createServer((req,res)=>{
    // Switching directly between tools must never leave the old tool highlighted.
    const focusSurface=await page.locator('#armyFocusGuide').evaluate(e=>getComputedStyle(e).backgroundColor);
    const focusRect=await page.locator('#armyFocusGuide').boundingBox();
-   const focusButton=await page.locator('#exitArmyFocus').boundingBox();
+   const focusButton=await page.locator('#clearArmyFocus').boundingBox();
    await page.locator('#planToolErase').click();
    assert.equal(await page.locator('#planToolFocus').getAttribute('aria-pressed'),'false',label+' eraser releases focus button');
    assert.equal(await page.locator('#planToolErase').getAttribute('aria-pressed'),'true',label+' eraser is the only active paint tool');
    assert(await page.locator('#armyFocusGuide').evaluate(e=>e.classList.contains('hidden')),label+' eraser closes focus panel');
    assert.equal(await page.locator('#planEraseHint').evaluate(e=>getComputedStyle(e).backgroundColor),focusSurface,label+' focus and eraser share the same panel surface');
    const eraserRect=await page.locator('#planEraseHint').boundingBox();
-   const eraserButton=await page.locator('#eraseExit').boundingBox();
+   const eraserButton=await page.locator('#eraseReset').boundingBox();
    assert(Math.abs(eraserRect.y-focusRect.y)<1&&Math.abs(eraserRect.height-focusRect.height)<1,label+' focus/eraser same exact bounding box');
    assert(Math.abs(eraserButton.height-focusButton.height)<1,label+' focus/eraser action sizes match');
    await page.locator('#planToolFocus').click();
    assert.equal(await page.locator('#planToolErase').getAttribute('aria-pressed'),'false',label+' focus releases eraser button');
    assert.equal(await page.locator('#planToolFocus').getAttribute('aria-pressed'),'true',label+' focus is the only selected tool');
-   await page.locator('#exitArmyFocus').click();
+   await page.locator('#planToolFocus').click();
    assert.equal(await page.locator('#buildDock').evaluate(e=>getComputedStyle(e).visibility),'visible',label+' exiting focus restores construction');
    await page.locator('#planToolPaint').click();
    await page.locator('#planToolErase').click();
@@ -222,7 +222,7 @@ const server=http.createServer((req,res)=>{
    assert(eraseHud.visible&&eraseHud.display==='grid',label+' eraser appears as a permanent HUD status, not a floating toast');
    assert.equal(eraseHud.radius,'0px',label+' eraser HUD has square panel geometry');
    assert(Math.abs(eraseHud.left)<1&&Math.abs(eraseHud.right)<1&&Math.abs(eraseHud.bottom)<1,label+' eraser strip fills map width at bottom');
-   assert.equal(await page.locator('#planEraseHint button').count(),3,label+' eraser exposes Exit, Reset and Erase selected');
+   assert.equal(await page.locator('#planEraseHint button').count(),2,label+' eraser exposes only Reset and Erase selected');
    assert.equal(await page.locator('#buildDock').evaluate(e=>getComputedStyle(e).visibility),'hidden',label+' eraser never overlaps construction');
    assert.equal(eraseHud.title,'ERASER',label+' eraser has distinct mode title');
    await page.locator('#planToolErase').click();
@@ -235,7 +235,7 @@ const server=http.createServer((req,res)=>{
    assert.equal(bottomAfter.y,bottomBefore.y,label+' switching mode never grows the bottom panel');
    assert(Math.abs(bottomAfter.y-focusRect.y)<1&&Math.abs(bottomAfter.height-focusRect.height)<1,label+' attack/focus/eraser share exactly one panel geometry');
    assert.equal(await page.locator('#planGuide').evaluate(e=>getComputedStyle(e).display),'grid',label+' attack panel uses same CSS grid as focus/eraser');
-   const attackButton=await page.locator('#planGuideExit').boundingBox();
+   const attackButton=await page.locator('#planPaintClear').boundingBox();
    assert(Math.abs(attackButton.height-focusButton.height)<1,label+' all editing action rows share one height');
    const controls=await page.evaluate(()=>{const map=document.getElementById('mapView').getBoundingClientRect(),bottom=document.getElementById('planGuide').getBoundingClientRect(),tools=document.getElementById('planToolSwitch').getBoundingClientRect(),brush=document.getElementById('planControls').getBoundingClientRect();return {expected:map.y+(64+map.height-bottom.height)/2,tools:tools.y+tools.height/2,brush:brush.y+brush.height/2};});
    assert(Math.abs(controls.tools-controls.expected)<1&&Math.abs(controls.brush-controls.expected)<1,label+' both side controls are centered in usable map space');
@@ -243,7 +243,7 @@ const server=http.createServer((req,res)=>{
    assert(Math.abs(toolBefore.x-toolAfter.x)<1&&Math.abs(toolBefore.y-toolAfter.y)<1,label+' selecting attack keeps side tool position stable');
    assert.equal(await page.locator('#planTroopsControl').isVisible(),false,label+' no troop percentage slider');
    assert.equal(await page.locator('#planBrushSize').isVisible(),true,label+' brush sizing remains available');
-   assert.equal(await page.locator('#planGuideExit').evaluate(el=>getComputedStyle(el).borderTopWidth),'0px',label+' plan controls have no frames');
+   assert.equal(await page.locator('#planPaintClear').evaluate(el=>getComputedStyle(el).borderTopWidth),'0px',label+' plan controls have no frames');
    await page.evaluate(()=>{window.__layout.showAux('armiesPanel');window.__layout.hideAux();});
    await page.evaluate(()=>window.__layout.setBuildingMode('lumber'));
    assert.equal(await page.locator('#planGuide').isVisible(),false,label+' resource priority does not open paint');
