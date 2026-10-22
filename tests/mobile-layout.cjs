@@ -8,7 +8,7 @@ const server=http.createServer((req,res)=>{
  try{
   let body=fs.readFileSync(file);
   if(name==='/'||name==='/index.html')body=body.toString().split('\n').filter(line=>!line.includes('unpkg.com/peerjs')).join('\n');
-  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={focusCandidate:()=>{const p=mine().capital,r=canvas.getBoundingClientRect();for(let dy=-12;dy<=12;dy++)for(let dx=-12;dx<=12;dx++){const x=p.x+dx,y=p.y+dy;if(E.inside(x,y)&&x>10&&x<E.W-10&&y>10&&y<E.H-10&&E.tile(state,x,y)&&E.owner(state,x,y)===0){zoom=.55;camX=canvas.clientWidth/2-(x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(y+.5)*TILE*zoom;clampCamera();draw();return {x:r.left+camX+(x+.5)*TILE*zoom,y:r.top+camY+(y+.5)*TILE*zoom};}}return null;},beginAttackPlanner,brushAt,syncPaintEligibility,resetAttackPlanner,getPlanner:()=>attackPlanner,buildingCells,drawHarvestSites,buildingLevelColor,roofSprite,roofBase,buildingSpritePath,repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,nationLabelAnchors,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
+  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={focusCandidate:()=>{const p=mine().capital,r=canvas.getBoundingClientRect();for(let dy=-12;dy<=12;dy++)for(let dx=-12;dx<=12;dx++){const x=p.x+dx,y=p.y+dy;if(E.inside(x,y)&&x>10&&x<E.W-10&&y>10&&y<E.H-10&&E.tile(state,x,y)&&E.owner(state,x,y)===0){zoom=.55;camX=canvas.clientWidth/2-(x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(y+.5)*TILE*zoom;clampCamera();draw();return {x:r.left+camX+(x+.5)*TILE*zoom,y:r.top+camY+(y+.5)*TILE*zoom};}}return null;},beginAttackPlanner,brushAt,refreshPaintGuide,syncPaintEligibility,resetAttackPlanner,getPlanner:()=>attackPlanner,buildingCells,drawHarvestSites,buildingLevelColor,roofSprite,roofBase,buildingSpritePath,repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,nationLabelAnchors,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
   res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream'});res.end(body);
  }catch(_){res.writeHead(404);res.end();}
 });
@@ -209,7 +209,38 @@ const server=http.createServer((req,res)=>{
    assert.equal(await page.locator('#planToolFocus').getAttribute('aria-pressed'),'true',label+' focus is the only selected tool');
    await page.locator('#planToolFocus').click();
    assert.equal(await page.locator('#buildDock').evaluate(e=>getComputedStyle(e).visibility),'visible',label+' exiting focus restores construction');
+   const savedFocusCheck=await page.evaluate(()=>{
+    const L=window.__layout,s=L.getState(),E=window.BKEngine,p=s.players.find(v=>!v.bot),f=p.capital;
+    const cmd=E.action(s,p.id,{type:'armyFocus',x:f.x,y:f.y});
+    const context=document.getElementById('mapCanvas').getContext('2d'),arc=context.arc;
+    let visible=false;
+    try{
+     context.arc=function(x,y,r,...args){if(Math.abs(x-(f.x+.5)*14)<.01&&Math.abs(y-(f.y+.5)*14)<.01&&r>2)visible=true;return arc.call(this,x,y,r,...args);};
+     L.draw();
+    }finally{context.arc=arc;}
+    const kept=!!p.armyFocus&&p.armyFocus.x===f.x&&p.armyFocus.y===f.y;
+    E.action(s,p.id,{type:'armyFocus',clear:true});
+    return {ok:cmd.ok,kept,visible};
+   });
+   assert(savedFocusCheck.ok&&savedFocusCheck.kept&&savedFocusCheck.visible,label+' saved focus stays visible on the map after leaving focus mode');
    await page.locator('#planToolPaint').click();
+   const clearFixture=await page.evaluate(()=>{
+    const L=window.__layout,s=L.getState(),p=s.players.find(v=>!v.bot);
+    const i=s.tiles.findIndex((t,i)=>t&&s.owners[i]!==p.id&&!p.allies.includes(s.owners[i]));
+    if(i>=0){L.getPlanner().cells.add(i);L.refreshPaintGuide();}
+    return {index:i,count:L.getPlanner().cells.size,enabled:!document.getElementById('planPaintClear').disabled};
+   });
+   if(clearFixture.index>=0){
+    assert(clearFixture.count>0&&clearFixture.enabled,label+' planning Clear enables for newly painted cells');
+    await page.locator('#planPaintClear').click();
+    assert.equal(await page.evaluate(()=>window.__layout.getPlanner().cells.size),0,label+' Clear immediately discards every painted cell');
+   }
+   const symmetricToolGutters=await page.evaluate(()=>{
+    const map=document.getElementById('mapView').getBoundingClientRect();
+    const left=document.getElementById('planControls').getBoundingClientRect(),right=document.getElementById('planToolSwitch').getBoundingClientRect();
+    return {left:left.left-map.left,right:map.right-right.right};
+   });
+   assert(Math.abs(symmetricToolGutters.left-symmetricToolGutters.right)<=2,label+' brush rail and right-side tools use symmetric horizontal gutters '+JSON.stringify(symmetricToolGutters));
    await page.locator('#planToolErase').click();
    assert(await page.locator('#planGuide').evaluate(e=>e.classList.contains('hidden')),label+' brush to eraser closes planning panel');
    assert.equal(await page.evaluate(()=>window.__layout.getPlanner().mode),'erase',label+' eraser is global');
