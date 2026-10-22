@@ -11,13 +11,13 @@ const CC0_RESOURCES=new Set(['food','wood','stone','gold']);
 const BUILDING_SPRITE_FILES={city:'capital',barracks:'city'};
 const buildingSpriteFile=kind=>BUILDING_SPRITE_FILES[kind]||kind;
 // Player-authored sprite is stored separately from third-party art.
-const FORT_SINGLE_TILE='assets/player/fort-tiles/single.png';
+const FORT_CLASSIC_TILE=OLD_CC0+'buildings/fort.png';
 const FARM_LEVEL_PATH='assets/player/drafts/farm/';
-// Previous Fort is one 32x32 tile at every building level; gameplay upgrades stay intact.
+// Restore the earliest Tiny Swords Fort. Upgrade levels still use the same source sprite.
 const fortArtLevel=level=>1;
 const farmArtLevel=level=>Math.min(3,Math.max(1,Math.floor(level||1)));
 const buildingSpritePath=(kind,level=1)=>
- kind==='fort'?FORT_SINGLE_TILE:
+ kind==='fort'?FORT_CLASSIC_TILE:
  kind==='farm'?FARM_LEVEL_PATH+'level-'+farmArtLevel(level)+'.png':
  OLD_CC0+'buildings/'+buildingSpriteFile(kind)+'.png';
 const uiIcon=name=>{
@@ -1631,8 +1631,8 @@ if(typeof Image==='function')for(const kind of BUILDING_KINDS){
  sprite.src=buildingSpritePath(kind);
 }
 
-// Restore the original single Fort tile from v109/v110. No connecting walls,
- // no replacement tower levels; all forts remain independent world-grid cells.
+// Restore the original Tiny Swords Fort used beside the other buildings.
+// No joining and no authored tower sprites in the active scene.
 const fortLevelSprites=Object.create(null);
 fortLevelSprites[1]=mapBuildingSprites.fort;
 // Three authored farm designs progress visibly from soil to growing crops
@@ -1677,18 +1677,6 @@ function hsvRGB(h,s,v){
  const [r,g,b]=[[chroma,second,0],[second,chroma,0],[0,chroma,second],[0,second,chroma],[second,0,chroma],[chroma,0,second]][group];
  return [Math.round((r+low)*255),Math.round((g+low)*255),Math.round((b+low)*255)];
 }
-function isFortBrick(r,g,b){
- return (r===150&&g===66&&b===83)||(r===227&&g===105&&b===86);
-}
-function fortBrickColor(r,g,b,hue,saturation,level){
- // Preserve the dark / light red brick contrast in the original 1x1 tile.
- // Each country's hue is applied only to masonry, never to gray metal.
- const lv=Math.min(4,Math.max(1,level|0));
- const bright=r===227;
- const value=Math.min(1,(bright?.86:.56)*(.90+(lv-1)*.065));
- const sat=clamp01(Math.max(.58,saturation)*(bright?.88:.94));
- return hsvRGB(hue,sat,value);
-}
 function roofBase(kind,level=1){
  const visualLevel=kind==='fort'?fortArtLevel(level):kind==='farm'?farmArtLevel(level):1;
  const src=kind==='fort'?(fortLevelSprites[visualLevel]||mapBuildingSprites.fort):
@@ -1706,11 +1694,9 @@ function roofBase(kind,level=1){
  const mask=[];
  for(let i=0;i<pixels.data.length;i+=4){
   const r=pixels.data[i],g=pixels.data[i+1],b=pixels.data[i+2];
-  // The v109/v110 Fort tile has two red brick pigments; leave all
-  // gray metal and transparent pixels untouched.
-  if(kind==='fort'){
-   if(pixels.data[i+3]===255&&isFortBrick(r,g,b))mask.push(i);
-  }else if(pixels.data[i+3]>=96&&b>=64&&b>r+13&&b>g+2&&g>=r-28)mask.push(i);
+  // The restored classic Fort uses the same blue-roof shading mask as
+  // City, Barracks and all other Tiny Swords buildings.
+  if(pixels.data[i+3]>=96&&b>=64&&b>r+13&&b>g+2&&g>=r-28)mask.push(i);
  }
  const base={width:canvas.width,height:canvas.height,pixels,mask};
  roofBasePixels.set(file,base);return base;
@@ -1736,9 +1722,7 @@ function roofSprite(kind,owner,level=1){
   const out=new Uint8ClampedArray(base.pixels.data);
   for(const i of base.mask){
    const rr=out[i],gg=out[i+1],bb=out[i+2],originalMax=Math.max(rr,gg,bb);
-   const next=kind==='fort'
-    ?fortBrickColor(rr,gg,bb,hue,saturation,level)
-    :hsvRGB(hue,clamp01((.38+.36*saturation+.14*(originalMax-Math.min(rr,gg,bb))/255)*tier.saturation),clamp01(originalMax/255*tier.brightness));
+   const next=hsvRGB(hue,clamp01((.38+.36*saturation+.14*(originalMax-Math.min(rr,gg,bb))/255)*tier.saturation),clamp01(originalMax/255*tier.brightness));
    out[i]=next[0];out[i+1]=next[1];out[i+2]=next[2];
   }
   const canvas=document.createElement('canvas');canvas.width=base.width;canvas.height=base.height;
