@@ -338,7 +338,7 @@ const server=http.createServer((req,res)=>{
      for(const level of [1,2,3]){
       const img=images[level-1],url=L.buildingSpritePath(kind,level);
       if(img?.naturalWidth!==32||img?.naturalHeight!==32)wrongSize++;
-      if(!url.endsWith('assets/player/owned/'+kind+'/level-'+level+'.png'))wrongPath++;
+      if(!url.endsWith('assets/player/'+(kind==='city'?'owned':'owned-v116')+'/'+kind+'/level-'+level+'.png'))wrongPath++;
       if(L.roofSprite(kind,me.id,level))variants++;
       const orig=originals[level-1],tinted=pix(L.roofSprite(kind,me.id,level));
       const mask=new Set(L.roofBase(kind,level)?.mask||[]);
