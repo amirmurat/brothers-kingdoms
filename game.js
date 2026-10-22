@@ -1724,47 +1724,52 @@ function drawMapBuilding(b,x,y,overviewCount=1){
  const kind=b.kind,source=roofSprite(kind,b.owner,b.level),loaded=!!(source?.naturalWidth||source?.width);
  const ownerColor=color(b.owner);
  const macro=zoom<1.35,far=zoom<.55;
- const screenH=macro?(far?25:34):Math.min(92,Math.max(48,TILE*zoom*1.68));
+ const screenH=macro?(far?20:26):Math.min(76,Math.max(36,TILE*zoom*1.4));
  const h=(kind==='capital'?screenH*1.15:screenH)/zoom,w=h*(loaded?(source.naturalWidth||source.width)/(source.naturalHeight||source.height):1);
- const baseX=x-w/2,baseY=y-h*.74;
+ // Snap sprite geometry to physical screen pixels, eliminating subpixel shimmer.
+ const dpr=canvas.width/Math.max(1,canvas.clientWidth);
+ const snapX=v=>(Math.round((v*zoom+camX)*dpr)/dpr-camX)/zoom;
+ const snapY=v=>(Math.round((v*zoom+camY)*dpr)/dpr-camY)/zoom;
+ const drawW=Math.max(1,Math.round(w*zoom*dpr)/dpr)/zoom,drawH=Math.max(1,Math.round(h*zoom*dpr)/dpr)/zoom;
+ const baseX=snapX(x-drawW/2),baseY=snapY(y-drawH*.74);
  ctx.save();
  // Close zoom preserves the pixel sprite's silhouette; no opaque black tile.
  // Overview uses owner color, not building type, alongside the explicit type code.
  if(macro){
   ctx.save();ctx.globalAlpha=.15;ctx.fillStyle=ownerColor;
-  ctx.fillRect(baseX-2/zoom,baseY-2/zoom,w+4/zoom,h+4/zoom);ctx.restore();
+  ctx.fillRect(baseX-2/zoom,baseY-2/zoom,drawW+4/zoom,drawH+4/zoom);ctx.restore();
   ctx.strokeStyle=ownerColor;ctx.lineWidth=2/zoom;
-  ctx.strokeRect(baseX-1/zoom,baseY-1/zoom,w+2/zoom,h+2/zoom);
+  ctx.strokeRect(baseX-1/zoom,baseY-1/zoom,drawW+2/zoom,drawH+2/zoom);
  }else{
   ctx.fillStyle='#16303966';ctx.beginPath();
-  ctx.ellipse(x,baseY+h,w*.48,h*.12,0,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle=ownerColor;ctx.fillRect(baseX+2/zoom,baseY+h-2/zoom,w-4/zoom,3/zoom);
+  ctx.ellipse(x,baseY+drawH,drawW*.48,drawH*.12,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=ownerColor;ctx.fillRect(baseX+2/zoom,baseY+drawH-2/zoom,drawW-4/zoom,3/zoom);
  }
- if(loaded){ctx.imageSmoothingEnabled=false;ctx.drawImage(source,baseX,baseY,w,h);ctx.imageSmoothingEnabled=true;}
- else ctx.drawImage(buildingTypeMarker(kind,ownerColor),baseX,baseY,w,h);
+ if(loaded){ctx.imageSmoothingEnabled=false;ctx.drawImage(source,baseX,baseY,drawW,drawH);ctx.imageSmoothingEnabled=true;}
+ else ctx.drawImage(buildingTypeMarker(kind,ownerColor),baseX,baseY,drawW,drawH);
  // Capital and City intentionally share the original castle silhouette;
  // the capital carries a pennant and taller footprint to remain identifiable.
  if(kind==='capital'){
-  const flagW=9/zoom,flagH=15/zoom,flagX=x-w*.04,flagY=baseY-flagH*.45;
+  const flagW=9/zoom,flagH=15/zoom,flagX=x-drawW*.04,flagY=baseY-flagH*.45;
   ctx.strokeStyle='#10242c';ctx.lineWidth=2/zoom;
   ctx.beginPath();ctx.moveTo(flagX,flagY);ctx.lineTo(flagX,flagY+flagH);ctx.stroke();
   ctx.fillStyle=ownerColor;ctx.beginPath();ctx.moveTo(flagX,flagY);ctx.lineTo(flagX+flagW,flagY+flagH*.22);ctx.lineTo(flagX,flagY+flagH*.44);ctx.closePath();ctx.fill();
   ctx.strokeStyle='#f7f5da';ctx.lineWidth=1/zoom;ctx.stroke();
  }
  const labelW=(overviewCount>1?22:20)/zoom, labelH=macro?11/zoom:13/zoom;
- ctx.fillStyle='#12212de9';ctx.fillRect(x-labelW/2,baseY+h-labelH*.65,labelW,labelH);
+ ctx.fillStyle='#12212de9';ctx.fillRect(x-labelW/2,baseY+drawH-labelH*.65,labelW,labelH);
  ctx.fillStyle='#f7f8fb';ctx.textAlign='center';ctx.textBaseline='middle';
- ctx.font=`bold ${(macro?8:9)/zoom}px system-ui`;ctx.fillText(BUILDING_CODES[kind]||'BL',x,baseY+h-labelH*.13);
+ ctx.font=`bold ${(macro?8:9)/zoom}px system-ui`;ctx.fillText(BUILDING_CODES[kind]||'BL',x,baseY+drawH-labelH*.13);
  if(overviewCount>1){
   const ww=18/zoom,hh=12/zoom;
-  ctx.fillStyle='#ecf0f4';ctx.fillRect(x+w*.24,baseY-hh*.45,ww,hh);
+  ctx.fillStyle='#ecf0f4';ctx.fillRect(x+drawW*.24,baseY-hh*.45,ww,hh);
   ctx.fillStyle='#132333';ctx.font=`bold ${8/zoom}px system-ui`;
-  ctx.fillText(String(overviewCount),x+w*.24+ww/2,baseY+hh*.05);
+  ctx.fillText(String(overviewCount),x+drawW*.24+ww/2,baseY+hh*.05);
  }else if(!far){
   const ww=14/zoom,hh=13/zoom;
-  ctx.fillStyle='#f3eee2';ctx.fillRect(x+w*.24,baseY+h-hh*.4,ww,hh);
+  ctx.fillStyle='#f3eee2';ctx.fillRect(x+drawW*.24,baseY+drawH-hh*.4,ww,hh);
   ctx.fillStyle='#102032';ctx.font=`bold ${9/zoom}px system-ui`;
-  ctx.fillText(String(b.level||1),x+w*.24+ww/2,baseY+h+hh*.09);
+  ctx.fillText(String(b.level||1),x+drawW*.24+ww/2,baseY+drawH+hh*.09);
  }
  ctx.restore();drawUpgradeWork(b,x,y);
 }
