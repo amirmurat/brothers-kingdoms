@@ -303,6 +303,7 @@ const server=http.createServer((req,res)=>{
     const p1=first?.getContext?.('2d')?.getImageData(0,0,first.width,first.height).data;
     const p4=high?.getContext?.('2d')?.getImageData(0,0,high.width,high.height).data;
     const pe=second?.getContext?.('2d')?.getImageData(0,0,second.width,second.height).data;
+    const mask=new Set(base?.mask||[]);
     let tinted=0,graded=0,owners=0,nonRoofChanges=0;
     for(let i=0;i<(original?.length||0);i+=4){
      const changed=p1&&[0,1,2].some(k=>p1[i+k]!==original[i+k]);
@@ -310,7 +311,7 @@ const server=http.createServer((req,res)=>{
      tinted++;
      if(p4&&[0,1,2].some(k=>p4[i+k]!==p1[i+k]))graded++;
      if(pe&&[0,1,2].some(k=>pe[i+k]!==p1[i+k]))owners++;
-     if(!base.mask.includes(i))nonRoofChanges++;
+     if(!mask.has(i))nonRoofChanges++;
     }
     return {sourceCity,sourceCapital,sourceBarracks,tinted,graded,owners,nonRoofChanges,enemy:!!enemy,
       contextTint:!!first?.toDataURL,keepsAlpha:p1&&p1[3]===original[3]};
