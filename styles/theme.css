@@ -3284,3 +3284,51 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
 #game#game#game#game #contextBody .context-heading strong{
  display:flex!important;align-items:center!important;line-height:1.3!important;
 }
+
+
+/* v105 — Tiny Swords original CC0 artwork, retaining v104 dark HUD geometry.
+   Map sprites stay pixel-perfect, while text, tap targets and contrast are unchanged. */
+#game#game#game#game img.tiny-building-art,
+#game#game#game#game img.tiny-resource-art,
+#game#game#game#game #contextBody img.context-building-art[src*="tiny-swords-cc0"]{
+ display:inline-block!important;
+ object-fit:contain!important;image-rendering:pixelated!important;
+ filter:drop-shadow(0 1px 1px #07121a8c)!important;
+ background:transparent!important;border:0!important;
+}
+#game#game#game#game #buildDock button>.building-art{
+ width:32px!important;height:32px!important;flex:0 0 32px!important;
+ min-width:32px!important;max-height:32px!important;
+}
+#game#game#game#game #quickBuild .quick-build-item img.tiny-building-art{
+ width:33px!important;height:33px!important;min-width:33px!important;
+ object-fit:contain!important;image-rendering:pixelated!important;
+}
+#game#game#game#game #placingBuildIcon img.tiny-building-art{
+ width:36px!important;height:36px!important;
+}
+#game#game#game#game #buildingsPanel img.tiny-building-art{
+ width:42px!important;height:42px!important;flex:0 0 42px!important;
+}
+#game#game#game#game #resourceSummary.resource-hud>[data-resource]>.resource-heading>img.tiny-resource-art{
+ position:static!important;width:19px!important;height:19px!important;flex:0 0 19px!important;
+ margin:0!important;vertical-align:middle!important;
+}
+#game#game#game#game .cost-unit img.tiny-resource-art{
+ width:18px!important;height:18px!important;
+ vertical-align:middle!important;
+}
+#game#game#game#game .resource-ledger img.tiny-resource-art{width:23px!important;height:23px!important}
+#game#game#game#game :is(#buildDock,#planGuide,#armyFocusGuide,#planEraseHint):not(.hidden){
+ background:var(--sheet-flat,#151c26)!important;
+ color:var(--flat-ink,#edf2f8)!important;
+ border-top:1px solid #384755!important;
+ box-shadow:none!important;backdrop-filter:none!important;
+}
+#game#game#game#game :is(#buildDock button,#planGuide .plan-guide-actions button,#armyFocusGuide .plan-guide-actions button,#planEraseHint .plan-guide-actions button):focus-visible{
+ outline:2px solid #84dbf2!important;outline-offset:-2px!important;
+}
+@media(max-width:355px){
+ #game#game#game#game #buildDock button>.building-art{width:27px!important;height:27px!important;flex-basis:27px!important}
+ #game#game#game#game #resourceSummary.resource-hud>[data-resource]>.resource-heading>img.tiny-resource-art{width:16px!important;height:16px!important;flex-basis:16px!important}
+}
