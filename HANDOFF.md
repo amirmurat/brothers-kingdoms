@@ -1,5 +1,12 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 
+## ART REVIEW — Draft Farm, deliberately not integrated (22.10.2026)
+
+Owner rejected previous generated/isometric and simplistic/repetitive farm designs and requested real visual references followed by **drawing pixel-by-pixel without any image-generation model**. The approved Fort and Quarry art is already archived and MUST NOT change during Farm work. A new distinct three-tier FARM candidate has been hand-coded with Pillow as native 32x32 transparent PNGs at `assets/player/drafts/farm/level-{1,2,3}.png`, plus README including SHA-256 hashes. L1 = mainly bare soil with early sprouts; L2 = lush green irrigated plots and barn; L3 = mature golden wheat and granary. These three pieces are **unapproved review drafts**, explicitly do NOT change game.js/index.html/engine.js or live website on this commit; wait for visual feedback first. The drawing source was also provided to the user directly as `paint_bk_farm.py` in the conversation.
+
+---
+
+
 ## ART REVIEW — 22.10.2026: Approved original Fort + Quarry PNGs safely archived
 
 The user requested: "Давай по одному типу исправлять. Ты сохрани камнелом и форт в гитхаб, а то потеряем." **Completed:** six unchanged, native 32×32 transparent RGBA images, three levels each, preserved at `assets/player/approved-topdown/fort/level-{1,2,3}.png` and `assets/player/approved-topdown/quarry/level-{1,2,3}.png`. Each file was hash-verified against the approved /mnt/data/rook_quarry_32x32 local original; see `assets/player/approved-topdown/README.md` for all SHA-256s and GitHub previews.
