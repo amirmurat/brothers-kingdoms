@@ -1630,7 +1630,8 @@ const fortTileImages=Object.create(null),fortTileVariants=new Map();
 if(typeof Image==='function')for(const kind of ['cap','straight','corner','tee']){
  const img=new Image();fortTileImages[kind]=img;
  img.onload=()=>{fortTileVariants.clear();queueDraw();};
- img.src=FORT_TILE_PATH+kind+'.png';
+ // A newly replaced art file must bypass Safari/Cloudflare's cached old corner.
+ img.src=FORT_TILE_PATH+kind+'.png'+(kind==='corner'?'?v=110':'');
 }
 // Tiny Swords old CC0 terrain sheets; no new mechanics. Off-screen world bitmap
 // is repainted only for changed cells, never per animation frame.
