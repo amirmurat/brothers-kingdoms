@@ -4,7 +4,7 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),E=require('../e
 const source=fs.readFileSync('engine.js','utf8').replace('function marchField(s,id,destination){','function marchField(s,id,destination){s.testFloods=(s.testFloods||0)+1;');
 const mod={exports:{}};new Function('module',source)(mod);const F=mod.exports;
 const s=F.lobby(7),id=F.addPlayer(s,'A'),enemy=F.addPlayer(s,'B');assert(F.start(s,0).ok);
-s.tiles.fill(1);s.owners.fill(id);s.territoryRevision++;s.buildings=[{id:'home',owner:id,kind:'capital',x:20,y:30,level:1}];
+s.tiles.fill(1);s.owners.fill(id);s.territoryRevision++;s.buildings=[{id:'home',owner:id,kind:'city',x:20,y:30,level:1}];
 const p=F.person(s,id);p.troops=1200;p.garrisons=[{id:'g',x:70,y:30,strength:1200,returning:true}];p.land=F.W*F.H;
 for(let k=0;k<20;k++)F.spatialArmyStep(s);
 assert.equal(s.testFloods||0,0,'Open friendly routes must reuse paths without whole-map floods');
