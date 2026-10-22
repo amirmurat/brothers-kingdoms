@@ -34,7 +34,7 @@ const BUILDING_KINDS=['city','barracks','fort','farm','lumber','quarry','mine'];
 const buildingLevelColor=b=>{
  const hex=b.owner==null?'#829bb8':color(b.owner);
  const rr=parseInt(hex.slice(1,3),16),gg=parseInt(hex.slice(3,5),16),bb=parseInt(hex.slice(5,7),16);
- const hue=rgbHue(rr,gg,bb),level=Math.max(1,Math.min(5,b.level||1));
+ const hue=rgbHue(rr,gg,bb),level=Math.max(1,Math.min(3,b.level||1));
  return `hsl(${Math.round(hue)} 75% ${Math.round(37+level*9)}%)`;
 };
 const BUILDING_PRIORITY={fort:8,barracks:7,city:6,mine:3,quarry:3,lumber:3,farm:3};
@@ -47,7 +47,7 @@ const buildingInfo={
  quarry:{short:'Produces stone for buildings.',detail:'+7 stone/s per level',place:'Hills or mountains',resource:'stone',perLevel:7},
  mine:{short:'Produces gold for research.',detail:'+7 gold/s per level',place:'Ore, hills, or mountains',resource:'gold',perLevel:7},
  barracks:{short:'Increases army capacity.',detail:'+430 troop capacity · +5 recruitment/s per level',place:'Your land, excluding mountain summits',cap:430,rate:5},
- fort:{short:'Defends nearby tiles.',detail:'Defense radius 4 · enemy building sight 14 / 20 / 26 / 32 tiles',place:'Your land, including mountains'},
+ fort:{short:'Defends nearby tiles.',detail:'Defense radius 4 · enemy building sight 14 / 20 / 26 tiles',place:'Your land, including mountains'},
  city:{short:'Produces food, gold, and troops.',detail:'+5 food/s · +5 gold/s · +260 capacity · +3 recruitment/s per level',place:'Your land, excluding mountain summits',cap:260,rate:3}
 };
 const nameResource={food:'Food',wood:'Wood',stone:'Stone',gold:'Gold'};
@@ -682,7 +682,7 @@ function setPreview(t){
  box.dataset.diplomacy=allied?'allied':received?'received':sentOffer?'sent':enemy?.bot?'bot':'offer';
  const candidate=E.buildingAt(state,t.x,t.y),building=candidate&&E.visibleBuilding(state,myId,candidate)?candidate:null;
  $('targetTitle').textContent=t.type==='redirect'?'Redirect offensive':allied?'Ally: '+enemy.name:enemy?'Diplomacy · '+enemy.name:'No foreign kingdom';
- $('targetDetail').textContent=t.type==='redirect'?`${number(sent)} troops · reserve ${number(p.troops)} · ${terrainNames[E.tile(state,t.x,t.y)]}`:`${terrainNames[E.tile(state,t.x,t.y)]}${building?' · '+(E.KINDS[building.kind]?.name||'Capital'):''} · Alliances and peace`;
+ $('targetDetail').textContent=t.type==='redirect'?`${number(sent)} troops · reserve ${number(p.troops)} · ${terrainNames[E.tile(state,t.x,t.y)]}`:`${terrainNames[E.tile(state,t.x,t.y)]}${building?' · '+(E.KINDS[building.kind]?.name||'City'):''} · Alliances and peace`;
  const defense=enemy?Math.round(E.tileDefense(state,owner,t.x,t.y)):0;const averageDefense=enemy&&front.cells.length?Math.round(front.cells.reduce((sum,i)=>sum+E.tileDefense(state,owner,i%E.W,Math.floor(i/E.W)),0)/front.cells.length):0;
  $('targetForecast').textContent=allied?'Allied territory cannot be attacked. End the alliance first.':
    t.type==='redirect'?'Confirm to redirect your army.':
@@ -709,7 +709,7 @@ function contextual(item){
   const buildState=!upgradeWorker?'Waiting for builders':upgradeWorker.x===item.x&&upgradeWorker.y===item.y?'Builders working':'Builders travelling';
   const effect=details?buildingBenefit(item.kind,me,item.level):'Capital defense improves at each level';
   const next=details?buildingBenefit(item.kind,me,item.level+1):'City defense will increase';
-  const stationed=own&&['capital','city','barracks'].includes(item.kind)?(me.garrisons||[]).filter(c=>!c.returning&&(!Number.isFinite(c.tx)||c.x===c.tx&&c.y===c.ty)&&Math.abs(c.x-item.x)+Math.abs(c.y-item.y)<=2).reduce((n,c)=>n+c.strength,0):null;
+  const stationed=own&&['city','barracks'].includes(item.kind)?(me.garrisons||[]).filter(c=>!c.returning&&(!Number.isFinite(c.tx)||c.x===c.tx&&c.y===c.ty)&&Math.abs(c.x-item.x)+Math.abs(c.y-item.y)<=2).reduce((n,c)=>n+c.strength,0):null;
   html=`<div class="context-heading"><strong><img class="context-building-art" src="${buildingRoofUrl(item.kind,item.owner,item.level)}" alt="" aria-hidden="true"/>${esc(E.KINDS[item.kind]?.name||'City')} · lvl. ${item.level}</strong><small>${esc(other?.name||'')}</small></div>
    <div class="context-effect"><small>Current</small><span>${esc(effect)}</span></div>
    ${own&&item.kind==='fort'?`<div class="context-effect"><small>Scouting range</small><span>${E.fortRadius(item,state)} tiles · ${esc(terrainNames[E.tile(state,item.x,item.y)])}</span></div>`:''}
@@ -943,7 +943,7 @@ function updateUI(){const p=mine();if(!p)return;
  const top=[...state.players].filter(p=>p.land>0).sort((a,b)=>b.land-a.land);
  patchHtml('quickLeadersList',top.length?top.map((v,i)=>`<div class="quick-row${v.id===myId?' is-me':''}"><span class="leader-rank">${i+1}</span><i class="leader-dot" style="background:${v.color}"></i><b>${esc(v.name)}${v.bot?' · Bot':''}</b><small>${(v.land/Math.max(1,state.landTotal)*100).toFixed(1)}% · ${number(v.land)} tiles</small></div>`).join(''):'<p class="leader-empty">No active players</p>');
  updateTechCards(p);
- patchHtml('accessibleObjects',state.buildings.filter(b=>b.owner===myId).slice(0,30).map(b=>'<li>'+esc(E.KINDS[b.kind]?.name||'Capital')+' '+b.x+','+b.y+'</li>').join('')+state.armies.filter(a=>a.owner===myId).map(a=>'<li>Army '+number(a.strength)+' troops, '+a.x+','+a.y+'</li>').join(''));
+ patchHtml('accessibleObjects',state.buildings.filter(b=>b.owner===myId).slice(0,30).map(b=>'<li>'+esc(E.KINDS[b.kind]?.name||'City')+' '+b.x+','+b.y+'</li>').join('')+state.armies.filter(a=>a.owner===myId).map(a=>'<li>Army '+number(a.strength)+' troops, '+a.x+','+a.y+'</li>').join(''));
  if(state.log?.[0]&&state.tick>3&&state.log[0]!==lastAnnounced){const message=state.log[0];lastAnnounced=message;if(!/researched|completed/i.test(message)&&/captured the capital|eliminated|won|alliance/.test(message.toLowerCase()))toast(message);}
  updateSelection();refreshQuickBuild();
 }
@@ -1753,7 +1753,7 @@ function buildingTypeMarker(kind,owner){
  c.fillStyle='#192838';c.fillRect(1,1,42,42);
  c.fillStyle=owner||'#dce6f0';c.fillRect(1,1,42,5);
  const path=buildingPaths[kind]||buildingPaths.city;
- c.save();c.translate(11,9);c.scale(22/(kind==='capital'?64:512),22/(kind==='capital'?64:512));
+ c.save();c.translate(11,9);c.scale(22/512,22/512);
  c.fillStyle='#f2f6fb';c.fill(path,'evenodd');c.restore();
  c.font='bold 11px system-ui';c.textAlign='center';c.textBaseline='middle';
  c.fillStyle='#ffffff';c.fillText(BUILDING_CODES[kind]||'BL',22,35);
