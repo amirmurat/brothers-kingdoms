@@ -1,3 +1,11 @@
+## v119 — устранение перекрытия зданий на портретной карте (23.10.2026; итерация после iPhone-скриншотов)
+- Источник: `design/visual-review-v26` v118 (основной Cloudflare сайт), правка подготовлена в `ux/building-spacing-clusters-v119`.
+- Фактическая обратная связь по четырём скриншотам iPhone: v118 улучшила различимость отдельных зданий, но на ближнем/среднем масштабе соседние Fort/City/Barracks соприкасаются и превращаются в сплошную полосу; на дальней дистанции квадраты/треугольники перекрываются. Статичные country labels теперь не закрывают здания — оставить.
+- Первопричина: v118 форсировала минимальную ширину каждого отдельного PNG **18 экранных пикселей**, несмотря на более мелкий текущий world tile. Контуры занимали ещё несколько пикселей, поэтому соседние клетки визуально пересекались.
+- Итерация v119: исходные owner PNG и уровни **не изменены**; отдельный спрайт рисуется в 74% площади своей клетки (фон 82% площади), не вылезая на соседнюю; больше нет жёстких 18 px. При TILE×zoom < 11px вместо разрозненных налезающих маркеров — стабильная группировка близлежащих строений одной страны с компактным счётчиком. Одна постройка остаётся различимой формой: город — ромб, казармы — треугольник, форт — квадрат. Положение и хитбокс здания, сервер, gameplay, оригинальные файлы PNG, работающая система лейблов не менялись.
+- В `index.html` обновлён version token `119-building-spacing-clusters-r1` для Safari. Не объявлять работоспособность на реальном iPhone и факт Cloudflare deploy без подтверждения. Только портретный дизайн входит в текущий объём работ.
+---
+
 ## v118 — Portrait map building readability (23.10.2026; unmerged preview)
 - Target: **Cloudflare production game**, active source branch `design/visual-review-v26`. Work-in-progress PR source: `ux/portrait-building-readability-v118`; do not use obsolete `main` / GitHub Pages or its unrelated v27.
 - User screenshots showed four simultaneous issues on iPhone **portrait**: tiny buildings at normal zoom, camouflage against terrain, near-invisibility when zoomed out, and giant nation labels covering cities when zoomed in.
