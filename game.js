@@ -1878,14 +1878,22 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   const label=place.id+' · '+place.name.slice(0,20);
   ctx.save();
   ctx.font='750 '+Math.max(9,11/zoom)+'px system-ui';
-  ctx.textAlign='center';ctx.textBaseline='middle';
-  const tw=ctx.measureText(label).width+20/zoom,lh=20/zoom;
+  ctx.textAlign='center';ctx.textBaseline='alphabetic';
+  const metrics=ctx.measureText(label);
+  const tw=metrics.width+20/zoom;
+  // Derive the badge from the same glyph bounds we will draw, so the
+  // perceived center of the text and its dark backing never drift apart.
+  const asc=metrics.actualBoundingBoxAscent||8/zoom;
+  const desc=metrics.actualBoundingBoxDescent||2/zoom;
+  const glyphX=x+((metrics.actualBoundingBoxLeft||metrics.width/2)-(metrics.actualBoundingBoxRight||metrics.width/2))/2;
+  const glyphY=y+(asc-desc)/2;
+  const lh=Math.max(20/zoom,asc+desc+8/zoom);
   const box={x:x-tw/2,y:y-lh/2,w:tw,h:lh};
   if(labelBoxes.some(r=>box.x<r.x+r.w&&box.x+box.w>r.x&&box.y<r.y+r.h&&box.y+box.h>r.y)){ctx.restore();continue;}
   labelBoxes.push(box);
   ctx.fillStyle='#101218f2';ctx.strokeStyle=place.color;ctx.lineWidth=1.2/Math.max(.5,zoom);
   ctx.beginPath();ctx.roundRect(box.x,box.y,tw,lh,Math.min(6/Math.max(.5,zoom),lh/2));ctx.fill();ctx.stroke();
-  ctx.fillStyle='#f1f5fa';ctx.fillText(label,x,y,tw-8/zoom);
+  ctx.fillStyle='#f1f5fa';ctx.fillText(label,glyphX,glyphY);
   ctx.restore();
  }
 
