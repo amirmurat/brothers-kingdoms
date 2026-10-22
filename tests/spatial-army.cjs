@@ -7,7 +7,7 @@ function fixture(){
  for(let y=20;y<=40;y++)for(let x=71;x<=80;x++)s.owners[E.idx(x,y)]=enemy;
  const p=E.person(s,id),foe=E.person(s,enemy);p.troops=800;p.land=1071;p.capital={x:22,y:30};p.garrisons=[];
  foe.troops=0;foe.garrisons=[];foe.land=210;
- s.buildings=[{id:'home',owner:id,kind:'capital',x:22,y:30,level:1},{id:'front',owner:id,kind:'barracks',x:65,y:30,level:1}];
+ s.buildings=[{id:'home',owner:id,kind:'city',x:22,y:30,level:1},{id:'front',owner:id,kind:'barracks',x:65,y:30,level:1}];
  return {s,id,enemy,p,foe};
 }
 const sum=p=>p.garrisons.reduce((n,g)=>n+g.strength,0);
