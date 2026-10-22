@@ -494,7 +494,10 @@ function refreshPaintGuide(){
  const protectedCount=[...plan.cells].filter(i=>state.owners[i]!==myId&&!selected.includes(state.owners[i])).length;
  const overlap=overlappingPlans(plan).length;
  $('planPaintCount').textContent=number(count)+' cells';
- $('planPaintClear').disabled=pressed.size>0||(!plan.editId&&!count);
+ const savedCells=[...(state.attackPlans||[]),...(state.recoveryPlans||[])]
+  .filter(p=>p.owner===myId).flatMap(p=>p.zoneCells||[]);
+ $('planPaintClear').disabled=pressed.size>0||(!plan.editId&&!count&&!savedCells.length);
+ $('planPaintClear').textContent=plan.editId?'Clear plan':count?'Clear area':'Clear all plans';
  $('planReviewButton').disabled=count===0||pressed.size>0;
  $('planBrushValue').textContent=String(plan.brushRadius);
  $('planTroopsValue').textContent=percent+'%';
@@ -506,12 +509,26 @@ function refreshPaintGuide(){
 function clearPaintedZone(){
  const plan=attackPlanner;if(plan?.mode!=='paint'||pressed.size>0)return;
  if(plan.editId&&!plan.workResource){
-  if(command({type:'erasePlanCells',cells:[...plan.resetCells]})){resetAttackPlanner();toast('Selected offensive region removed');}
+  const original=[...(plan.resetCells||plan.originalCells||[])];
+  if(original.length&&command({type:'erasePlanCells',cells:original})){
+   resetAttackPlanner();toast('Offensive plan removed');
+  }
   return;
  }
- plan.cells.clear();
- plan.lastPoint=null;plan.brushPoint=null;plan.zoneCells=null;plan.optionsKey='';
- refreshPaintGuide();queueDraw();
+ if(plan.cells.size){
+  // Clear the local painter's complete selection; never leave a stale preview.
+  plan.cells.clear();plan.lastPoint=null;plan.brushPoint=null;plan.zoneCells=null;
+  plan.optionsKey='';plan.removedTargets?.clear();refreshPaintGuide();queueDraw();
+  return;
+ }
+ if(plan.workResource){refreshPaintGuide();return;}
+ // When there is nothing newly painted, the button explicitly says
+ // "Clear all plans" and removes existing saved owned attack/recovery zones.
+ const all=new Set([...(state.attackPlans||[]),...(state.recoveryPlans||[])]
+  .filter(p=>p.owner===myId).flatMap(p=>p.zoneCells||[]));
+ if(all.size&&command({type:'erasePlanCells',cells:[...all]})){
+  resetAttackPlanner();toast('All offensive plans cleared');
+ }
 }
 function reviewPaintedZone(){
  const plan=attackPlanner;if(plan?.mode!=='paint'||pressed.size>0)return;
@@ -1033,7 +1050,6 @@ for(const b of document.querySelectorAll('[data-percent]')){b.setAttribute('aria
 $('cancelMode').onclick=cancelMode;function cancelMode(){setBuildingMode(null);}
 $('cancelTarget').onclick=()=>{setPreview(null);redirectArmy=null;lastTap=0;};$('confirmTarget').onclick=()=>{if(!target)return;if(target.type!=='redirect'){beginAttackPlanner();return;}const t=target;const ok=command({type:'redirect',id:t.id,x:t.x,y:t.y});if(ok){setPreview(null);redirectArmy=null;}};
 
-$('planGuideExit').onclick=resetAttackPlanner;
 $('planReviewClose').onclick=editPaintedZone;
 $('planDiscard').onclick=editPaintedZone;
 $('planPaintClear').onclick=clearPaintedZone;
@@ -1050,9 +1066,7 @@ function refreshArmyFocus(){
 function exitArmyFocus(){defensePicking=false;focusHover=null;$('planToolFocus').classList.remove('chosen');$('planToolFocus').setAttribute('aria-pressed','false');refreshArmyFocus();queueDraw();}
 $('planToolSwitch').addEventListener('click',e=>{const button=e.target.closest('button');if(button&&button.id!=='planToolFocus'&&defensePicking)exitArmyFocus();},true);
 $('planToolFocus').onclick=()=>{const wasPicking=defensePicking;if(attackPlanner)resetAttackPlanner();closeNations();hideAux();setBuildingMode(null);defensePicking=!wasPicking;focusHover=null;$('planToolFocus').classList.toggle('chosen',defensePicking);$('planToolFocus').setAttribute('aria-pressed',String(defensePicking));refreshArmyFocus();queueDraw();};
-$('exitArmyFocus').onclick=exitArmyFocus;
 $('clearArmyFocus').onclick=()=>{command({type:'armyFocus',clear:true});focusHover=null;refreshArmyFocus();queueDraw();};
-$('eraseExit').onclick=resetAttackPlanner;
 $('eraseReset').onclick=()=>{if(attackPlanner?.mode==='erase'){attackPlanner.cells.clear();refreshPaintGuide();queueDraw();}};
 $('eraseApply').onclick=()=>{const p=attackPlanner;if(p?.mode==='erase'&&p.cells.size&&command({type:'erasePlanCells',cells:[...p.cells]})){p.cells.clear();refreshPaintGuide();queueDraw();}};
 $('planToolPaint').onclick=()=>togglePaintTool('paint');
@@ -1801,12 +1815,7 @@ function worldBorderPaths(){
 }
 function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr=canvas.width/Math.max(1,canvas.clientWidth);const w=canvas.clientWidth,h=canvas.clientHeight;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#3890a5';ctx.fillRect(0,0,w,h);
  ctx.save();ctx.translate(camX,camY);ctx.scale(zoom,zoom);ctx.imageSmoothingEnabled=zoom<.42;ctx.drawImage(worldLayer,0,0,worldLayer.width,worldLayer.height,0,0,E.W*TILE,E.H*TILE);
- if(zoom>=.28){
-  const paths=worldBorderPaths();
-  ctx.lineWidth=Math.max(.55,1.65/zoom);ctx.strokeStyle='#e6f3ffb0';ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke(paths.owners);
-  ctx.strokeStyle='#ff7488e6';ctx.lineWidth=Math.max(1.2,2.3/zoom);ctx.setLineDash([3/zoom,2/zoom]);ctx.lineCap='butt';ctx.stroke(paths.wars);ctx.setLineDash([]);
-  ctx.strokeStyle='#f1edc29f';ctx.lineWidth=Math.max(.85,1.25/zoom);ctx.stroke(paths.coast);
- }
+
  const defense=defensePicking?(focusHover&&E.inside(focusHover.x,focusHover.y)?focusHover:mine()?.armyFocus):null;
  if(defense){ctx.strokeStyle=E.focusStatus(state,myId,defense)==='invalid'?'#ff617b':'#39d5ff';ctx.lineWidth=2/zoom;ctx.beginPath();ctx.arc((defense.x+.5)*TILE,(defense.y+.5)*TILE,TILE*1.5,0,Math.PI*2);ctx.moveTo((defense.x-2)*TILE,(defense.y+.5)*TILE);ctx.lineTo((defense.x+3)*TILE,(defense.y+.5)*TILE);ctx.moveTo((defense.x+.5)*TILE,(defense.y-2)*TILE);ctx.lineTo((defense.x+.5)*TILE,(defense.y+3)*TILE);ctx.stroke();}
 
@@ -1821,8 +1830,10 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   const sx=x*zoom+camX,sy=y*zoom+camY;
   if(sx<-65||sx>w+65||sy<-65||sy>h+65)continue;
   if(!markerBins){markerList.push({b,x,y,count:1});continue;}
-  const size=zoom<.55?39:zoom<.95?34:30;
-  const key=Math.floor(sx/size)+':'+Math.floor(sy/size);
+  // Buckets are anchored in terrain cells, never in screen pixels. Dragging
+  // the map must not change which icon represents a cluster.
+  const gridCells=Math.max(2,Math.round((zoom<.55?44:zoom<.95?38:33)/(TILE*zoom)));
+  const key=b.owner+':'+Math.floor(b.x/gridCells)+':'+Math.floor(b.y/gridCells);
   const existing=markerBins.get(key);
   if(!existing)markerBins.set(key,{b,x,y,count:1});
   else{
@@ -1833,6 +1844,31 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
  if(markerBins)markerList.push(...markerBins.values());
  ctx.textAlign='center';ctx.textBaseline='middle';
  for(const marker of markerList)drawMapBuilding(marker.b,marker.x,marker.y,marker.count);
+ // Political and war borders are a higher layer than buildings and roads.
+ // This keeps country boundaries readable even in heavily built-up regions.
+ if(zoom>=.28){
+  const paths=worldBorderPaths();
+  ctx.lineWidth=Math.max(1.3,2.25/zoom);ctx.strokeStyle='#f3f9f9e6';ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke(paths.owners);
+  ctx.strokeStyle='#ff7488e6';ctx.lineWidth=Math.max(1.7,2.8/zoom);ctx.setLineDash([3/zoom,2/zoom]);ctx.lineCap='butt';ctx.stroke(paths.wars);ctx.setLineDash([]);
+  ctx.strokeStyle='#f1edc29f';ctx.lineWidth=Math.max(.85,1.25/zoom);ctx.stroke(paths.coast);
+ }
+ // Persistent strategic focus belongs to the current army order, not to the
+ // temporary focus input mode. Keep it visible until explicitly cleared.
+ const savedFocus=mine()?.armyFocus;
+ if(savedFocus&&E.inside(savedFocus.x,savedFocus.y)){
+  const fx=(savedFocus.x+.5)*TILE,fy=(savedFocus.y+.5)*TILE;
+  const valid=E.focusStatus(state,myId,savedFocus)!=='invalid';
+  ctx.save();ctx.strokeStyle=valid?'#65e6f8':'#ff5e75';
+  ctx.fillStyle=valid?'#10434bb8':'#551b29b8';
+  ctx.lineWidth=2.2/zoom;
+  ctx.beginPath();ctx.arc(fx,fy,10/zoom,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(fx-15/zoom,fy);ctx.lineTo(fx-6/zoom,fy);
+  ctx.moveTo(fx+6/zoom,fy);ctx.lineTo(fx+15/zoom,fy);
+  ctx.moveTo(fx,fy-15/zoom);ctx.lineTo(fx,fy-6/zoom);
+  ctx.moveTo(fx,fy+6/zoom);ctx.lineTo(fx,fy+15/zoom);
+  ctx.stroke();ctx.restore();
+ }
  // Draw one name per surviving country, even after the capital becomes a city.
  // Full territorial flood-fill runs only when the territory revision changes.
  const labelBoxes=[];
