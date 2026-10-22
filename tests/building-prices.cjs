@@ -19,7 +19,7 @@ first.owner=other;assert.equal(E.costBuilding(s,id,'farm').wood,48);
 assert.equal(E.costBuilding(s,other,'farm').wood,48,'captured structures count for their current owner');
 s.buildings=s.buildings.filter(b=>b.kind!=='farm'||b.owner!==id);
 assert.equal(E.costBuilding(s,id,'farm').wood,45,'losing all resets price to base');
-s.buildings.push({...first,id:'owned',owner:id,level:4});
+s.buildings.push({...first,id:'owned',owner:id,level:3});
 p.res.wood=45;wood=p.res.wood;stone=p.res.stone;
 const count=s.buildings.length;
 assert.equal(build('farm',22,20).ok,false,'base-only balance cannot pay scaled price');
@@ -29,7 +29,7 @@ assert.equal(JSON.stringify(E.KINDS),base,'shared base prices never mutate');
 for(const kind of Object.keys(E.KINDS)){
  const fresh=E.lobby(1);fresh.buildings=[];
  const price=E.costBuilding(fresh,id,kind);
- fresh.buildings.push({owner:id,kind,level:4});
+ fresh.buildings.push({owner:id,kind,level:3});
  const more=E.costBuilding(fresh,id,kind);
  for(const [resource,value] of Object.entries(price))assert.equal(more[resource],Math.ceil(value*1.05));
 }
