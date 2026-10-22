@@ -2,7 +2,7 @@
 const fs=require('node:fs'),http=require('node:http'),path=require('node:path'),cp=require('node:child_process'),assert=require('node:assert/strict');
 const {chromium,webkit}=require('playwright'),E=require('../engine.js'),{fixture}=require('./performance-v100.cjs');
 const root=process.cwd(),baseline='e8a8856a65baa35168785be14bc4a0aed80b8a07',readOld=file=>cp.execFileSync('git',['show',baseline+':'+file],{encoding:'utf8',maxBuffer:2e6});
-const old={'engine.js':readOld('engine.js'),'game.js':readOld('game.js')};
+const old={'engine.js':readOld('engine.js'),'game.js':readOld('game.js'),'index.html':readOld('index.html')};
 const s=fixture(E,true);for(let n=0;n<4;n++)E.tick(s);
 // Stress physical rendering with 1000 columns, preserving each wave's strength.
 for(const a of s.armies){const original=a.columns||[];if(!original.length)continue;const factor=Math.max(1,Math.ceil(1000/s.armies.length/original.length));a.columns=original.flatMap(c=>Array.from({length:factor},()=>({...c,strength:c.strength/factor})));}
