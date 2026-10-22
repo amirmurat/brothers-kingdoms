@@ -6,7 +6,7 @@ function setup(percent=30){
  for(let y=20;y<=60;y++)for(let x=20;x<=70;x++)s.owners[E.idx(x,y)]=id;
  const p=E.person(s,id);p.land=2091;p.troops=100000;p.troopCap=200000;p.capital={x:22,y:40};
  p.garrisons=[{id:'near',x:70,y:40,strength:60000},{id:'far',x:22,y:40,strength:40000}];
- s.buildings=[{id:'base',owner:id,kind:'capital',x:22,y:40,level:1}];E.person(s,foe).troops=0;E.person(s,foe).garrisons=[];
+ s.buildings=[{id:'base',owner:id,kind:'city',x:22,y:40,level:1}];E.person(s,foe).troops=0;E.person(s,foe).garrisons=[];
  const zone=[];for(let y=20;y<=60;y++)for(let x=71;x<=100;x++)zone.push(E.idx(x,y));
  assert(E.action(s,id,{type:'send',x:71,y:40,zone,percent}).ok);return{s,id,p,a:s.armies[0]};
 }
