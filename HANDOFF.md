@@ -1,5 +1,16 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 
+## START HERE — v110 corrected two-line Fort corner (22.10.2026)
+
+**Correct editable branch:** `design/visual-review-v26` (NOT old `main`). The owner observed a single-line corner joining double-line straight Fort walls on their actual iPhone. They uploaded `Fort Corner 2 lines.png` (original 32×32 native transparent sprite). This corrected art is now installed **byte-identically** as `assets/player/fort-tiles/corner.png` (Git blob `28d49686fd65893f32eb4cb6fe14cdef9ab995ed`). The previous `corner.png` was saved as `assets/player/fort-tiles/corner-1-line.png` (archived; NOT used by renderer). The user-authored double-line corner has both outer SW and inner NE masonry; base opening mask N|E=3. The other three orientations are derived by exact RGBA 90° rotations. No change in same-owner/same-kind adjacency, world tile geometry, other Fort segments, or engine.
+
+**Critical cache:** `game.js` loads `corner.png?v=110` explicitly to avoid Safari / Cloudflare returning old single-line corner for identical filename. `index.html` script/style cache key updated to `110-fort-double-corner-r1`. `tests/mobile-layout.cjs` now checks NE interior masonry pixel RGBA [150,66,83,255], SW outer pixel [227,105,86,255], exact 90° corner rotation and versioned URL. All sixteen masks still covered. `assets/player/README.md` records the replacement and archived file.
+
+**Verification:** Source PNG inspected: 32×32 pixels, 256 transparent pixels; 192+192 brick colors and 3 neutral grays. JS V8 syntax passed. GitHub Actions for final test commit `8c38ba619` are running; check result before claiming all tests green. Not verified on user's live Cloudflare URL or physical Safari yet. Do not merge into obsolete main.
+
+---
+
+
 ## START HERE — v109 complete connected Fort walls (22.10.2026)
 
 **Correct working branch:** `design/visual-review-v26` (not the old `main`/GitHub Pages). Client asset version `109-fort-wall-autotile-r1`. The user reuploaded **five** independently drawn native 32×32 PNGs; these exact bytes are now stored at `assets/player/fort-tiles/{single,cap,straight,corner,tee}.png`. The previous `assets/player/fort.png` is archived and **not used by active game or HUD**. All art is user-authored, not Tiny Swords; do not assume CC0.
