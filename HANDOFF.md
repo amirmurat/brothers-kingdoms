@@ -1,5 +1,14 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 
+## ART REVIEW — 22.10.2026: Approved original Fort + Quarry PNGs safely archived
+
+The user requested: "Давай по одному типу исправлять. Ты сохрани камнелом и форт в гитхаб, а то потеряем." **Completed:** six unchanged, native 32×32 transparent RGBA images, three levels each, preserved at `assets/player/approved-topdown/fort/level-{1,2,3}.png` and `assets/player/approved-topdown/quarry/level-{1,2,3}.png`. Each file was hash-verified against the approved /mnt/data/rook_quarry_32x32 local original; see `assets/player/approved-topdown/README.md` for all SHA-256s and GitHub previews.
+
+These are the *manually pixel-drawn* (Python/Pillow), top-down, detailed Fort-as-rook and irregular open-pit quarry that the user approved after rejecting image-generator alternatives and superficial geometric symbols. This is **a preservation-only art archive** — no changes to game.js, engine.js, index.html, existing active `assets/player/fort-levels`, or game rules. The user wants to refine the **other building types one at a time**; do not integrate these new art files or overwrite originals without explicit direction. The original authoring script `paint_rook_quarry.py` was provided in the art conversation and could be committed separately if requested.
+
+---
+
+
 ## START HERE — v111 top-down Forts, no auto-connecting (22.10.2026)
 
 **Current working branch:** `design/visual-review-v26`, not obsolete `main`. The owner explicitly prioritized **strategic readability** over 3-D architectural detail and approved strictly orthogonal top-down **exactly symmetric** pixel-art Fort towers; they abandoned the wall-joining idea.
