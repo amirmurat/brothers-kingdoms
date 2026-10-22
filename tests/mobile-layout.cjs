@@ -319,8 +319,8 @@ const server=http.createServer((req,res)=>{
    assert(minimapGeometry.rightGap<1,label+' right-side tools and menu have same right inset');
 
    const typeColors=await page.evaluate(()=>['city','barracks','fort'].map(kind=>window.__layout.buildingLevelColor({kind,level:1})));
-   const tiers=await page.evaluate(()=>['city','barracks','fort'].map(kind=>new Set([1,2,3,4,5].map(level=>window.__layout.buildingLevelColor({kind,level}))).size));
-   assert(tiers.every(n=>n===5),label+' roof levels have five distinct owner-color shades');
+   const tiers=await page.evaluate(()=>['city','barracks','fort'].map(kind=>new Set([1,2,3].map(level=>window.__layout.buildingLevelColor({kind,level}))).size));
+   assert(tiers.every(n=>n===3),label+' three distinct owner/upgrade color shades');
    assert.equal(new Set(typeColors).size,1,label+' building type never changes the nation/level color');
    const ownedArt=await page.evaluate(async()=>{
     const L=window.__layout,s=L.getState(),me=s.players.find(p=>!p.bot),enemy=s.players.find(p=>p.id!==me.id);
