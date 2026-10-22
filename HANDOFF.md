@@ -1,5 +1,16 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 
+## START HERE — v105 Tiny Swords old CC0 on the correct active branch (22.10.2026)
+
+**Working branch:** `design/visual-review-v26`, based on v104 `a954e5265`, **not** old `main`. After the owner reported that v26 had been applied to the wrong base, the visual update was ported to this active branch. Original `engine.js`, roads, planned attacks, army focus, worker-built upgrades, Cloudflare server and English UI strings were preserved. The accidentally merged v26 on `main` was restored to exactly the former v25 file tree by corrective commit `1580d51f1`; its historical commit remains in Git history. **Never merge this v105 branch to main or claim Pages is the active game.**
+
+**v105 changes:** 18 image assets + provenance note copied from `assets/tiny-swords-cc0/` (old Pixel Frog edition, separate from modern non-CC0 Free Pack). Existing `game.js` now loads all eight original building silhouettes, the context card / build dock use them, and dynamic and static HUD resources use CC0 art. World bitmap uses Tiny Swords water/grass/tree/rock details and a brighter sea/coast palette with the existing dirty-cell cache and low-zoom building aggregation. Actual cached roads are restyled as continuous sand-center routes with dark contrast. The v104 shared Plan/Focus/Eraser bottom-sheet geometry is preserved, with matching border treatment for Build; images render pixel-crisp while interface text stays modern/flat. `index.html` asset cache version: `105-tiny-swords-active-r1`. Source art and CC0 provenance details and original-archive verification caveat: `assets/tiny-swords-cc0/README.md`.
+
+**Verification:** V8 parsed active `game.js` successfully; no old active `assets/buildings/` paths or building-specific `assets/shapes/*.svg` remain in `game.js`. The GitHub Actions runs for art and HTML changes `39698434992`, `39698474028` passed; check the *final* v105 CSS workflow `39698576644` separately before declaring all green. Browser/screenshot/device inspection, live Cloudflare deployment of v105 and real iPhone Safari are not independently confirmed; do not advertise production as v105 unless actually deployed.
+
+---
+
+
 ## START HERE — v104 visual clarity, coherent map panels (22.10.2026)
 
 **Executable HEAD:** `43b69c47d5cbcc5484299c30e9b854ef3c89ba21`, branch `design/visual-review-v26`, PR #11 draft; `main` untouched. CI for exact HEAD: GitHub Actions `39693394320` **running when note was written**. v104 clean-up `2dc8e5b` has already passed full CI `39693144175 SUCCESS`. Preceding executable commit `11f622508e01743fca79d67a30227ce12cf0ed52` fully passed `39692827099 SUCCESS` (engine/server tests, Chromium/WebKit mobile geometry and network, browser performance). Do not claim final HEAD verified until checking CI. Cache parameter: `104-art-roads-panel-r3`. Cloudflare production and actual iPhone Safari not verified.
