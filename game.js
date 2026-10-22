@@ -1724,7 +1724,7 @@ function roofSprite(kind,owner,level=1){
  // Do not recolor green crops, golden wheat, or water to ownership hues;
  // political territory borders already show country ownership on the map.
  if(kind==='farm'||!src?.naturalWidth||owner==null)return src;
- const hex=color(owner),key=buildingSpritePath(kind,visualLevel)+'|'+hex+'|'+Math.min(4,Math.max(1,visualLevel|0));
+ const hex=color(owner),key=buildingSpritePath(kind,visualLevel)+'|'+hex+'|'+Math.min(4,Math.max(1,(kind==='fort'?level:visualLevel)|0));
  if(roofSpriteCache.has(key))return roofSpriteCache.get(key);
  try{
   const base=roofBase(kind,visualLevel);
