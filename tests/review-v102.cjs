@@ -34,8 +34,11 @@ function fixture(){const s=E.lobby(7),id=E.addPlayer(s,'Builder'),foe=E.addPlaye
 console.log('PASS v102: circular terrain scouting, allied visibility, invalid focus safety, worker-built upgrades, duplicate charge prevention and physical construction');
 
 {
- const {s,id,foe,p}=fixture();s.buildings=[...Array.from({length:3},(_,n)=>({id:'u'+n,owner:id,kind:'fort',level:1,x:20+n,y:20})),{id:'base',owner:id,kind:'city',level:1,x:19,y:20}];
- assert(E.action(s,id,{type:'upgrade',id:'u0'}).ok);assert(E.action(s,id,{type:'upgrade',id:'u1'}).ok);const paid=p.res.gold;assert(!E.action(s,id,{type:'upgrade',id:'u2'}).ok);assert.equal(p.res.gold,paid,'Concurrency refusal never charges');
+ const {s,id,foe,p}=fixture();s.buildings=[...Array.from({length:5},(_,n)=>({id:'u'+n,owner:id,kind:'fort',level:1,x:20+n,y:20})),{id:'base',owner:id,kind:'city',level:1,x:19,y:20}];
+ // One level-1 city supplies 24 workers / four real 6-worker groups.
+ const capacity=E.workforceStats(s,id).slots;assert.equal(capacity,4,'Concurrent jobs scale with the city's workforce');
+ for(let n=0;n<capacity;n++)assert(E.action(s,id,{type:'upgrade',id:'u'+n}).ok,'Every available worker crew can take a job');
+ const paid=p.res.gold;assert(!E.action(s,id,{type:'upgrade',id:'u4'}).ok);assert.equal(p.res.gold,paid,'Only a genuinely unavailable crew blocks additional work, without charging');
  s.buildings[0].owner=foe;s.owners[E.idx(20,20)]=foe;s.territoryRevision++;s.tick++;E.workforceStep(s);assert(!s.buildings[0].upgrade,'Captured building cannot inherit a paid upgrade');assert.equal(s.buildings[0].level,1);
  const save=JSON.parse(JSON.stringify(s));assert(save.buildings[1].upgrade);
  for(let n=0;n<100&&save.buildings[1].level===1;n++){save.tick++;E.workforceStep(save);}
