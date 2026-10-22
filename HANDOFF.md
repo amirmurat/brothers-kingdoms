@@ -1,5 +1,14 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 
+## v113 — Restored original standalone Fort tile (22.10.2026)
+
+**User request:** "Лучше верни бывший тайл форта. @GitHub" after the iterative tower and farm art work became too slow. The **v109/v110 historical Fort 1×1 tile** `assets/player/fort-tiles/single.png` is now again the **active Fort sprite** for all building levels. The new v111 tower files in `assets/player/fort-levels/level-{1,2,3}.png` and separately approved hand-drawn rook/quarry art remain safely archived and untouched; do not delete them. The live code in `game.js` uses `FORT_SINGLE_TILE`, maps every Fort level to one fixed PNG, recolors only original dark/light red masonry pigments (RGB `150,66,83` and `227,105,86`) for the owning country, and maintains distinct upgrade tint cache entries. No neighbor joining, autotiling, 3-level visual tower selection, or layout changes; every Fort independently fills exactly one world cell. Game mechanics (four levels) and the active v112 farm artwork are unchanged.
+
+HTML cache token: `113-original-fort-single-r1`. `tests/mobile-layout.cjs` now asserts the historic tile loads for every Fort level, country color, alpha preservation, independent placement, and still-distinct tier tints. Verify current GitHub Actions before claiming test success or Cloudflare availability. The active branch remains `design/visual-review-v26`; `main` is obsolete. **Only Fort visuals have been reverted**, not all of v112.
+
+---
+
+
 ## v112 — Farm artwork is now active in game; Cloudflare preview page (22.10.2026)
 
 **Deployment branch is `design/visual-review-v26`**, not stale `main`. User no longer wants rounds of review, asks for working changes *on the site*. Implemented in `game.js`: `buildingSpritePath('farm',level)` routes to the existing three 32×32 RGBA farm PNGs at `assets/player/drafts/farm/level-{1,2,3}.png`. The per-tier loader `farmLevelSprites` preloads level 2 and 3; level 1 uses existing `mapBuildingSprites.farm`. All farm sprites render as individual one-cell images. Level 4+ falls back visually to level 3 art; gameplay levels/costs remain untouched. Farm images are not recolored to owner hue: this preserves brown soil, green crops, blue water and golden wheat, and territory borders already show ownership. Other buildings, multiplayer, economics and styling unchanged.
