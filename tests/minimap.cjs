@@ -1,0 +1,14 @@
+const assert=require('assert'),fs=require('fs'),vm=require('vm');
+const source=fs.readFileSync('game.js','utf8');
+const draw=source.slice(source.indexOf('function drawMini(){'),source.indexOf("window.addEventListener('resize'",source.indexOf('function drawMini(){')));
+const calls=[];
+const context={imageSmoothingEnabled:false,drawImage(...args){calls.push(args)},clearRect(){},strokeRect(){}};
+const world={width:960,height:624};
+const sandbox={state:{owners:[1],armies:[],territoryRevision:1},worldLayer:world,E:{W:160,H:104},miniRevision:-1,minimapCached:null,document:{createElement(){return {getContext(){return context}}}},mctx:context,activeThreats:[],zoom:2,TILE:6,camX:0,camY:0,canvas:{clientWidth:390,clientHeight:600}};
+vm.runInNewContext(draw+'drawMini();',sandbox);
+assert.deepStrictEqual(calls[0],[world,0,0,160,104],'entire enlarged world must scale into minimap');
+assert.equal(sandbox.minimapCached.width,160);assert.equal(sandbox.minimapCached.height,104);
+const html=fs.readFileSync('index.html','utf8'),css=fs.readFileSync('styles/theme.css','utf8');
+assert(html.indexOf('id="gameFeedback"')>html.indexOf('<section class="map-shell">'));
+assert(/#game#game#game #gameFeedback\{position:absolute!important/.test(css));
+console.log('PASS: full-world minimap scaling and feedback outside map layout flow');

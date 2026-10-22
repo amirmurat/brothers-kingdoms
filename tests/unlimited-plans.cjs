@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict'),E=require('../engine.js');
+const s=E.lobby(98337),id=E.addPlayer(s,'Player');E.start(s,0);
+s.tiles.fill(1);s.owners.fill(id);s.buildings=[];s.armies=[];const p=E.person(s,id);p.land=E.W*E.H;p.troops=450;p.garrisons=[{id:'g',x:20,y:20,strength:450}];
+const cells=Array.from({length:1000},(_,i)=>3000+i),order=zone=>E.action(s,id,{type:'send',x:1,y:1,zone,targets:[0]});
+assert.equal(E.planCellLimit(s,id),45);assert(order(cells).ok);
+let plan=s.attackPlans[0];const total=()=>s.attackPlans.reduce((n,v)=>n+v.zoneCells.length,0);assert.equal(total(),45,'Oversized request quietly stops at the current army capacity across independent regions');assert(s.attackPlans.length>1,'Disconnected rows become independent plans');
+p.troops=150;s.armies=[{id:'deployed',owner:id,strength:300,columns:[]}];
+assert.equal(E.planCellLimit(s,id),45,'Mobilizing soldiers does not shrink painting capacity');
+s.armies=[];p.troops=100;
+assert(E.action(s,id,{type:'updatePlan',id:plan.id,zone:cells}).ok);
+assert.equal(total(),45,'Casualties do not erase existing drawings');
+p.troops=2000;assert(E.action(s,id,{type:'updatePlan',id:plan.id,zone:cells}).ok);assert.equal(total(),200,'Army growth permits a larger overall zone');
+const erased=E.action(s,id,{type:'erasePlanCells',cells:plan.zoneCells.slice(0,50)});assert.equal(erased.erased,50);
+p.troops=0;const before=s.attackPlans.length;assert(order(cells.slice(600)).ok);assert.equal(s.attackPlans.length,before,'Zero troops quietly paints nothing');
+assert.equal(E.BUILD,'v103');
+console.log('PASS army-sized painting: reserve+deployed, quiet cap, growth, casualty preservation, erasing and zero-force no-op');

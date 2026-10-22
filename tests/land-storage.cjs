@@ -1,0 +1,10 @@
+'use strict';
+const assert=require('node:assert/strict'),E=require('../engine.js');
+const s=E.lobby(13),id=E.addPlayer(s,'Owner');assert(E.start(s,0).ok);
+assert(!s.buildings.some(b=>b.kind==='farm'),'New match has no free farm');
+const p=E.person(s,id);assert.equal(E.resourceCapacity(s,id),p.land*50);
+p.land=20;p.res={food:9999,wood:9999,stone:9999,gold:9999};E.tick(s);
+for(const amount of Object.values(p.res))assert(amount<=1000,'Storage follows land cells, not 250k');
+p.land=10000;assert.equal(E.resourceCapacity(s,id),500000,'Large territory can exceed the old fixed cap');
+p.land=5;E.tick(s);for(const amount of Object.values(p.res))assert(amount<=250,'Losing land reduces storage');
+console.log('PASS land storage: new start, per-cell capacity, growth beyond old cap and contraction');

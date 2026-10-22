@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('node:assert/strict'),E=require('../engine.js');
+const s=E.lobby(57283),id=E.addPlayer(s,'Commander');assert(E.start(s,0).ok);
+const p=E.person(s,id);s.tiles.fill(1);s.owners.fill(0);s.buildings=[];s.territoryRevision++;
+s.owners[E.idx(80,50)]=id;p.land=1;p.troops=1000;
+const make=(name,x,percent)=>({id:name,owner:id,targets:[0],zoneCells:[E.idx(x,50)],percent,waves:0,nextWaveTick:0});
+const a=make('east',81,5),b=make('west',79,95);s.attackPlans=[a,b];
+const east=E.planAllocation(s,a),west=E.planAllocation(s,b);assert.equal(east,west,'Legacy percentages do not control deployment');
+assert(east>0&&east+west<=750,'Automatic commitments retain home reserves');
+s.armies=[{owner:id,planId:a.id,strength:east}];p.troops-=east;
+assert.equal(E.planAllocation(s,a),0,'Existing soldiers already satisfy the local demand');
+assert.equal(E.planAllocation(s,b),west,'Another plan receives its demand independently of launch order');
+assert.equal(E.militaryStrength(s,id).total,1000);
+s.attackPlans=[];s.armies=[{owner:id,strength:903}];p.troops=0;
+E.tick(s);assert.equal(p.troopIncome,0,'Deployed soldiers still occupy recruitment capacity');
+console.log('PASS automatic shared army: percentage independence, reserved defenders, no duplicate commitments and total capacity');

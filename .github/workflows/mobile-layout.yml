@@ -1,0 +1,57 @@
+name: Mobile layout
+on:
+  push:
+    branches: [design/visual-review-v26]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Engine and server regressions
+        run: |
+          node tests/review-v102.cjs
+          node tests/map-strategy-v101.cjs
+          node tests/strategic-priorities.cjs
+          node tests/economy-v100.cjs
+          node tests/performance-v100.cjs
+          node tests/land-storage.cjs
+          node tests/workforce.cjs
+          node tests/army-command.cjs
+          node tests/army-performance.cjs
+          node tests/front-distribution.cjs
+          node tests/spatial-army.cjs
+          node tests/shared-army.cjs
+          node tests/spawn-points.cjs
+          node tests/building-prices.cjs
+          node tests/adaptive-offensives.cjs
+          node tests/offensive-plans.cjs
+          node tests/plan-frontier-merge.cjs
+          node tests/recovery-frontier.cjs
+          node tests/saved-plan-eraser.cjs
+          node tests/unlimited-plans.cjs
+          node tests/nations.cjs
+          node tests/cloudflare-server.cjs
+          node tests/cloudflare-client.cjs
+          node tests/ui-windows.cjs
+      - run: npm install --no-save playwright ws
+      - run: npx playwright install --with-deps chromium webkit
+      - run: node tests/mobile-layout.cjs
+      - run: node tests/network-lobby.cjs
+
+      - run: node tests/performance-browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v100-performance
+          path: |
+            test-results/
+            /tmp/bk-v*.png
