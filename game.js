@@ -11,7 +11,8 @@ const CC0_RESOURCES=new Set(['food','wood','stone','gold']);
 const BUILDING_SPRITE_FILES={city:'capital',barracks:'city'};
 const buildingSpriteFile=kind=>BUILDING_SPRITE_FILES[kind]||kind;
 // Player-authored sprite is stored separately from third-party art.
-const buildingSpritePath=kind=>kind==='fort'?'assets/player/fort.png':OLD_CC0+'buildings/'+buildingSpriteFile(kind)+'.png';
+const FORT_TILE_PATH='assets/player/fort-tiles/';
+const buildingSpritePath=kind=>kind==='fort'?FORT_TILE_PATH+'single.png':OLD_CC0+'buildings/'+buildingSpriteFile(kind)+'.png';
 const uiIcon=name=>{
  if(CC0_BUILDINGS.has(name))return `<img class="ui-icon tiny-building-art" src="${buildingRoofUrl(name,state?.phase==='playing'?myId:null,1)}" alt="" aria-hidden="true"/>`;
  if(CC0_RESOURCES.has(name))return `<img class="ui-icon tiny-resource-art" src="${OLD_CC0}resources/${name}.png" alt="" aria-hidden="true"/>`;
@@ -1623,6 +1624,14 @@ if(typeof Image==='function')for(const kind of BUILDING_KINDS){
  sprite.src=buildingSpritePath(kind);
 }
 
+// Connected fort walls are a same-owner/same-kind 4-bit autotile, with the
+// uploaded art as-is. Adjacent parts are rotated by exact pixel permutations.
+const fortTileImages=Object.create(null),fortTileVariants=new Map();
+if(typeof Image==='function')for(const kind of ['cap','straight','corner','tee']){
+ const img=new Image();fortTileImages[kind]=img;
+ img.onload=()=>{fortTileVariants.clear();queueDraw();};
+ img.src=FORT_TILE_PATH+kind+'.png';
+}
 // Tiny Swords old CC0 terrain sheets; no new mechanics. Off-screen world bitmap
 // is repainted only for changed cells, never per animation frame.
 const tinyTerrain=Object.create(null);
@@ -1656,6 +1665,16 @@ function hsvRGB(h,s,v){
  const [r,g,b]=[[chroma,second,0],[second,chroma,0],[0,chroma,second],[0,second,chroma],[second,0,chroma],[chroma,0,second]][group];
  return [Math.round((r+low)*255),Math.round((g+low)*255),Math.round((b+low)*255)];
 }
+function isFortBrick(r,g,b){
+ return (r===150&&g===66&&b===83)||(r===227&&g===105&&b===86);
+}
+function fortBrickColor(r,g,b,hue,saturation,level){
+ const bright=r===227;
+ const lv=Math.min(4,Math.max(1,level|0));
+ const value=Math.min(1,(bright?.86:.56)*(.9+(lv-1)*.065));
+ const sat=clamp01(Math.max(.58,saturation)*(bright?.88:.94));
+ return hsvRGB(hue,sat,value);
+}
 function roofBase(kind){
  const src=mapBuildingSprites[kind],file=buildingSpritePath(kind);
  if(!src?.naturalWidth||!src.naturalHeight)return null;
@@ -1669,14 +1688,11 @@ function roofBase(kind){
  const mask=[];
  for(let i=0;i<pixels.data.length;i+=4){
   const r=pixels.data[i],g=pixels.data[i+1],b=pixels.data[i+2];
-  // Player-made Fort has one exact lime accent (#CFFF70). ONLY this accent
-  // changes with ownership; 6 other palette entries and alpha stay byte-exact.
+  // New authored Fort tiles use TWO red masonry colors as team accents.
+  // They contain no lime (#CFFF70). Gray metal and transparency stay intact.
   if(kind==='fort'){
-   if(r===207&&g===255&&b===112&&pixels.data[i+3]===255)mask.push(i);
-  }else{
-   // Existing Tiny Swords art keeps the original blue-shingle roof mask.
-   if(pixels.data[i+3]>=96&&b>=64&&b>r+13&&b>g+2&&g>=r-28)mask.push(i);
-  }
+   if(pixels.data[i+3]===255&&isFortBrick(r,g,b))mask.push(i);
+  }else if(pixels.data[i+3]>=96&&b>=64&&b>r+13&&b>g+2&&g>=r-28)mask.push(i);
  }
  const base={width:canvas.width,height:canvas.height,pixels,mask};
  roofBasePixels.set(file,base);return base;
@@ -1696,11 +1712,9 @@ function roofSprite(kind,owner,level=1){
   const out=new Uint8ClampedArray(base.pixels.data);
   for(const i of base.mask){
    const rr=out[i],gg=out[i+1],bb=out[i+2],originalMax=Math.max(rr,gg,bb);
-   const sat=kind==='fort'?clamp01(Math.max(.5,saturation)*(.82+(Math.min(4,Math.max(1,level|0))-1)*.06))
-    :clamp01((.38+.36*saturation+.14*(originalMax-Math.min(rr,gg,bb))/255)*tier.saturation);
-   const value=kind==='fort'?clamp01(Math.max(r,g,b)/255*(.88+(Math.min(4,Math.max(1,level|0))-1)*.05))
-    :clamp01(originalMax/255*tier.brightness);
-   const next=hsvRGB(hue,sat,value);
+   const next=kind==='fort'
+    ?fortBrickColor(rr,gg,bb,hue,saturation,level)
+    :hsvRGB(hue,clamp01((.38+.36*saturation+.14*(originalMax-Math.min(rr,gg,bb))/255)*tier.saturation),clamp01(originalMax/255*tier.brightness));
    out[i]=next[0];out[i+1]=next[1];out[i+2]=next[2];
   }
   const canvas=document.createElement('canvas');canvas.width=base.width;canvas.height=base.height;
@@ -1761,16 +1775,72 @@ function buildingConnectMask(b,byCell){
  }
  return mask;
 }
-function drawMapBuilding(b){
+
+// Facing mask (N=1,E=2,S=4,W=8): opened sides are adjacent own Forts.
+// Uploaded base orientations: cap E, corner N+E, straight E+W, tee N+E+W.
+// Rotating the bit mask clockwise yields the corresponding sprite rotation.
+const FORT_BASES=[{type:'cap',mask:2},{type:'corner',mask:3},{type:'straight',mask:10},{type:'tee',mask:11}];
+const clockwiseMask=m=>((m<<1)&15)|(m>>3);
+function fortTileSpec(mask){
+ const m=mask&15;
+ if(m===0)return {type:'single',rot:0};
+ if(m===15)return {type:'empty',rot:0}; // Four neighbors: no exterior wall.
+ for(const base of FORT_BASES){
+  let next=base.mask;
+  for(let rot=0;rot<4;rot++){
+   if(m===next)return {type:base.type,rot};
+   next=clockwiseMask(next);
+  }
+ }
+ return {type:'single',rot:0};
+}
+function fortConnectedSprite(mask,owner,level=1){
+ const spec=fortTileSpec(mask);
+ if(spec.type==='empty')return null;
+ if(spec.type==='single')return roofSprite('fort',owner,level);
+ const src=fortTileImages[spec.type];
+ if(!src?.naturalWidth)return roofSprite('fort',owner,level);
+ const hex=color(owner),lv=Math.min(4,Math.max(1,level|0));
+ const key=spec.type+'|'+spec.rot+'|'+hex+'|'+lv;
+ if(fortTileVariants.has(key))return fortTileVariants.get(key);
+ try{
+  const w=src.naturalWidth,h=src.naturalHeight;
+  if(w!==32||h!==32)return roofSprite('fort',owner,level);
+  const input=document.createElement('canvas');input.width=w;input.height=h;
+  const ic=input.getContext('2d',{willReadFrequently:true});ic.drawImage(src,0,0);
+  const pixels=ic.getImageData(0,0,w,h).data;
+  const out=new Uint8ClampedArray(pixels.length);
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  const hue=rgbHue(r,g,b),sat=(Math.max(r,g,b)-Math.min(r,g,b))/Math.max(1,Math.max(r,g,b));
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+   const i=(y*w+x)*4,red=pixels[i],green=pixels[i+1],blue=pixels[i+2];
+   let rr=red,gg=green,bb=blue;
+   if(pixels[i+3]===255&&isFortBrick(red,green,blue)){
+    [rr,gg,bb]=fortBrickColor(red,green,blue,hue,sat,lv);
+   }
+   const dx=spec.rot===1?w-1-y:spec.rot===2?w-1-x:spec.rot===3?y:x;
+   const dy=spec.rot===1?x:spec.rot===2?h-1-y:spec.rot===3?h-1-x:y;
+   const j=(dy*w+dx)*4;
+   out[j]=rr;out[j+1]=gg;out[j+2]=bb;out[j+3]=pixels[i+3];
+  }
+  const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+  canvas.getContext('2d').putImageData(new ImageData(out,w,h),0,0);
+  if(fortTileVariants.size>255)fortTileVariants.clear();
+  fortTileVariants.set(key,canvas);return canvas;
+ }catch(e){return roofSprite('fort',owner,level);}
+}
+function drawMapBuilding(b,neighborMask=0){
  const bounds=buildingTileBounds(b);
- const source=roofSprite(b.kind,b.owner,b.level);
+ const source=b.kind==='fort'?fortConnectedSprite(neighborMask,b.owner,b.level):roofSprite(b.kind,b.owner,b.level);
  const loaded=!!(source?.naturalWidth||source?.width);
  const centerX=bounds.x+bounds.width/2,centerY=bounds.y+bounds.height/2;
  ctx.save();
  // No per-zoom size thresholds, screen-space icon backplates, or marker
  // aggregation. Source pixels remain nearest-neighbor for the entire tile.
  ctx.imageSmoothingEnabled=false;
- if(loaded)ctx.drawImage(source,bounds.x,bounds.y,bounds.width,bounds.height);
+ if(b.kind==='fort'&&fortTileSpec(neighborMask).type==='empty'){
+  // Interior of a filled connected block. Keep land and selection intact.
+ }else if(loaded)ctx.drawImage(source,bounds.x,bounds.y,bounds.width,bounds.height);
  else ctx.drawImage(buildingTypeMarker(b.kind,color(b.owner)),bounds.x,bounds.y,bounds.width,bounds.height);
  // Capital and City use identical castle art; keep the distinguishing pennant
  // entirely INSIDE the capital's cell, so it never overlaps neighbors.
@@ -1784,7 +1854,7 @@ function drawMapBuilding(b){
  }
  // Labels are high-zoom inspection hints. Hide them during strategic zoom
  // and never enlarge buildings to compensate for a small map cell.
- if(zoom>=2.35){
+ if(zoom>=2.35&&b.kind!=='fort'){
   const boxW=TILE*.54,boxH=TILE*.32;
   ctx.fillStyle='#0c1923d9';ctx.fillRect(centerX-boxW/2,centerY-boxH/2,boxW,boxH);
   ctx.fillStyle='#ffffff';ctx.font=`bold ${TILE*.23}px system-ui`;
@@ -1843,8 +1913,7 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   const sx=bounds.x*zoom+camX,sy=bounds.y*zoom+camY;
   const side=TILE*zoom;
   if(sx+side<-2||sx>w+2||sy+side<-2||sy>h+2)continue;
-  // Explicitly resolve neighbor topology before rendering; future sprites
-  // can select one of the 16 connection variants with this exact mask.
+  // Select connected walls from the owner-and-kind neighbor mask.
   const links=buildingConnectMask(b,byCell);
   drawMapBuilding(b,links);
  }
