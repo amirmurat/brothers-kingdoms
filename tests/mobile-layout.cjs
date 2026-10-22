@@ -171,15 +171,24 @@ const server=http.createServer((req,res)=>{
    assert(visualBudget.rects>0&&visualBudget.rects<1000,label+' overlapping troops share shaded cells');
    assert.equal(visualBudget.labels,0,label+' no troop number labels on the map');
    assert.equal(visualBudget.circles,0,label+' no per-squad circles');
-   await page.evaluate(()=>{const L=window.__layout,s=L.getState();L.contextual(s.buildings.find(b=>b.kind==='capital'&&!s.players.find(p=>p.id===b.owner).bot));});
-   assert((await page.locator('#contextBody').textContent()).includes('Garrison nearby'),label+' base tap reveals stationed troops');
-   const contextFlat=await page.evaluate(()=>{
-    const e=document.querySelector('#contextBody .context-effect'),style=getComputedStyle(e);
-    const costs=[...document.querySelectorAll('#contextBody .cost-unit')].map(x=>{const z=getComputedStyle(x);return {radius:z.borderRadius,fill:z.backgroundColor}});
-    return {radius:style.borderRadius,border:style.borderLeftWidth,costs};
+   // Capital has become an ordinary City; current upgrade details use the
+   // flat map-style level track rather than the old framed effect widget.
+   await page.evaluate(()=>{
+    const L=window.__layout,s=L.getState(),p=s.players.find(p=>!p.bot);
+    L.contextual(s.buildings.find(b=>b.kind==='city'&&b.owner===p.id));
    });
-   assert.equal(contextFlat.radius,'0px',label+' building effect flat');
-   assert.equal(contextFlat.border,'0px',label+' building effect no frame');
+   const buildingDetails=await page.locator('#contextBody').textContent();
+   assert(buildingDetails.includes('Nearby garrison'),label+' owned city exposes nearby garrison');
+   assert(buildingDetails.includes('BUILDER CREWS'),label+' upgraded building panel shows real builder crew status');
+   const contextFlat=await page.evaluate(()=>{
+    const card=document.getElementById('contextCard'),
+     track=document.querySelector('#contextBody .context-level-track'),
+     costs=[...document.querySelectorAll('#contextBody .cost-unit')].map(x=>{const z=getComputedStyle(x);return {radius:z.borderRadius,fill:z.backgroundColor}});
+    return {radius:getComputedStyle(card).borderRadius,steps:track?.children.length,
+      trackRadius:track?getComputedStyle(track).borderRadius:null,costs};
+   });
+   assert.equal(contextFlat.radius,'0px',label+' building details share the square map HUD');
+   assert.equal(contextFlat.steps,3,label+' building upgrade has a three-tier progress track');
    assert(contextFlat.costs.every(c=>c.radius==='0px'&&c.fill==='rgba(0, 0, 0, 0)'),label+' costs have no pills');
    await page.evaluate(()=>window.__layout.hideAux());
 
