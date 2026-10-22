@@ -1,5 +1,18 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 
+## START HERE — v106 building roles and country/level roof palettes (22.10.2026)
+
+**Current editable game branch:** `design/visual-review-v26`. Builds on v105/v104; do **not** edit obsolete `main` or claim its GitHub Pages preview is the active Cloudflare build. Browser cache: `106-roofs-by-nation-r2`.
+
+**Owner's explicit requirements:** Show the previous capital Castle artwork as the **City**; show the previous City/Archery artwork as **Barracks**; retain Castle for Capital but give it a larger silhouette and a visible faction-colored pennant to distinguish it. All other buildings retain their own old Tiny Swords CC0 sprites. Building *types* are distinguished by **shape and two-letter labels** (HQ/CT/BA/FT/etc.), **not by type-specific color coding**. Country ownership determines roof hue; building level determines roof lightness/saturation; the numeric level remains an independent accessibility cue.
+
+**Implementation:** `game.js`: central `BUILDING_SPRITE_FILES` mapping shared by on-map sprites, UI building cards and construction palette; `roofSprite` repaints only the blue/cyan pigment subset using source-preserving Canvas ImageData. Original transparent pixels, stone and wood stay untouched. Variants cached by source file + country color + level to avoid work every draw. Context card and build dock use player-specific tinted assets, and refresh when active player changes. Overview outline/bases use owner color and neutral level badge, not building-kind colors. A small pennant differentiates Capital from City despite sharing Castle sprite. `tests/mobile-layout.cjs` updated to remove legacy test requiring differently colored types; added requested silhouette mapping, country/level roof tint and non-roof pixel preservation in Chromium/WebKit test runs. English UI strings and `engine.js`, Cloudflare multiplayer, tactics/road behavior untouched.
+
+**Verification at edit:** V8 parsed `game.js`. CI initially failed for the outdated distinct-building-types-color test before test update; subsequent CI `39703625419` passed with updated tests, while final run `39703651807` was still running when note was written. Check latest Actions after all code/docs commits before claiming full success. Real iPhone Safari screenshots and Cloudflare production deployment of v106 **not verified**.
+
+---
+
+
 ## START HERE — v105 Tiny Swords old CC0 on the correct active branch (22.10.2026)
 
 **Working branch:** `design/visual-review-v26`, based on v104 `a954e5265`, **not** old `main`. After the owner reported that v26 had been applied to the wrong base, the visual update was ported to this active branch. Original `engine.js`, roads, planned attacks, army focus, worker-built upgrades, Cloudflare server and English UI strings were preserved. The accidentally merged v26 on `main` was restored to exactly the former v25 file tree by corrective commit `1580d51f1`; its historical commit remains in Git history. **Never merge this v105 branch to main or claim Pages is the active game.**
