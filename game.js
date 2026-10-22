@@ -11,12 +11,13 @@ const CC0_RESOURCES=new Set(['food','wood','stone','gold']);
 const BUILDING_SPRITE_FILES={city:'capital',barracks:'city'};
 const buildingSpriteFile=kind=>BUILDING_SPRITE_FILES[kind]||kind;
 // Player-authored sprite is stored separately from third-party art.
-const FORT_LEVEL_PATH='assets/player/fort-levels/';
+const FORT_SINGLE_TILE='assets/player/fort-tiles/single.png';
 const FARM_LEVEL_PATH='assets/player/drafts/farm/';
-const fortArtLevel=level=>Math.min(3,Math.max(1,Math.floor(level||1)));
+// Previous Fort is one 32x32 tile at every building level; gameplay upgrades stay intact.
+const fortArtLevel=level=>1;
 const farmArtLevel=level=>Math.min(3,Math.max(1,Math.floor(level||1)));
 const buildingSpritePath=(kind,level=1)=>
- kind==='fort'?FORT_LEVEL_PATH+'level-'+fortArtLevel(level)+'.png':
+ kind==='fort'?FORT_SINGLE_TILE:
  kind==='farm'?FARM_LEVEL_PATH+'level-'+farmArtLevel(level)+'.png':
  OLD_CC0+'buildings/'+buildingSpriteFile(kind)+'.png';
 const uiIcon=name=>{
@@ -1630,15 +1631,10 @@ if(typeof Image==='function')for(const kind of BUILDING_KINDS){
  sprite.src=buildingSpritePath(kind);
 }
 
-// Each Fort is an independent top-down tower. The three native sprites
-// change with building level, not with adjacent buildings.
+// Restore the original single Fort tile from v109/v110. No connecting walls,
+ // no replacement tower levels; all forts remain independent world-grid cells.
 const fortLevelSprites=Object.create(null);
 fortLevelSprites[1]=mapBuildingSprites.fort;
-if(typeof Image==='function')for(const level of [2,3]){
- const img=new Image();fortLevelSprites[level]=img;
- img.onload=()=>{roofSpriteCache.clear();roofBasePixels.clear();queueDraw();};
- img.src=buildingSpritePath('fort',level);
-}
 // Three authored farm designs progress visibly from soil to growing crops
 // to mature wheat. All are 32x32, top-down, and occupy one fixed map tile.
 const farmLevelSprites=Object.create(null);
@@ -1682,14 +1678,15 @@ function hsvRGB(h,s,v){
  return [Math.round((r+low)*255),Math.round((g+low)*255),Math.round((b+low)*255)];
 }
 function isFortBrick(r,g,b){
- return (r===127&&g===48&&b===70)||(r===185&&g===66&&b===84)||(r===230&&g===104&&b===103);
+ return (r===150&&g===66&&b===83)||(r===227&&g===105&&b===86);
 }
 function fortBrickColor(r,g,b,hue,saturation,level){
- const lv=fortArtLevel(level);
- // Keep the three source pigment values as dark/medium/highlight accents.
- const base=r===230?.94:r===185?.7:.48;
- const value=Math.min(1,base*(.96+(lv-1)*.02));
- const sat=clamp01(Math.max(.58,saturation)*(r===230?.88:.94));
+ // Preserve the dark / light red brick contrast in the original 1x1 tile.
+ // Each country's hue is applied only to masonry, never to gray metal.
+ const lv=Math.min(4,Math.max(1,level|0));
+ const bright=r===227;
+ const value=Math.min(1,(bright?.86:.56)*(.90+(lv-1)*.065));
+ const sat=clamp01(Math.max(.58,saturation)*(bright?.88:.94));
  return hsvRGB(hue,sat,value);
 }
 function roofBase(kind,level=1){
@@ -1709,8 +1706,8 @@ function roofBase(kind,level=1){
  const mask=[];
  for(let i=0;i<pixels.data.length;i+=4){
   const r=pixels.data[i],g=pixels.data[i+1],b=pixels.data[i+2];
-  // Symmetric top-down towers have three red accent pigments.
-  // Gray stone, golden level-3 trim and transparent pixels are preserved.
+  // The v109/v110 Fort tile has two red brick pigments; leave all
+  // gray metal and transparent pixels untouched.
   if(kind==='fort'){
    if(pixels.data[i+3]===255&&isFortBrick(r,g,b))mask.push(i);
   }else if(pixels.data[i+3]>=96&&b>=64&&b>r+13&&b>g+2&&g>=r-28)mask.push(i);
@@ -1740,7 +1737,7 @@ function roofSprite(kind,owner,level=1){
   for(const i of base.mask){
    const rr=out[i],gg=out[i+1],bb=out[i+2],originalMax=Math.max(rr,gg,bb);
    const next=kind==='fort'
-    ?fortBrickColor(rr,gg,bb,hue,saturation,visualLevel)
+    ?fortBrickColor(rr,gg,bb,hue,saturation,level)
     :hsvRGB(hue,clamp01((.38+.36*saturation+.14*(originalMax-Math.min(rr,gg,bb))/255)*tier.saturation),clamp01(originalMax/255*tier.brightness));
    out[i]=next[0];out[i+1]=next[1];out[i+2]=next[2];
   }
