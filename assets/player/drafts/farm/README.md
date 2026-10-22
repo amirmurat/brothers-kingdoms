@@ -1,6 +1,6 @@
 # Farm — manually pixel-drawn review drafts (22 Oct 2026)
 
-**Not approved or used by the active game yet.** These three experimental PNGs are preserved for visual review, at original **32 × 32 RGBA**. No image generator, image-to-image transform, copied sprites, resampling or 3-D camera was used: each colored pixel was constructed from explicit Pillow primitives.
+**Now wired into the active game renderer for legacy Farm buildings; preview page is available on the Worker after deployment.** These three experimental PNGs are preserved for visual review, at original **32 × 32 RGBA**. No image generator, image-to-image transform, copied sprites, resampling or 3-D camera was used: each colored pixel was constructed from explicit Pillow primitives.
 
 | Visual tier | Artwork | Visual goal |
 | --- | --- | --- |
@@ -19,3 +19,7 @@ SHA-256 originals:
 - `level-3.png`: `4e069aa54d6e03c27cf40f4731bd52af7f3d1716f8b54013582c067a26a25275`
 
 Do not change `game.js`, balance, previous approved Fort/Quarry art, or UI textures on the basis of this draft without explicit user approval. Previous rejected farm concepts are not to be silently promoted to active art.
+
+## Published site preview
+
+The separate review page [preview.html](preview.html) is copied by `scripts/build-cloudflare.cjs` into the Worker static assets. It lets players inspect the three variants even though current new matches auto-produce resources instead of placing Farms. This does not change the economy.
