@@ -8,7 +8,7 @@ const server=http.createServer((req,res)=>{
  try{
   let body=fs.readFileSync(file);
   if(name==='/'||name==='/index.html')body=body.toString().split('\n').filter(line=>!line.includes('unpkg.com/peerjs')).join('\n');
-  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={focusCandidate:()=>{const p=mine().capital,r=canvas.getBoundingClientRect();for(let dy=-12;dy<=12;dy++)for(let dx=-12;dx<=12;dx++){const x=p.x+dx,y=p.y+dy;if(E.inside(x,y)&&x>10&&x<E.W-10&&y>10&&y<E.H-10&&E.tile(state,x,y)&&E.owner(state,x,y)===0){zoom=.55;camX=canvas.clientWidth/2-(x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(y+.5)*TILE*zoom;clampCamera();draw();return {x:r.left+camX+(x+.5)*TILE*zoom,y:r.top+camY+(y+.5)*TILE*zoom};}}return null;},beginAttackPlanner,brushAt,syncPaintEligibility,resetAttackPlanner,getPlanner:()=>attackPlanner,buildingCells,drawHarvestSites,buildingLevelColor,repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,nationLabelAnchors,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
+  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={focusCandidate:()=>{const p=mine().capital,r=canvas.getBoundingClientRect();for(let dy=-12;dy<=12;dy++)for(let dx=-12;dx<=12;dx++){const x=p.x+dx,y=p.y+dy;if(E.inside(x,y)&&x>10&&x<E.W-10&&y>10&&y<E.H-10&&E.tile(state,x,y)&&E.owner(state,x,y)===0){zoom=.55;camX=canvas.clientWidth/2-(x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(y+.5)*TILE*zoom;clampCamera();draw();return {x:r.left+camX+(x+.5)*TILE*zoom,y:r.top+camY+(y+.5)*TILE*zoom};}}return null;},beginAttackPlanner,brushAt,syncPaintEligibility,resetAttackPlanner,getPlanner:()=>attackPlanner,buildingCells,drawHarvestSites,buildingLevelColor,roofSprite,roofBase,buildingSpritePath,repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,nationLabelAnchors,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
   res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream'});res.end(body);
  }catch(_){res.writeHead(404);res.end();}
 });
@@ -289,8 +289,38 @@ const server=http.createServer((req,res)=>{
 
    const typeColors=await page.evaluate(()=>['city','barracks','fort'].map(kind=>window.__layout.buildingLevelColor({kind,level:1})));
    const tiers=await page.evaluate(()=>['city','barracks','fort'].map(kind=>new Set([1,2,3,4,5].map(level=>window.__layout.buildingLevelColor({kind,level}))).size));
-   assert(tiers.every(n=>n===5),label+' every building type has five distinct tier colors');
-   assert.equal(new Set(typeColors).size,3,label+' map building types have distinct colors');
+   assert(tiers.every(n=>n===5),label+' roof levels have five distinct owner-color shades');
+   assert.equal(new Set(typeColors).size,1,label+' building type never changes the nation/level color');
+   const roofs=await page.evaluate(async()=>{
+    const L=window.__layout,s=L.getState(),me=s.players.find(p=>!p.bot),enemy=s.players.find(p=>p.id!==me.id);
+    await Promise.all(['capital','city','barracks'].map(kind=>new Promise(resolve=>{
+     const img=new Image();img.onload=resolve;img.onerror=resolve;img.src=L.buildingSpritePath(kind);
+    })));
+    const sourceCity=L.buildingSpritePath('city'),sourceCapital=L.buildingSpritePath('capital'),sourceBarracks=L.buildingSpritePath('barracks');
+    const first=L.roofSprite('city',me.id,1),high=L.roofSprite('city',me.id,4);
+    const second=enemy?L.roofSprite('city',enemy.id,1):null;
+    const base=L.roofBase('city'),original=base?.pixels.data;
+    const p1=first?.getContext?.('2d')?.getImageData(0,0,first.width,first.height).data;
+    const p4=high?.getContext?.('2d')?.getImageData(0,0,high.width,high.height).data;
+    const pe=second?.getContext?.('2d')?.getImageData(0,0,second.width,second.height).data;
+    let tinted=0,graded=0,owners=0,nonRoofChanges=0;
+    for(let i=0;i<(original?.length||0);i+=4){
+     const changed=p1&&[0,1,2].some(k=>p1[i+k]!==original[i+k]);
+     if(!changed)continue;
+     tinted++;
+     if(p4&&[0,1,2].some(k=>p4[i+k]!==p1[i+k]))graded++;
+     if(pe&&[0,1,2].some(k=>pe[i+k]!==p1[i+k]))owners++;
+     if(!base.mask.includes(i))nonRoofChanges++;
+    }
+    return {sourceCity,sourceCapital,sourceBarracks,tinted,graded,owners,nonRoofChanges,enemy:!!enemy,
+      contextTint:!!first?.toDataURL,keepsAlpha:p1&&p1[3]===original[3]};
+   });
+   assert.equal(roofs.sourceCity,roofs.sourceCapital,label+' city uses the former capital artwork');
+   assert(roofs.sourceBarracks.endsWith('/city.png'),label+' barracks uses the former city artwork');
+   assert(roofs.tinted>0&&roofs.graded>0,label+' actual roof pixels recolor and gain levels');
+   if(roofs.enemy)assert(roofs.owners>0,label+' the roof changes with country');
+   assert.equal(roofs.nonRoofChanges,0,label+' wall, wood and ground pixels remain unchanged');
+   assert(roofs.keepsAlpha&&roofs.contextTint,label+' roof transparency is preserved and can be shown in context');
    const hudStability=await page.evaluate(()=>{
     const ids=['troopCount','workerCount','landCount','frontCount','resFood','resWood','resStone','resGold'];
     const nodes=ids.map(id=>document.getElementById(id)),old=nodes.map(n=>n.textContent);
