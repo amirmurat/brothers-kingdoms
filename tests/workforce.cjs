@@ -5,7 +5,7 @@ function fixture(){const s=E.lobby(41),id=E.addPlayer(s,'Builder'),enemy=E.addPl
  for(let y=10;y<=30;y++)for(let x=10;x<=40;x++)s.owners[E.idx(x,y)]=id;
  const p=E.person(s,id),q=E.person(s,enemy);p.land=651;p.troops=500;p.garrisons=[{id:'g',x:10,y:20,strength:500}];p.capital={x:10,y:20};p.res={wood:5000,stone:5000,gold:5000,food:5000};
  q.land=1;q.troops=0;q.garrisons=[];s.owners[E.idx(41,20)]=enemy;
- s.buildings=[{id:'capital',owner:id,kind:'capital',x:10,y:20,level:1}];return {s,id,enemy,p,q};}
+ s.buildings=[{id:'capital',owner:id,kind:'city',x:10,y:20,level:1}];return {s,id,enemy,p,q};}
 {
  const {s,id,enemy,p}=fixture(),wood=E.idx(20,20),food=E.idx(20,21),stone=E.idx(20,22),gold=E.idx(20,23),foreign=E.idx(41,20);
  s.tiles[wood]=2;s.tiles[food]=4;s.tiles[stone]=3;s.tiles[gold]=5;s.tiles[foreign]=2;
