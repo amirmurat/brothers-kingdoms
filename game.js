@@ -700,26 +700,47 @@ function setPreview(t){
  queueDraw();
 }
 function contextual(item){
- const box=$('contextCard'),content=$('contextBody');if(!item){if(!box.classList.contains('hidden'))hideAux();return;}
- const me=mine(),own=item.owner===myId,other=E.person(state,item.owner);let html='';
+ const box=$('contextCard'),content=$('contextBody');
+ if(!item){if(!box.classList.contains('hidden'))hideAux();return;}
+ const me=mine(),own=item.owner===myId,other=E.person(state,item.owner);
+ let html='';
  if(item.kind&&item.kind!=='army'){
-  const details=buildingInfo[item.kind],cost=E.costUpgrade(item),maxed=item.level>=3,upgrading=item.upgrade;
+  const details=buildingInfo[item.kind],cost=E.costUpgrade(item),
+   maxed=item.level>=3,upgrading=item.upgrade;
   const upgradeJob=upgrading&&(state.buildJobs||[]).find(j=>j.id===upgrading.jobId);
   const upgradeWorker=upgrading&&(me.workers||[]).find(g=>g.job===upgrading.jobId);
-  const progress=upgradeJob?.progress??upgrading?.progress??0,total=upgrading?.total||E.upgradeTime(item);
-  const buildState=!upgradeWorker?'Waiting for builders':upgradeWorker.x===item.x&&upgradeWorker.y===item.y?'Builders working':'Builders travelling';
+  const progress=upgradeJob?.progress??upgrading?.progress??0,
+   total=upgrading?.total||E.upgradeTime(item);
+  const buildState=!upgradeWorker?'Waiting for builders':upgradeWorker.x===item.x&&upgradeWorker.y===item.y?'Working':'Travelling';
   const effect=details?buildingBenefit(item.kind,me,item.level):'Capital defense improves at each level';
   const next=details?buildingBenefit(item.kind,me,item.level+1):'City defense will increase';
-  const stationed=own&&['city','barracks'].includes(item.kind)?(me.garrisons||[]).filter(c=>!c.returning&&(!Number.isFinite(c.tx)||c.x===c.tx&&c.y===c.ty)&&Math.abs(c.x-item.x)+Math.abs(c.y-item.y)<=2).reduce((n,c)=>n+c.strength,0):null;
-  html=`<div class="context-heading"><strong><img class="context-building-art" src="${buildingRoofUrl(item.kind,item.owner,item.level)}" alt="" aria-hidden="true"/>${esc(E.KINDS[item.kind]?.name||'City')} · lvl. ${item.level}</strong><small>${esc(other?.name||'')}</small></div>
-   <div class="context-effect"><small>Current</small><span>${esc(effect)}</span></div>
-   ${own&&item.kind==='fort'?`<div class="context-effect"><small>Scouting range</small><span>${E.fortRadius(item,state)} tiles · ${esc(terrainNames[E.tile(state,item.x,item.y)])}</span></div>`:''}
-   ${stationed===null?'':`<div class="context-effect"><small>Garrison nearby</small><span>${number(stationed)} troops</span></div>`}
-   ${maxed?'':`<div class="context-effect context-effect-next"><small>After upgrade</small><span>${esc(next)}</span></div>`}
-   ${own&&upgrading?`<div class="context-effect"><small>Upgrading to level ${upgrading.level}</small><span>${buildState} · ${Math.floor(progress)}/${total} work · current output until complete</span></div>`:own&&!maxed?`<div class="context-upgrade-price"><small>Upgrade cost</small><div>${briefCost(cost)}</div></div><button data-context-upgrade="${esc(item.id)}" ${!canPay(me,cost)?'disabled':''}>Assign builders · ${E.upgradeTime(item)} work</button>${!canPay(me,cost)?`<small class="context-shortage">Missing: ${deficit(me,cost)}</small>`:''}`:own?'<small>Maximum level</small>':''}`;
-
+  const crews=E.workforceStats(state,myId),crewFree=crews.slots>crews.building;
+  const stationed=own&&['city','barracks'].includes(item.kind)?
+   (me.garrisons||[]).filter(c=>!c.returning&&(!Number.isFinite(c.tx)||c.x===c.tx&&c.y===c.ty)&&Math.abs(c.x-item.x)+Math.abs(c.y-item.y)<=2)
+    .reduce((n,c)=>n+c.strength,0):null;
+  const level=Math.min(3,Math.max(1,item.level));
+  const tierSteps=[1,2,3].map(n=>'<span class="'+(n<=level?'complete':'')+(n===level?' current':'')+'" aria-label="Level '+n+'">'+n+'</span>').join('');
+  html=`<div class="context-building-header">
+    <span class="context-eyebrow">BUILDING DETAILS</span>
+    <div class="context-building-identity">
+      <img class="context-building-art" src="${buildingRoofUrl(item.kind,item.owner,item.level)}" alt="" aria-hidden="true"/>
+      <div class="context-building-title"><strong>${esc(E.KINDS[item.kind]?.name||'City')}</strong><small>${esc(other?.name||'')} · Level ${item.level} / 3</small></div>
+    </div>
+    <div class="context-level-track" aria-label="Level ${item.level} of 3">${tierSteps}</div>
+   </div>
+   <div class="context-stats-row"><div class="context-stat"><small>CURRENT</small><span>${esc(effect)}</span></div>
+   ${maxed?'':`<div class="context-stat"><small>NEXT LEVEL</small><span>${esc(next)}</span></div>`}</div>
+   ${own&&item.kind==='fort'?`<div class="context-meta">Scouting range: ${E.fortRadius(item,state)} tiles · ${esc(terrainNames[E.tile(state,item.x,item.y)])}</div>`:''}
+   ${stationed===null?'':`<div class="context-meta">Nearby garrison: ${number(stationed)} troops</div>`}
+   ${own?`<div class="context-builder-status"><span>BUILDER CREWS</span><strong>${crews.building} / ${crews.slots} assigned</strong></div>`:''}
+   ${own&&upgrading?`<div class="context-progress"><div class="context-progress-heading"><span>UPGRADING TO LEVEL ${upgrading.level}</span><span>${Math.floor(progress)} / ${total}</span></div><div class="context-progress-track"><i style="width:${Math.round(Math.max(0,Math.min(1,progress/Math.max(1,total)))*100)}%"></i></div><small>${buildState} · current production continues</small></div>`:
+     own&&!maxed?`<div class="context-upgrade-price"><small>UPGRADE COST</small><div>${briefCost(cost)}</div></div>
+       <button class="context-upgrade-action" data-context-upgrade="${esc(item.id)}" ${!canPay(me,cost)||!crewFree?'disabled':''}>UPGRADE TO LEVEL ${item.level+1} · ${E.upgradeTime(item)} WORK</button>
+       ${!canPay(me,cost)?`<small class="context-shortage">Missing: ${deficit(me,cost)}</small>`:!crewFree?'<small class="context-shortage">All builder crews are assigned. Upgrade after a crew becomes free.</small>':''}`:
+     own?'<div class="context-max-level">MAXIMUM LEVEL</div>':''}`;
  }else html=`<strong>Army · ${esc(other?.name||'')}</strong><span>${number(item.strength)} troops · ${item.tx},${item.ty}</span>${own?`${!Array.isArray(item.zoneCells)?`<button data-context-redirect="${esc(item.id)}">Change target</button>`:''}<button data-context-return="${esc(item.id)}">Retreat</button>`:''}`;
- if(content.__last!==html){content.innerHTML=html;content.__last=html;}if(box.classList.contains('hidden'))showAux('contextCard');
+ if(content.__last!==html){content.innerHTML=html;content.__last=html;}
+ if(box.classList.contains('hidden'))showAux('contextCard');
 }
 let serverSocket=null,serverActive=false,serverSession=0,serverHeartbeat=null,serverJoinToken=null;
 function serverEnabled(){return window.BK_SERVER===true;}
@@ -1755,7 +1776,6 @@ function buildingTypeMarker(kind,owner){
  c.save();c.translate(11,9);c.scale(22/512,22/512);
  c.fillStyle='#f2f6fb';c.fill(path,'evenodd');c.restore();
  c.font='bold 11px system-ui';c.textAlign='center';c.textBaseline='middle';
- c.fillStyle='#ffffff';c.fillText(BUILDING_CODES[kind]||'BL',22,35);
  buildingTypeMarkers.set(key,icon);return icon;
 }
 // World-space 1x1 tile geometry. Zoom belongs only to the camera transform,
