@@ -8,7 +8,7 @@ const server=http.createServer((req,res)=>{
  try{
   let body=fs.readFileSync(file);
   if(name==='/'||name==='/index.html')body=body.toString().split('\n').filter(line=>!line.includes('unpkg.com/peerjs')).join('\n');
-  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={focusCandidate:()=>{const p=mine().capital,r=canvas.getBoundingClientRect();for(let dy=-12;dy<=12;dy++)for(let dx=-12;dx<=12;dx++){const x=p.x+dx,y=p.y+dy;if(E.inside(x,y)&&x>10&&x<E.W-10&&y>10&&y<E.H-10&&E.tile(state,x,y)&&E.owner(state,x,y)===0){zoom=.55;camX=canvas.clientWidth/2-(x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(y+.5)*TILE*zoom;clampCamera();draw();return {x:r.left+camX+(x+.5)*TILE*zoom,y:r.top+camY+(y+.5)*TILE*zoom};}}return null;},beginAttackPlanner,brushAt,refreshPaintGuide,syncPaintEligibility,resetAttackPlanner,getPlanner:()=>attackPlanner,buildingCells,drawHarvestSites,buildingLevelColor,roofSprite,roofBase,buildingSpritePath,repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,nationLabelAnchors,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
+  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={focusCandidate:()=>{const p=mine().capital,r=canvas.getBoundingClientRect();for(let dy=-12;dy<=12;dy++)for(let dx=-12;dx<=12;dx++){const x=p.x+dx,y=p.y+dy;if(E.inside(x,y)&&x>10&&x<E.W-10&&y>10&&y<E.H-10&&E.tile(state,x,y)&&E.owner(state,x,y)===0){zoom=.55;camX=canvas.clientWidth/2-(x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(y+.5)*TILE*zoom;clampCamera();draw();return {x:r.left+camX+(x+.5)*TILE*zoom,y:r.top+camY+(y+.5)*TILE*zoom};}}return null;},beginAttackPlanner,brushAt,refreshPaintGuide,syncPaintEligibility,resetAttackPlanner,getPlanner:()=>attackPlanner,buildingCells,drawHarvestSites,buildingLevelColor,roofSprite,roofBase,buildingSpritePath,buildingTileBounds,buildingConnectMask,repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,nationLabelAnchors,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
   res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream'});res.end(body);
  }catch(_){res.writeHead(404);res.end();}
 });
@@ -353,6 +353,44 @@ const server=http.createServer((req,res)=>{
    if(roofs.enemy)assert(roofs.owners>0,label+' the roof changes with country');
    assert.equal(roofs.nonRoofChanges,0,label+' wall, wood and ground pixels remain unchanged');
    assert(roofs.keepsAlpha&&roofs.contextTint,label+' roof transparency is preserved and can be shown in context');
+   const tileSystem=await page.evaluate(async()=>{
+    const L=window.__layout,s=L.getState(),p=s.players.find(q=>!q.bot),other=s.players.find(q=>q.id!==p.id);
+    const b={x:10,y:15,owner:p.id,kind:'fort',level:1};
+    const neighbor={...b,x:11},wrong={...b,y:16,owner:other?.id??p.id+999};
+    const occupied=new Map([[b.y*160+b.x,b],[neighbor.y*160+neighbor.x,neighbor],[wrong.y*160+wrong.x,wrong]]);
+    const bounds=L.buildingTileBounds(b),east=L.buildingTileBounds(neighbor);
+    // The world coordinate geometry does not change when the zoom changes.
+    const mask=L.buildingConnectMask(b,occupied);
+    const wrongType=new Map([[neighbor.y*160+neighbor.x,{...neighbor,kind:'city'}]]);
+    const different=L.buildingConnectMask(b,wrongType);
+    const image=new Image();
+    const src=L.buildingSpritePath('fort');
+    await new Promise(resolve=>{image.onload=resolve;image.onerror=resolve;image.src=src;});
+    const base=L.roofBase('fort'),first=L.roofSprite('fort',p.id,1),level=L.roofSprite('fort',p.id,4);
+    const enemy=other?L.roofSprite('fort',other.id,1):null;
+    const firstPixels=first?.getContext?.('2d')?.getImageData(0,0,32,32).data;
+    const levelPixels=level?.getContext?.('2d')?.getImageData(0,0,32,32).data;
+    const enemyPixels=enemy?.getContext?.('2d')?.getImageData(0,0,32,32).data;
+    const lime=new Set(base?.mask||[]),original=base?.pixels.data;
+    let changed=0,unrelated=0,leveled=0,foreign=0;
+    for(let i=0;i<(original?.length||0);i+=4){
+     if(firstPixels&&[0,1,2].some(k=>firstPixels[i+k]!==original[i+k])){
+      changed++;if(!lime.has(i))unrelated++;
+     }
+     if(lime.has(i)&&levelPixels&&[0,1,2].some(k=>levelPixels[i+k]!==firstPixels[i+k]))leveled++;
+     if(lime.has(i)&&enemyPixels&&[0,1,2].some(k=>enemyPixels[i+k]!==firstPixels[i+k]))foreign++;
+    }
+    return {src,loaded:image.naturalWidth===32&&image.naturalHeight===32,maskSize:lime.size,
+      bounds,east,mask,different,changed,unrelated,leveled,foreign,hasEnemy:!!other};
+   });
+   assert(tileSystem.src.endsWith('assets/player/fort.png')&&tileSystem.loaded,label+' uses the actual revised 32x32 Fort PNG');
+   assert.equal(tileSystem.bounds.width,tileSystem.east.x-tileSystem.bounds.x,label+' sprites occupy exactly one cell without gaps');
+   assert.equal(tileSystem.bounds.height,tileSystem.bounds.width,label+' square cells never use zoom-dependent building sizes');
+   assert.equal(tileSystem.mask,2,label+' same-owner adjacent forts connect on east edge');
+   assert.equal(tileSystem.different,0,label+' other building kinds do not connect');
+   assert.equal(tileSystem.maskSize,132,label+' identifies exactly 132 lime accent pixels');
+   assert(tileSystem.changed>0&&tileSystem.leveled>0&&tileSystem.unrelated===0,label+' recolor only original lime, with level variants');
+   if(tileSystem.hasEnemy)assert(tileSystem.foreign>0,label+' same fort changes with country hue');
    const hudStability=await page.evaluate(()=>{
     const ids=['troopCount','workerCount','landCount','frontCount','resFood','resWood','resStone','resGold'];
     const nodes=ids.map(id=>document.getElementById(id)),old=nodes.map(n=>n.textContent);
