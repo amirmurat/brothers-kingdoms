@@ -10,7 +10,8 @@ const CC0_RESOURCES=new Set(['food','wood','stone','gold']);
 // The city's new silhouette is the previous capital; the barracks use the previous city's.
 const BUILDING_SPRITE_FILES={city:'capital',barracks:'city'};
 const buildingSpriteFile=kind=>BUILDING_SPRITE_FILES[kind]||kind;
-const buildingSpritePath=kind=>OLD_CC0+'buildings/'+buildingSpriteFile(kind)+'.png';
+// Player-authored sprite is stored separately from third-party art.
+const buildingSpritePath=kind=>kind==='fort'?'assets/player/fort.png':OLD_CC0+'buildings/'+buildingSpriteFile(kind)+'.png';
 const uiIcon=name=>{
  if(CC0_BUILDINGS.has(name))return `<img class="ui-icon tiny-building-art" src="${buildingRoofUrl(name,state?.phase==='playing'?myId:null,1)}" alt="" aria-hidden="true"/>`;
  if(CC0_RESOURCES.has(name))return `<img class="ui-icon tiny-resource-art" src="${OLD_CC0}resources/${name}.png" alt="" aria-hidden="true"/>`;
@@ -1656,7 +1657,7 @@ function hsvRGB(h,s,v){
  return [Math.round((r+low)*255),Math.round((g+low)*255),Math.round((b+low)*255)];
 }
 function roofBase(kind){
- const src=mapBuildingSprites[kind],file=buildingSpriteFile(kind);
+ const src=mapBuildingSprites[kind],file=buildingSpritePath(kind);
  if(!src?.naturalWidth||!src.naturalHeight)return null;
  const known=roofBasePixels.get(file);
  if(known&&known.width===src.naturalWidth&&known.height===src.naturalHeight)return known;
@@ -1668,9 +1669,14 @@ function roofBase(kind){
  const mask=[];
  for(let i=0;i<pixels.data.length;i+=4){
   const r=pixels.data[i],g=pixels.data[i+1],b=pixels.data[i+2];
-  // All old-pack roofs use cyan/blue shingle pigments. The neutral and
-  // golden wall materials are excluded, as are dark outlines and transparency.
-  if(pixels.data[i+3]>=96&&b>=64&&b>r+13&&b>g+2&&g>=r-28)mask.push(i);
+  // Player-made Fort has one exact lime accent (#CFFF70). ONLY this accent
+  // changes with ownership; 6 other palette entries and alpha stay byte-exact.
+  if(kind==='fort'){
+   if(r===207&&g===255&&b===112&&pixels.data[i+3]===255)mask.push(i);
+  }else{
+   // Existing Tiny Swords art keeps the original blue-shingle roof mask.
+   if(pixels.data[i+3]>=96&&b>=64&&b>r+13&&b>g+2&&g>=r-28)mask.push(i);
+  }
  }
  const base={width:canvas.width,height:canvas.height,pixels,mask};
  roofBasePixels.set(file,base);return base;
@@ -1678,7 +1684,7 @@ function roofBase(kind){
 function roofSprite(kind,owner,level=1){
  const src=mapBuildingSprites[kind];
  if(!src?.naturalWidth||owner==null)return src;
- const hex=color(owner),key=buildingSpriteFile(kind)+'|'+hex+'|'+Math.min(4,Math.max(1,level|0));
+ const hex=color(owner),key=buildingSpritePath(kind)+'|'+hex+'|'+Math.min(4,Math.max(1,level|0));
  if(roofSpriteCache.has(key))return roofSpriteCache.get(key);
  try{
   const base=roofBase(kind);
@@ -1690,8 +1696,10 @@ function roofSprite(kind,owner,level=1){
   const out=new Uint8ClampedArray(base.pixels.data);
   for(const i of base.mask){
    const rr=out[i],gg=out[i+1],bb=out[i+2],originalMax=Math.max(rr,gg,bb);
-   const sat=clamp01((.38+.36*saturation+.14*(originalMax-Math.min(rr,gg,bb))/255)*tier.saturation);
-   const value=clamp01(originalMax/255*tier.brightness);
+   const sat=kind==='fort'?clamp01(Math.max(.5,saturation)*(.82+(Math.min(4,Math.max(1,level|0))-1)*.06))
+    :clamp01((.38+.36*saturation+.14*(originalMax-Math.min(rr,gg,bb))/255)*tier.saturation);
+   const value=kind==='fort'?clamp01(Math.max(r,g,b)/255*(.88+(Math.min(4,Math.max(1,level|0))-1)*.05))
+    :clamp01(originalMax/255*tier.brightness);
    const next=hsvRGB(hue,sat,value);
    out[i]=next[0];out[i+1]=next[1];out[i+2]=next[2];
   }
@@ -1734,58 +1742,61 @@ function buildingTypeMarker(kind,owner){
  c.fillStyle='#ffffff';c.fillText(BUILDING_CODES[kind]||'BL',22,35);
  buildingTypeMarkers.set(key,icon);return icon;
 }
-function drawMapBuilding(b,x,y,overviewCount=1){
- const kind=b.kind,source=roofSprite(kind,b.owner,b.level),loaded=!!(source?.naturalWidth||source?.width);
- const ownerColor=color(b.owner);
- const macro=zoom<1.35,far=zoom<.55;
- const screenH=macro?(far?20:26):Math.min(76,Math.max(36,TILE*zoom*1.4));
- const h=(kind==='capital'?screenH*1.15:screenH)/zoom,w=h*(loaded?(source.naturalWidth||source.width)/(source.naturalHeight||source.height):1);
- // Snap sprite geometry to physical screen pixels, eliminating subpixel shimmer.
- const dpr=canvas.width/Math.max(1,canvas.clientWidth);
- const snapX=v=>(Math.round((v*zoom+camX)*dpr)/dpr-camX)/zoom;
- const snapY=v=>(Math.round((v*zoom+camY)*dpr)/dpr-camY)/zoom;
- const drawW=Math.max(1,Math.round(w*zoom*dpr)/dpr)/zoom,drawH=Math.max(1,Math.round(h*zoom*dpr)/dpr)/zoom;
- const baseX=snapX(x-drawW/2),baseY=snapY(y-drawH*.74);
+// World-space 1x1 tile geometry. Zoom belongs only to the camera transform,
+// never to building sprite dimensions. Every future wall/city tile can connect
+// to adjacent tiles without sprite sizes or their grouping changing on zoom.
+function buildingTileBounds(b){
+ return {x:b.x*TILE,y:b.y*TILE,width:TILE,height:TILE};
+}
+// N=1 E=2 S=4 W=8. Only same kind AND same owner connect, so neighboring
+// foreign cities/walls cannot borrow each other's joined-edge art.
+// This is the tile-mask contract for upcoming N/E/S/W-connected sprites.
+function buildingConnectMask(b,byCell){
+ let mask=0;
+ for(const [dx,dy,bit] of [[0,-1,1],[1,0,2],[0,1,4],[-1,0,8]]){
+  const x=b.x+dx,y=b.y+dy;
+  if(x<0||x>=E.W||y<0||y>=E.H)continue;
+  const n=byCell.get(y*E.W+x);
+  if(n?.kind===b.kind&&n.owner===b.owner)mask|=bit;
+ }
+ return mask;
+}
+function drawMapBuilding(b){
+ const bounds=buildingTileBounds(b);
+ const source=roofSprite(b.kind,b.owner,b.level);
+ const loaded=!!(source?.naturalWidth||source?.width);
+ const centerX=bounds.x+bounds.width/2,centerY=bounds.y+bounds.height/2;
  ctx.save();
- // Close zoom preserves the pixel sprite's silhouette; no opaque black tile.
- // Overview uses owner color, not building type, alongside the explicit type code.
- if(macro){
-  ctx.save();ctx.globalAlpha=.15;ctx.fillStyle=ownerColor;
-  ctx.fillRect(baseX-2/zoom,baseY-2/zoom,drawW+4/zoom,drawH+4/zoom);ctx.restore();
-  ctx.strokeStyle=ownerColor;ctx.lineWidth=2/zoom;
-  ctx.strokeRect(baseX-1/zoom,baseY-1/zoom,drawW+2/zoom,drawH+2/zoom);
- }else{
-  ctx.fillStyle='#16303966';ctx.beginPath();
-  ctx.ellipse(x,baseY+drawH,drawW*.48,drawH*.12,0,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle=ownerColor;ctx.fillRect(baseX+2/zoom,baseY+drawH-2/zoom,drawW-4/zoom,3/zoom);
+ // No per-zoom size thresholds, screen-space icon backplates, or marker
+ // aggregation. Source pixels remain nearest-neighbor for the entire tile.
+ ctx.imageSmoothingEnabled=false;
+ if(loaded)ctx.drawImage(source,bounds.x,bounds.y,bounds.width,bounds.height);
+ else ctx.drawImage(buildingTypeMarker(b.kind,color(b.owner)),bounds.x,bounds.y,bounds.width,bounds.height);
+ // Capital and City use identical castle art; keep the distinguishing pennant
+ // entirely INSIDE the capital's cell, so it never overlaps neighbors.
+ if(b.kind==='capital'){
+  const px=bounds.x+TILE*.76,top=bounds.y+TILE*.08,pole=TILE*.32;
+  ctx.strokeStyle='#17242a';ctx.lineWidth=TILE*.07;
+  ctx.beginPath();ctx.moveTo(px,top);ctx.lineTo(px,top+pole);ctx.stroke();
+  ctx.fillStyle=color(b.owner);
+  ctx.beginPath();ctx.moveTo(px,top);ctx.lineTo(px+TILE*.19,top+pole*.19);
+  ctx.lineTo(px,top+pole*.43);ctx.closePath();ctx.fill();
  }
- if(loaded){ctx.imageSmoothingEnabled=false;ctx.drawImage(source,baseX,baseY,drawW,drawH);ctx.imageSmoothingEnabled=true;}
- else ctx.drawImage(buildingTypeMarker(kind,ownerColor),baseX,baseY,drawW,drawH);
- // Capital and City intentionally share the original castle silhouette;
- // the capital carries a pennant and taller footprint to remain identifiable.
- if(kind==='capital'){
-  const flagW=9/zoom,flagH=15/zoom,flagX=x-drawW*.04,flagY=baseY-flagH*.45;
-  ctx.strokeStyle='#10242c';ctx.lineWidth=2/zoom;
-  ctx.beginPath();ctx.moveTo(flagX,flagY);ctx.lineTo(flagX,flagY+flagH);ctx.stroke();
-  ctx.fillStyle=ownerColor;ctx.beginPath();ctx.moveTo(flagX,flagY);ctx.lineTo(flagX+flagW,flagY+flagH*.22);ctx.lineTo(flagX,flagY+flagH*.44);ctx.closePath();ctx.fill();
-  ctx.strokeStyle='#f7f5da';ctx.lineWidth=1/zoom;ctx.stroke();
+ // Labels are high-zoom inspection hints. Hide them during strategic zoom
+ // and never enlarge buildings to compensate for a small map cell.
+ if(zoom>=2.35){
+  const boxW=TILE*.54,boxH=TILE*.32;
+  ctx.fillStyle='#0c1923d9';ctx.fillRect(centerX-boxW/2,centerY-boxH/2,boxW,boxH);
+  ctx.fillStyle='#ffffff';ctx.font=`bold ${TILE*.23}px system-ui`;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(BUILDING_CODES[b.kind]||'BL',centerX,centerY,boxW*.92);
+  if((b.level||1)>1){
+   ctx.fillStyle='#eef1ec';ctx.font=`bold ${TILE*.18}px system-ui`;
+   ctx.fillText(String(b.level),centerX,centerY+TILE*.38);
+  }
  }
- const labelW=(overviewCount>1?22:20)/zoom, labelH=macro?11/zoom:13/zoom;
- ctx.fillStyle='#12212de9';ctx.fillRect(x-labelW/2,baseY+drawH-labelH*.65,labelW,labelH);
- ctx.fillStyle='#f7f8fb';ctx.textAlign='center';ctx.textBaseline='middle';
- ctx.font=`bold ${(macro?8:9)/zoom}px system-ui`;ctx.fillText(BUILDING_CODES[kind]||'BL',x,baseY+drawH-labelH*.13);
- if(overviewCount>1){
-  const ww=18/zoom,hh=12/zoom;
-  ctx.fillStyle='#ecf0f4';ctx.fillRect(x+drawW*.24,baseY-hh*.45,ww,hh);
-  ctx.fillStyle='#132333';ctx.font=`bold ${8/zoom}px system-ui`;
-  ctx.fillText(String(overviewCount),x+drawW*.24+ww/2,baseY+hh*.05);
- }else if(!far){
-  const ww=14/zoom,hh=13/zoom;
-  ctx.fillStyle='#f3eee2';ctx.fillRect(x+drawW*.24,baseY+drawH-hh*.4,ww,hh);
-  ctx.fillStyle='#102032';ctx.font=`bold ${9/zoom}px system-ui`;
-  ctx.fillText(String(b.level||1),x+drawW*.24+ww/2,baseY+drawH+hh*.09);
- }
- ctx.restore();drawUpgradeWork(b,x,y);
+ ctx.restore();
+ drawUpgradeWork(b,centerX,centerY);
 }
 let worldBordersCache=null;
 function worldBorderPaths(){
@@ -1823,27 +1834,20 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
  drawInfrastructure();drawAttackPlanning();drawArmyDisplay(w,h);drawHarvestSites(w,h);
  // Low-detail overview groups nearby buildings by screen cell. Group count is
  // explicit; zooming reveals individual building artwork and numeric levels.
- const markerBins=zoom<1.35?new Map():null,markerList=[];
- for(const b of state.buildings){
-  if(!E.visibleBuilding(state,myId,b))continue;
-  const x=(b.x+.5)*TILE,y=(b.y+.5)*TILE;
-  const sx=x*zoom+camX,sy=y*zoom+camY;
-  if(sx<-65||sx>w+65||sy<-65||sy>h+65)continue;
-  if(!markerBins){markerList.push({b,x,y,count:1});continue;}
-  // Buckets are anchored in terrain cells, never in screen pixels. Dragging
-  // the map must not change which icon represents a cluster.
-  const gridCells=Math.max(2,Math.round((zoom<.55?44:zoom<.95?38:33)/(TILE*zoom)));
-  const key=b.owner+':'+Math.floor(b.x/gridCells)+':'+Math.floor(b.y/gridCells);
-  const existing=markerBins.get(key);
-  if(!existing)markerBins.set(key,{b,x,y,count:1});
-  else{
-   existing.count++;
-   if((BUILDING_PRIORITY[b.kind]||0)+(b.level||1)*.2>(BUILDING_PRIORITY[existing.b.kind]||0)+(existing.b.level||1)*.2){existing.b=b;existing.x=x;existing.y=y;}
-  }
+ // All visible buildings are world-locked 1x1 cells. Never screen-cluster
+ // them: adjacent matching tiles must remain adjacent at EVERY zoom level.
+ const visibleBuildings=state.buildings.filter(b=>E.visibleBuilding(state,myId,b));
+ const byCell=new Map(visibleBuildings.map(b=>[b.y*E.W+b.x,b]));
+ for(const b of visibleBuildings){
+  const bounds=buildingTileBounds(b);
+  const sx=bounds.x*zoom+camX,sy=bounds.y*zoom+camY;
+  const side=TILE*zoom;
+  if(sx+side<-2||sx>w+2||sy+side<-2||sy>h+2)continue;
+  // Explicitly resolve neighbor topology before rendering; future sprites
+  // can select one of the 16 connection variants with this exact mask.
+  const links=buildingConnectMask(b,byCell);
+  drawMapBuilding(b,links);
  }
- if(markerBins)markerList.push(...markerBins.values());
- ctx.textAlign='center';ctx.textBaseline='middle';
- for(const marker of markerList)drawMapBuilding(marker.b,marker.x,marker.y,marker.count);
  // Political and war borders are a higher layer than buildings and roads.
  // This keeps country boundaries readable even in heavily built-up regions.
  if(zoom>=.28){
