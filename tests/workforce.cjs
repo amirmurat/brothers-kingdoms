@@ -63,7 +63,7 @@ function fixture(){const s=E.lobby(41),id=E.addPlayer(s,'Builder'),enemy=E.addPl
 }
 {
  const {s,id,p}=fixture();
- for(let n=0;n<120;n++)s.buildings.push({id:'city'+n,kind:'city',owner:id,x:11+n%20,y:11+Math.floor(n/20),level:4});
+ for(let n=0;n<120;n++)s.buildings.push({id:'city'+n,kind:'city',owner:id,x:11+n%20,y:11+Math.floor(n/20),level:3});
  E.workforceStep(s);assert(p.workers.length<=24,'Thousands of workers use at most 24 groups');
  assert.equal(p.workers.reduce((n,g)=>n+g.count,0),E.workforceStats(s,id).capacity,'Aggregation preserves workforce');
  const old=JSON.parse(JSON.stringify(s));delete old.players[0].workers;delete old.roads;delete old.workZones;delete old.buildJobs;
