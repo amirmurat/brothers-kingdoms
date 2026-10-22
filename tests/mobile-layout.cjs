@@ -8,7 +8,7 @@ const server=http.createServer((req,res)=>{
  try{
   let body=fs.readFileSync(file);
   if(name==='/'||name==='/index.html')body=body.toString().split('\n').filter(line=>!line.includes('unpkg.com/peerjs')).join('\n');
-  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={focusCandidate:()=>{const p=mine().capital,r=canvas.getBoundingClientRect();for(let dy=-12;dy<=12;dy++)for(let dx=-12;dx<=12;dx++){const x=p.x+dx,y=p.y+dy;if(E.inside(x,y)&&x>10&&x<E.W-10&&y>10&&y<E.H-10&&E.tile(state,x,y)&&E.owner(state,x,y)===0){zoom=.55;camX=canvas.clientWidth/2-(x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(y+.5)*TILE*zoom;clampCamera();draw();return {x:r.left+camX+(x+.5)*TILE*zoom,y:r.top+camY+(y+.5)*TILE*zoom};}}return null;},beginAttackPlanner,brushAt,refreshPaintGuide,syncPaintEligibility,resetAttackPlanner,getPlanner:()=>attackPlanner,buildingCells,drawHarvestSites,buildingLevelColor,roofSprite,roofBase,buildingSpritePath,buildingTileBounds,buildingConnectMask,fortTileSpec,fortConnectedSprite,fortTileImages,repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,nationLabelAnchors,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
+  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={focusCandidate:()=>{const p=mine().capital,r=canvas.getBoundingClientRect();for(let dy=-12;dy<=12;dy++)for(let dx=-12;dx<=12;dx++){const x=p.x+dx,y=p.y+dy;if(E.inside(x,y)&&x>10&&x<E.W-10&&y>10&&y<E.H-10&&E.tile(state,x,y)&&E.owner(state,x,y)===0){zoom=.55;camX=canvas.clientWidth/2-(x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(y+.5)*TILE*zoom;clampCamera();draw();return {x:r.left+camX+(x+.5)*TILE*zoom,y:r.top+camY+(y+.5)*TILE*zoom};}}return null;},beginAttackPlanner,brushAt,refreshPaintGuide,syncPaintEligibility,resetAttackPlanner,getPlanner:()=>attackPlanner,buildingCells,drawHarvestSites,buildingLevelColor,roofSprite,roofBase,buildingSpritePath,buildingTileBounds,fortLevelSprites,drawMapBuilding,repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,nationLabelAnchors,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
   res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream'});res.end(body);
  }catch(_){res.writeHead(404);res.end();}
 });
@@ -353,84 +353,76 @@ const server=http.createServer((req,res)=>{
    if(roofs.enemy)assert(roofs.owners>0,label+' the roof changes with country');
    assert.equal(roofs.nonRoofChanges,0,label+' wall, wood and ground pixels remain unchanged');
    assert(roofs.keepsAlpha&&roofs.contextTint,label+' roof transparency is preserved and can be shown in context');
-   const tileSystem=await page.evaluate(async()=>{
-    const L=window.__layout,s=L.getState(),p=s.players.find(q=>!q.bot),other=s.players.find(q=>q.id!==p.id);
-    const b={x:10,y:15,owner:p.id,kind:'fort',level:1};
-    const neighbor={...b,x:11},wrong={...b,y:16,owner:other?.id??p.id+999};
-    const occupied=new Map([[b.y*160+b.x,b],[neighbor.y*160+neighbor.x,neighbor],[wrong.y*160+wrong.x,wrong]]);
-    const bounds=L.buildingTileBounds(b),east=L.buildingTileBounds(neighbor);
-    const mask=L.buildingConnectMask(b,occupied);
-    const wrongType=new Map([[neighbor.y*160+neighbor.x,{...neighbor,kind:'city'}]]);
-    const different=L.buildingConnectMask(b,wrongType);
-    const sources=[L.buildingSpritePath('fort'),...Object.values(L.fortTileImages).map(img=>img.src)];
-    await Promise.all(sources.map(src=>new Promise(resolve=>{
-     const img=new Image();img.onload=()=>resolve(img.naturalWidth===32&&img.naturalHeight===32);img.onerror=()=>resolve(false);img.src=src;
+   const towerSystem=await page.evaluate(async()=>{
+    const L=window.__layout,s=L.getState(),me=s.players.find(p=>!p.bot),enemy=s.players.find(p=>p.id!==me.id);
+    const urls=[1,2,3,4,5].map(level=>L.buildingSpritePath('fort',level));
+    const waiting=await Promise.all([1,2,3].map(level=>new Promise(resolve=>{
+     const img=L.fortLevelSprites[level];
+     if(img?.complete&&img.naturalWidth)return resolve(true);
+     if(!img)return resolve(false);
+     img.addEventListener('load',()=>resolve(true),{once:true});
+     img.addEventListener('error',()=>resolve(false),{once:true});
     })));
-    const allLoaded=Object.values(L.fortTileImages).every(img=>img.complete&&img.naturalWidth===32);
-    // Distinguish the newly uploaded DOUBLE-LINE corner from the original
-    // single-line L tile. The second interior run must exist in the NE quadrant.
-    const cc=document.createElement('canvas');cc.width=32;cc.height=32;
-    const cp=cc.getContext('2d');cp.drawImage(L.fortTileImages.corner,0,0);
-    const upperInner=Array.from(cp.getImageData(24,3,1,1).data);
-    const outerCorner=Array.from(cp.getImageData(3,26,1,1).data);
-    const corner90a=L.fortConnectedSprite(3,p.id,1);
-    const corner90b=L.fortConnectedSprite(6,p.id,1);
-    const pA=corner90a.getContext('2d').getImageData(0,0,32,32).data;
-    const pB=corner90b.getContext('2d').getImageData(0,0,32,32).data;
-    let cornerRotationMismatch=0;
-    for(let y=0;y<32;y++)for(let x=0;x<32;x++){
-     const i=(y*32+x)*4,j=(x*32+(31-y))*4;
-     for(let ch=0;ch<4;ch++)if(pA[i+ch]!==pB[j+ch])cornerRotationMismatch++;
-    }
-    const allSpecs=Array.from({length:16},(_,m)=>L.fortTileSpec(m));
-    const expected=['single','cap','cap','corner','cap','straight','corner','tee','cap','corner','straight','tee','corner','tee','tee','empty'];
-    const single=L.roofSprite('fort',p.id,1),high=L.roofSprite('fort',p.id,4);
-    const enemy=other?L.roofSprite('fort',other.id,1):null;
-    const base=L.roofBase('fort'),orig=base?.pixels.data;
-    const pix=im=>im?.getContext?.('2d')?.getImageData(0,0,32,32).data;
-    const lowPix=pix(single),highPix=pix(high),enemyPix=pix(enemy),maskSet=new Set(base?.mask||[]);
-    let tinted=0,foreign=0,leveled=0,metalChanged=0,alphaChanged=0;
+    const bounds=L.buildingTileBounds({x:10,y:15}),east=L.buildingTileBounds({x:11,y:15});
+    const getData=im=>{
+     if(!im)return null;
+     const c=document.createElement('canvas');c.width=32;c.height=32;
+     c.getContext('2d').drawImage(im,0,0);
+     return c.getContext('2d').getImageData(0,0,32,32).data;
+    };
+    const sourcePixels=[1,2,3].map(level=>getData(L.fortLevelSprites[level]));
+    const symmetry=sourcePixels.map(p=>{
+     if(!p)return false;
+     for(let y=0;y<32;y++)for(let x=0;x<32;x++){
+      const i=(y*32+x)*4,lh=(y*32+31-x)*4,tb=((31-y)*32+x)*4;
+      for(let c=0;c<4;c++)if(p[i+c]!==p[lh+c]||p[i+c]!==p[tb+c])return false;
+     }
+     return true;
+    });
+    const differ=(a,b)=>{
+     if(!a||!b)return false;
+     for(let i=0;i<a.length;i++)if(a[i]!==b[i])return true;
+     return false;
+    };
+    const base=L.roofBase('fort',1),orig=base?.pixels.data;
+    const own=getData(L.roofSprite('fort',me.id,1));
+    const foreign=enemy?getData(L.roofSprite('fort',enemy.id,1)):null;
+    const allowed=new Set(base?.mask||[]);
+    let changed=0,changedOthers=0,changedAlpha=0,ownerDifference=0;
     for(let i=0;i<(orig?.length||0);i+=4){
-     const change=lowPix&&[0,1,2].some(k=>lowPix[i+k]!==orig[i+k]);
-     if(change){tinted++;if(!maskSet.has(i))metalChanged++;}
-     if(highPix&&[0,1,2].some(k=>highPix[i+k]!==lowPix[i+k])&&maskSet.has(i))leveled++;
-     if(enemyPix&&[0,1,2].some(k=>enemyPix[i+k]!==lowPix[i+k])&&maskSet.has(i))foreign++;
-     if(lowPix&&lowPix[i+3]!==orig[i+3])alphaChanged++;
+     if([0,1,2].some(c=>own[i+c]!==orig[i+c])){changed++;if(!allowed.has(i))changedOthers++;}
+     if(own[i+3]!==orig[i+3])changedAlpha++;
+     if(foreign&&allowed.has(i)&&[0,1,2].some(c=>foreign[i+c]!==own[i+c]))ownerDifference++;
     }
-    // Every wall orientation is generated from one native PNG by exact pixel
-    // permutation. Check a rotated cap against the unrotated cap.
-    const right=L.fortConnectedSprite(2,p.id,1),down=L.fortConnectedSprite(4,p.id,1);
-    const from=pix(right),to=pix(down);let rotateMismatch=0;
-    if(from&&to)for(let y=0;y<32;y++)for(let x=0;x<32;x++){
-     const i=(y*32+x)*4,j=(x*32+(31-y))*4;
-     for(let c=0;c<4;c++)if(from[i+c]!==to[j+c])rotateMismatch++;
-    }
-    const counts={};for(let m=0;m<16;m++){
-     const tile=L.fortConnectedSprite(m,p.id,1),sp=allSpecs[m];
-     counts[m]={type:sp.type,rotation:sp.rot,draws:m===15?tile===null:!!(tile?.width||tile?.naturalWidth)};
-    }
-    return {source:L.buildingSpritePath('fort'),bounds,east,mask,different,loaded:allLoaded,upperInner,outerCorner,cornerRotationMismatch,cornerSrc:L.fortTileImages.corner.src,
-     typesMatch:allSpecs.every((spec,i)=>spec.type===expected[i]),
-     distinctMasks:allSpecs.length,counts,rotateMismatch,tinted,foreign,leveled,metalChanged,alphaChanged,
-     hasEnemy:!!other,maskSize:maskSet.size,
-     surroundedEmpty:L.fortConnectedSprite(15,p.id,1)===null};
+    const context=document.getElementById('mapCanvas').getContext('2d');
+    const originalDraw=context.drawImage;
+    let drawn=0;
+    try{
+     context.drawImage=function(...args){drawn++;return originalDraw.apply(this,args);};
+     L.drawMapBuilding({kind:'fort',x:20,y:20,owner:me.id,level:1});
+     L.drawMapBuilding({kind:'fort',x:21,y:20,owner:me.id,level:2});
+     L.drawMapBuilding({kind:'fort',x:20,y:21,owner:me.id,level:3});
+     L.drawMapBuilding({kind:'fort',x:21,y:21,owner:me.id,level:4});
+    }finally{context.drawImage=originalDraw;}
+    return {urls,loaded:waiting.every(Boolean),width:L.fortLevelSprites[1]?.naturalWidth,
+      height:L.fortLevelSprites[1]?.naturalHeight,bounds,east,symmetry,
+      levelsDistinct:differ(sourcePixels[0],sourcePixels[1])&&differ(sourcePixels[1],sourcePixels[2]),
+      changed,changedOthers,changedAlpha,ownerDifference,hasEnemy:!!enemy,
+      colorMaskSize:allowed.size,drawn};
    });
-   assert(tileSystem.source.endsWith('/fort-tiles/single.png')&&tileSystem.loaded,label+' imports five original 32x32 fort tile PNGs');
-   assert.equal(tileSystem.bounds.width,tileSystem.east.x-tileSystem.bounds.x,label+' fort tiles share world-aligned 1-cell edges');
-   assert.equal(tileSystem.bounds.width,tileSystem.bounds.height,label+' sprite sizes do not depend on camera zoom');
-   assert.equal(tileSystem.mask,2,label+' adjacent same-owner forts connect to the east');
-   assert.equal(tileSystem.different,0,label+' neighboring other building types never join');
-   assert(tileSystem.typesMatch&&tileSystem.distinctMasks===16,label+' all 16 join masks are mapped correctly');
-   assert.deepEqual(tileSystem.upperInner,[150,66,83,255],label+' two-line corner has the new NE interior masonry, not the old single-line art');
-   assert.deepEqual(tileSystem.outerCorner,[227,105,86,255],label+' two-line corner retains the SW outer masonry');
-   assert.equal(tileSystem.cornerRotationMismatch,0,label+' the two-line corner rotates with exact RGBA pixels');
-   assert(tileSystem.cornerSrc.includes('corner.png?v=110'),label+' refreshed corner bypasses stale mobile image cache');
-   assert(Object.values(tileSystem.counts).every(v=>v.draws),label+' all wall variants resolve to a sprite, including empty surrounded interior');
-   assert(tileSystem.surroundedEmpty,label+' fully surrounded Fort hides the internal wall');
-   assert.equal(tileSystem.rotateMismatch,0,label+' 90-degree wall rotation preserves every pixel and alpha');
-   assert(tileSystem.tinted>0&&tileSystem.leveled>0&&tileSystem.metalChanged===0&&tileSystem.alphaChanged===0,
-    label+' only red wall pigments recolor by ownership and level, not neutral metal or transparency');
-   if(tileSystem.hasEnemy)assert(tileSystem.foreign>0,label+' different owners have different fort masonry hues');
+   assert(towerSystem.loaded&&towerSystem.width===32&&towerSystem.height===32,label+' all three native top-down tower PNGs load');
+   assert(towerSystem.urls.slice(0,3).every((url,i)=>url.endsWith('fort-levels/level-'+(i+1)+'.png')),label+' levels use their own top-down sprites');
+   assert.equal(towerSystem.urls[3],towerSystem.urls[2],label+' level 4 temporarily uses level 3 art without changing game rules');
+   assert.equal(towerSystem.urls[4],towerSystem.urls[2],label+' other higher levels temporarily use level 3 art');
+   assert(towerSystem.symmetry.every(Boolean),label+' all top-down towers have exact vertical and horizontal symmetry');
+   assert(towerSystem.levelsDistinct,label+' the three tower levels have different silhouettes');
+   assert.equal(towerSystem.bounds.width,towerSystem.east.x-towerSystem.bounds.x,label+' each tower remains exactly one terrain cell');
+   assert.equal(towerSystem.bounds.height,towerSystem.bounds.width,label+' tower dimensions never change with camera zoom');
+   assert(towerSystem.colorMaskSize>40&&towerSystem.changed>0,label+' red tower accents adopt player hue');
+   assert.equal(towerSystem.changedOthers,0,label+' stone and other tower pixels never recolor');
+   assert.equal(towerSystem.changedAlpha,0,label+' tower transparency stays exact');
+   if(towerSystem.hasEnemy)assert(towerSystem.ownerDifference>0,label+' different owners color tower accents differently');
+   assert.equal(towerSystem.drawn,4,label+' adjacent towers remain four independently drawn sprites');
    const hudStability=await page.evaluate(()=>{
     const ids=['troopCount','workerCount','landCount','frontCount','resFood','resWood','resStone','resGold'];
     const nodes=ids.map(id=>document.getElementById(id)),old=nodes.map(n=>n.textContent);
