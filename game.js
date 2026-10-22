@@ -1804,41 +1804,64 @@ function outlinedMapBuilding(source){
  buildingOutlineCache.set(source,layer);
  return layer;
 }
-function drawOverviewBuilding(b,cx,cy,opacity){
- // One small high-contrast signal per building at distant zoom, never a new art asset.
- const r=(zoom<.25?3.2:4.8)/zoom;
- ctx.save();ctx.globalAlpha=opacity;ctx.translate(cx,cy);
- ctx.beginPath();
- if(b.kind==='fort')ctx.rect(-r,-r,r*2,r*2);
- else if(b.kind==='barracks'){ctx.moveTo(0,-r*1.25);ctx.lineTo(r*1.2,r);ctx.lineTo(-r*1.2,r);ctx.closePath();}
- else if(b.kind==='city'){ctx.moveTo(0,-r*1.3);ctx.lineTo(r*1.3,0);ctx.lineTo(0,r*1.3);ctx.lineTo(-r*1.3,0);ctx.closePath();}
- else ctx.arc(0,0,r,0,Math.PI*2);
- ctx.fillStyle=color(b.owner);ctx.strokeStyle='#0b1b25';ctx.lineWidth=3/zoom;
- ctx.fill();ctx.stroke();ctx.strokeStyle='#f4f4e6';ctx.lineWidth=1.15/zoom;ctx.stroke();
- ctx.restore();
-}
-// Neighbor shape selection was retired: Forts never join or disappear.
-// All sprite changes are screen-space presentation; selection and buildings stay one world cell.
-function drawMapBuilding(b){
- const bounds=buildingTileBounds(b);
- const centerX=bounds.x+bounds.width/2,centerY=bounds.y+bounds.height/2;
- const source=roofSprite(b.kind,b.owner,b.level);
- const outlined=outlinedMapBuilding(source);
- const pixelCell=TILE*zoom;
- const spriteOpacity=Math.max(0,Math.min(1,(pixelCell-5)/6));
- ctx.save();
- if(spriteOpacity<1)drawOverviewBuilding(b,centerX,centerY,1-spriteOpacity);
- if(spriteOpacity>0){
-  // Minimum readable on-screen area in portrait mode, restrained at closer zoom.
-  const spritePixels=Math.max(18,pixelCell),side=spritePixels/zoom;
-  ctx.globalAlpha=spriteOpacity;
-  ctx.fillStyle='rgba(10,23,29,.48)';
-  ctx.beginPath();ctx.roundRect(centerX-side*.45,centerY-side*.45,side*.9,side*.9,Math.max(1,2/zoom));ctx.fill();
-  ctx.imageSmoothingEnabled=false;
-  if(outlined)ctx.drawImage(outlined,centerX-side*.54,centerY-side*.54,side*1.08,side*1.08);
-  else ctx.drawImage(buildingTypeMarker(b.kind,color(b.owner)),centerX-side/2,centerY-side/2,side,side);
+// v119: one visual footprint per map cell. Do not enlarge adjacent original PNGs.
+function drawOverviewBuilding(b,x,y,count=1){
+ ctx.save();ctx.translate(x,y);ctx.scale(1/zoom,1/zoom);
+ const accent=color(b.owner);
+ if(count>1){
+  // Zoomed-out neighbors become one owned group, with a readable count.
+  const size=17;
+  ctx.fillStyle='#0c1b26';ctx.strokeStyle=accent;ctx.lineWidth=1.6;
+  ctx.beginPath();ctx.roundRect(-size/2,-size/2,size,size,4);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#ffffff';ctx.font='800 11px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(count>99?'99+':String(count),0,.5);
+ }else{
+  // Single buildings remain distinct by shape, without growing wider than nearby cells.
+  const radius=Math.max(3.5,Math.min(5.3,TILE*zoom*.43));
+  ctx.beginPath();
+  if(b.kind==='fort')ctx.rect(-radius,-radius,radius*2,radius*2);
+  else if(b.kind==='barracks'){ctx.moveTo(0,-radius*1.1);ctx.lineTo(radius,radius);ctx.lineTo(-radius,radius);ctx.closePath();}
+  else if(b.kind==='city'){ctx.moveTo(0,-radius*1.12);ctx.lineTo(radius*1.12,0);ctx.lineTo(0,radius*1.12);ctx.lineTo(-radius*1.12,0);ctx.closePath();}
+  else ctx.arc(0,0,radius,0,Math.PI*2);
+  ctx.fillStyle=accent;ctx.strokeStyle='#0c1b26';ctx.lineWidth=2;
+  ctx.fill();ctx.stroke();ctx.lineWidth=.85;ctx.strokeStyle='#f9f8ea';ctx.stroke();
  }
  ctx.restore();
+}
+function drawMapBuilding(b){
+ const bounds=buildingTileBounds(b);
+ const source=roofSprite(b.kind,b.owner,b.level);
+ const outlined=outlinedMapBuilding(source);
+ // Native artwork occupies at most 82% of its own world tile. At high
+ // camera zoom this still grows naturally, but never touches neighboring art.
+ const inset=TILE*.09,baseSize=TILE*.82;
+ const artInset=TILE*.13,artSize=TILE*.74;
+ ctx.save();
+ ctx.fillStyle='rgba(9,23,30,.72)';
+ ctx.fillRect(bounds.x+inset,bounds.y+inset,baseSize,baseSize);
+ ctx.strokeStyle='rgba(248,247,221,.68)';
+ ctx.lineWidth=Math.min(.65,1/Math.max(.35,zoom));
+ ctx.strokeRect(bounds.x+inset,bounds.y+inset,baseSize,baseSize);
+ ctx.imageSmoothingEnabled=false;
+ if(outlined)ctx.drawImage(outlined,bounds.x+artInset,bounds.y+artInset,artSize,artSize);
+ else ctx.drawImage(buildingTypeMarker(b.kind,color(b.owner)),bounds.x+artInset,bounds.y+artInset,artSize,artSize);
+ ctx.restore();
+}
+// Deterministic clustering uses world-grid coordinates, not moving screen bins,
+// so clusters never rearrange merely because the player pans the map.
+function drawDistantBuildings(visible){
+ const cellPixels=TILE*zoom;
+ const span=Math.max(1,Math.ceil(16/cellPixels));
+ const groups=new Map();
+ for(const b of visible){
+  const key=b.owner+':'+Math.floor(b.x/span)+':'+Math.floor(b.y/span);
+  let g=groups.get(key);
+  if(!g){g={owner:b.owner,kind:b.kind,count:0,x:0,y:0,first:b};groups.set(key,g);}
+  g.count++;g.x+=b.x+.5;g.y+=b.y+.5;
+ }
+ for(const g of groups.values()){
+  drawOverviewBuilding(g.first,g.x/g.count*TILE,g.y/g.count*TILE,g.count);
+ }
 }
 let worldBordersCache=null;
 function worldBorderPaths(){
@@ -1874,15 +1897,17 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
 
  // Fort scouting still works; range rings appear only while inspecting a fort or positioning one.
  drawInfrastructure();drawAttackPlanning();drawArmyDisplay(w,h);drawHarvestSites(w,h);
- // Every visible building keeps one world-grid cell; no sprite grouping,
- // adjacency, or additional scaling relative to the map during zoom.
+ // Keep original artwork inside each world tile. At low zoom, adjacent
+ // buildings collapse into an owned count marker instead of overlapping.
+ const visibleMapBuildings=[];
  for(const b of state.buildings){
   if(!E.visibleBuilding(state,myId,b))continue;
-  const bounds=buildingTileBounds(b);
-  const sx=bounds.x*zoom+camX,sy=bounds.y*zoom+camY,side=TILE*zoom;
-  if(sx+side<-2||sx>w+2||sy+side<-2||sy>h+2)continue;
-  drawMapBuilding(b);
+  const sx=(b.x+.5)*TILE*zoom+camX,sy=(b.y+.5)*TILE*zoom+camY;
+  if(sx<-16||sx>w+16||sy<-16||sy>h+16)continue;
+  visibleMapBuildings.push(b);
  }
+ if(TILE*zoom<11)drawDistantBuildings(visibleMapBuildings);
+ else for(const b of visibleMapBuildings)drawMapBuilding(b);
  // Political and war borders are a higher layer than buildings and roads.
  // This keeps country boundaries readable even in heavily built-up regions.
  if(zoom>=.28){
