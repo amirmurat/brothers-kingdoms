@@ -60,13 +60,14 @@ console.log('PASS v102: circular terrain scouting, allied visibility, invalid fo
 {
  const {s,id}=fixture(),fort={id:'isolated',owner:id,kind:'fort',level:1,x:30,y:20};
  s.buildings=[fort];
- assert(E.action(s,id,{type:'upgrade',id:fort.id}).ok);
+ assert(!E.action(s,id,{type:'upgrade',id:fort.id}).ok,'Cannot start an upgrade without an available builder crew');
  s.tick+=300;E.workforceStep(s);
  assert.equal(fort.level,1,'No builders means no upgrade progress despite elapsed time');
- assert.equal(fort.upgrade.progress,0);
+ assert(!fort.upgrade,'Rejected unstaffed upgrade does not spend resources or queue a ghost job');
  s.buildings.push({id:'base',owner:id,kind:'city',level:1,x:20,y:20});
+ assert(E.action(s,id,{type:'upgrade',id:fort.id}).ok,'Adding a real workforce unlocks construction');
  for(let n=0;n<140&&fort.level===1;n++){s.tick++;E.workforceStep(s);}
- assert.equal(fort.level,2,'Building a worker base resumes previously queued upgrade');
+ assert.equal(fort.level,2,'A newly staffed crew travels and finishes the upgrade');
 }
 {
  const {s,id}=fixture(),fort={id:'legacy',owner:id,kind:'fort',level:1,x:20,y:20};
