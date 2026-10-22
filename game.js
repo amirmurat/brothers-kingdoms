@@ -4,8 +4,12 @@
 const E=window.BKEngine,$=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // Phosphor MIT icons for interface actions; shared geometric paths for buildings.
 const UI_ICON_NAMES={food:'grains',wood:'tree',stone:'mountains',gold:'coins',farm:'grains',lumber:'tree',quarry:'mountains',mine:'coins',barracks:'sword',fort:'shield',city:'buildings',capital:'castle-turret',economy:'coins',war:'sword',logistics:'flag-banner'};
+const OLD_CC0='assets/tiny-swords-cc0/';
+const CC0_BUILDINGS=new Set(['capital','city','barracks','fort','farm','lumber','quarry','mine']);
+const CC0_RESOURCES=new Set(['food','wood','stone','gold']);
 const uiIcon=name=>{
- if(name==='stone')return '<img class="ui-icon stone-resource-icon" src="assets/shapes/stone.svg" alt="" aria-hidden="true"/>';
+ if(CC0_BUILDINGS.has(name))return `<img class="ui-icon tiny-building-art" src="${OLD_CC0}buildings/${name}.png" alt="" aria-hidden="true"/>`;
+ if(CC0_RESOURCES.has(name))return `<img class="ui-icon tiny-resource-art" src="${OLD_CC0}resources/${name}.png" alt="" aria-hidden="true"/>`;
  const id=UI_ICON_NAMES[name]||name;
  const set=id==='flag-banner'?'controls':'game';
  return `<svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/${set}.svg#${id}"></use></svg>`;
@@ -23,7 +27,7 @@ const BUILDING_TYPE_COLORS={capital:'#ffd47c',city:'#c899f2',barracks:'#7daefa',
 const LEVEL_RANK_COLORS=['#dce4f0','#6adf9c','#77c8ff','#c9a1ff','#f5d17c'];
 const BUILDING_PRIORITY={capital:9,fort:8,barracks:7,city:6,mine:3,quarry:3,lumber:3,farm:3};
 
-const buildingArt=kind=>`<img class="building-art" src="assets/shapes/${kind}.svg" alt="" aria-hidden="true"/>`;
+const buildingArt=kind=>`<img class="building-art tiny-building-art" src="${OLD_CC0}buildings/${kind}.png" alt="" aria-hidden="true"/>`;
 const BUILDING_CODES={capital:'HQ',city:'CT',barracks:'BA',fort:'FT',farm:'FM',lumber:'WD',quarry:'ST',mine:'AU'};
 const buildingInfo={
  farm:{short:'Feeds your army.',detail:'+8 food/s per level',place:'Your land, excluding mountain summits',resource:'food',perLevel:8},
@@ -677,7 +681,7 @@ function contextual(item){
   const effect=details?buildingBenefit(item.kind,me,item.level):'Capital defense improves at each level';
   const next=details?buildingBenefit(item.kind,me,item.level+1):'Capital defense will increase';
   const stationed=own&&['capital','city','barracks'].includes(item.kind)?(me.garrisons||[]).filter(c=>!c.returning&&(!Number.isFinite(c.tx)||c.x===c.tx&&c.y===c.ty)&&Math.abs(c.x-item.x)+Math.abs(c.y-item.y)<=2).reduce((n,c)=>n+c.strength,0):null;
-  html=`<div class="context-heading"><strong><img class="context-building-art" src="assets/shapes/${esc(item.kind)}.svg" alt="" aria-hidden="true"/>${esc(E.KINDS[item.kind]?.name||'Capital')} · lvl. ${item.level}</strong><small>${esc(other?.name||'')}</small></div>
+  html=`<div class="context-heading"><strong><img class="context-building-art" src="${OLD_CC0}buildings/${esc(item.kind)}.png" alt="" aria-hidden="true"/>${esc(E.KINDS[item.kind]?.name||'Capital')} · lvl. ${item.level}</strong><small>${esc(other?.name||'')}</small></div>
    <div class="context-effect"><small>Current</small><span>${esc(effect)}</span></div>
    ${own&&item.kind==='fort'?`<div class="context-effect"><small>Scouting range</small><span>${E.fortRadius(item,state)} tiles · ${esc(terrainNames[E.tile(state,item.x,item.y)])}</span></div>`:''}
    ${stationed===null?'':`<div class="context-effect"><small>Garrison nearby</small><span>${number(stationed)} troops</span></div>`}
@@ -1370,7 +1374,7 @@ $('zoomIn').onclick=()=>zoomAt(1.24,canvas.clientWidth/2,canvas.clientHeight/2);
 mini.addEventListener('pointerdown',e=>{const r=mini.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*E.W,y=(e.clientY-r.top)/r.height*E.H;camX=canvas.clientWidth/2-x*TILE*zoom;camY=canvas.clientHeight/2-y*TILE*zoom;clampCamera();queueDraw();});mini.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();fitWorld();}});
 // Low-resolution territory bitmap: one pixel per world tile. The GPU enlarges it.
 // It is updated only when a territory changes, NOT once per animation frame.
-const TERRAIN_RGB=[[28,102,139],[102,139,79],[39,111,65],[143,148,151],[147,176,78],[121,96,57],[176,179,175]];
+const TERRAIN_RGB=[[56,145,165],[113,152,80],[58,125,75],[150,144,115],[154,183,97],[149,116,68],[156,164,155]];
 let minimapCached=null,pixelLayer=null;
 let mapPaintOwners=null;
 function repaintWorld(){
@@ -1385,18 +1389,35 @@ function repaintWorld(){
   dirty.add(i);const x=i%E.W,y=(i/E.W)|0;
   if(x)dirty.add(i-1);if(x<E.W-1)dirty.add(i+1);if(y)dirty.add(i-E.W);if(y<E.H-1)dirty.add(i+E.W);
  }
- const wc=worldLayer.getContext('2d',{alpha:false}),colors=Object.fromEntries(state.players.map(p=>{const v=parseInt(p.color.slice(1),16);return[p.id,[(v>>>16)&255,(v>>>8)&255,v&255]];}));
+ const wc=worldLayer.getContext('2d',{alpha:false});wc.imageSmoothingEnabled=false;const colors=Object.fromEntries(state.players.map(p=>{const v=parseInt(p.color.slice(1),16);return[p.id,[(v>>>16)&255,(v>>>8)&255,v&255]];}));
  // Paint only changed ownership cells and adjacent boundary cells. The resource
  // pattern is deterministic, so overwriting a cell restores its exact terrain.
  for(const i of dirty){const x=i%E.W,y=(i/E.W)|0,t=tiles[i],terr=TERRAIN_RGB[t]||TERRAIN_RGB[1],col=colors[owners[i]],k=col?(t===1?.38:.25):0;
   let h=Math.imul(x+state.seed*3,374761393)^Math.imul(y,668265263);h=Math.imul(h^(h>>>13),1274126177);
   const shade=(((h>>>24)&15)-7)*(t===0?.66:.27);
   wc.fillStyle='rgb('+terr.map((v,j)=>Math.max(0,Math.min(255,Math.round(v*(1-k)+(col?.[j]||0)*k+shade)))).join(',')+')';wc.fillRect(x*6,y*6,6,6);
-  if(!t){if((x*41+y*73+state.seed*13)%19===0){wc.fillStyle='#8ad7e95e';wc.fillRect(x*6+2,y*6+2,2,1);}continue;}
+  if(!t){
+   if(tinyTerrain.water?.naturalWidth&&((x*31+y*47+state.seed)%8===0)){
+    wc.save();wc.globalAlpha=.33;wc.drawImage(tinyTerrain.water,0,0,64,64,x*6,y*6,6,6);wc.restore();
+   }
+   if((x*41+y*73+state.seed*13)%19===0){wc.fillStyle='#b2e8f0b0';wc.fillRect(x*6+2,y*6+2,2,1);}
+   continue;
+  }
+  if(tinyTerrain.grass?.naturalWidth&&((x*17+y*11+state.seed)%3===0)){
+   wc.save();wc.globalAlpha=.23;
+   wc.drawImage(tinyTerrain.grass,((x+y)%4)*64,64,64,64,x*6,y*6,6,6);
+   wc.restore();
+  }
   if(x===0||y===0||x===E.W-1||y===E.H-1||((x*41+y*73+state.seed*13)%5))continue;
   const px=x*6+3,py=y*6+3;
-  if(t===2){wc.fillStyle='#58b86c';wc.fillRect(px-2,py-1,2,3);wc.fillRect(px+1,py-2,2,4);wc.fillRect(px,py+1,2,1);}
-  else if(t===3||t===6){wc.strokeStyle='#eef0df';wc.lineWidth=.9;wc.beginPath();wc.moveTo(px-2,py+1);wc.lineTo(px,py-2);wc.lineTo(px+2,py+1);wc.stroke();}
+  if(t===2){
+   if(tinyTerrain.tree?.naturalWidth)wc.drawImage(tinyTerrain.tree,0,0,192,256,px-3,py-3,6,6);
+   else{wc.fillStyle='#327c42';wc.fillRect(px-2,py-1,3,4);wc.fillRect(px+1,py-2,2,5);}
+  }
+  else if(t===3||t===6){
+   if(tinyTerrain.rock?.naturalWidth)wc.drawImage(tinyTerrain.rock,0,0,Math.min(64,tinyTerrain.rock.naturalWidth),Math.min(64,tinyTerrain.rock.naturalHeight),px-3,py-3,6,6);
+   else{wc.strokeStyle='#e4e3bf';wc.lineWidth=.9;wc.beginPath();wc.moveTo(px-2,py+1);wc.lineTo(px,py-2);wc.lineTo(px+2,py+1);wc.stroke();}
+  }
   else if(t===4){wc.fillStyle='#e9c96e';wc.fillRect(px-2,py,4,1);}
   else if(t===5){wc.fillStyle='#ffd54a';wc.fillRect(px-1,py-2,2,2);}
  }
@@ -1501,8 +1522,8 @@ function drawInfrastructure(){
  if(roads.length){
   ctx.globalAlpha=zoom<.5?.45:zoom<.9?.76:.92;
   ctx.lineJoin='round';ctx.lineCap='round';
-  ctx.strokeStyle='#3f4b42';ctx.lineWidth=TILE*.34;ctx.stroke(infrastructureCache.roadPath);
-  ctx.strokeStyle='#e8ce94';ctx.lineWidth=TILE*.20;ctx.stroke(infrastructureCache.roadPath);
+  ctx.strokeStyle='#473e30';ctx.lineWidth=TILE*.37;ctx.stroke(infrastructureCache.roadPath);
+  ctx.strokeStyle='#e7cb8d';ctx.lineWidth=TILE*.22;ctx.stroke(infrastructureCache.roadPath);
  }ctx.restore();
 }
 function drawHarvestSites(w,h){
@@ -1577,7 +1598,16 @@ const mapBuildingSprites=Object.create(null);
 if(typeof Image==='function')for(const kind of Object.keys(BUILDING_TYPE_COLORS)){
  const sprite=new Image();mapBuildingSprites[kind]=sprite;
  sprite.onload=()=>queueDraw();
- sprite.src='assets/buildings/'+kind+'.png';
+ sprite.src=OLD_CC0+'buildings/'+kind+'.png';
+}
+
+// Tiny Swords old CC0 terrain sheets; no new mechanics. Off-screen world bitmap
+// is repainted only for changed cells, never per animation frame.
+const tinyTerrain=Object.create(null);
+if(typeof Image==='function')for(const id of ['grass','forest','water','tree','rock']){
+ const img=new Image();tinyTerrain[id]=img;
+ img.onload=()=>{paintedRevision=-1;queueDraw();};
+ img.src=OLD_CC0+'terrain/'+id+'.png';
 }
 // Building icons have original silhouettes and type colors. Levels have a separate
 // numeric rank and a shared rank color, so neither identity relies on color alone.
@@ -1609,7 +1639,7 @@ function drawMapBuilding(b,x,y,overviewCount=1){
  const kind=b.kind,source=mapBuildingSprites[kind],loaded=source?.naturalWidth>0;
  const color=BUILDING_TYPE_COLORS[kind]||'#dce6f0',levelColor=LEVEL_RANK_COLORS[Math.max(0,Math.min(4,(b.level||1)-1))];
  const macro=zoom<1.35,far=zoom<.55;
- const screenH=macro?(far?24:30):Math.min(84,Math.max(38,TILE*zoom*1.5));
+ const screenH=macro?(far?25:34):Math.min(92,Math.max(48,TILE*zoom*1.68));
  const h=screenH/zoom,w=h*(loaded?source.naturalWidth/source.naturalHeight:1);
  const baseX=x-w/2,baseY=y-h*.74;
  ctx.save();
@@ -1670,13 +1700,13 @@ function worldBorderPaths(){
  }
  worldBordersCache={seed:state.seed,revision:state.territoryRevision,warKey,owners,wars,coast};return worldBordersCache;
 }
-function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr=canvas.width/Math.max(1,canvas.clientWidth);const w=canvas.clientWidth,h=canvas.clientHeight;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#195775';ctx.fillRect(0,0,w,h);
- ctx.save();ctx.translate(camX,camY);ctx.scale(zoom,zoom);ctx.imageSmoothingEnabled=true;ctx.drawImage(worldLayer,0,0,worldLayer.width,worldLayer.height,0,0,E.W*TILE,E.H*TILE);
+function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr=canvas.width/Math.max(1,canvas.clientWidth);const w=canvas.clientWidth,h=canvas.clientHeight;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#3890a5';ctx.fillRect(0,0,w,h);
+ ctx.save();ctx.translate(camX,camY);ctx.scale(zoom,zoom);ctx.imageSmoothingEnabled=zoom<.42;ctx.drawImage(worldLayer,0,0,worldLayer.width,worldLayer.height,0,0,E.W*TILE,E.H*TILE);
  if(zoom>=.28){
   const paths=worldBorderPaths();
   ctx.lineWidth=Math.max(.55,1.65/zoom);ctx.strokeStyle='#e6f3ffb0';ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke(paths.owners);
   ctx.strokeStyle='#ff7488e6';ctx.lineWidth=Math.max(1.2,2.3/zoom);ctx.setLineDash([3/zoom,2/zoom]);ctx.lineCap='butt';ctx.stroke(paths.wars);ctx.setLineDash([]);
-  ctx.strokeStyle='#b0e4d9a0';ctx.lineWidth=Math.max(.7,1.15/zoom);ctx.stroke(paths.coast);
+  ctx.strokeStyle='#f1edc29f';ctx.lineWidth=Math.max(.85,1.25/zoom);ctx.stroke(paths.coast);
  }
  const defense=defensePicking?(focusHover&&E.inside(focusHover.x,focusHover.y)?focusHover:mine()?.armyFocus):null;
  if(defense){ctx.strokeStyle=E.focusStatus(state,myId,defense)==='invalid'?'#ff617b':'#39d5ff';ctx.lineWidth=2/zoom;ctx.beginPath();ctx.arc((defense.x+.5)*TILE,(defense.y+.5)*TILE,TILE*1.5,0,Math.PI*2);ctx.moveTo((defense.x-2)*TILE,(defense.y+.5)*TILE);ctx.lineTo((defense.x+3)*TILE,(defense.y+.5)*TILE);ctx.moveTo((defense.x+.5)*TILE,(defense.y-2)*TILE);ctx.lineTo((defense.x+.5)*TILE,(defense.y+3)*TILE);ctx.stroke();}
