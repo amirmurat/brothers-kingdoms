@@ -64,7 +64,7 @@ function fixture(){const s=E.lobby(41),id=E.addPlayer(s,'Builder'),enemy=E.addPl
 {
  const {s,id,p}=fixture();
  for(let n=0;n<120;n++)s.buildings.push({id:'city'+n,kind:'city',owner:id,x:11+n%20,y:11+Math.floor(n/20),level:3});
- E.workforceStep(s);assert(p.workers.length<=24,'Thousands of workers use at most 24 groups');
+ E.workforceStep(s);assert.equal(p.workers.length,Math.ceil(E.workforceStats(s,id).capacity/6),'Builder crews scale with actual builders, not a fixed 24-group cap');
  assert.equal(p.workers.reduce((n,g)=>n+g.count,0),E.workforceStats(s,id).capacity,'Aggregation preserves workforce');
  const old=JSON.parse(JSON.stringify(s));delete old.players[0].workers;delete old.roads;delete old.workZones;delete old.buildJobs;
  E.workforceStep(old);assert(E.workforceStats(old,id).groups>0,'Old saves migrate without removing old buildings');
@@ -115,4 +115,31 @@ function fixture(){const s=E.lobby(41),id=E.addPlayer(s,'Builder'),enemy=E.addPl
  assert.equal(new Set(reservations).size,reservations.length,'A construction site reserves at most one worker group');
  assert(reservations.length>=2,'Separate sites get their own builders');
 }
-console.log('PASS workforce: painted resources, terrain/authority, real travel, local harvest, queued construction, city capacity, roads, bounded groups and wire/save migration');
+
+{
+ const {s,id,p}=fixture();
+ // Twelve worker crews permit any mix of construction AND upgrade, not 24
+ // construction jobs plus an unrelated two-upgrade restriction.
+ s.buildings[0].level=3;
+ s.buildings.push({id:'own-fort-a',owner:id,kind:'fort',x:22,y:20,level:1},
+                  {id:'own-fort-b',owner:id,kind:'fort',x:23,y:20,level:1});
+ for(const r of ['wood','stone','gold','food'])p.res[r]=1_000_000;
+ assert.equal(E.workforceStats(s,id).slots,12);
+ assert(E.action(s,id,{type:'upgrade',id:'own-fort-a'}).ok);
+ assert(E.action(s,id,{type:'upgrade',id:'own-fort-b'}).ok,
+        'More than one upgrade is allowed when there are free crews');
+ for(let x=12;x<22;x++){
+  const build=E.action(s,id,{type:'queueBuild',kind:'fort',x,y:20});
+  assert(build.ok,'Queued Fort '+x+': '+build.error);
+ }
+ const status=E.workforceStats(s,id);
+ assert.equal(status.building,12,'Ten constructions and two upgrades occupy twelve crews');
+ assert.equal(status.upgrading,2);
+ assert.equal(E.action(s,id,{type:'queueBuild',kind:'fort',x:25,y:20}).ok,false,
+              'All crews assigned, extra job is held back');
+ E.workforceStep(s);
+ assert.equal(p.workers.length,12,'Twelve actual work crews generated');
+ const reserved=p.workers.filter(w=>w.job).length;
+ assert(reserved>=2,'Builders can work on many independent jobs, not only two');
+}
+console.log('PASS workforce: painted resources, terrain/authority, real travel, local harvest, queued construction, city capacity, roads, crew-based concurrent jobs and wire/save migration');
