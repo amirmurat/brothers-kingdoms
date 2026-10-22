@@ -1,3 +1,9 @@
+# Current Fort sprite — v114
+
+The live Fort now uses the **original Tiny Swords building** `assets/tiny-swords-cc0/buildings/fort.png`, from the same third-party building art set as City, Barracks and other structures. It is colored using the shared blue-roof faction mask, with level-dependent tint and one-cell world-grid scaling. No auto-connected walls.
+
+The player-authored sprites below are **preserved but not used**: `fort.png` (first authored Fort), `fort-tiles/` (connected wall experiments, including the archived single tile), `fort-levels/` (three top-down tower tiers), `approved-topdown/fort/` (approved rook-style design). Do not confuse these with the original Tiny Swords Fort the owner requested to restore.
+
 # Original player and project-created pixel art
 
 ## Active Fort artwork — v111
