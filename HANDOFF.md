@@ -1,5 +1,20 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 
+## START HERE — v111 top-down Forts, no auto-connecting (22.10.2026)
+
+**Current working branch:** `design/visual-review-v26`, not obsolete `main`. The owner explicitly prioritized **strategic readability** over 3-D architectural detail and approved strictly orthogonal top-down **exactly symmetric** pixel-art Fort towers; they abandoned the wall-joining idea.
+
+**Actual code:** `game.js` now uses `assets/player/fort-levels/level-{1,2,3}.png` (three 32×32 RGBA artworks). Each building still occupies exactly one world tile (`TILE×TILE`), independent of zoom. No `buildingConnectMask`, `fortTileSpec`, `fortConnectedSprite`, rotating corner assets, or per-frame neighbor enumeration: **all adjacent forts render as independent buildings, even if four forts surround one cell**. Native art is top-down, left/right and top/bottom mirrored exactly. `roofSprite` selects a separate source PNG by `b.level` and caches owner-colored variants. Country hue recolors only three precisely matched red pigments; stone, gold details, transparency and pixel borders remain unchanged. Building menu previews level 1; selected building cards show actual visual level. Preload levels 2 and 3; redraw when loaded.
+
+**Do not alter level cap yet:** `engine.js` retains level 4 maximum and its gameplay stats/upgrade cost. Levels 4+ *visually* use level 3 PNG as a temporary fallback, pending a later explicit request to reduce mechanical maximum to 3. No balance/server changes.
+
+**Asset version:** `111-independent-fort-towers-r1` in `index.html`. `assets/player/README.md` records current three PNGs and archives the old owner-created `fort.png` and `fort-tiles/` wall pieces rather than deleting them. The original five + extra corner are no longer used anywhere in current runtime. No Cloudflare publication verified: GitHub feature branch is not the public deployment.
+
+**Tests:** `tests/mobile-layout.cjs` was changed from verifying the old 16 join masks to checking 32×32 loading, pixel-perfect horizontal/vertical symmetry, three different tier images, owner-only red accents, unaffected alpha, one-cell geometry, and four adjacent forts being drawn four times. Check the latest Actions result before claiming green. Real iPhone Safari testing remains pending.
+
+---
+
+
 ## START HERE — v110 corrected two-line Fort corner (22.10.2026)
 
 **Correct editable branch:** `design/visual-review-v26` (NOT old `main`). The owner observed a single-line corner joining double-line straight Fort walls on their actual iPhone. They uploaded `Fort Corner 2 lines.png` (original 32×32 native transparent sprite). This corrected art is now installed **byte-identically** as `assets/player/fort-tiles/corner.png` (Git blob `28d49686fd65893f32eb4cb6fe14cdef9ab995ed`). The previous `corner.png` was saved as `assets/player/fort-tiles/corner-1-line.png` (archived; NOT used by renderer). The user-authored double-line corner has both outer SW and inner NE masonry; base opening mask N|E=3. The other three orientations are derived by exact RGBA 90° rotations. No change in same-owner/same-kind adjacency, world tile geometry, other Fort segments, or engine.
