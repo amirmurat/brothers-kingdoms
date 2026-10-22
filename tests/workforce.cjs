@@ -94,4 +94,25 @@ function fixture(){const s=E.lobby(41),id=E.addPlayer(s,'Builder'),enemy=E.addPl
  const assigned=r=>p.workers.filter(g=>g.resource===r).length;
  assert(assigned('gold')>assigned('stone'),'Priority allocates more groups to gold than comparable stone deposits');
 }
+
+{
+ const {s,id,p}=fixture();
+ // A settled worker must not abandon a productive site every eight ticks.
+ const gold=E.idx(12,20),wood=E.idx(13,20);
+ s.tiles[gold]=5;s.tiles[wood]=2;
+ for(let n=0;n<30;n++){s.tick++;E.workforceStep(s);}
+ const working=p.workers.filter(g=>g.resource&&g.x===g.tx&&g.y===g.ty&&g.progress>=3);
+ assert(working.length>=1,'At least one civilian group reaches a productive deposit');
+ const before=working.map(g=>({id:g.id,resource:g.resource,tx:g.tx,ty:g.ty}));
+ for(let n=0;n<40;n++){s.tick++;E.workforceStep(s);}
+ const after=before.filter(prev=>p.workers.some(g=>g.id===prev.id&&g.resource===prev.resource&&g.tx===prev.tx&&g.ty===prev.ty&&g.progress>=3));
+ assert(after.length>=1,'No forced time-based reassignment of productive workers');
+ const nearBuild=E.action(s,id,{type:'queueBuild',kind:'fort',x:14,y:20});
+ const farBuild=E.action(s,id,{type:'queueBuild',kind:'fort',x:38,y:20});
+ assert(nearBuild.ok&&farBuild.ok);
+ E.workforceStep(s);
+ const reservations=p.workers.map(g=>g.job).filter(Boolean);
+ assert.equal(new Set(reservations).size,reservations.length,'A construction site reserves at most one worker group');
+ assert(reservations.length>=2,'Separate sites get their own builders');
+}
 console.log('PASS workforce: painted resources, terrain/authority, real travel, local harvest, queued construction, city capacity, roads, bounded groups and wire/save migration');
