@@ -1,5 +1,18 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 
+## START HERE — v107 mobile map clarity, mode UI and builder scheduling (22.10.2026)
+
+**Working code** remains on `design/visual-review-v26` (Cloudflare Workers version lineage v106, not old `main`). Current cache key `107-map-tools-workers-r1`. Owner provided five physical iPhone screenshots showing shimmer in close/low-zoom Tiny Swords buildings, obstructed borders, redundant bottom Exit buttons, asymmetric brush rail versus right toolbar, dead Clear All plan action, disappearing saved army focus after leaving the mode, and unintelligent builders.
+
+**Changes:** `game.js` snaps every building sprite rectangle to device pixels during Canvas camera motion; reduced oversized map icons and aligned overview clusters to fixed world tile bins **including owner ID** instead of panning-dependent screen bins. Nation and war borders draw **over** buildings/roads at higher contrast. The actual saved `mine().armyFocus` is drawn permanently as a crosshair after leaving focus mode, in blue when valid and red when invalid; only `clearArmyFocus` clears the server-side order. `planPaintClear` clears the complete unsaved painted zone; when there are no new cells but saved plans exist, its label becomes `Clear all plans` and the owner's existing saved attack/recovery zones are trimmed using the host-authoritative `erasePlanCells` action. Editing a plan supports a genuine `Clear plan`. `index.html` removes the three redundant Exit controls on Plan/Focus/Eraser; pressing the matching right-side mode button again exits the mode (already implemented). `styles/theme.css` standardizes safe-area 12px left/right gutters and reformats bottom actions as Plan (Clear/Start), Focus (Clear focus), Eraser (Reset/Erase selected).
+
+**Builders:** `engine.js` eliminated arbitrary 8-tick harvest reassignment and the first worker's forced road detour; walking workers still lay roads opportunistically. Construction and upgrades use **global nearest reachable group/job pairing**, persistent one-group-per-job reservation, a modest upgrade urgency bonus and a penalty for disrupting harvesting. Deposits are chosen with stronger distance weighting; lost/captured tasks still release groups, and already engaged workers finish their assignment before switching. All unchanged economic balances, building prices and server authority retained. `tests/workforce.cjs` covers job reservations, harvest stability across 40 changing ticks and nearby assignments. `tests/mobile-layout.cjs` verifies two-button sheets, toggle-based exit, visible saved focus marker, actual Clear handler and symmetric side gutters. `tests/performance-browser.cjs` now compares historical v99 engine/game with historical v99 HTML, because old v99 code requires Exit elements deliberately removed from v107 UI.
+
+**Validation:** v107 pre-final workflows passed engine/server regression, Chromium+WebKit mobile layout and network two-client checks on predecessor commits; older intermediate full workflows failed on obsolete v99 HTML in the performance harness, addressed in `tests/performance-browser.cjs`. Check final GitHub Actions before claiming success. No independent Cloudflare production deployment or physical touch-device rerun confirmed; user screenshots correspond to earlier Worker deployment. Do not merge branch to obsolete `main`.
+
+---
+
+
 ## START HERE — v106 building roles and country/level roof palettes (22.10.2026)
 
 **Current editable game branch:** `design/visual-review-v26`. Builds on v105/v104; do **not** edit obsolete `main` or claim its GitHub Pages preview is the active Cloudflare build. Browser cache: `106-roofs-by-nation-r2`.
