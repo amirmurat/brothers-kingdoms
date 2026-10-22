@@ -4,9 +4,9 @@ function load(source){const mod={exports:{}};new Function('module',source)(mod);
 function fixture(E,dense=false){
  const s=E.lobby(13);for(let n=0;n<4;n++)E.addPlayer(s,'Nation '+n);E.start(s,0);s.tiles.fill(1);s.owners.fill(0);s.buildings=[];
  for(let y=0;y<E.H;y++)for(let x=0;x<E.W;x++)s.owners[E.idx(x,y)]=1+(x>=80?1:0)+(y>=52?2:0);
- for(const p of s.players){p.land=4160;p.troops=450000;p.capital={x:p.id%2?25:135,y:p.id<3?25:80};p.garrisons=[{id:'g'+p.id,...p.capital,strength:p.troops}];p.res={food:10000,wood:10000,stone:10000,gold:10000};for(let n=0;n<8;n++)s.buildings.push({id:'b'+p.id+'-'+n,owner:p.id,kind:n?'city':'capital',x:p.capital.x+n,y:p.capital.y,level:4});}
+ for(const p of s.players){p.land=4160;p.troops=450000;p.capital={x:p.id%2?25:135,y:p.id<3?25:80};p.garrisons=[{id:'g'+p.id,...p.capital,strength:p.troops}];p.res={food:10000,wood:10000,stone:10000,gold:10000};for(let n=0;n<8;n++)s.buildings.push({id:'b'+p.id+'-'+n,owner:p.id,kind:'city',x:p.capital.x+n,y:p.capital.y,level:3});}
  if(dense){s.buildings=[];for(const p of s.players){const left=p.id%2?3:83,top=p.id<3?3:55;
-  for(let n=0;n<360;n++){const x=n===0?p.capital.x:left+n%60,y=n===0?p.capital.y:top+Math.floor(n/60)*7;s.buildings.push({id:'dense-'+p.id+'-'+n,owner:p.id,kind:n===0?'capital':n<120?'barracks':'city',x,y,level:4});}
+  for(let n=0;n<360;n++){const x=n===0?p.capital.x:left+n%60,y=n===0?p.capital.y:top+Math.floor(n/60)*7;s.buildings.push({id:'dense-'+p.id+'-'+n,owner:p.id,kind:n<120?'barracks':'city',x,y,level:3});}
   p.garrisons=[{id:'g'+p.id,...p.capital,strength:p.troops}];
  }}
  s.territoryRevision++;
