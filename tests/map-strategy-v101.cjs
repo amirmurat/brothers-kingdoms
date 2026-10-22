@@ -1,8 +1,8 @@
 'use strict';
 const assert=require('node:assert/strict'),E=require('../engine.js');
-function fixture(){const s=E.lobby(19),id=E.addPlayer(s,'A'),foe=E.addPlayer(s,'B');E.start(s,0);s.tiles.fill(1);s.owners.fill(0);s.buildings=[];s.armies=[];s.attackPlans=[];s.recoveryPlans=[];for(let y=20;y<60;y++)for(let x=20;x<70;x++)s.owners[E.idx(x,y)]=id;s.territoryRevision++;const p=E.person(s,id);p.land=2000;p.troops=10000;p.garrisons=[{id:'home',x:65,y:40,strength:10000}];p.capital={x:30,y:40};s.buildings=[{id:'base',owner:id,kind:'capital',x:30,y:40,level:1}];return {s,id,foe,p};}
+function fixture(){const s=E.lobby(19),id=E.addPlayer(s,'A'),foe=E.addPlayer(s,'B');E.start(s,0);s.tiles.fill(1);s.owners.fill(0);s.buildings=[];s.armies=[];s.attackPlans=[];s.recoveryPlans=[];for(let y=20;y<60;y++)for(let x=20;x<70;x++)s.owners[E.idx(x,y)]=id;s.territoryRevision++;const p=E.person(s,id);p.land=2000;p.troops=10000;p.garrisons=[{id:'home',x:65,y:40,strength:10000}];p.capital={x:30,y:40};s.buildings=[{id:'base',owner:id,kind:'city',x:30,y:40,level:1}];return {s,id,foe,p};}
 {
- const {s,id,foe,p}=fixture(),enemy={id:'secret',owner:foe,kind:'city',level:4,x:85,y:40};s.buildings.push(enemy);
+ const {s,id,foe,p}=fixture(),enemy={id:'secret',owner:foe,kind:'city',level:3,x:85,y:40};s.buildings.push(enemy);
  assert(!E.visibleBuilding(s,id,enemy));let wire=E.networkState(s,id);assert(!wire.buildings.some(b=>b.id==='secret'));assert.equal(wire.players.find(p=>p.id===foe).capital,null);
  const hidden=E.strategicWeight(s,id,85,40);assert.equal(hidden,1,'AI cannot target a hidden building');
  const fort={id:'scout',owner:id,kind:'fort',level:1,x:68,y:40};s.buildings.push(fort);assert(!E.visibleBuilding(s,id,enemy));fort.level=2;assert(E.visibleBuilding(s,id,enemy));s.tick++;
