@@ -1,5 +1,16 @@
 # Brothers Kingdoms — HANDOFF / контекст для следующего ChatGPT
 
+## v112 — Farm artwork is now active in game; Cloudflare preview page (22.10.2026)
+
+**Deployment branch is `design/visual-review-v26`**, not stale `main`. User no longer wants rounds of review, asks for working changes *on the site*. Implemented in `game.js`: `buildingSpritePath('farm',level)` routes to the existing three 32×32 RGBA farm PNGs at `assets/player/drafts/farm/level-{1,2,3}.png`. The per-tier loader `farmLevelSprites` preloads level 2 and 3; level 1 uses existing `mapBuildingSprites.farm`. All farm sprites render as individual one-cell images. Level 4+ falls back visually to level 3 art; gameplay levels/costs remain untouched. Farm images are not recolored to owner hue: this preserves brown soil, green crops, blue water and golden wheat, and territory borders already show ownership. Other buildings, multiplayer, economics and styling unchanged.
+
+**Important accessibility detail:** New matches now auto-produce resources on controlled harvest land and **do not offer farm as a buildable kind** (quick build dock = City/Barracks/Fort). Older saved states with farm buildings display tier-specific artwork. So to expose the work on the public site immediately, added `assets/player/drafts/farm/preview.html`, a self-contained English/mobile gallery with direct image links. Worker URL when the branch is built: `https://brothers-kingdoms.murat-amir-olzhasuly.workers.dev/assets/player/drafts/farm/preview.html`. `scripts/build-cloudflare.cjs` copies all `assets/`, including this page, so no additional build config needed.
+
+Updated `index.html` static cache-buster to `112-topdown-farm-tiers-r1`. Updated `tests/mobile-layout.cjs` to verify loading, level distinction, palette preservation and gallery route. Follow the Actions result. **IMPORTANT:** GitHub branch commit does NOT prove Cloudflare deployed; Cloudflare dashboard is separately connected to this branch per `docs/CLOUDFLARE_SETUP.md`. User wants deployed site, so inspect Workers build/log and `/api/health` if available. Do not claim deployed unless verified. GitHub Pages `main` is a separate stale v25 frontend and is not the user's active Cloudflare Worker game.
+
+---
+
+
 ## ART REVIEW — Draft Farm, deliberately not integrated (22.10.2026)
 
 Owner rejected previous generated/isometric and simplistic/repetitive farm designs and requested real visual references followed by **drawing pixel-by-pixel without any image-generation model**. The approved Fort and Quarry art is already archived and MUST NOT change during Farm work. A new distinct three-tier FARM candidate has been hand-coded with Pillow as native 32x32 transparent PNGs at `assets/player/drafts/farm/level-{1,2,3}.png`, plus README including SHA-256 hashes. L1 = mainly bare soil with early sprouts; L2 = lush green irrigated plots and barn; L3 = mature golden wheat and granary. These three pieces are **unapproved review drafts**, explicitly do NOT change game.js/index.html/engine.js or live website on this commit; wait for visual feedback first. The drawing source was also provided to the user directly as `paint_bk_farm.py` in the conversation.
