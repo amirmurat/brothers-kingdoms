@@ -1,3 +1,13 @@
+## Objective safety audit after v134 — route and diplomacy boundaries (23.10.2026)
+
+**Root issue:** Unknown logic regressions in autonomous strategy could make player orders unsafe or misleading. Rechecked current `design/visual-review-v26` at `557e519`, canonical Workers site and engine v106; v134 r2 mobile Chromium/WebKit CI #39942124967 passed. User has not yet confirmed direct objective selection on real iPhone.
+
+**Six-stage targeted cycle:** Isolated one risk cluster: direct building objectives might cross water/isolated regions or continue after target nation becomes allied/non-hostile. Compared altering routing/war logic versus locking behavior with deterministic regression; existing engine handled these cases correctly, so do not change game mechanics. Simulated a revealed target behind a complete impassable water barrier: order rejected without moving troops or creating a plan. Simulated alliance and revoked Nations authorization *after launching* an objective: no territory captured and physical waves stopped. Control scenario with unchanged war permissions still advances. Added `tests/objective-boundaries-v135.cjs` to authoritative engine CI for future generated maps and multiplayer changes. No game engine, UI, sprite, or `main` changes.
+
+**Next work:** Run full CI for this test-only checkpoint, then perform measured economy/building-role audit across early, middle and late-game (city, barracks, fort; food/gold balance) before considering gameplay-value changes. Keep test outcomes distinct from a physical iPhone validation.
+
+---
+
 ## v134 — objective orders toward scouted buildings across varied map seeds (23.10.2026)
 
 **Six stages:** Root problem remains undiscovered game-logic weaknesses and weak strategic agency. After v132 made troop commitment meaningful and v133 demonstrated narrow vs broad front tradeoffs, evaluated keeping area paint alone, a superficial priority button, and a direct *known objective* attack. Chose a minimal optional objective order on top of the existing attack-plan engine; painting remains available. User's future procedural maps require route logic to respect geography and variable terrain rather than manually coded coordinates.
