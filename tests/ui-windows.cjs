@@ -11,11 +11,11 @@ function el(id=''){
 const context=new Proxy({createImageData(w,h){return {data:new Uint8ClampedArray(w*h*4)}},measureText(){return {width:30}}},{get(t,k){return t[k]||(()=>{})}});
 const document={getElementById:el,querySelectorAll(){return []},querySelector(){return null},createElement(){return el('created')},addEventListener(){},activeElement:el('body'),body:el('body'),hidden:false};
 const sandbox={btoa,atob,console,window:{BKEngine:E,innerWidth:390,addEventListener(){}},document,localStorage:{getItem(k){return saved.get(k)||null},setItem(k,v){saved.set(k,v)},removeItem(k){saved.delete(k)}},location:{hash:'',origin:'https://test',pathname:'/index.html',search:''},history:{replaceState(){}},navigator:{},Path2D:class{moveTo(){}lineTo(){}rect(){}},requestAnimationFrame(){},setTimeout(){return 1},clearTimeout(){},setInterval(){},performance:{now(){return 0}},devicePixelRatio:1,crypto:require('crypto').webcrypto,Uint8Array,Uint8ClampedArray,Blob};
-el('soloBots').value='2';el('nickname').value='Test';
+el('soloBots').value='2';el('soloRoomBots').value='2';el('nickname').value='Test';
 
-const source=fs.readFileSync('game.js','utf8').replace(/\}\)\(\);\s*$/, "window.test={createDemo,goHome,showAux,hideAux,openPanel,closePanel,toggleQuickBuild,setBuildingMode,beginAttackPlanner,beginGlobalEraser,renderWars,refreshQuickBuild,updateUI,onPointerDown,mapInputBlocked,get:()=>({state,myId,attackPlanner,pressed,panelOpen,quickBuildOpen})};})();");
+const source=fs.readFileSync('game.js','utf8').replace(/\}\)\(\);\s*$/, "window.test={createDemo,startGame,goHome,showAux,hideAux,openPanel,closePanel,toggleQuickBuild,setBuildingMode,beginAttackPlanner,beginGlobalEraser,renderWars,refreshQuickBuild,updateUI,onPointerDown,mapInputBlocked,get:()=>({state,myId,attackPlanner,pressed,panelOpen,quickBuildOpen})};})();");
 vm.runInNewContext(source,sandbox);const t=sandbox.window.test;
-t.createDemo(false);const s=t.get().state;
+t.createDemo(false);t.startGame();const s=t.get().state;
 assert.equal(t.mapInputBlocked(),false);
 t.openPanel();assert(t.mapInputBlocked());assert(el('sidebar').classList.contains('open'));
 t.toggleQuickBuild(true);assert(!t.get().panelOpen);assert(t.get().quickBuildOpen);assert(t.mapInputBlocked());
@@ -36,7 +36,7 @@ el('helpButton').onclick();assert(!t.get().panelOpen);assert(!el('tutorial').cla
 el('closeTutorial').onclick();assert(!t.mapInputBlocked());
 t.beginAttackPlanner();el('warChip').onclick();t.goHome();
 assert(el('warPanel').classList.contains('hidden'));assert(!document.body.classList.contains('aux-open'));
-t.createDemo(false);
+t.createDemo(false);t.startGame();
 const quick=el('quickBuildChoices'),nations=el('warPanelList');let quickWrites=0,nationWrites=0;
 let quickHtml=quick.innerHTML,nationHtml=nations.innerHTML;
 Object.defineProperty(quick,'innerHTML',{get:()=>quickHtml,set:v=>{quickHtml=v;quickWrites++;}});

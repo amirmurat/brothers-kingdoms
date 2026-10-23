@@ -4,6 +4,8 @@
 
 **Behavior:** `Play solo` / `New solo match` now open local `#waiting` in `SOLO SETUP` mode with map and `Automatic` option; solo opponent picker is shown instead of the multiplayer bot picker. The map uses existing `chooseSpawn` and engine validates site. Press `Start match` locally runs `E.start` with selected bots, renders game and saves immediately; no network API calls. `Continue solo` loads existing saved match directly and does not show lobby. Exiting setup returns to main menu and retains previous saved solo until another match is started. Multiplayer room create/invite/join/readiness remain unchanged. Main menu cache `129-local-solo-lobby-r1`. Original art/engine/server unaffected.
 
+**Regression:** CI first detected the prior `tests/ui-windows.cjs` fixture expected `createDemo(false)` to enter battle automatically. Updated the fixture to explicitly call `startGame()` after local setup, keeping the UI/window behavior assertions unchanged. The first code commit's server/engine still untouched.
+
 **Regression:** mobile browser tests assert setup appears, room code is hidden, difficulty shown, chosen spawn is preserved in player's capital, bot count correct, leaving setup protects previous save, continuation bypasses lobby, and existing multiplayer map/click path stays passing. Static JS/CSS and deployed Worker verification required. Run full GitHub Actions and verify real iPhone portrait lobby.
 
 ---
