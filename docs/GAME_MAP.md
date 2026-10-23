@@ -1,4 +1,16 @@
-# Brothers Kingdoms — карта интерфейса и исходников (v25)
+# Brothers Kingdoms — карта интерфейса и исходников
+
+## v145 — active map buildings and construction workflow
+
+`game.js`: `flatBuildingIcon` is the active filled-cell Canvas symbol for map, catalog and details; original PNGs/sprite helpers are archival compatibility sources. `drawMapBuilding` preserves one world cell at every zoom; new jobs get yellow work marks/progress, own upgrades cyan marks/progress. No active distant cluster displacement.
+
+`#buildDock` has City, Barracks, Fort, Farm. `selectMap` creates a local placement draft; `#contextCard` confirms type, coordinates and authoritative quoted cost before `queueBuild`. `contextCard` is a non-modal flex row inside `.game-layout`, below the live map: no backdrop or map input blocking. Exact clicked buildings and pending jobs take precedence over nearby armies. It includes upgrade, cancel work, two-step removal and collapsible details. Selected objects stay in the remaining map area.
+
+Authority: `queueBuild`, `upgrade`, `cancelBuild`, `removeBuilding` in engine.js. Cancel refunds only the unfinished cost fraction, once, up to storage capacity; completed-building demolition refunds no built cost. Ownership/site and quoted-price checks happen on authority, including stale/captured cases. Farms use normal paid construction (45 wood/10 stone before scaling, 20 work ticks) on owned grass/fields. `automaticWorkSites` does not create food jobs from terrain: actual built Farms need physical worker crews (8 food/tick/level with six workers). Legacy farms become staffed jobs; other resources and the minimal recovery floor remain.
+
+Validation: `tests/building-lifecycle-v144.cjs`, `tests/manual-farms-v145.cjs`, `tests/building-ui-v144.cjs` plus regular engine/server/mobile/lobby/performance CI. Real iPhone remains an independent gate. Current deployment/priority status is in the top of HANDOFF.md.
+
+---
 
 ## v112 — 3-tier farm preview and legacy building renderer
 
