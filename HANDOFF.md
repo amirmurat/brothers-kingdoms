@@ -1,3 +1,15 @@
+## v124 — compact portrait HUD (23.10.2026)
+
+**Problem:** Screenshot-reviewed iPhone UI v123 has an oversized permanent top area (88px stats + 80px resources) and bottom dock (112px). Pure spacing reduction would cramp cards. The requested six-stage UX review considered the problem, touch/performance/legibility constraints, simple padding, collapsible details and fixed compact rows, then chose one-tap compact reflow and clear acceptance criteria.
+
+**Decision:** portrait <=600 CSS px only, stats 88→64px, resources 80→62px, build dock 112→76px (nominal +78px vertical map space). Keep reserve/builders/land, all four amounts/income, original City/Barracks/Fort art, live costs, build duration and one-tap placement always available. Move image and label/time into a compact first row, costs into second; do not add another sheet or hide prices. Planning, focus and eraser retain taller action surfaces for safe taps. Buttons remain >=44px high; labels remain English.
+
+**Files:** `styles/theme.css`, `index.html` (Safari cache `124-portrait-compact-hud-r1`), `tests/mobile-layout.cjs` for portrait dimensions and dock arrangement; no changes to `game.js`, engine, server, owned PNG, balance, multiplayer, placement semantics, or landscape design. Branch is `design/visual-review-v26` only, not `main`.
+
+**QA:** static CSS/JS syntax and cache tests; confirm GitHub CI and actual live Cloudflare CSS/HTML before saying deployed. Check physical iPhone portrait at 320/390 widths, label/price clipping, resource taps, build selection and tactical sheets. No claim of a real iPhone test until owner reviews the live build.
+
+---
+
 ## v123 — quieter medium roads and compact lost-land alert (23.10.2026)
 
 - Owner reviewed four physical portrait iPhone screenshots of v122 at 08:19. Distant building clustering looked readable, but roads dominated medium zoom and the `Lost N cells` warning occupied a broad map band. Owner approved a quick small reversible visual correction.

@@ -271,8 +271,13 @@ const server=http.createServer((req,res)=>{
    await page.locator('#planToolPaint').click();
    const toolAfter=await page.locator('#planToolPaint').boundingBox();
    const bottomAfter=await page.locator('#planGuide').boundingBox();
-   assert.equal(bottomAfter.height,bottomBefore.height,label+' normal and planning HUD have identical height');
-   assert.equal(bottomAfter.y,bottomBefore.y,label+' switching mode never grows the bottom panel');
+   if(viewport.width<viewport.height){
+    assert(bottomAfter.height>=bottomBefore.height,label+' planning surface preserves larger action controls');
+    assert(bottomAfter.y<=bottomBefore.y,label+' planning surface expands upward when needed');
+   }else{
+    assert.equal(bottomAfter.height,bottomBefore.height,label+' landscape surface retains previous geometry');
+    assert.equal(bottomAfter.y,bottomBefore.y,label+' landscape panel stays stable');
+   }
    assert(Math.abs(bottomAfter.y-focusRect.y)<1&&Math.abs(bottomAfter.height-focusRect.height)<1,label+' attack/focus/eraser share exactly one panel geometry');
    assert.equal(await page.locator('#planGuide').evaluate(e=>getComputedStyle(e).display),'grid',label+' attack panel uses same CSS grid as focus/eraser');
    const attackButton=await page.locator('#planPaintClear').boundingBox();
@@ -441,8 +446,12 @@ const server=http.createServer((req,res)=>{
    assert.equal(await page.locator('[data-place-building="city"]').getAttribute('aria-pressed'),'false',label+' choosing another clears previous building');
    assert.equal(await page.locator('[data-place-building="fort"]').getAttribute('aria-pressed'),'true',label+' choosing another selects it');
    assert.equal(await page.locator('#placingBuild').isVisible(),false,label+' no separate placement chooser');
-   const buttons=await page.locator('#buildDock button').evaluateAll(els=>els.map(el=>{const r=el.getBoundingClientRect(),icon=el.querySelector(':scope > img').getBoundingClientRect();return {width:r.width,height:r.height,centerError:Math.abs(icon.x+icon.width/2-r.x-r.width/2)};}));
-   assert(buttons.every(b=>Math.abs(b.width-buttons[0].width)<.5&&Math.abs(b.height-buttons[0].height)<.5&&b.centerError<1),label+' bottom actions share dimensions and centered icons '+JSON.stringify(buttons));
+   const buttons=await page.locator('#buildDock button').evaluateAll(els=>els.map(el=>{const r=el.getBoundingClientRect(),icon=el.querySelector(':scope > img').getBoundingClientRect(),price=el.querySelector('.dock-cost').getBoundingClientRect();return {width:r.width,height:r.height,artInside:icon.left>=r.left-1&&icon.right<=r.right+1&&icon.top>=r.top-1&&icon.bottom<=r.bottom+1,pricesInside:price.left>=r.left-1&&price.right<=r.right+1&&price.top>=r.top-1&&price.bottom<=r.bottom+1};}));
+   assert(buttons.every(b=>Math.abs(b.width-buttons[0].width)<.5&&Math.abs(b.height-buttons[0].height)<.5&&b.height>=44&&b.artInside&&b.pricesInside),label+' equal tappable build options retain original art and prices '+JSON.stringify(buttons));
+   if(viewport.width<viewport.height){
+    const compact=await page.evaluate(()=>({top:document.querySelector('#game .topbar').getBoundingClientRect().height,resources:document.getElementById('resourceSummary').getBoundingClientRect().height,dock:document.getElementById('buildDock').getBoundingClientRect().height}));
+    assert(compact.top<=64.5&&compact.resources<=62.5&&compact.dock<=76.5&&compact.dock>=44,label+' portrait HUD frees vertical map space '+JSON.stringify(compact));
+   }
    assert.equal(await page.locator('#buildDock').evaluate(el=>getComputedStyle(el).borderRadius),'0px',label+' bottom HUD has no floating frame');
    const falseWarnings=await page.evaluate(()=>{const L=window.__layout,s=L.getState(),p=s.players.find(p=>!p.bot),other=s.players.find(p=>p.id!==s.players[0].id),saved={armies:s.armies,wars:s.wars,recruitment:p.recruitment,food:p.res.food,troopIncome:p.troopIncome};try{s.wars=[];s.armies=[{id:'peaceful',owner:other.id,targetOwner:0,x:p.capital.x+1,y:p.capital.y,strength:100}];p.recruitment={reason:'Army capacity reached'};p.res.food=0;p.troopIncome=0;L.warnHud('');const el=document.getElementById('hudAlert');return el.classList.contains('hidden')||!/Capital threatened|No food/.test(el.textContent);}finally{s.armies=saved.armies;s.wars=saved.wars;p.recruitment=saved.recruitment;p.res.food=saved.food;p.troopIncome=saved.troopIncome;}});
    assert(falseWarnings,label+' peaceful armies and full capacity create no false danger/food alert');
