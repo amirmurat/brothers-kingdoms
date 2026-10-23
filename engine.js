@@ -339,6 +339,29 @@ function upsertPaintedPlan(s,id,request,rawTargets,percent,editId=null,excludeTa
  return {ok:true,merged:merged.size>0,planId:plans[0].id,planIds:plans.map(q=>q.id),
   separated:plans.length,waiting:plans.every(q=>!s.armies.some(a=>a.planId===q.id))};
 }
+// Objective-based orders use only an already scouted enemy structure.
+function objectiveRegion(s,id,tx,ty){
+ const foe=s.owners[idx(tx,ty)],budget=planCellLimit(s,id);
+ const fronts=borderCandidates(s,id,foe),seen=new Uint8Array(W*H),prev=new Int32Array(W*H).fill(-1),queue=[];
+ for(const i of fronts){if(!seen[i]){seen[i]=1;queue.push(i);}}
+ const destination=idx(tx,ty);
+ for(let k=0;k<queue.length&&!seen[destination];k++){
+  for(const j of adjacentCells(queue[k])){
+   if(seen[j]||!s.tiles[j]||s.owners[j]!==foe)continue;
+   seen[j]=1;prev[j]=queue[k];queue.push(j);
+  }
+ }
+ if(!seen[destination])return {error:'No land route from your border to this objective.'};
+ const path=[];for(let i=destination;i>=0;i=prev[i]){path.push(i);if(prev[i]<0)break;}
+ if(path.length>budget)return {error:'Not enough troops to plan a route this long.'};
+ const zone=new Set(path);
+ // A narrow frontage avoids global painted areas; never use fogged building data.
+ for(const i of path)for(const j of adjacentCells(i)){
+  if(zone.size>=budget)break;
+  if(s.tiles[j]&&s.owners[j]===foe)zone.add(j);
+ }
+ return {cells:[...zone].sort((a,b)=>a-b)};
+}
 function createPaintedPlan(s,id,a,percent){
  return upsertPaintedPlan(s,id,a.zone,a.targets??[s.owners[a.zone[0]]],percent,null,a.excludeTargets);
 }
@@ -405,6 +428,16 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
   const cost=Object.fromEntries(Object.entries(KINDS[kind].cost).map(([k,v])=>[k,Math.ceil(v*(1+.05*(buildingCount(s,id,kind)+count)))]));
   if(!available(p,cost))return {ok:false,error:'Not enough resources.'};
   charge(p,cost);s.buildJobs.push({id:'j'+(++s.nonce),owner:id,kind,x,y,cost,progress:0});return {ok:true};
+ }
+ if(a.type==='objectiveAttack'){
+  if(!Number.isInteger(a.x)||!Number.isInteger(a.y)||!inside(a.x,a.y))return {ok:false,error:'Choose a revealed enemy building.'};
+  const foe=owner(s,a.x,a.y),b=buildingAt(s,a.x,a.y);
+  if(!foe||foe===id||p.allies.includes(foe)||!b||b.owner!==foe||!visibleBuilding(s,id,b))
+   return {ok:false,error:'Objective unavailable: scout the enemy building first.'};
+  if(!nationTargets(s,id).includes(foe))return {ok:false,error:'Enable attacks against this nation in Nations first.'};
+  const region=objectiveRegion(s,id,a.x,a.y);
+  if(region.error)return {ok:false,error:region.error};
+  return upsertPaintedPlan(s,id,region.cells,[foe],clamp(Number(a.percent)||30,5,95));
  }
  if(a.type==='send'){
   let tx=Math.floor(a.x),ty=Math.floor(a.y);const percent=clamp(Number(a.percent)||30,5,95);
@@ -1663,5 +1696,5 @@ function restoreNetworkState(s){
  delete s.armyPacked;return s;
 }
 
-return{BUILD:'v105',focusStatus,constructionTime,upgradeTime,fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v106',focusStatus,constructionTime,upgradeTime,fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });

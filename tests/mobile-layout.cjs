@@ -8,7 +8,7 @@ const server=http.createServer((req,res)=>{
  try{
   let body=fs.readFileSync(file);
   if(name==='/'||name==='/index.html')body=body.toString().split('\n').filter(line=>!line.includes('unpkg.com/peerjs')).join('\n');
-  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={focusCandidate:()=>{const p=mine().capital,r=canvas.getBoundingClientRect();for(let dy=-12;dy<=12;dy++)for(let dx=-12;dx<=12;dx++){const x=p.x+dx,y=p.y+dy;if(E.inside(x,y)&&x>10&&x<E.W-10&&y>10&&y<E.H-10&&E.tile(state,x,y)&&E.owner(state,x,y)===0){zoom=.55;camX=canvas.clientWidth/2-(x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(y+.5)*TILE*zoom;clampCamera();draw();return {x:r.left+camX+(x+.5)*TILE*zoom,y:r.top+camY+(y+.5)*TILE*zoom};}}return null;},beginAttackPlanner,brushAt,refreshPaintGuide,syncPaintEligibility,resetAttackPlanner,getPlanner:()=>attackPlanner,buildingCells,drawHarvestSites,buildingLevelColor,roofSprite,roofBase,buildingSpritePath,buildingTileBounds,ownedLevelSprites,farmLevelSprites,drawMapBuilding,repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,nationLabelAnchors,getArmyDisplay,drawArmyDisplay,render,draw,chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
+  if(name==='/game.js')body=body.toString().replace(/\}\)\(\);\s*$/,"window.__layout={focusCandidate:()=>{const p=mine().capital,r=canvas.getBoundingClientRect();for(let dy=-12;dy<=12;dy++)for(let dx=-12;dx<=12;dx++){const x=p.x+dx,y=p.y+dy;if(E.inside(x,y)&&x>10&&x<E.W-10&&y>10&&y<E.H-10&&E.tile(state,x,y)&&E.owner(state,x,y)===0){zoom=.55;camX=canvas.clientWidth/2-(x+.5)*TILE*zoom;camY=canvas.clientHeight/2-(y+.5)*TILE*zoom;clampCamera();draw();return {x:r.left+camX+(x+.5)*TILE*zoom,y:r.top+camY+(y+.5)*TILE*zoom};}}return null;},beginAttackPlanner,brushAt,refreshPaintGuide,syncPaintEligibility,resetAttackPlanner,getPlanner:()=>attackPlanner,buildingCells,drawHarvestSites,buildingLevelColor,roofSprite,roofBase,buildingSpritePath,buildingTileBounds,ownedLevelSprites,farmLevelSprites,drawMapBuilding,repaintWorld,simulatePacket:()=>{movementStart=performance.now();},contextual,nationLabelAnchors,getArmyDisplay,drawArmyDisplay,render,draw,selectMapTile:(x,y)=>{const r=canvas.getBoundingClientRect();selectMap(r.left+camX+(x+.5)*TILE*zoom,r.top+camY+(y+.5)*TILE*zoom);},chooseSpawn,getState:()=>state,createDemo,setBuildingMode,warnHud,toast,openPanel,closePanel,showAux,hideAux,goHome,setRoom:()=>{goHome();state=E.lobby(5);myId=E.addPlayer(state,'A very long player');E.addPlayer(state,'Second player');host=true;render();}};})();");
   res.writeHead(200,{'Content-Type':types[path.extname(file)]||'application/octet-stream'});res.end(body);
  }catch(_){res.writeHead(404);res.end();}
 });
@@ -689,6 +689,39 @@ const server=http.createServer((req,res)=>{
    assert(outcomeLayout.buttons.every(b=>b.height>=44&&Math.abs(b.width-outcomeLayout.buttons[0].width)<1&&Math.abs(b.left-outcomeLayout.buttons[0].left)<1),label+' result actions share geometry');
    await page.evaluate(()=>window.__layout.goHome());
    assert(await page.locator('#lobby').isVisible(),label+' home visible');
+   // v134: real portrait flow from a currently scouted building to a bounded order.
+   await page.evaluate(()=>window.__layout.createDemo(false));
+   await page.locator('#startButton').click();
+   const objectiveFixture=await page.evaluate(()=>{
+    const L=window.__layout,E=window.BKEngine,s=L.getState(),p=s.players.find(v=>!v.bot),foe=s.players.find(v=>v.bot);
+    if(!foe)return null;
+    const y=39;s.tiles.fill(1);s.owners=s.owners.map((_,i)=>i%E.W<70?p.id:foe.id);
+    s.buildings=[{id:'enemy-test-city',owner:foe.id,kind:'city',level:2,x:82,y},
+      {id:'scout-test-fort',owner:p.id,kind:'fort',level:1,x:68,y}];
+    s.armies=[];s.attackPlans=[];s.recoveryPlans=[];s.wars=[];
+    for(const v of s.players)v.land=s.owners.filter(id=>id===v.id).length;
+    p.capital={x:68,y};p.troops=3000;p.troopCap=5000;p.garrisons=[{id:'front',x:68,y,strength:3000}];
+    foe.capital={x:82,y};foe.troops=400;foe.garrisons=[{id:'foe',x:90,y,strength:400}];
+    s.territoryRevision++;
+    const war=E.action(s,p.id,{type:'setNationTarget',target:foe.id,enabled:true});
+    L.selectMapTile(82,y);
+    return {war:war.ok,visible:E.visibleBuilding(s,p.id,s.buildings[0])};
+   });
+   if(objectiveFixture){
+    assert(objectiveFixture.war&&objectiveFixture.visible,label+' scouted enemy building can be targeted');
+    const objectiveButton=page.locator('#confirmTarget');
+    assert(await page.locator('#targetPreview').isVisible(),label+' tapping a known city opens objective preview');
+    assert((await page.locator('#targetTitle').textContent()).includes('City'),label+' preview identifies the goal');
+    assert.equal(await objectiveButton.textContent(),'Attack objective',label+' attack action is clear');
+    await page.locator('[data-target-percent="50"]').click();
+    await objectiveButton.click();
+    const outcome=await page.evaluate(()=>{
+     const E=window.BKEngine,s=window.__layout.getState(),p=s.players.find(v=>!v.bot);
+     const plan=s.attackPlans.find(v=>v.owner===p.id);
+     return {plan:!!plan,goal:!!plan?.zoneCells.includes(E.idx(82,39)),percent:plan?.allocationValue};
+    });
+    assert(outcome.plan&&outcome.goal&&outcome.percent===50,label+' 50% objective order reaches the local engine');
+   }
    console.log('PASS '+label);await page.close();
   }}finally{await browser.close();}
  }

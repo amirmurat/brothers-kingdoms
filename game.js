@@ -685,16 +685,17 @@ function setPreview(t){
  offerButton.textContent=allied?(t.confirmBreak?'Confirm end alliance':'End alliance'):received?'Accept alliance offer':sentOffer?'Offer sent':enemy?.bot?'Bots do not accept alliances':'Offer alliance';
  box.dataset.diplomacy=allied?'allied':received?'received':sentOffer?'sent':enemy?.bot?'bot':'offer';
  const candidate=E.buildingAt(state,t.x,t.y),building=candidate&&E.visibleBuilding(state,myId,candidate)?candidate:null;
- $('targetTitle').textContent=t.type==='redirect'?'Redirect offensive':allied?'Ally: '+enemy.name:enemy?'Diplomacy · '+enemy.name:'No foreign kingdom';
+ $('targetTitle').textContent=t.type==='objective'?'Target '+(E.KINDS[building?.kind]?.name||'building')+' · '+(enemy?.name||'Rival'):t.type==='redirect'?'Redirect offensive':allied?'Ally: '+enemy.name:enemy?'Diplomacy · '+enemy.name:'No foreign kingdom';
  $('targetDetail').textContent=t.type==='redirect'?`${number(sent)} troops · reserve ${number(p.troops)} · ${terrainNames[E.tile(state,t.x,t.y)]}`:`${terrainNames[E.tile(state,t.x,t.y)]}${building?' · '+(E.KINDS[building.kind]?.name||'City'):''} · Alliances and peace`;
  const defense=enemy?Math.round(E.tileDefense(state,owner,t.x,t.y)):0;const averageDefense=enemy&&front.cells.length?Math.round(front.cells.reduce((sum,i)=>sum+E.tileDefense(state,owner,i%E.W,Math.floor(i/E.W)),0)/front.cells.length):0;
  $('targetForecast').textContent=allied?'Allied territory cannot be attacked. End the alliance first.':
+   t.type==='objective'?(!selectedNationTargets().includes(owner)?'Enable attacks on this nation in Nations first.':'A narrow land route will be planned toward this scouted building. Troops and reserves follow your selected percentage.'):
    t.type==='redirect'?'Confirm to redirect your army.':
    sea?'Sea is impassable. Choose land.':
    owner?(war?'War is active. Paint a target area to start a new advance.':'Paint a connected attack area. The first confirmed attack declares war.'):
    'Brush over neutral land connected to your border, then review and confirm.';
- $('confirmTarget').textContent=t.type==='redirect'?'Change target':'Paint attack zone';
- $('confirmTarget').disabled=allied;
+ $('confirmTarget').textContent=t.type==='objective'?'Attack objective':t.type==='redirect'?'Change target':'Paint attack zone';
+ $('confirmTarget').disabled=allied||(t.type==='objective'&&!selectedNationTargets().includes(owner));
  if(t.type==='redirect'&&!allied&&p.troops<Math.max(75,Math.min(300,p.troopCap*.12)))$('targetForecast').textContent+=' Warning: your reserve will be low after this order.';
  box.dataset.order=t.type;$('cancelTarget').textContent=t.type==='redirect'?'Cancel':'Close';
  const projectedY=(t.y+.5)*TILE*zoom+camY,available=canvas.clientHeight-Math.min(270,Math.max(155,canvas.clientHeight*.37));
@@ -1125,7 +1126,7 @@ $('attackPercent').oninput=e=>{percent=Number(e.target.value);$('percentLabel').
 document.querySelectorAll('[data-target-percent]').forEach(b=>b.onclick=()=>{$('attackPercent').value=b.dataset.targetPercent;$('attackPercent').oninput({target:$('attackPercent')});});
 for(const b of document.querySelectorAll('[data-percent]')){b.setAttribute('aria-pressed',String(Number(b.dataset.percent)===percent));b.onclick=()=>{$('attackPercent').value=b.dataset.percent;$('attackPercent').oninput({target:$('attackPercent')});};}
 $('cancelMode').onclick=cancelMode;function cancelMode(){setBuildingMode(null);}
-$('cancelTarget').onclick=()=>{setPreview(null);redirectArmy=null;lastTap=0;};$('confirmTarget').onclick=()=>{if(!target)return;if(target.type!=='redirect'){beginAttackPlanner();return;}const t=target;const ok=command({type:'redirect',id:t.id,x:t.x,y:t.y});if(ok){setPreview(null);redirectArmy=null;}};
+$('cancelTarget').onclick=()=>{setPreview(null);redirectArmy=null;lastTap=0;};$('confirmTarget').onclick=()=>{if(!target)return;if(target.type==='objective'){const t=target;if(command({type:'objectiveAttack',x:t.x,y:t.y,percent})){setPreview(null);toast('Objective offensive ordered');}return;}if(target.type!=='redirect'){beginAttackPlanner();return;}const t=target;const ok=command({type:'redirect',id:t.id,x:t.x,y:t.y});if(ok){setPreview(null);redirectArmy=null;}};
 
 $('planReviewClose').onclick=editPaintedZone;
 $('planDiscard').onclick=editPaintedZone;
@@ -1335,6 +1336,10 @@ function selectMap(clientX,clientY){
  if(clickedOwner!==myId){
   if(!E.tile(state,p.x,p.y))return toast('You cannot conquer the sea. Choose land.');
   selected=null;contextual(null);
+  const known=E.buildingAt(state,p.x,p.y);
+  if(known?.owner===clickedOwner&&clickedOwner&&E.visibleBuilding(state,myId,known)){
+   setPreview({type:'objective',x:p.x,y:p.y});return;
+  }
   const opponent=E.person(state,clickedOwner);
   if(opponent&&!opponent.eliminated){
    openMilitary('nations');

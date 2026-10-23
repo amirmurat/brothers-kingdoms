@@ -1,3 +1,15 @@
+## v134 — objective orders toward scouted buildings across varied map seeds (23.10.2026)
+
+**Six stages:** Root problem remains undiscovered game-logic weaknesses and weak strategic agency. After v132 made troop commitment meaningful and v133 demonstrated narrow vs broad front tradeoffs, evaluated keeping area paint alone, a superficial priority button, and a direct *known objective* attack. Chose a minimal optional objective order on top of the existing attack-plan engine; painting remains available. User's future procedural maps require route logic to respect geography and variable terrain rather than manually coded coordinates.
+
+**Gameplay rule:** When the player taps a currently scouted enemy City, Barracks or Fort, show an objective confirmation in the existing target preview. They choose troop percent, then the authoritative engine constructs a narrow passable corridor from an owned border through ONLY that opposing nation's connected land to the structure. The order is accepted only if the building is actually present and visible to that player via fort/allied intelligence, target has been enabled in Nations (war permission), path exists and the soldier-based plan size permits it. Otherwise reject with explanation. Enemy buildings never become visible merely because their coordinates are submitted. The order flows through existing `upsertPaintedPlan`, preserving defensive reserve, physical routes, war/ally protections and save schema. Normal taps on other hostile territory still open Nations. Player-painted attacks are unchanged.
+
+**Verification:** `tests/objective-targeting-v134.cjs` runs against seven already-seeded generated terrains, testing hidden-building rejection, war authorization, troop conservation, network snapshots, battlefield connectivity, and ally protection. Mobile Chromium/WebKit screen checks and Cloudflare deployment remain independent gates. No original sprite files or `main` updates. Engine build v106; client token `134-objective-theatre-r1`. Future map regeneration with completely new geography or dimensions will require additional tests rather than assuming current 160×104 is dynamic. This is a small first playable objective UX, not a full AI or economy rebalance.
+
+**Next research:** Test real iPhone selection of a scouted enemy structure and attack outcome; compare player success at tactical objectives vs wide plans with bots and several generated seeds. Then audit building cost vs recurring benefit and late-game money/food overload before changing economic values.
+
+---
+
 ## Future maps — procedural generation is a confirmed long-term direction (23.10.2026)
 
 **Owner requirement:** In the future Brothers Kingdoms will have generated maps rather than only the present map. Treat replayability across diverse *generated terrain and geography* as an explicit design constraint for current tactical objectives and future economic/logistics systems. No timeline, algorithm, changing dimensions, or specific geographic features have yet been approved.
