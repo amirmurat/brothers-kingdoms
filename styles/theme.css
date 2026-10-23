@@ -3508,3 +3508,17 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
   padding:10px 0!important;
  }
 }
+
+
+/* v123 — portrait map: a smaller loss alert, without shrinking its 44px tap target.
+   Leave incoming-attack and ordinary message layouts unchanged. */
+#game#game#game#game#game #notificationStack:has(#hudAlert.danger:not(.hidden)){
+ width:min(254px,calc(100% - 84px))!important;
+}
+#game#game#game#game#game #notificationStack #gameFeedback #hudAlert.danger{
+ height:44px!important;min-height:44px!important;max-height:44px!important;
+ gap:8px!important;padding:0 10px!important;
+}
+#game#game#game#game#game #notificationStack #gameFeedback #hudAlert.danger #hudAlertText{
+ font:500 12px/18px system-ui!important;
+}

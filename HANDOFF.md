@@ -1,3 +1,12 @@
+## v123 — quieter medium roads and compact lost-land alert (23.10.2026)
+
+- Owner reviewed four physical portrait iPhone screenshots of v122 at 08:19. Distant building clustering looked readable, but roads dominated medium zoom and the `Lost N cells` warning occupied a broad map band. Owner approved a quick small reversible visual correction.
+- In `game.js`, for 9–46 CSS px per world tile, road contrast/width now recover quadratically toward the unchanged full-detail look at >=46 px. Below 9 px, the v122 thin backbone is unchanged; `state.roads`, gameplay connections, hitboxes, terrain, building LOD, original author PNGs and network remain unchanged.
+- In the active `styles/theme.css` only danger HUD banners become at most 254 CSS px wide and 44 px tall, preserving a 44 px tap target and message/action affordance. Other notifications and incoming attack layouts are not modified. `index.html` cache token is `123-medium-roads-compact-alert-r1` for iPhone Safari.
+- QA: exact targeted source replacements and style/cache integrity checked before commit. Confirm GitHub CI, Cloudflare live JS/CSS and physical iPhone Safari separately. No claim of 9/10 visual acceptance until new device feedback. This v123 change does not touch `main`/GitHub Pages.
+
+---
+
 ## Точка продолжения нового чата — 23.10.2026 после v122
 
 **Причина записи:** Амир собирается удалить старый длинный чат из-за прерывания потока ответа ChatGPT («Streaming interrupted. Waiting for the complete message...»). Этот UI-сбой **сам по себе не доказывает** сбой GitHub, репозитория или Cloudflare. Следующий чат должен продолжить работу без истории удалённого диалога.

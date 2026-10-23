@@ -1593,8 +1593,9 @@ function drawInfrastructure(){
    ctx.globalAlpha=.37;ctx.strokeStyle='#e4c899';ctx.lineWidth=1.15/zoom;
    ctx.stroke(infrastructureCache.roadBackbonePath);
   }else{
-   // Return continuously to v121 road weight at >=24px/tile.
-   const weight=Math.max(0,Math.min(1,(cellPixels-9)/15));
+   // Subdue medium-distance roads; return to the detailed original at >=46px/tile.
+   const progress=Math.max(0,Math.min(1,(cellPixels-9)/37));
+   const weight=progress*progress;
    ctx.globalAlpha=.42+.5*weight;
    ctx.strokeStyle='#473e30';ctx.lineWidth=TILE*(.16+.21*weight);ctx.stroke(infrastructureCache.roadPath);
    ctx.strokeStyle='#e7cb8d';ctx.lineWidth=TILE*(.09+.13*weight);ctx.stroke(infrastructureCache.roadPath);
