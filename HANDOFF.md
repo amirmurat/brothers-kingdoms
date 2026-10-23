@@ -1,3 +1,21 @@
+## v136 — economic role audit (23.10.2026)
+
+Root problem: Brothers Kingdoms feels too easy and food/gold lose strategic value. Six-stage review compared arbitrary price nerfs, immediate army upkeep, and baseline measurement. Chosen next step is measurement before changing rules, to avoid harming early-game accessibility, bots, multiplayer and existing saves.
+
+Synthetic 20-tick snapshots on engine v106:
+- 100 land, one City and one Barracks: 8 food/tick, 6 gold/tick, 13 recruits/tick; food net +5.
+- 2,000 land, ten of each: 72 food, 60 gold, 104 recruits; food net +51.
+- 10,000 land, fifty of each: 352 food, 296 gold, 504 recruits; food net +251.
+- At full troop capacity recruitment drops to zero, so all production becomes stockpiled until the resource storage cap.
+- One additional City gives 24 workers, +5 food/gold, +3 recruit potential and +260 army capacity; one Barracks gives +5 recruit potential and +430 capacity; Fort adds local defense and scouting. City spans several roles.
+- Gold has no recurring spending mechanic; the existing gold sinks are structures, upgrades and finite research. Stone production can be much slower than gold.
+
+Added diagnostic-only tests/economy-roles-v136.cjs to the engine CI. It records twelve controlled cases and checks conservation/caps and local fort defense without freezing current surplus numbers. No gameplay, engine version, sprites, main, Cloudflare logic or saves changed. These are artificial economic snapshots, not measured multiplayer outcomes.
+
+Next: compare optional army food upkeep, paid mobilization and city specialization in controlled simulations. Choose only after verifying that early solo and bot outcomes stay fair. Ports/rail and procedural maps remain long-term requirements.
+
+---
+
 ## Objective safety audit after v134 — route and diplomacy boundaries (23.10.2026)
 
 **Root issue:** Unknown logic regressions in autonomous strategy could make player orders unsafe or misleading. Rechecked current `design/visual-review-v26` at `557e519`, canonical Workers site and engine v106; v134 r2 mobile Chromium/WebKit CI #39942124967 passed. User has not yet confirmed direct objective selection on real iPhone.
