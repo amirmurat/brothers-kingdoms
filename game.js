@@ -69,8 +69,9 @@ function resourceRates(p){
  const cap=p.troopCap||Math.floor(900+land*2.4+c.barracks*430+c.city*260);
  const expected=Math.max(0,Math.min(cap-E.militaryStrength(state,p.id).total,Math.round(4+land/100+c.barracks*5+c.city*3+p.tech.war*2)));
  const recruited=p.troopIncome===undefined?Math.min(expected,Math.floor(((p.res.food||0)+gross.food)/.2)):p.troopIncome;
- const foodNet=Math.floor(gross.food||0)-Math.ceil(Math.max(0,recruited||0)*.2);
- return {gross,recruited,foodNet};
+ const foodNet=Math.floor(gross.food||0)-Math.ceil(Math.max(0,recruited||0)*.2)-(p.upkeep?.food||0);
+ const goldNet=Math.floor(gross.gold||0)-(p.upkeep?.gold||0);
+ return {gross,recruited,foodNet,goldNet};
 }
 const costText=c=>Object.entries(c||{}).map(([k,v])=>({wood:'Wood',stone:'Stone',gold:'Gold',food:'Food'}[k]||k)+' '+v).join(' · ');
 const number=n=>Math.floor(n||0).toLocaleString('en-US');
@@ -995,16 +996,18 @@ function updateUI(){const p=mine();if(!p)return;
  renderWars();syncPaintEligibility(attackPlanner);if(attackPlanner?.mode==='review')refreshPlanReview();else if(attackPlanner?.mode==='paint'&&attackPlanner.pointerId===null)refreshPaintGuide();
  // Before the first economy tick, derive the same production formula as the engine,
  // rather than showing a misleading +0/s for every resource.
- const {gross,recruited,foodNet}=resourceRates(p);
+ const {gross,recruited,foodNet,goldNet}=resourceRates(p);
  for(const r of ['food','wood','stone','gold']){
   const suffix=r[0].toUpperCase()+r.slice(1),amount=Math.floor(p.res[r]||0);
-  const rate=r==='food'?foodNet:Math.floor(gross[r]||0);
+  const rate=r==='food'?foodNet:r==='gold'?goldNet:Math.floor(gross[r]||0);
   $('res'+suffix).textContent=hudNumber(amount);
   const rateNode=$('inc'+suffix),item=rateNode.closest('[data-resource]');
   setRate(rateNode,rate);
   rateNode.classList.toggle('resource-negative',rate<0);
   item.classList.toggle('resource-low',r==='food'&&amount<Math.max(12,Math.abs(rate)*5));
-  item.setAttribute('title',`${nameResource[r]}: ${number(amount)} / ${number(E.resourceCapacity(state,myId))}. ${r==='food'?'Estimated net growth after recruitment':'Production'}: ${rate>=0?'+':'−'}${number(Math.abs(rate))} per second`);
+  const supply=(r==='food'||r==='gold')?(p.upkeep?.[r]||0):0;
+  const detail=r==='food'?'Net after recruits and field army supplies':r==='gold'?'Net after field army supplies':'Production';
+  item.setAttribute('title',`${nameResource[r]}: ${number(amount)} / ${number(E.resourceCapacity(state,myId))}. ${detail}: ${rate>=0?'+':'−'}${number(Math.abs(rate))} per second${supply?' (army supplies −'+number(supply)+'/s)':''}`);
  }
 
  updateIncomingAttack(p);

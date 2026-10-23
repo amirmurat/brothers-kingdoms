@@ -1569,6 +1569,13 @@ function clampStorage(s,p){const cap=resourceCapacity(s,p.id);for(const k of Obj
 function income(s,p){const c=counts(s,p.id),l=p.land,e=1+p.tech.economy*.25;
  const income={food:Math.round((2+l/100+c.farm*8+c.city*5+(p.workIncome?.food||0))*e),wood:Math.round((1+l/180+c.lumber*7+(p.workIncome?.wood||0))*e),stone:Math.round((1+l/200+c.quarry*7+(p.workIncome?.stone||0))*e),gold:Math.round((1+l/220+c.mine*7+c.city*5+(p.workIncome?.gold||0))*e)};
  for(const k of Object.keys(income))p.res[k]=Math.min(resourceCapacity(s,p.id),p.res[k]+income[k]);
+ // Supplies are used only by fielded troops. Stationed reserves have no upkeep.
+ // Small rates preserve early-game accessibility; exhausted stocks never go negative.
+ const fielded=militaryStrength(s,p.id).deployed;
+ const foodSupply=Math.floor(fielded*.005),goldSupply=Math.floor(fielded*.003);
+ p.upkeep={food:foodSupply,gold:goldSupply};
+ p.res.food=Math.max(0,p.res.food-foodSupply);
+ p.res.gold=Math.max(0,p.res.gold-goldSupply);
  p.troopCap=Math.floor(900+l*2.4+c.barracks*430+c.city*260);
  const potential=Math.round(4+l/100+c.barracks*5+c.city*3+p.tech.war*2),room=Math.max(0,p.troopCap-militaryStrength(s,p.id).total),newTroops=Math.max(0,Math.min(room,potential));const supply=Math.max(0,Math.min(newTroops,Math.floor(p.res.food/0.20)));
  p.recruitment={potential,actual:supply,reason:room===0?'Army capacity reached':supply<newTroops?'Food limits recruitment':room<potential?'Army capacity limits recruitment':'Recruiting',foodPerTroop:.2};p.troopIncome=supply;p.troops+=supply;p.res.food=Math.max(0,p.res.food-Math.ceil(supply*.20));p.income=income;
@@ -1696,5 +1703,5 @@ function restoreNetworkState(s){
  delete s.armyPacked;return s;
 }
 
-return{BUILD:'v106',focusStatus,constructionTime,upgradeTime,fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v107',focusStatus,constructionTime,upgradeTime,fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });

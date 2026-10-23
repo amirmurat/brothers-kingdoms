@@ -28,6 +28,7 @@ jobs:
           node tests/objective-boundaries-v135.cjs
           node tests/economy-v100.cjs
           node tests/economy-roles-v136.cjs
+          node tests/field-supply-v137.cjs
           node tests/performance-v100.cjs
           node tests/land-storage.cjs
           node tests/workforce.cjs
