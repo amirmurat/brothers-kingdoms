@@ -3709,3 +3709,19 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
 #waiting#waiting#waiting#waiting #roomActionBar #waitingHint{
  margin:6px 0 0!important;font:500 12px/17px system-ui!important;
 }
+
+
+/* v128 fix: bottom:sticky cannot pull an action upwards into the initial
+   viewport. Portrait-only fixed action area and corresponding scroll reserve. */
+@media (orientation:portrait) and (max-width:600px){
+ #waiting#waiting#waiting#waiting #roomActionBar{
+  position:fixed!important;left:50%!important;bottom:0!important;
+  transform:translateX(-50%)!important;
+  width:min(100%,440px)!important;max-width:440px!important;
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px))!important;
+  box-sizing:border-box!important;
+ }
+ #waiting#waiting#waiting#waiting .waiting-card{
+  padding-bottom:calc(146px + env(safe-area-inset-bottom,0px))!important;
+ }
+}
