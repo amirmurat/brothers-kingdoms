@@ -16,7 +16,7 @@ function stage(land,cities,barracks,forts,full=false){
  let n=0;for(const [kind,count] of [['city',cities],['barracks',barracks],['fort',forts]]){
   for(let j=0;j<count;j++){const x=10+n%100,y=2+Math.floor(n/100);s.buildings.push({id:'a'+n++,owner:id,kind,level:1,x,y});}
  }
- p.troops=full?Math.floor(900+land*2.4+barracks*430+cities*260):0;
+ p.troops=full?barracks*430:0;
  p.garrisons=full?[{id:'reserve',x:10,y:2,strength:p.troops}]:[];
  s.territoryRevision++;return {s,id,p};
 }

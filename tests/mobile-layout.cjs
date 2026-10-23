@@ -229,6 +229,8 @@ const server=http.createServer((req,res)=>{
    const buildingDetails=await page.locator('#contextBody').textContent();
    assert(buildingDetails.includes('Nearby garrison'),label+' owned city exposes nearby garrison');
    assert(buildingDetails.includes('BUILDER CREWS'),label+' upgraded building panel shows real builder crew status');
+   assert(buildingDetails.includes('Local builders:')&&buildingDetails.includes('no resource or army bonus'),label+' city explains local builders and its separated role');
+   assert(!buildingDetails.includes('food and gold')&&!buildingDetails.includes('recruitment/s'),label+' city no longer advertises removed economic or military bonuses');
    const contextFlat=await page.evaluate(()=>{
     const card=document.getElementById('contextCard'),
      track=document.querySelector('#contextBody .context-level-track'),

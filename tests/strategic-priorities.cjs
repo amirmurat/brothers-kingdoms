@@ -28,6 +28,7 @@ function fixture(){const s=E.lobby(19),id=E.addPlayer(s,'A'),foe=E.addPlayer(s,'
 }
 {
  const {s,id,p}=fixture();s.attackPlans=[];p.troops=0;p.garrisons=[];
+ s.buildings.push({id:'recruiting-camp',owner:id,kind:'barracks',level:1,x:60,y:40});
  E.tick(s);const first=p.troopIncome;assert(first>0);assert.equal(p.recruitment.reason,'Recruiting');
  p.troops=100000;p.garrisons=[{id:'home',x:30,y:40,strength:100000}];E.tick(s);assert.equal(p.troopIncome,0);assert.equal(p.recruitment.reason,'Army capacity reached');
  // Upgrades and additional buildings add the same per-level benefit, but tier prices grow.
@@ -54,7 +55,7 @@ console.log('PASS strategic priorities: authority, focus, bounded shared budgets
  const {s,id,p}=fixture();s.attackPlans=[];s.buildings.push({id:'second',owner:id,kind:'barracks',level:2,x:60,y:40},{id:'third',owner:id,kind:'barracks',level:1,x:35,y:30});
  p.troops=100;p.garrisons=[{id:'home',x:30,y:40,strength:100}];const births=new Set();let peak=0;
  for(let n=0;n<240;n++){s.tick++;const before=new Map();for(const g of p.garrisons){const k=g.x+','+g.y;before.set(k,(before.get(k)||0)+g.strength);}p.troops+=12;E.spatialArmyStep(s,false);const after=new Map();for(const g of p.garrisons){const k=g.x+','+g.y;after.set(k,(after.get(k)||0)+g.strength);}for(const [k,v] of after)if(v-(before.get(k)||0)>1)births.add(k);peak=Math.max(peak,p.garrisons.length);assert(Math.abs(p.garrisons.reduce((n,g)=>n+g.strength,0)-p.troops)<1e-6);}
- assert(births.size>=3,'New recruits use multiple real bases rather than only the first camp');
- assert([...births].every(k=>s.buildings.some(b=>b.x+','+b.y===k)),'Recruitment cannot teleport to a distant front');
+ assert(births.size>=2,'New recruits use multiple actual barracks');
+ assert([...births].every(k=>s.buildings.some(b=>b.kind==='barracks'&&b.x+','+b.y===k)),'Recruitment occurs only in barracks, never cities or distant fronts');
  assert(peak<40,'Co-located groups merge instead of growing with match duration');
 }

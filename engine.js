@@ -69,7 +69,7 @@ function log(s,msg){s.log.unshift(msg);if(s.log.length>8)s.log.length=8;}
 function lobby(seed=57283){return {version:14,settings:{bots:0},phase:'lobby',seed:Math.floor(seed),tick:0,tiles:[],owners:[],players:[],buildings:[],armies:[],attackPlans:[],recoveryPlans:[],workZones:[],buildJobs:[],roads:[],workRevision:0,roadRevision:0,log:['Conquer land, develop your economy, and defend your territory.'],winner:null,mode:'conquest',duration:null,nonce:0,landTotal:0,territoryRevision:0,wars:[],peaceOffers:[]};}
 function addPlayer(s,name,isBot=false){if(s.phase!=='lobby'||s.players.filter(p=>!p.bot).length>=MAX&&!isBot||s.players.length>=COLORS.length)return null;
  let id=1;while(s.players.some(p=>p.id===id))id++;let safe=String(name||('Kingdom '+id)).trim().slice(0,18)||('Player '+id);
- s.players.push({id,name:safe,bot:!!isBot,color:COLORS[(id-1)%COLORS.length],res:{food:650,wood:390,stone:310,gold:260},troops:450,troopCap:1700,land:0,ready:!!isBot,connected:true,spawnPreference:'auto',eliminated:false,attackTargets:[],tech:{economy:0,war:0,logistics:0},offers:[],allies:[],capital:null,kills:0});
+ s.players.push({id,name:safe,bot:!!isBot,color:COLORS[(id-1)%COLORS.length],res:{food:650,wood:390,stone:310,gold:260},troops:450,troopCap:0,land:0,ready:!!isBot,connected:true,spawnPreference:'auto',eliminated:false,attackTargets:[],tech:{economy:0,war:0,logistics:0},offers:[],allies:[],capital:null,kills:0});
  log(s,safe+' entered the battle.');return id;
 }
 function tile(s,x,y){return inside(x,y)?s.tiles[idx(x,y)]:0;}
@@ -643,11 +643,23 @@ function layRoad(s,p,i){
 function workSuitable(s,id,resource,i){return Number.isInteger(i)&&i>=0&&i<W*H&&s.owners[i]===id&&WORK_RESOURCES[resource]?.includes(s.tiles[i]);}
 function workforceStats(s,id){
  const bases=s.buildings.filter(b=>b.owner===id&&b.kind==='city');
- const capacity=bases.reduce((n,b)=>n+24*b.level,0),groups=person(s,id)?.workers||[];
+ const groups=person(s,id)?.workers||[];
+ const capacity=bases.length?bases.reduce((n,b)=>n+24*b.level,0):groups.reduce((n,g)=>n+g.count,0);
  const working=groups.filter(g=>g.resource&&g.progress>=3&&g.x===g.tx&&g.y===g.ty);
  return {capacity,slots:Math.ceil(capacity/6),groups:groups.length,working:working.reduce((n,g)=>n+g.count,0),
   building:(s.buildJobs||[]).filter(j=>j.owner===id).length,
   upgrading:(s.buildJobs||[]).filter(j=>j.owner===id&&j.upgradeOf).length};
+}
+function constructionSupport(s,id,x,y){
+ if(!inside(x,y)||owner(s,x,y)!==id)return null;
+ const components=ownedComponents(s,id),destination=idx(x,y),p=person(s,id);
+ const groups=(p?.workers||[]).filter(g=>!g.job&&components[idx(g.x,g.y)]===components[destination]);
+ groups.sort((a,b)=>(near(a,{x,y})*2+(a.resource?8:0))-(near(b,{x,y})*2+(b.resource?8:0)));
+ const g=groups[0];if(!g)return null;
+ const route=localRoute(s,id,idx(g.x,g.y),destination);if(!route)return null;
+ const cities=s.buildings.filter(b=>b.owner===id&&b.kind==='city'&&components[idx(b.x,b.y)]===components[destination]);
+ const city=cities.find(b=>b.id===g.homeCity)||cities.sort((a,b)=>near(g,a)-near(g,b))[0];
+ return {crewId:g.id,cityId:city?.id||null,x:g.x,y:g.y,travelTicks:route.reduce((n,i)=>n+(roadSet(s).has(i)?1:2),0)};
 }
 function paintWorkZone(s,p,a){
  const resource=String(a.resource);if(!WORK_RESOURCES[resource])return {ok:false,error:'Choose a resource.'};
@@ -723,16 +735,26 @@ function workforceStep(s){
   s.buildJobs=s.buildJobs.filter(q=>q!==j);
  }
  for(const p of s.players){if(!alive(p))continue;
-  const bases=s.buildings.filter(b=>b.owner===p.id&&b.kind==='city'),capacity=bases.reduce((n,b)=>n+b.level*24,0);
+  const bases=s.buildings.filter(b=>b.owner===p.id&&b.kind==='city');
   p.workers??=[];
   // Overrun civilians retreat locally; they never cross enemy land.
   p.workers=p.workers.filter(g=>{if(s.owners[idx(g.x,g.y)]===p.id)return true;
    const exit=adjacentCells(idx(g.x,g.y)).find(i=>s.owners[i]===p.id&&s.tiles[i]);
    if(exit===undefined)return false;g.x=exit%W;g.y=(exit/W)|0;g.route=null;g.job=null;g.resource=null;return true;});
+  // Surviving civilians can rebuild a lost last city; no replacement workers spawn without one.
+  const capacity=bases.length?bases.reduce((n,b)=>n+b.level*24,0):p.workers.reduce((n,g)=>n+g.count,0);
   const count=Math.ceil(capacity/6);
   while(p.workers.length<count){const b=bases[p.workers.length%bases.length];p.workers.push({id:'c'+(++s.nonce),x:b.x,y:b.y,count:6,progress:0});}
   if(p.workers.length>count)p.workers.length=count;
   for(const g of p.workers)g.count=capacity/Math.max(1,count);
+  // One existing universal crew per city waits at home for nearby construction.
+  // It is not a new worker class: it builds normally and returns after its job.
+  const homeCrews=new Map();
+  for(const b of bases){
+   const g=p.workers.find(g=>g.homeCity===b.id&&!homeCrews.has(g))||p.workers.find(g=>!homeCrews.has(g));
+   if(g){g.homeCity=b.id;homeCrews.set(g,b);}
+  }
+  for(const g of p.workers)if(g.homeCity&&!homeCrews.has(g))delete g.homeCity;
   p.workIncome={food:0,wood:0,stone:0,gold:0};
   if(!count)continue;
   const components=ownedComponents(s,p.id),occupied=new Set(),roads=roadSet(s);
@@ -784,7 +806,11 @@ function workforceStep(s){
    if(g.job&&!job){g.job=null;g.route=null;}
    // Roadwork is opportunistic: never interrupt productive harvesting simply
    // because a distant base is missing a road. Workers lay roads while moving.
-   if(!job&&!g.resource&&!(g.roadTask&&current!==idx(g.tx,g.ty))&&routes<2){
+   const home=homeCrews.get(g);
+   if(home&&!job){
+    g.resource=null;g.roadTask=false;g.tx=home.x;g.ty=home.y;g.progress=0;
+   }
+   if(!home&&!job&&!g.resource&&!(g.roadTask&&current!==idx(g.tx,g.ty))&&routes<2){
     g.roadTask=false;
     // One group connects bases and active front supply endpoints. Other groups
     // keep producing; road tasks cannot take over the whole workforce.
@@ -797,7 +823,7 @@ function workforceStep(s){
       const d=Math.abs(g.x-t.i%W)+Math.abs(g.y-((t.i/W)|0));
       // A scarce resource gets preference; distance still favours local jobs.
       const desired=count*resourceWeight(t.resource)/Math.max(1,totalWeight);
-      const value=d*.22+assigned[t.resource]/Math.max(.25,desired)*4+Math.min(1,(p.res[t.resource]||0)/10000);
+      const value=d*.22+assigned[t.resource]/Math.max(.25,desired)*4+Math.min(1,(p.res[t.resource]||0)/10000)-(t.resource===p.workPriority?4:0);
       if(value<score){score=value;best=t;}
      }
      if(best){g.tx=best.i%W;g.ty=(best.i/W)|0;g.resource=best.resource;assigned[best.resource]++;g.progress=0;g.route=null;occupied.add(best.i);}
@@ -859,11 +885,12 @@ function coalesceGarrisons(p){
  p.garrisons=squads;
 }
 function recruitmentBase(s,p){
- const bases=homeSites(s,p.id);if(!bases.length)return null;
+ const homes=homeSites(s,p.id),camps=homes.filter(b=>b.kind==='barracks');
+ const bases=s.tick?camps:homes;if(!bases.length)return homes[0]||null;
  // Migration keeps the historical start. New recruits rotate across actual
  // production bases, weighted by their contribution, never appearing at a front.
  if(!s.tick)return bases[0];
- const weight=b=>b.kind==='barracks'?5*(b.level||1):b.kind==='city'?3*(b.level||1):4+p.land/100+p.tech.war*2;
+ const weight=b=>Math.max(1,b.level||1);
  let ticket=hash(s.tick,p.id,s.seed+197)*bases.reduce((n,b)=>n+weight(b),0);
  for(const b of bases){ticket-=weight(b);if(ticket<0)return b;}return bases[bases.length-1];
 }
@@ -948,15 +975,16 @@ function defensePosts(s,p){
    if(c.strength>0&&Number.isFinite(c.x)&&Number.isFinite(c.y))threats.push(c);
  }
  for(const b of borders(s,p.id)){
-  const i=idx(b.x,b.y),enemies=adjacentCells(i).map(j=>s.owners[j]).filter(id=>id&&id!==p.id&&!p.allies.includes(id)&&(s.wars||[]).includes(warKey(p.id,id)));
+  const i=idx(b.x,b.y),enemies=adjacentCells(i).map(j=>s.owners[j]).filter(id=>id&&id!==p.id&&!p.allies.includes(id));
   if(!enemies.length)continue;
-  let weight=2+strategicWeight(s,p.id,b.x,b.y)*.25;
+  const atWar=enemies.some(id=>(s.wars||[]).includes(warKey(p.id,id)));
+  let weight=(atWar?4:1)+strategicWeight(s,p.id,b.x,b.y)*.1;
   for(const c of threats){const d=near(b,c);
    if(d<=12)weight+=Math.min(40,Math.sqrt(c.strength/25))*Math.pow(1-d/13,2);
   }
   if(s.buildings.some(base=>base.owner===p.id&&base.kind==='city'&&near(base,b)<=8))weight+=2;
   if(s.buildings.some(base=>base.owner===p.id&&base.kind==='fort'&&near(base,b)<=4))weight+=1;
-  candidates.push({...b,weight,role:'Guard'});
+  candidates.push({...b,weight,atWar,role:'Guard'});
  }
  if(candidates.length&&bases.length){
   const distances=new Map(bases.map(b=>[b,candidates.reduce((n,t)=>Math.min(n,near(b,t)),Infinity)]));
@@ -964,11 +992,20 @@ function defensePosts(s,p){
   posts[0]={x:safe.x,y:safe.y,weight:3,role:'Reserve'};
  }
  candidates.sort((a,b)=>b.weight-a.weight||a.y-b.y||a.x-b.x);
- for(const c of candidates){if(posts.filter(p=>p.role==='Guard').length>=5)break;
+ const camps=bases.filter(b=>b.kind==='barracks');
+ // Barracks anchor automatic defense. Peaceful non-allies are potential threats;
+ // real invasions outweigh them. This only redistributes the existing reserve.
+ if(camps.length){
+  for(const b of camps){
+   const weight=1+candidates.reduce((n,c)=>Math.max(n,c.weight*Math.max(0,1-near(b,c)/30)),0);
+   posts.push({x:b.x,y:b.y,weight,role:'Border garrison'});
+  }
+ }
+ for(const c of candidates.filter(c=>c.atWar||!camps.length)){if(posts.filter(p=>p.role==='Guard').length>=5)break;
   if(posts.some(p=>p.role==='Guard'&&near(p,c)<10))continue;
   posts.push(c);
  }
- const important=bases.map(b=>({...b,weight:strategicWeight(s,p.id,b.x,b.y),role:'Garrison'})).sort((a,b)=>b.weight-a.weight);
+ const important=bases.filter(b=>b.kind!=='barracks').map(b=>({...b,weight:1,role:'Garrison'})).sort((a,b)=>b.weight-a.weight);
  for(const b of important){if(posts.length>=10)break;if(!posts.some(t=>near(t,b)<5))posts.push(b);}
  const priority=posts.find(t=>t.role==='Priority defense');if(priority)priority.weight=Math.max(priority.weight,posts.filter(t=>t!==priority).reduce((n,t)=>n+t.weight,0)*2);
  return posts;
@@ -1222,7 +1259,6 @@ function tileDefense(s,id,x,y){let n=3;const defender=person(s,id);if(!defender)
  for(const b of s.buildings){if(b.owner!==id)continue;const d=Math.abs(b.x-x)+Math.abs(b.y-y);
   // No special capital-defense bonus.
   if(b.kind==='fort'&&d<=4)n+=Math.max(0,5-d)*b.level*3.7;
-  if(b.kind==='city'&&d<=2)n+=b.level*4;
  }
  return n;
 }
@@ -1567,7 +1603,7 @@ function counts(s,id){const stats={farm:0,lumber:0,quarry:0,mine:0,barracks:0,fo
 function resourceCapacity(s,id){return Math.max(0,Math.floor((person(s,id)?.land||0)*STORAGE_PER_CELL));}
 function clampStorage(s,p){const cap=resourceCapacity(s,p.id);for(const k of Object.keys(p.res))p.res[k]=Math.min(cap,p.res[k]);}
 function income(s,p){const c=counts(s,p.id),l=p.land,e=1+p.tech.economy*.25;
- const income={food:Math.round((2+l/100+c.farm*8+c.city*5+(p.workIncome?.food||0))*e),wood:Math.round((1+l/180+c.lumber*7+(p.workIncome?.wood||0))*e),stone:Math.round((1+l/200+c.quarry*7+(p.workIncome?.stone||0))*e),gold:Math.round((1+l/220+c.mine*7+c.city*5+(p.workIncome?.gold||0))*e)};
+ const income={food:Math.round((2+c.farm*8+(p.workIncome?.food||0))*e),wood:Math.round((c.lumber*7+(p.workIncome?.wood||0))*e),stone:Math.round((c.quarry*7+(p.workIncome?.stone||0))*e),gold:Math.round((c.mine*7+(p.workIncome?.gold||0))*e)};
  for(const k of Object.keys(income))p.res[k]=Math.min(resourceCapacity(s,p.id),p.res[k]+income[k]);
  // Supplies are used only by fielded troops. Stationed reserves have no upkeep.
  // Small rates preserve early-game accessibility; exhausted stocks never go negative.
@@ -1585,9 +1621,9 @@ function income(s,p){const c=counts(s,p.id),l=p.land,e=1+p.tech.economy*.25;
   p.res[resource]=Math.max(0,p.res[resource]-due[resource]);
  }
  p.upkeep=due;
- p.troopCap=Math.floor(900+l*2.4+c.barracks*430+c.city*260);
- const potential=Math.round(4+l/100+c.barracks*5+c.city*3+p.tech.war*2),room=Math.max(0,p.troopCap-militaryStrength(s,p.id).total),newTroops=Math.max(0,Math.min(room,potential));const supply=Math.max(0,Math.min(newTroops,Math.floor(p.res.food/0.20)));
- p.recruitment={potential,actual:supply,reason:room===0?'Army capacity reached':supply<newTroops?'Food limits recruitment':room<potential?'Army capacity limits recruitment':'Recruiting',foodPerTroop:.2};p.troopIncome=supply;p.troops+=supply;p.res.food=Math.max(0,p.res.food-Math.ceil(supply*.20));p.income=income;
+ p.troopCap=c.barracks*430;
+ const potential=c.barracks?Math.round(c.barracks*5+p.tech.war*2):0,room=Math.max(0,p.troopCap-militaryStrength(s,p.id).total),newTroops=Math.max(0,Math.min(room,potential));const supply=Math.max(0,Math.min(newTroops,Math.floor(p.res.food/0.20)));
+ p.recruitment={potential,actual:supply,reason:!c.barracks?'Build barracks to recruit':room===0?'Army capacity reached':supply<newTroops?'Food limits recruitment':room<potential?'Army capacity limits recruitment':'Recruiting',foodPerTroop:.2};p.troopIncome=supply;p.troops+=supply;p.res.food=Math.max(0,p.res.food-Math.ceil(supply*.20));p.income=income;
 }
 function bot(s,id){const p=person(s,id);if(!alive(p)||s.phase!=='playing')return;
  if(s.tick%4===id%4){
@@ -1720,5 +1756,5 @@ function restoreNetworkState(s){
  delete s.armyPacked;return s;
 }
 
-return{BUILD:'v110',focusStatus,constructionTime,upgradeTime,fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v111',constructionSupport,focusStatus,constructionTime,upgradeTime,fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });
