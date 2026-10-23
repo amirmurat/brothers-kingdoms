@@ -4,7 +4,7 @@ const E=require('../engine.js');
 const source=fs.readFileSync('server/cloudflare.mjs','utf8').replace(/^import .*;$/m,'').replace('export default','const worker =').replace('export class KingdomRoom','class KingdomRoom');
 async function checkRoom(E,source,assert,btoa){
  const timers=new Map();let next=1;
- const {KingdomRoom}=new Function('globalThis','setInterval','clearInterval','btoa',source+';return {KingdomRoom,worker};')(
+ const {KingdomRoom,worker}=new Function('globalThis','setInterval','clearInterval','btoa',source+';return {KingdomRoom,worker};')(
   {BKEngine:E},fn=>{timers.set(next,fn);return next++;},id=>timers.delete(id),btoa);
  const data=new Map(),sockets=[],pending=[];
  const clone=x=>JSON.parse(JSON.stringify(x));
