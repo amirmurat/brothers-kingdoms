@@ -3944,3 +3944,9 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
   display:flex!important;
  }
 }
+
+/* v149 shared sheet-height: keep the Build toggle directly above the sheet. */
+#game#game#game#game#game #mapView{--build-sheet-height:224px}
+@media (orientation:portrait) and (max-height:660px){
+ #game#game#game#game#game #mapView{--build-sheet-height:204px}
+}
