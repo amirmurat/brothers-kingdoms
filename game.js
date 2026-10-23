@@ -10,6 +10,9 @@ const CC0_RESOURCES=new Set(['food','wood','stone','gold']);
 // Nine original 32x32 sprites supplied by the game owner (3 upgrade tiers).
 const OWNED_ART='assets/player/owned/';
 const OWNED_KINDS=new Set(['city','barracks','fort']);
+// User-drawn 32x32 low-detail variants. Detailed originals remain the primary assets.
+const SIMPLE_ART='assets/player/map-lod-v120/';
+const simpleSpritePath=(kind,level=1)=>SIMPLE_ART+kind+'/level-'+artLevel(level)+'.png';
 const farmArtLevel=level=>Math.min(3,Math.max(1,Math.floor(level||1)));
 const artLevel=level=>Math.min(3,Math.max(1,Math.floor(level||1)));
 const buildingSpritePath=(kind,level=1)=>
@@ -1660,6 +1663,13 @@ if(typeof Image==='function')for(const kind of [...OWNED_KINDS,'farm'])for(const
  img.onload=()=>{roofSpriteCache.clear();roofBasePixels.clear();queueDraw();};
  img.src=buildingSpritePath(kind,level);
 }
+// Load the owner's simplified alternatives separately; they do not affect catalogue art.
+const simpleLevelSprites={city:Object.create(null),barracks:Object.create(null),fort:Object.create(null)};
+if(typeof Image==='function')for(const kind of OWNED_KINDS)for(const level of [1,2,3]){
+ const img=new Image();simpleLevelSprites[kind][level]=img;
+ img.onload=()=>{roofSpriteCache.clear();roofBasePixels.clear();queueDraw();};
+ img.src=simpleSpritePath(kind,level);
+}
 // Tiny Swords old CC0 terrain sheets; no new mechanics. Off-screen world bitmap
 // is repainted only for changed cells, never per animation frame.
 const tinyTerrain=Object.create(null);
@@ -1693,13 +1703,17 @@ function hsvRGB(h,s,v){
  const [r,g,b]=[[chroma,second,0],[second,chroma,0],[0,chroma,second],[0,second,chroma],[second,0,chroma],[chroma,0,second]][group];
  return [Math.round((r+low)*255),Math.round((g+low)*255),Math.round((b+low)*255)];
 }
-function sourceSprite(kind,level=1){
+function sourceSprite(kind,level=1,detail='full'){
+ if(detail==='simple'&&OWNED_KINDS.has(kind)){
+  const img=simpleLevelSprites[kind][artLevel(level)];
+  if(img?.naturalWidth)return img;
+ }
  return OWNED_KINDS.has(kind)?ownedLevelSprites[kind][artLevel(level)]||mapBuildingSprites[kind]:
   kind==='farm'?farmLevelSprites[farmArtLevel(level)]||mapBuildingSprites.farm:
   mapBuildingSprites[kind];
 }
-function roofBase(kind,level=1){
- const src=sourceSprite(kind,level),file=buildingSpritePath(kind,level);
+function roofBase(kind,level=1,detail='full'){
+ const src=sourceSprite(kind,level,detail),file=detail==='simple'&&src===simpleLevelSprites[kind]?.[artLevel(level)]?simpleSpritePath(kind,level):buildingSpritePath(kind,level);
  if(!src?.naturalWidth||!src.naturalHeight)return null;
  const known=roofBasePixels.get(file);
  if(known&&known.width===src.naturalWidth&&known.height===src.naturalHeight)return known;
@@ -1720,13 +1734,13 @@ function roofBase(kind,level=1){
  const base={width:canvas.width,height:canvas.height,pixels,mask};
  roofBasePixels.set(file,base);return base;
 }
-function roofSprite(kind,owner,level=1){
- const visualLevel=artLevel(level),src=sourceSprite(kind,visualLevel);
+function roofSprite(kind,owner,level=1,detail='full'){
+ const visualLevel=artLevel(level),src=sourceSprite(kind,visualLevel,detail);
  if(kind==='farm'||!src?.naturalWidth||owner==null)return src;
- const hex=color(owner),key=buildingSpritePath(kind,visualLevel)+'|'+hex+'|'+visualLevel;
+ const hex=color(owner),key=(detail==='simple'&&src===simpleLevelSprites[kind]?.[visualLevel]?simpleSpritePath(kind,visualLevel):buildingSpritePath(kind,visualLevel))+'|'+hex+'|'+visualLevel;
  if(roofSpriteCache.has(key))return roofSpriteCache.get(key);
  try{
-  const base=roofBase(kind,visualLevel);
+  const base=roofBase(kind,visualLevel,detail);
   if(!base)return src;
   const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
   if(!Number.isFinite(r+g+b))return src;
@@ -1830,8 +1844,11 @@ function drawOverviewBuilding(b,x,y,count=1){
 }
 function drawMapBuilding(b){
  const bounds=buildingTileBounds(b);
- const source=roofSprite(b.kind,b.owner,b.level);
- const outlined=outlinedMapBuilding(source);
+ // Zoom LOD: distant clusters <11 CSS px/tile, owner's simple art 11–24,
+ // original detailed art on close zoom. This affects only map presentation.
+ const useSimple=OWNED_KINDS.has(b.kind)&&TILE*zoom<24;
+ const source=roofSprite(b.kind,b.owner,b.level,useSimple?'simple':'full');
+ const outlined=useSimple?null:outlinedMapBuilding(source);
  // Native artwork occupies at most 82% of its own world tile. At high
  // camera zoom this still grows naturally, but never touches neighboring art.
  const inset=TILE*.09,baseSize=TILE*.82;
@@ -1844,6 +1861,7 @@ function drawMapBuilding(b){
  ctx.strokeRect(bounds.x+inset,bounds.y+inset,baseSize,baseSize);
  ctx.imageSmoothingEnabled=false;
  if(outlined)ctx.drawImage(outlined,bounds.x+artInset,bounds.y+artInset,artSize,artSize);
+ else if(source&&(source.naturalWidth||source.width))ctx.drawImage(source,bounds.x+artInset,bounds.y+artInset,artSize,artSize);
  else ctx.drawImage(buildingTypeMarker(b.kind,color(b.owner)),bounds.x+artInset,bounds.y+artInset,artSize,artSize);
  ctx.restore();
 }
