@@ -62,10 +62,10 @@ function techBenefit(id,level){if(id==='economy')return `Income multiplier ×${(
 function resourceRates(p){
  const c=E.counts(state,p.id),land=p.land||0,m=1+(p.tech.economy||0)*.25;
  const gross=p.income||{
-  food:Math.round((2+c.farm*8+(p.workIncome?.food||0))*m),
-  wood:Math.round((c.lumber*7+(p.workIncome?.wood||0))*m),
-  stone:Math.round((c.quarry*7+(p.workIncome?.stone||0))*m),
-  gold:Math.round((c.mine*7+(p.workIncome?.gold||0))*m)
+  food:2+Math.round((c.farm*8+(p.workIncome?.food||0))*m),
+  wood:1+Math.round((c.lumber*7+(p.workIncome?.wood||0))*m),
+  stone:1+Math.round((c.quarry*7+(p.workIncome?.stone||0))*m),
+  gold:1+Math.round((c.mine*7+(p.workIncome?.gold||0))*m)
  };
  const cap=p.troopCap??c.barracks*430;
  const expected=Math.max(0,Math.min(cap-E.militaryStrength(state,p.id).total,c.barracks?Math.round(c.barracks*5+p.tech.war*2):0));

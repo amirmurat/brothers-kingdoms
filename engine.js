@@ -741,7 +741,12 @@ function workforceStep(s){
   p.workers=p.workers.filter(g=>{if(s.owners[idx(g.x,g.y)]===p.id)return true;
    const exit=adjacentCells(idx(g.x,g.y)).find(i=>s.owners[i]===p.id&&s.tiles[i]);
    if(exit===undefined)return false;g.x=exit%W;g.y=(exit/W)|0;g.route=null;g.job=null;g.resource=null;return true;});
-  // Surviving civilians can rebuild a lost last city; no replacement workers spawn without one.
+  // A kingdom with land can slowly recover one civilian crew without a city.
+  // Never revive eliminated kingdoms or create an army/city for free.
+  if(!bases.length&&p.land>0&&p.workers.reduce((n,g)=>n+g.count,0)<6){
+   if(p.workers.length)p.workers[0].count+=1;
+   else{const i=s.owners.findIndex(v=>v===p.id);if(i>=0)p.workers.push({id:'c'+(++s.nonce),x:i%W,y:(i/W)|0,count:1,progress:0});}
+  }
   const capacity=bases.length?bases.reduce((n,b)=>n+b.level*24,0):p.workers.reduce((n,g)=>n+g.count,0);
   const count=Math.ceil(capacity/6);
   while(p.workers.length<count){const b=bases[p.workers.length%bases.length];p.workers.push({id:'c'+(++s.nonce),x:b.x,y:b.y,count:6,progress:0});}
@@ -1600,10 +1605,10 @@ function advance(s,a){
  if(a.strength<3||a.stuck>=3||a.turns>140||!f.candidates.size)finishWave(s,a,p);
 }
 function counts(s,id){const stats={farm:0,lumber:0,quarry:0,mine:0,barracks:0,fort:0,city:0};for(const b of s.buildings)if(b.owner===id&&stats[b.kind]!==undefined)stats[b.kind]+=b.level;return stats;}
-function resourceCapacity(s,id){return Math.max(0,Math.floor((person(s,id)?.land||0)*STORAGE_PER_CELL));}
+function resourceCapacity(s,id){const p=person(s,id);return p?.land>0?Math.max(500,Math.floor(p.land*STORAGE_PER_CELL)):0;}
 function clampStorage(s,p){const cap=resourceCapacity(s,p.id);for(const k of Object.keys(p.res))p.res[k]=Math.min(cap,p.res[k]);}
 function income(s,p){const c=counts(s,p.id),l=p.land,e=1+p.tech.economy*.25;
- const income={food:Math.round((2+c.farm*8+(p.workIncome?.food||0))*e),wood:Math.round((c.lumber*7+(p.workIncome?.wood||0))*e),stone:Math.round((c.quarry*7+(p.workIncome?.stone||0))*e),gold:Math.round((c.mine*7+(p.workIncome?.gold||0))*e)};
+ const income={food:2+Math.round((c.farm*8+(p.workIncome?.food||0))*e),wood:1+Math.round((c.lumber*7+(p.workIncome?.wood||0))*e),stone:1+Math.round((c.quarry*7+(p.workIncome?.stone||0))*e),gold:1+Math.round((c.mine*7+(p.workIncome?.gold||0))*e)};
  for(const k of Object.keys(income))p.res[k]=Math.min(resourceCapacity(s,p.id),p.res[k]+income[k]);
  // Supplies are used only by fielded troops. Stationed reserves have no upkeep.
  // Small rates preserve early-game accessibility; exhausted stocks never go negative.
@@ -1758,5 +1763,5 @@ function restoreNetworkState(s){
  delete s.armyPacked;return s;
 }
 
-return{BUILD:'v111',constructionSupport,focusStatus,constructionTime,upgradeTime,fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v112',constructionSupport,focusStatus,constructionTime,upgradeTime,fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });

@@ -12,10 +12,10 @@ function fixture(){
 }
 {
  const {s,id,p}=fixture();E.tick(s);assert.equal(p.troopCap,0);assert.equal(p.troopIncome,0);
- assert.deepEqual(p.income,{food:2,wood:0,stone:0,gold:0},'City and empty land cannot mint resources');
+ assert.deepEqual(p.income,{food:2,wood:1,stone:1,gold:1},'City and empty land add nothing beyond the recovery baseline');
  assert.equal(E.workforceStats(s,id).capacity,24);
  s.buildings[0].level=3;E.tick(s);assert.equal(E.workforceStats(s,id).capacity,72);
- assert.equal(p.income.gold,0);assert.equal(p.income.food,2);assert.equal(p.troopCap,0);
+ assert.equal(p.income.gold,1);assert.equal(p.income.food,2);assert.equal(p.troopCap,0);
  s.buildings.push({id:'barracks',kind:'barracks',owner:id,x:35,y:40,level:2});E.tick(s);
  assert.equal(p.troopCap,860);assert.equal(p.troopIncome,10);
  assert(p.garrisons.filter(g=>g.strength>0).every(g=>g.x===35&&g.y===40),'Actual new troops appear at barracks');
@@ -51,7 +51,7 @@ function fixture(){
   s.territoryRevision++;
   E.action(s,id,{type:'setWorkPriority',priority:resource});
   for(let t=0;t<70;t++)E.tick(s);
-  assert(p.income[resource]>(resource==='food'?2:0),'Worked '+resource+' cells produce real income');
+  assert(p.income[resource]>(resource==='food'?2:1),'Worked '+resource+' cells produce above-baseline income');
  }
 }
 function deployment(allied=false,invasion=false){

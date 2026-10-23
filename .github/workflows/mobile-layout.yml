@@ -30,6 +30,7 @@ jobs:
           node tests/economy-v100.cjs
           node tests/economy-roles-v136.cjs
           node tests/economic-centers-v142.cjs
+          node tests/recovery-economy-v143.cjs
           node tests/field-supply-v137.cjs
           node tests/supply-precision-v138.cjs
           node tests/fog-plans-v139.cjs

@@ -6,5 +6,5 @@ const p=E.person(s,id);assert.equal(E.resourceCapacity(s,id),p.land*50);
 p.land=20;p.res={food:9999,wood:9999,stone:9999,gold:9999};E.tick(s);
 for(const amount of Object.values(p.res))assert(amount<=1000,'Storage follows land cells, not 250k');
 p.land=10000;assert.equal(E.resourceCapacity(s,id),500000,'Large territory can exceed the old fixed cap');
-p.land=5;E.tick(s);for(const amount of Object.values(p.res))assert(amount<=250,'Losing land reduces storage');
+p.land=5;E.tick(s);assert.equal(E.resourceCapacity(s,id),500);for(const amount of Object.values(p.res))assert(amount<=500,'Losing land retains only the minimal recovery storage');
 console.log('PASS land storage: new start, per-cell capacity, growth beyond old cap and contraction');

@@ -14,7 +14,17 @@
 
 **Future requirement, not a defect:** generated maps with diverse geography; ports/rail later when resource movement/logistics has actual value. Always test procedural map seeds when changing strategic AI. Do not edit `main` or owner-authored sprites.
 
-**Current six-step selection: v142 economic centers, explicitly authorized by owner.** Owner chose this over continuing tempo investigation. Keep resource terrain and universal workers; cities are visible civilian centers, barracks military centers. No new army-reserve slider. Physical iPhone review and economic play feedback remain separate gates.
+**Current six-step selection: v143 recovery floor, explicitly authorized by owner.** Owner wants minimum resource and civilian income so a kingdom with land can recover from losing all buildings/people/stores. Keep city/barracks role separation and no reserve slider. Physical iPhone review and economic play feedback remain separate gates.
+
+---
+
+## v143 — minimum resource and civilian recovery (23.10.2026)
+
+**Problem / six stages:** Owner rejected permanent economic deadlock after losing all buildings, people and stocks, and explicitly chose minimum resource/people income. Verified working branch / canonical v111 engine equality at entry. Compared instant free city/army, elimination, and a small bounded recovery floor; chose owner's floor with ordinary paid construction and existing worker routing. Criteria: recovery from zero on buildable surviving land, city/barracks roles retained, no free army or resurrecting defeated players, storage sufficient to afford recovery, save/network compatibility.
+
+**Implementation:** Engine v112 / client `143-recovery-baseline-r1`. All active kingdoms receive flat 2 food + 1 wood + 1 stone + 1 gold per economy tick, independent of city count/land area and not multiplied by Economy research; actual production still receives research benefits. With no cities and fewer than six surviving workers, restore one civilian per tick up to one six-person crew on owned land. Existing larger survivor workforce is preserved. No new save fields, free soldiers or buildings. No land/eliminated kingdoms do not receive continuing recovery. Resource storage is `max(500, land*50)` while land remains, zero without land: the former tiny-land cap could not hold the 495 wood required for a replacement city. This necessary floor also allows a subsequent barracks on a small remnant.
+
+**Validation:** New `tests/recovery-economy-v143.cjs` starts from two owned plain tiles with zero buildings, troops, people and resources; verifies 1→6 workers, bounded fixed income, paid city then paid barracks and real recruitment within 950 ticks. Checks no research amplification, old saves, network preservation and no eliminated-player revival. Adjusted v142 role/land-storage expectations to the new independent baseline; global road test now accounts for the other kingdom's recovered crew while still checking owned routes. Main and owner art untouched. Full CI, exact Cloudflare deployment and physical iPhone review pending publication; next verify these gates, then owner play feedback. Existing military supply/recruitment spending can consume income while armies are deployed; recovery from completely empty peaceful state is tested, not guaranteed under continued invasion.
 
 ---
 

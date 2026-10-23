@@ -19,7 +19,8 @@ function fixture(){const s=E.lobby(41),id=E.addPlayer(s,'Builder'),enemy=E.addPl
  assert.equal(p.workIncome.wood,0,'No remote extraction before arrival');
  for(let n=0;n<100;n++)E.workforceStep(s);
  assert(Object.values(p.workIncome).some(n=>n>0),'Arrived prepared groups produce resources');
- assert(s.roads.length>0&&s.roads.every(i=>s.owners[i]===id),'Workers pave only reached friendly cells');
+ assert(s.roads.length>0&&s.roads.every(i=>[id,enemy].includes(s.owners[i])),'Both kingdoms, including recovery crews, pave only owned cells');
+ assert(E.person(s,enemy).workers.every(g=>s.owners[E.idx(g.x,g.y)]===enemy),'Recovery workers stay on their own land');
  assert(p.workers.every(g=>s.owners[E.idx(g.x,g.y)]===id));
  const before=JSON.stringify(s.workZones.filter(z=>z.resource!=='wood'));
  E.action(s,id,{type:'workZone',resource:'wood',cells:[]});
