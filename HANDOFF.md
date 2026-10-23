@@ -1,3 +1,13 @@
+## v126 — unified alignment of all three build dock cells (23.10.2026)
+
+**Six-stage problem review:** The owner supplied a real portrait-iPhone screenshot after v125. The defect was not just City's distance from the viewport: v125 translated *only* City art/title/time 8px, while Barracks and Fort kept the v124 5px (or 4px at narrow widths) inset. This created unequal left alignment across equal cells. Considered a City-only adjustment, symmetric dock gutters that squeeze cost rows, and shared cell padding. Chose shared inner alignment with unchanged sprite size/geometry and centered costs, as smallest systemic correction.
+
+**Implementation:** Replace obsolete City-only translate CSS with a common portrait build-button padding of 12px for 356–600 CSS px widths and 8px for <=355px. The grid columns, 29px/26px original PNGs, titles, timings, 3 live cost units, 76px button hitbox, taller tactical sheets, HUD resources, engine and multiplayer are untouched. Cache token: `126-unified-dock-grid-r1`. Work only on `design/visual-review-v26`; do not merge `main`.
+
+**Regression:** `tests/mobile-layout.cjs` now checks all three cards have identical art/title/time X offsets, safe 12px/8px insets, contained icons/text, all three live cost units contained, prices centered per button, and >=44px existing hit targets at 320px and 390px portrait, plus unchanged landscape path. Older v125 City-specific test removed. CSS and test syntax checked before commit; Cloudflare live CSS, browser CI and physical iPhone appearance require separate confirmation.
+
+---
+
 ## v125 — City dock safe inset on portrait iPhone (23.10.2026)
 
 - **Six-stage review:** owner screenshot of live v124 showed City sprite nearly touching the left edge of the viewport; goal is a balanced outer gutter without shrinking authored art or sacrificing one-tap construction. Checked narrow (320px) and normal portrait widths, hitbox, title/time, three live costs, Safari cache and tactical modes. Compared (1) padding entire dock (risks narrowing all three cost cells), (2) resizing/symmetric cards (unnecessary scope), (3) moving only first item identity. Selected reversible 8 CSS px inner shift for City sprite/label/time; centered cost row and dock dimensions unchanged.

@@ -3642,15 +3642,16 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
 }
 
 
-/* v125 — portrait city inset: shift only its sprite and identity 8 CSS px.
-   Live prices remain centred in the original full-width row, and the button
-   still spans its original 76px-high hit target. */
+/* v126 — one aligned portrait dock grid (replaces the City-only shift).
+   Three equal build cells share exactly the same left inset and content
+   columns; price rows remain centered. Art and touch targets are unchanged. */
 @media (orientation:portrait) and (max-width:600px){
- #game#game#game#game #buildDock button[data-place-building="city"]
-  > :is(.building-art,span:not(.dock-cost),.dock-time){
-  transform:translateX(8px)!important;
+ #game#game#game#game #buildDock button{
+  padding:5px 12px!important;
  }
- #game#game#game#game #buildDock button[data-place-building="city"]>span:not(.dock-cost){
-  width:calc(100% - 8px)!important;
+}
+@media (orientation:portrait) and (max-width:355px){
+ #game#game#game#game #buildDock button{
+  padding:4px 8px!important;
  }
 }

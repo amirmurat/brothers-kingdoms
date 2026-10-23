@@ -449,16 +449,21 @@ const server=http.createServer((req,res)=>{
    const buttons=await page.locator('#buildDock button').evaluateAll(els=>els.map(el=>{const r=el.getBoundingClientRect(),icon=el.querySelector(':scope > img').getBoundingClientRect(),price=el.querySelector('.dock-cost').getBoundingClientRect();return {width:r.width,height:r.height,artInside:icon.left>=r.left-1&&icon.right<=r.right+1&&icon.top>=r.top-1&&icon.bottom<=r.bottom+1,pricesInside:price.left>=r.left-1&&price.right<=r.right+1&&price.top>=r.top-1&&price.bottom<=r.bottom+1};}));
    assert(buttons.every(b=>Math.abs(b.width-buttons[0].width)<.5&&Math.abs(b.height-buttons[0].height)<.5&&b.height>=44&&b.artInside&&b.pricesInside),label+' equal tappable build options retain original art and prices '+JSON.stringify(buttons));
    if(viewport.width<viewport.height){
-    const cityInset=await page.locator('[data-place-building="city"]').evaluate(btn=>{
-     const box=btn.getBoundingClientRect(),art=btn.querySelector(':scope > img').getBoundingClientRect(),
-      title=btn.querySelector(':scope > span').getBoundingClientRect(),
-      time=btn.querySelector('.dock-time').getBoundingClientRect(),
-      costs=btn.querySelector('.dock-cost').getBoundingClientRect();
-     return {left:art.left-box.left,artWithin:art.right<=box.right-1,aligned:Math.abs(title.left-time.left)<1,
-      textWithin:title.right<=box.right+1&&time.right<=box.right+1,
-      separated:art.right+1<=title.left,costsWithin:costs.left>=box.left-1&&costs.right<=box.right+1};
-    });
-    assert(cityInset.left>=11.5&&cityInset.artWithin&&cityInset.aligned&&cityInset.textWithin&&cityInset.separated&&cityInset.costsWithin,label+' city sprite and label clear outer safe inset with no overlap '+JSON.stringify(cityInset));
+    const aligned=await page.locator('#buildDock button').evaluateAll(els=>els.map(el=>{
+     const r=el.getBoundingClientRect(),art=el.querySelector(':scope > img').getBoundingClientRect(),
+      title=el.querySelector(':scope > span').getBoundingClientRect(),
+      time=el.querySelector('.dock-time').getBoundingClientRect(),
+      costs=el.querySelector('.dock-cost').getBoundingClientRect();
+     const priceUnits=[...el.querySelectorAll('.dock-cost .cost-unit')].map(u=>u.getBoundingClientRect());
+     return {kind:el.dataset.placeBuilding,artX:art.left-r.left,titleX:title.left-r.left,
+      timeX:time.left-r.left,priceCenter:(costs.left+costs.right)/2-(r.left+r.right)/2,
+      artInside:art.left>=r.left&&art.right<=r.right,headerInside:title.right<=r.right+1&&time.right<=r.right+1,
+      separated:art.right+1<=title.left,pricesInside:priceUnits.length===3&&priceUnits.every(u=>u.left>=r.left-1&&u.right<=r.right+1)};
+    }));
+    const inset=viewport.width<=355?8:12,range=key=>Math.max(...aligned.map(a=>a[key]))-Math.min(...aligned.map(a=>a[key]));
+    assert(aligned.length===3&&aligned.every(a=>Math.abs(a.artX-inset)<.6&&a.artInside&&a.headerInside&&a.separated&&a.pricesInside),label+' each portrait build cell shares same safe inset and keeps three prices visible '+JSON.stringify(aligned));
+    assert(range('artX')<.6&&range('titleX')<.6&&range('timeX')<.6,label+' City, Barracks and Fort artwork/text align across all columns '+JSON.stringify(aligned));
+    assert(aligned.every(a=>Math.abs(a.priceCenter)<.6),label+' live costs stay centered in their original button cells '+JSON.stringify(aligned));
    }
    if(viewport.width<viewport.height){
     const compact=await page.evaluate(()=>({top:document.querySelector('#game .topbar').getBoundingClientRect().height,resources:document.getElementById('resourceSummary').getBoundingClientRect().height,dock:document.getElementById('buildDock').getBoundingClientRect().height}));
