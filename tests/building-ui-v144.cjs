@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),http=require('node:http'),path=require('node:path'),assert=require('node:assert/strict');
 const {chromium,webkit}=require('playwright'),root=process.cwd();
-const hooks=`window.__build={get:()=>({state,myId,camX,camY}),mode:setBuildingMode,blocked:mapInputBlocked,icon:flatBuildingIcon,occupancy:buildingOccupancy,draw,select:(x,y)=>{const r=canvas.getBoundingClientRect();selectMap(r.left+camX+(x+.5)*TILE*zoom,r.top+camY+(y+.5)*TILE*zoom);},fixture:()=>{pauseSolo=true;const p=mine();state.tiles.fill(1);state.owners.fill(0);state.armies=[];state.buildJobs=[];state.attackPlans=[];state.recoveryPlans=[];state.roads=[];for(let y=30;y<75;y++)for(let x=60;x<110;x++)state.owners[E.idx(x,y)]=myId;state.territoryRevision++;p.land=2250;p.troops=100;p.garrisons=[];p.workers=[];p.capital={x:80,y:50};p.res={food:10000,wood:10000,stone:10000,gold:10000};state.buildings=['city','barracks','fort'].map((kind,n)=>({id:'fixture-'+kind,kind,owner:myId,x:80+n*3,y:50,level:1}));E.workforceStep(state);zoom=.8;camX=canvas.clientWidth/2-82*TILE*zoom;camY=canvas.clientHeight/2-50*TILE*zoom;render();draw();}};})();`;
+const hooks=`window.__build={get:()=>({state,myId,camX,camY}),mode:setBuildingMode,blocked:mapInputBlocked,icon:flatBuildingIcon,occupancy:buildingOccupancy,badge:buildingOccupancyBadge,draw,select:(x,y)=>{const r=canvas.getBoundingClientRect();selectMap(r.left+camX+(x+.5)*TILE*zoom,r.top+camY+(y+.5)*TILE*zoom);},fixture:()=>{pauseSolo=true;const p=mine();state.tiles.fill(1);state.owners.fill(0);state.armies=[];state.buildJobs=[];state.attackPlans=[];state.recoveryPlans=[];state.roads=[];for(let y=30;y<75;y++)for(let x=60;x<110;x++)state.owners[E.idx(x,y)]=myId;state.territoryRevision++;p.land=2250;p.troops=100;p.garrisons=[];p.workers=[];p.capital={x:80,y:50};p.res={food:10000,wood:10000,stone:10000,gold:10000};state.buildings=['city','barracks','fort'].map((kind,n)=>({id:'fixture-'+kind,kind,owner:myId,x:80+n*3,y:50,level:1}));E.workforceStep(state);zoom=.8;camX=canvas.clientWidth/2-82*TILE*zoom;camY=canvas.clientHeight/2-50*TILE*zoom;render();draw();}};})();`;
 const server=http.createServer((req,res)=>{try{
  const name=new URL(req.url,'http://localhost').pathname,file=path.join(root,name==='/'?'index.html':name);
  if(!file.startsWith(root+path.sep)){res.writeHead(403);return res.end();}
@@ -27,6 +27,14 @@ const server=http.createServer((req,res)=>{try{
   assert(Math.abs(await page.evaluate(()=>window.__build.get().camX)-camera)>10,'Map still pans while details stay open');
   assert(await page.locator('#contextCard').isVisible());
   const occupancy=await page.evaluate(()=>{const {state,myId}=window.__build.get(),city=state.buildings[0],p=state.players.find(p=>p.id===myId);p.garrisons=[{id:'guards',x:city.x,y:city.y,strength:37},{id:'nearby',x:city.x+1,y:city.y,strength:99}];return window.__build.occupancy(city);});assert.equal(occupancy.workers,24);assert.equal(occupancy.troops,37,'Map count excludes nearby troops');
+  const mapNumbers=await page.evaluate(()=>{
+   const {state,myId}=window.__build.get(),[city,barracks,fort]=state.buildings,p=state.players.find(p=>p.id===myId);
+   p.garrisons=[{id:'city-guards',x:city.x,y:city.y,strength:37},{id:'barracks-guards',x:barracks.x,y:barracks.y,strength:65},{id:'nearby',x:city.x+1,y:city.y,strength:99}];
+   return {city:window.__build.badge(city),barracks:window.__build.badge(barracks),
+    emptyFort:window.__build.badge(fort),foreign:window.__build.badge({...city,owner:myId+1})};
+  });
+  assert.deepEqual(mapNumbers,{city:'24',barracks:'65',emptyFort:'',foreign:''},
+   'City shows one worker count, Barracks one soldier count; empty and enemy labels are hidden');
   const pixels=await page.evaluate(()=>['city','barracks','fort','farm','lumber','quarry','mine'].map(k=>{const c=window.__build.icon(k,1),d=c.getContext('2d').getImageData(0,0,32,32).data;let opaque=0;for(let i=3;i<d.length;i+=4)if(d[i]===255)opaque++;return opaque;}));assert(pixels.every(n=>n===1024),'New icons fill the complete tile');
   await page.evaluate(()=>window.__build.mode('barracks'));
   const before=await page.evaluate(()=>JSON.stringify(window.__build.get().state.players[0].res));

@@ -1988,13 +1988,20 @@ function buildingOccupancy(b){
  if(b.owner!==myId)return null;const p=mine();
  return {workers:(p.workers||[]).filter(g=>g.x===b.x&&g.y===b.y).reduce((n,g)=>n+g.count,0),troops:(p.garrisons||[]).filter(g=>g.x===b.x&&g.y===b.y).reduce((n,g)=>n+g.strength,0)};
 }
+// Each building represents one primary population type. Never draw a redundant
+// "0 workers | 0 troops" label or expose a second, irrelevant number on the map.
+function buildingOccupancyBadge(b){
+ const count=buildingOccupancy(b);if(!count)return '';
+ const present=(b.kind==='barracks'||b.kind==='fort')?count.troops:count.workers;
+ return present>0?number(present):'';
+}
 function drawBuildingOccupancy(buildings,w,h){
  if(buildMode||quickBuildOpen)return;const occupied=[];
  const ordered=[...buildings].sort((a,b)=>Number(b.id===selected?.id)-Number(a.id===selected?.id));
  ctx.save();ctx.font=(11/zoom)+'px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
  for(const b of ordered){const active=b.id===selected?.id;if(!active&&zoom<1.6)continue;
-  const count=buildingOccupancy(b);if(!count)continue;
-  const text=number(count.workers)+' workers | '+number(count.troops)+' troops',width=ctx.measureText(text).width*zoom+12,height=22;
+  const text=buildingOccupancyBadge(b);if(!text)continue;
+  const width=Math.max(24,ctx.measureText(text).width*zoom+12),height=22;
   const sx=(b.x+.5)*TILE*zoom+camX,sy=b.y*TILE*zoom+camY;
   const x=Math.max(width/2+4,Math.min(w-width/2-58,sx)),y=Math.max(16,Math.min(h-16,sy-18));
   const rect={l:x-width/2,r:x+width/2,t:y-height/2,b:y+height/2};
