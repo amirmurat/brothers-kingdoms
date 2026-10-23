@@ -849,15 +849,9 @@ function updateResume(){
  resume.classList.toggle('start-choice-primary',saved);
  solo.classList.toggle('start-choice-primary',!saved);
  solo.querySelector('strong').textContent=saved?'New solo match':'Set up solo';
- solo.querySelector('small').textContent=saved?'Choose a start point · replaces saved progress when started':'Choose starting location and opponents';
- if(!saved)$('soloReplacePrompt').classList.add('hidden');
+ solo.querySelector('small').textContent=saved?'Choose a new starting point · saved game stays until Start':'Choose starting location and opponents';
 }
-function startSoloFromMenu(){
- if(savedSolo()){
-  $('soloReplacePrompt').classList.remove('hidden');
-  $('confirmNewSolo').focus();
- }else createDemo(false);
-}
+function startSoloFromMenu(){createDemo(false);}
 function createDemo(resume=false){
  if(state||peer)goHome();lastSaveTick=-1;defeatDismissed=false;
  lastHudLand=null;lastHudTick=-1;lastHudOwners=null;lastHudArmies=new Map();hudNotice=null;activeThreats=[];announcedThreats.clear();lastThreatSignature="";
@@ -867,7 +861,6 @@ function createDemo(resume=false){
  if(state.phase==='lobby'){
   state.settings={bots:Number($('soloBots').value)};
   E.person(state,myId).ready=true;
-  $('soloRoomBots').value=String(state.settings.bots);
  }
  phaseShown='';setNetwork('SOLO');render();
 }
@@ -875,8 +868,7 @@ function startGame(){
  if(serverActive){if(host)serverSend({t:'start'});return;}
  if(!host||!state||state.phase!=='lobby')return;
  if(demo){
-  state.settings.bots=Number($('soloRoomBots').value);
-  $('soloBots').value=String(state.settings.bots);
+  state.settings.bots=Number($('soloBots').value);
   try{localStorage.setItem('bk-solo-bots',$('soloBots').value);}catch(_){}
   const result=E.start(state,state.settings.bots);
   if(!result.ok){$('spawnHint').textContent=result.error;$('spawnHint').dataset.kind='error';return;}
@@ -960,13 +952,14 @@ function render(){if(!state)return;
   $('roomSubtitle').textContent=soloSetup?'Choose your starting point and opponents, then start.':'Share the code, check players and choose a start position.';
   $('multiplayerBotOptions').classList.toggle('hidden',soloSetup);
   $('soloBotOptions').classList.toggle('hidden',!soloSetup);
-  if(soloSetup){$('roomSettings').open=true;$('soloRoomBots').value=String(state.settings?.bots??4);}
-  $('roomMembersCount').textContent=state.players.filter(p=>!p.bot).length+' players';
+  if(soloSetup){$('roomSettings').open=true;$('soloBots').value=String(state.settings?.bots??4);}
+  const humanCount=state.players.filter(p=>!p.bot).length;
+  $('roomMembersCount').textContent=humanCount+' '+(humanCount===1?'player':'players');
   patchHtml('waitingPlayers',state.players.map(p=>`<div class="player-row"><i class="player-dot" style="background:${p.color}"></i><strong>${esc(p.name)}</strong><span class="muted">${[p.id===myId?'You':'',p.id===(serverActive?state.serverAdmin:1)?'Host':''].filter(Boolean).join(' · ')} · ${p.connected===false?'Offline':p.ready?'In room':'Connecting'}</span></div>`).join(''));
   $('startButton').classList.toggle('hidden',!host);$('readyButton').classList.add('hidden');$('readyButton').setAttribute('aria-pressed',String(readyLocal));$('readyButton').textContent=readyLocal?'Ready ✓':'I am ready';$('botCount').disabled=!host;
   $('startButton').disabled=!state.players.filter(p=>!p.bot).every(p=>p.ready||p.connected===false);$('botCount').value=state.settings?.bots??0;
   $('roomRules').textContent=soloSetup?'Conquer 100% of the land. Your solo match runs locally on this device.':serverActive?'Conquer 100% of the land. No time limit. The server runs the match; all players offline pauses it.':'Conquer 100% of the land. No time limit. The host must keep their tab open.';
-  $('waitingHint').textContent=soloSetup?'Choose a starting point or leave Automatic, then start your match.':serverActive?(host?'You can start the match. The server runs the game.':'Waiting for the room leader. You are ready.'):host?'You are the host. Leaving closes the room.':'Waiting for host to start. You are ready.';
+  $('waitingHint').textContent=soloSetup?(savedSolo()?'Starting this match replaces your saved solo progress.':''):serverActive?(host?'You can start the match. The server runs the game.':'Waiting for the room leader. You are ready.'):host?'You are the host. Leaving closes the room.':'Waiting for host to start. You are ready.';
   $('roomSettingsSummary').textContent=soloSetup?(state.settings?.bots??4)+' opponents':(state.settings?.bots??0)+' bots';
   renderSpawnMap();phaseShown='lobby';return;
  }
@@ -2163,7 +2156,7 @@ function goHome(){exitArmyFocus();
  worldLayer=null;pixelLayer=null;paintedRevision=-1;activeThreats=[];
  setTimeout(()=>{for(const c of closingConnections){try{c.close();}catch(_){}}try{closingPeer?.destroy();}catch(_){}},150);
  closeNations();setThreatList(false);hideAux();closePanel();$('quickBuild').classList.add('hidden');$('placingBuild').classList.add('hidden');$('targetPreview').classList.add('hidden');$('tutorial').classList.add('hidden');$('victory').classList.add('hidden');$('battleDock').classList.add('collapsed');
- $('lobbyError').textContent='';$('soloReplacePrompt').classList.add('hidden');$('gameToast').classList.add('hidden');setBusy(false);
+ $('lobbyError').textContent='';$('gameToast').classList.add('hidden');setBusy(false);
  history.replaceState(null,'',location.pathname+location.search);show('lobby');
 }
 function openSession(){
@@ -2189,8 +2182,6 @@ async function inviteFriends(){
 $('cancelConnect').onclick=goHome;
 $('hostButton').onclick=createRoom;$('joinButton').onclick=joinRoom;
 $('demoButton').onclick=startSoloFromMenu;$('resumeButton').onclick=()=>createDemo(true);
-$('confirmNewSolo').onclick=()=>{$('soloReplacePrompt').classList.add('hidden');createDemo(false);};
-$('keepSolo').onclick=()=>{$('soloReplacePrompt').classList.add('hidden');$('resumeButton').focus();};
 $('leaveRoom').onclick=()=>{if(host)for(const c of connections.keys())try{c.send({t:'room-closed'});}catch(_){}goHome();};
 $('startButton').onclick=startGame;$('copyLink').onclick=inviteFriends;$('copyCode').onclick=()=>copyText(code);
 for(const id of ['hudTroops','hudFronts']){
@@ -2209,17 +2200,15 @@ $('exitMatch').onclick=requestExit;$('cancelExit').onclick=openSession;
 $('confirmExit').onclick=()=>{if(host&&!demo)for(const c of connections.keys())try{c.send({t:'room-closed'});}catch(_){}goHome();};
 $('roomCode').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();joinRoom();}});
 $('nickname').addEventListener('change',()=>name());
-$('soloBots').addEventListener('change',()=>{try{localStorage.setItem('bk-solo-bots',$('soloBots').value);}catch(_){}});
+$('soloBots').addEventListener('change',()=>{
+ if(demo&&state?.phase==='lobby'){
+  state.settings.bots=Number($('soloBots').value);
+  $('roomSettingsSummary').textContent=state.settings.bots+' opponents';
+ }
+ try{localStorage.setItem('bk-solo-bots',$('soloBots').value);}catch(_){}
+});
 $('readyButton').onclick=()=>{readyLocal=!readyLocal;$('readyButton').setAttribute('aria-pressed',String(readyLocal));upstream?.send({t:'ready',value:readyLocal});};
 for(const id of ['botCount'])$(id).onchange=()=>{if(host&&state?.phase==='lobby'){if(serverActive){serverSend({t:'settings',bots:Number($('botCount').value)});return;}state.settings={bots:Number($('botCount').value)};broadcast();}};
-$('soloRoomBots').onchange=()=>{
- if(!demo||!state||state.phase!=='lobby')return;
- state.settings.bots=Number($('soloRoomBots').value);
- $('soloBots').value=$('soloRoomBots').value;
- $('roomSettingsSummary').textContent=state.settings.bots+' opponents';
- try{localStorage.setItem('bk-solo-bots',$('soloBots').value);}catch(_){}
-};
-
 $('resultExit').onclick=requestExit;$('spectateMatch').onclick=()=>{defeatDismissed=true;phaseShown='playing';$('victory').classList.add('hidden');};
 $('restart').onclick=()=>{
  if(serverActive){if(host&&state?.phase==='ended')serverSend({t:'rematch'});return;}
