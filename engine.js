@@ -418,6 +418,19 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
  }
  if(a.type==='setWorkPriority'){const priority=String(a.priority);if(!['balanced',...Object.keys(WORK_RESOURCES)].includes(priority))return {ok:false,error:'Choose a production priority.'};p.workPriority=priority;for(const g of p.workers||[])if(g.resource){g.resource=null;g.route=null;g.progress=0;}return {ok:true};}
  if(a.type==='workZone')return paintWorkZone(s,p,a);
+ if(a.type==='cancelBuild'){
+  const job=(s.buildJobs||[]).find(j=>j.id===a.id&&j.owner===id);
+  if(!job||owner(s,job.x,job.y)!==id)return {ok:false,error:'Construction is no longer yours.'};
+  return cancelBuildingJob(s,p,job);
+ }
+ if(a.type==='removeBuilding'){
+  const b=s.buildings.find(b=>b.id===a.id&&b.owner===id);
+  if(!b||owner(s,b.x,b.y)!==id)return {ok:false,error:'Building is no longer yours.'};
+  const job=(s.buildJobs||[]).find(j=>j.upgradeOf===b.id);
+  if(job)cancelBuildingJob(s,p,job);
+  s.buildings=s.buildings.filter(v=>v!==b);s.workRevision=(s.workRevision||0)+1;
+  return {ok:true};
+ }
  if(a.type==='queueBuild'){
   const kind=String(a.kind),x=Math.floor(a.x),y=Math.floor(a.y),fail=canBuild(s,id,kind,x,y);
   if(fail)return {ok:false,error:fail};
@@ -426,6 +439,7 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
   if(s.buildJobs.filter(j=>j.owner===id).length>=workforceStats(s,id).slots)return {ok:false,error:'All builder crews are assigned. Expand your cities or finish existing jobs.'};
   const count=s.buildJobs.filter(j=>j.owner===id&&!j.upgradeOf&&j.kind===kind).length;
   const cost=Object.fromEntries(Object.entries(KINDS[kind].cost).map(([k,v])=>[k,Math.ceil(v*(1+.05*(buildingCount(s,id,kind)+count)))]));
+  if(a.expectedCost&&Object.entries(cost).some(([k,v])=>a.expectedCost[k]!==v))return {ok:false,error:'Price changed. Review this site again.'};
   if(!available(p,cost))return {ok:false,error:'Not enough resources.'};
   charge(p,cost);s.buildJobs.push({id:'j'+(++s.nonce),owner:id,kind,x,y,cost,progress:0});return {ok:true};
  }
@@ -641,6 +655,17 @@ function layRoad(s,p,i){
  p.res.wood--;s.roads.push(i);roads.add(i);roadSets.get(s).length=s.roads.length;s.roadRevision=(s.roadRevision||0)+1;
 }
 function workSuitable(s,id,resource,i){return Number.isInteger(i)&&i>=0&&i<W*H&&s.owners[i]===id&&WORK_RESOURCES[resource]?.includes(s.tiles[i]);}
+function cancelBuildingJob(s,p,job){
+ const total=job.upgradeOf?upgradeTime({level:job.targetLevel-1}):constructionTime(job.kind);
+ const remaining=1-clamp((job.progress||0)/Math.max(1,total),0,1),refund={};
+ for(const [resource,cost] of Object.entries(job.cost||{})){
+  refund[resource]=Math.floor(cost*remaining);p.res[resource]=Math.min(resourceCapacity(s,p.id),p.res[resource]+refund[resource]);
+ }
+ const target=s.buildings.find(b=>b.id===job.upgradeOf);if(target?.upgrade?.jobId===job.id)delete target.upgrade;
+ s.buildJobs=s.buildJobs.filter(j=>j!==job);
+ for(const g of p.workers||[])if(g.job===job.id){g.job=null;g.route=null;g.resource=null;g.progress=0;}
+ return {ok:true,refund};
+}
 function workforceStats(s,id){
  const bases=s.buildings.filter(b=>b.owner===id&&b.kind==='city');
  const groups=person(s,id)?.workers||[];
@@ -1763,5 +1788,5 @@ function restoreNetworkState(s){
  delete s.armyPacked;return s;
 }
 
-return{BUILD:'v112',constructionSupport,focusStatus,constructionTime,upgradeTime,fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v113',constructionSupport,focusStatus,constructionTime,upgradeTime,fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });

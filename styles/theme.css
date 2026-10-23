@@ -3740,3 +3740,31 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
  grid-template-columns:repeat(5,minmax(0,1fr))!important;
  gap:5px!important;
 }
+
+/* v144: non-modal building dock is a real flex row below the map. */
+#game#game#game#game#game #contextCard{
+ position:relative!important;inset:auto!important;left:auto!important;bottom:auto!important;
+ transform:none!important;width:100%!important;max-width:none!important;flex:0 0 auto!important;
+ max-height:min(240px,36dvh)!important;min-height:0!important;margin:0!important;
+ padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))!important;
+ border:0!important;border-top:1px solid #465265!important;border-radius:0!important;
+ overflow:auto!important;background:#151c26!important;
+}
+#game#game#game#game#game #contextBody{gap:6px!important}
+#game#game#game#game#game #contextBody .context-building-header{padding:0 44px 0 0!important;border:0!important}
+#game#game#game#game#game #contextBody .context-building-header>strong{display:block!important;font:700 15px/22px system-ui!important}
+#game#game#game#game#game #contextBody .context-building-header>small{font:500 11px/16px system-ui!important}
+#game#game#game#game#game #contextBody .context-building-identity{margin:0!important;gap:8px!important}
+#game#game#game#game#game #contextBody .context-building-identity .context-building-art{width:32px!important;height:32px!important;min-width:32px!important;flex-basis:32px!important}
+#game#game#game#game#game #contextBody .context-building-title strong{font:700 16px/20px system-ui!important}
+#game#game#game#game#game #contextBody .context-stats-row{display:block!important;border:0!important}
+#game#game#game#game#game #contextBody .context-stat{padding:0!important;gap:0!important}
+#game#game#game#game#game #contextBody .context-stat>span{font:500 11px/15px system-ui!important}
+#game#game#game#game#game #contextBody .context-actions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important}
+#game#game#game#game#game #contextBody button{min-height:44px!important;font:650 12px/16px system-ui!important;padding:6px!important}
+#game#game#game#game#game #contextBody .context-upgrade-price{padding:0!important;border:0!important}
+#game#game#game#game#game #contextBody .context-more{font:500 11px/16px system-ui!important}
+#game#game#game#game#game #contextBody .context-more summary{min-height:28px!important;cursor:pointer!important}
+#game#game#game#game#game #contextBody progress{width:100%!important;height:7px!important;accent-color:#79d8ee}
+#game#game#game#game#game #contextCard #closeContext{width:44px!important;height:44px!important;min-height:44px!important;top:0!important;right:0!important}
+#game#game#game#game#game:has(#contextCard:not(.hidden)) #buildDock{visibility:hidden!important;pointer-events:none!important}

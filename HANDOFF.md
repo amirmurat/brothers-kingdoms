@@ -4,9 +4,10 @@
 
 **Owner's match-length target (23.10.2026): 15–30 minutes.** Assess first contact and progression against this target. The v141 two-kingdom first-border controller is not enough to attribute slow contact to rules: compare directed legal routes, bot counts and starting distance before changing simulation speed or AI.
 
-1. **P1 / BK-04 + BK-05 — Owner-selected economic roles (v142 implementation).** Owner explicitly replaced tempo research with cities supplying workers, barracks supplying military capacity/recruits and automatic threat-based reserve distribution. Resource-cell labor supplies resources; no new farmer/builder classes or reserve slider. Verify startup, local construction, reconstruction, legacy saves, bot scarcity and actual iPhone feedback before further tuning.
-2. **P2 / BK-03 — Player agency and competitive AI (v141 evidence; tempo research deferred by owner).** Scripted narrow/wide/no-order policies show consequential choices, not measured human difficulty. Revisit after owner reviews the new economic roles; do not continue directed-route work by inertia.
-3. **P2 / BK-06 — Real-device UX validation (pending, not a code regression).** Scouted objective and supply HUD still need real iPhone confirmation; browser Chromium/WebKit smoke is not physical Safari.
+1. **P1 / BK-07 — Owner-selected building readability and construction workflow (v144 / next manual farms).** Owner requests filled-cell simple icons, map construction/upgrade indicators, non-modal bottom details, explicit placement confirmation, cancellation/demolition and manual paid worker-operated farms. First cycle is v144; second must replace automatic food fields with manually built farms. Owner explicitly accepts replacing displayed old art; preserve original PNGs as archive. Complete these before more balance research.
+2. **P2 / BK-04 + BK-05 — Economic roles/recovery follow-up.** v142 city/barracks roles and v143 recovery floor verified; next owner play feedback. No new professions or reserve slider.
+3. **P2 / BK-03 — Player agency and competitive AI (v141 evidence; tempo research deferred by owner).** Revisit after economic/building review.
+4. **P2 / BK-06 — Real-device UX validation (pending).** Portrait iPhone still separate from Chromium/WebKit smoke.
 
 **Completed priority fixes:**
 - **BK-01 / v139:** Viewer-specific snapshots hide enemy offense and recovery orders; full authority/saves unchanged. CI #39948226135 success; Cloudflare engine v109 and published viewer filtering confirmed. Physical two-iPhone inspection not done.
@@ -14,7 +15,19 @@
 
 **Future requirement, not a defect:** generated maps with diverse geography; ports/rail later when resource movement/logistics has actual value. Always test procedural map seeds when changing strategic AI. Do not edit `main` or owner-authored sprites.
 
-**Current six-step selection: v143 recovery floor, explicitly authorized by owner.** Owner wants minimum resource and civilian income so a kingdom with land can recover from losing all buildings/people/stores. Keep city/barracks role separation and no reserve slider. Physical iPhone review and economic play feedback remain separate gates.
+**Current six-step selection: v144 building workflow, then manual farms as explicitly confirmed by owner.** Farmer professions and unrelated mechanical additions are out of scope.
+
+---
+
+## v144 — filled-cell building symbols and non-modal construction dock (23.10.2026)
+
+**Six stages:** Owner cannot identify tiny detailed sprites, see what is building/upgrading, or inspect a building without losing the map; asks confirmation, cancellation and removal. Verified canonical v112 and working branch before edits. Compared larger overlapping sprites/count clusters, simple filled world tiles and replacing original art files. Chose full-opacity native Canvas icons covering the entire logical cell, separate type color and large geometric shape, nation-colored edge, no cluster displacement. Owner explicitly approved replacing displayed old art at every zoom; original PNG files remain archived/unchanged. No image-generation dependency or new external art. Old sprite helpers retained for archive compatibility tests, not active map/card icons.
+
+**Workflow:** Engine v113 / client `144-visible-building-dock-r1`. Construction tap opens type, cell and exact price; only Build here queues/pays, Cancel spends nothing. Authority rejects stale quoted prices. Details use a real bottom flex row, compact actions, collapsible details; no backdrop or blocked map. Exact clicked building/site takes priority over nearby troops. New construction displays its actual type icon, yellow work marker and progress bar; upgrades have cyan marker/bar. Both are drawn at real cells at all zooms.
+
+**Lifecycle:** Own completed buildings can be demolished after explicit confirmation, no built-material refund. New work and upgrades can be cancelled separately; refund is floor(paid cost × unfinished fraction), clamped to storage, once only. Cancellation frees assigned crews and clears an upgrade without deleting the building. Authority rechecks building/job ownership and site ownership; removed/captured stale objects cannot be manipulated.
+
+**Validation:** New engine lifecycle tests cover price races, foreign/stale actions, full/partial/single refunds, crew release, upgrades and demolition. New browser suite covers no-spend draft/cancel, paid confirmation, identifiable pending building, cancellation/refund, two-step demolition, complete opaque icon pixels and non-overlapping map/dock. Local Edge passes new suite at 320/390 and existing suite at 320/390/844; inspected actual portrait screenshot. Full engine/server local suites pass (performance deferred to full CI); Canvas stubs now implement toDataURL. CI/Cloudflare pending publication. Next independent cycle: paid manually placed farms with workers; no more automatic food-field harvesting. Physical iPhone pending.
 
 ---
 
