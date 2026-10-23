@@ -1098,8 +1098,11 @@ function refreshQuickBuild(){
  if(dock.__last!==dockMarkup){dock.innerHTML=dockMarkup;dock.__last=dockMarkup;}dock.classList.toggle('placement-active',!!buildMode);
  const catalog=$('quickBuildChoices');
  const groups=[['Economy',['farm','lumber','quarry','mine']],['Infrastructure',['city','barracks','fort']]];
- const markup=groups.map(([name,kinds])=>`<h3>${name}</h3><div class="build-catalog-grid">${kinds.map(id=>{const cost=E.costBuilding(state,myId,id),info=buildingInfo[id];return `<button type="button" data-fast-build="${id}" aria-pressed="${buildMode===id}">${buildingArt(id,myId,1)}<strong>${esc(E.KINDS[id].name)}</strong><small>${esc(info.place)}</small><span class="catalog-output">${info.resource?'6 workers · +'+info.perLevel+' '+info.resource+'/s':id==='city'?'+24 workers':id==='barracks'?'+430 army capacity':'Nearby defense'}</span><span class="catalog-cost">${briefCost(cost)}</span>${!canPay(p,cost)?'<span class="catalog-shortage">Not enough resources</span>':''}</button>`;}).join('')}</div>`).join('');
- if((quickBuildOpen||!catalog.__last)&&catalog.__last!==markup){catalog.innerHTML=markup;catalog.__last=markup;}
+ const markup=groups.map(([name,kinds])=>`<section class="catalog-section"><h3>${name}</h3><div class="build-catalog-grid">${kinds.map(id=>{const cost=E.costBuilding(state,myId,id),info=buildingInfo[id];return `<button type="button" data-fast-build="${id}" aria-pressed="${buildMode===id}">${buildingArt(id,myId,1)}<strong>${esc(E.KINDS[id].name)}</strong><small>${esc(info.place)}</small><span class="catalog-output">${info.resource?'6 workers · +'+info.perLevel+' '+info.resource+'/s':id==='city'?'+24 workers':id==='barracks'?'+430 army capacity':'Nearby defense'}</span><span class="catalog-cost">${briefCost(cost)}</span>${!canPay(p,cost)?'<span class="catalog-shortage">Not enough resources</span>':''}</button>`;}).join('')}</div></section>`).join('');
+ if((quickBuildOpen||!catalog.__last)&&catalog.__last!==markup){
+  const scrollX=catalog.scrollLeft;
+  catalog.innerHTML=markup;catalog.__last=markup;catalog.scrollLeft=scrollX;
+ }
  $('placingBuild').classList.add('hidden');
  if(buildMode){$('placingBuildName').textContent=E.KINDS[buildMode].name;$('placingBuildCost').textContent=costText(E.costBuilding(state,myId,buildMode));$('placingBuildIcon').innerHTML=uiIcon(buildMode);}
  const workers=E.workforceStats(state,myId);

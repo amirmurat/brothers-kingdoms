@@ -3817,3 +3817,130 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
 #game#game#game#game#game .build-catalog-grid button{border:0!important}
 
 #game#game#game#game#game #quickBuildClose{background:var(--row-flat)!important;color:var(--flat-ink)!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+
+
+/* v149: match controls — two purpose groups; bottom sheets never resize the map.
+   Portrait iPhone is the reference. Keep all touch targets 48px. */
+#game#game#game#game#game .game-layout{position:relative!important}
+#game#game#game#game#game .game-layout>.map-shell{flex:1 1 auto!important;min-height:0!important}
+#game#game#game#game#game #contextCard{
+ position:absolute!important;inset:auto 0 0 0!important;top:auto!important;bottom:0!important;
+ transform:none!important;flex:none!important;width:100%!important;max-width:none!important;
+ max-height:min(220px,38dvh)!important;margin:0!important;z-index:90!important;
+ padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))!important;
+ background:var(--sheet-flat,#151c26)!important;border:0!important;
+ border-top:1px solid var(--divider-flat,#465265)!important;border-radius:0!important;box-shadow:none!important;
+ overflow-x:hidden!important;overflow-y:auto!important;
+}
+#game#game#game#game#game #planToolSwitch{
+ display:flex!important;flex-direction:column!important;align-items:stretch!important;
+ position:absolute!important;top:64px!important;bottom:auto!important;
+ transform:none!important;width:48px!important;min-width:48px!important;
+ max-height:none!important;height:auto!important;overflow:visible!important;
+ gap:8px!important;padding:0!important;margin:0!important;
+ background:transparent!important;border:0!important;box-shadow:none!important;
+ z-index:70!important;
+}
+#game#game#game#game#game #planToolSwitch .plan-tool-group{
+ display:flex!important;flex-direction:column!important;align-items:stretch!important;
+ width:48px!important;min-width:48px!important;gap:1px!important;
+ padding:0!important;margin:0!important;background:transparent!important;
+ border:0!important;box-shadow:none!important;
+}
+#game#game#game#game#game #planToolSwitch .plan-tool-group>button{
+ flex:0 0 48px!important;width:48px!important;height:48px!important;
+ min-width:48px!important;min-height:48px!important;
+ margin:0!important;padding:0!important;border-radius:0!important;
+}
+#game#game#game#game#game #mapNavigation{
+ bottom:calc(12px + env(safe-area-inset-bottom,0px))!important;
+ background:transparent!important;
+}
+/* In an open catalogue, Build stays available and toggles that sheet closed. */
+#game#game#game#game#game .map-view:has(#quickBuild:not(.hidden)) #planToolSwitch{
+ display:flex!important;top:auto!important;
+ bottom:calc(var(--build-sheet-height,224px) + 8px)!important;
+ transform:none!important;z-index:90!important;
+}
+#game#game#game#game#game .map-view:has(#quickBuild:not(.hidden)) #planToolSwitch .plan-tool-group--military,
+#game#game#game#game#game .map-view:has(#quickBuild:not(.hidden)) #scienceButton,
+#game#game#game#game#game:has(#contextCard:not(.hidden)) #planToolSwitch .plan-tool-group--military{
+ display:none!important;
+}
+#game#game#game#game#game .map-view:has(#quickBuild:not(.hidden)) #mapNavigation{
+ bottom:calc(var(--build-sheet-height,224px) + 8px)!important;
+}
+#game#game#game#game#game #quickBuild:not(.hidden){
+ --build-sheet-height:224px;
+ position:absolute!important;inset:auto 0 0 0!important;
+ top:auto!important;left:0!important;right:0!important;bottom:0!important;
+ width:100%!important;max-width:none!important;height:var(--build-sheet-height)!important;
+ max-height:var(--build-sheet-height)!important;
+ padding:7px 12px 9px!important;box-sizing:border-box!important;
+ background:var(--sheet-flat,#151c26)!important;
+ border:0!important;border-top:1px solid var(--divider-flat,#465265)!important;
+ border-radius:0!important;box-shadow:none!important;
+ overflow:hidden!important;z-index:80!important;transform:none!important;
+}
+#game#game#game#game#game #quickBuild .quick-build-head{
+ position:relative!important;top:0!important;height:34px!important;min-height:34px!important;
+ display:flex!important;align-items:center!important;margin:0!important;
+ padding:0 0 4px!important;border-bottom:1px solid var(--divider-flat,#465265)!important;
+ background:var(--sheet-flat,#151c26)!important;
+}
+#game#game#game#game#game #quickBuild .quick-build-head>strong{font:700 16px/22px system-ui!important}
+#game#game#game#game#game #quickBuildHelp{
+ margin:3px 0 5px!important;padding:0!important;font:500 11px/15px system-ui!important;
+}
+#game#game#game#game#game #quickBuildChoices{
+ display:flex!important;align-items:stretch!important;gap:12px!important;
+ width:100%!important;height:calc(100% - 57px)!important;max-height:none!important;
+ overflow-x:auto!important;overflow-y:hidden!important;
+ overscroll-behavior-x:contain!important;touch-action:pan-x!important;
+ -webkit-overflow-scrolling:touch;scroll-snap-type:x proximity!important;
+ padding:0 0 3px!important;
+}
+#game#game#game#game#game #quickBuildChoices .catalog-section{
+ display:flex!important;flex-direction:column!important;flex:0 0 auto!important;
+ min-width:0!important;scroll-snap-align:start!important;
+}
+#game#game#game#game#game #quickBuildChoices h3{
+ flex:0 0 16px!important;margin:0 0 3px!important;
+ font:650 11px/16px system-ui!important;letter-spacing:.04em!important;
+}
+#game#game#game#game#game #quickBuildChoices .build-catalog-grid{
+ display:flex!important;grid-template-columns:none!important;gap:6px!important;
+}
+#game#game#game#game#game #quickBuildChoices .build-catalog-grid>button{
+ display:grid!important;flex:0 0 154px!important;width:154px!important;
+ min-width:154px!important;max-width:154px!important;
+ height:128px!important;min-height:128px!important;
+ padding:7px!important;gap:3px 6px!important;overflow-y:auto!important;
+ background:var(--row-flat,#192331)!important;border:0!important;
+ border-radius:0!important;box-shadow:none!important;scroll-snap-align:start!important;
+}
+#game#game#game#game#game #quickBuildChoices .build-catalog-grid small{
+ font:500 10px/13px system-ui!important;
+}
+#game#game#game#game#game #quickBuildChoices .catalog-cost,
+#game#game#game#game#game #quickBuildChoices .catalog-output{
+ font:500 11px/14px system-ui!important;
+}
+@media (orientation:portrait) and (max-height:660px){
+ #game#game#game#game#game #planToolSwitch{top:62px!important;width:97px!important;min-width:97px!important}
+ #game#game#game#game#game #planToolSwitch .plan-tool-group{
+  display:grid!important;grid-template-columns:repeat(2,48px)!important;
+  width:97px!important;gap:1px!important;
+ }
+ #game#game#game#game#game #quickBuild:not(.hidden){--build-sheet-height:204px}
+ #game#game#game#game#game #quickBuildChoices .build-catalog-grid>button{
+  height:110px!important;min-height:110px!important;
+ }
+ #game#game#game#game#game .map-view:has(#quickBuild:not(.hidden)) #planToolSwitch,
+ #game#game#game#game#game .map-view:has(#quickBuild:not(.hidden)) #planToolSwitch .plan-tool-group--economy{
+  width:48px!important;min-width:48px!important;
+ }
+ #game#game#game#game#game .map-view:has(#quickBuild:not(.hidden)) #planToolSwitch .plan-tool-group--economy{
+  display:flex!important;
+ }
+}

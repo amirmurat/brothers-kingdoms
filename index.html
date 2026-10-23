@@ -9,7 +9,7 @@
 <title>Brothers Kingdoms · Frontline</title>
 <!-- v22: active styles are separated from structure; see docs/GAME_MAP.md -->
 <link rel="stylesheet" href="styles/legacy.css?v=49-visible-camp"/>
-<link rel="stylesheet" href="styles/theme.css?v=146-resource-buildings-r2"/>
+<link rel="stylesheet" href="styles/theme.css?v=149-inmatch-controls-r1"/>
 </head>
 <body>
 <div class="lobby-screen" id="lobby">
@@ -95,12 +95,16 @@
 <div class="map-hint" id="mapHint">Tap the brush to paint a conquest area</div>
 <!-- Lucide paintbrush / eraser icons, ISC. License: assets/icons/LUCIDE_LICENSE.txt -->
 <div id="buildDock" role="group" aria-label="Place strategic buildings"></div>
-<div class="plan-tool-switch" id="planToolSwitch" role="group" aria-label="Attack and eraser tools">
+<div class="plan-tool-switch" id="planToolSwitch" role="group" aria-label="Match map actions">
+ <div class="plan-tool-group plan-tool-group--military" role="group" aria-label="Military actions">
   <button type="button" id="planToolPaint" aria-label="Plan attack" title="Plan attack" aria-pressed="false"><svg class="plan-icon ui-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/game.svg#sword"></use></svg></button>
   <button type="button" id="planToolFocus" aria-label="Army focus" title="Army focus" aria-pressed="false"><svg class="plan-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="6"/><path d="M12 2v5m0 10v5M2 12h5m10 0h5"/></svg></button>
   <button type="button" id="planToolErase" aria-label="Erase attack zone" title="Eraser" aria-pressed="false"><svg class="plan-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.829 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21"/><path d="m5.082 11.09 8.828 8.828"/></svg></button>
+ </div>
+ <div class="plan-tool-group plan-tool-group--economy" role="group" aria-label="Construction and research">
  <button type="button" id="developButton" class="plan-side-action" aria-label="Build" title="Build" aria-pressed="false"><svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/game.svg#hammer"></use></svg></button>
  <button type="button" id="scienceButton" class="plan-side-action" aria-label="Research" title="Research" aria-pressed="false"><svg class="ui-icon" viewBox="0 0 256 256" aria-hidden="true"><use href="assets/icons/game.svg#books"></use></svg></button>
+ </div>
 </div>
 <div id="armyFocusGuide" class="map-tool-guide hidden" role="region" aria-label="Army focus controls"><div class="paint-heading"><strong>ARMY FOCUS</strong></div><span id="armyFocusDetail" role="status">Tap your land or a planned area</span><div class="plan-guide-actions"><button id="clearArmyFocus" type="button">Clear focus</button></div></div>
 <div class="plan-vertical-controls hidden" id="planControls" role="group" aria-label="Brush controls">
@@ -203,5 +207,5 @@
 <script src="server-config.js?v=146-resource-buildings-r2"></script>
 <script src="engine.js?v=146-resource-buildings-r2"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-<script src="game.js?v=148-building-headcounts-r1"></script>
+<script src="game.js?v=149-inmatch-controls-r1"></script>
 </body></html>
