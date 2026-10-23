@@ -1,3 +1,11 @@
+## Future maps — procedural generation is a confirmed long-term direction (23.10.2026)
+
+**Owner requirement:** In the future Brothers Kingdoms will have generated maps rather than only the present map. Treat replayability across diverse *generated terrain and geography* as an explicit design constraint for current tactical objectives and future economic/logistics systems. No timeline, algorithm, changing dimensions, or specific geographic features have yet been approved.
+
+**Design implications (not implemented):** Keep attacks/front routing/AI, valid spawn positions, scout/fort visibility, building placement, worker/resource zones, and eventual rail/ports independent of hardcoded map coordinates. Test representative generation seeds, narrow passages, isolated coastlines/regions, resource distribution, and balanced starting positions when generator design begins. If multiplayer uses generation, require deterministic seed/configuration shared by authoritative server and clients; preserve old saves and don't assume that current constant W/H can be changed safely. Preserve original owner-drawn sprites. The current six-step priority remains evidence-led strategic agency and game balance; map generation is a *future constraint*, not permission for a generator overhaul now. No changes to game code, main or sprites.
+
+---
+
 ## v133 — verify meaningful attack objectives before changing core game rules (23.10.2026)
 
 **Owner's enduring root problem:** Unknown game-logic/balance weaknesses make the game too easy, despite many automation and UI commands. Gameplay target: meaningful but not cumbersome human choices; future trains/ports only when economically justified. Six stages: identify decisions whose outcomes don't change, inspect engine/AI/fort/paint/path/cost, compare auto-only, trivial priority toggle, objective-based targeting, select based on measurable agency/reserve fairness/mobile cost, benchmark without modifying mechanics, verify repeatable test and CI before gameplay changes.
