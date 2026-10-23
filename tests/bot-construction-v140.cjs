@@ -16,7 +16,11 @@ function fixture(seed,land,buildings){
  s.buildJobs=[];return {s,id,p};
 }
 function attempt(f){
- for(let n=0;n<120;n++){f.s.tick=f.id%4+n*4;E.bot(f.s,f.id);}
+ for(let n=0;n<120;n++){
+  // Isolate building expenses; the separate periodic research budget is not a construction cost.
+  let tick=f.id%4+n*4;if(tick%38===f.id%38)tick+=4;
+  f.s.tick=tick;E.bot(f.s,f.id);
+ }
  return f.s.buildJobs.filter(j=>j.owner===f.id&&!j.upgradeOf);
 }
 for(const seed of [88,7611,139]){
