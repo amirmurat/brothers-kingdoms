@@ -1094,7 +1094,7 @@ function updateSelection(){const item=selected?.kind==='placement'?{...selected,
 function refreshQuickBuild(){
  const p=mine();if(!p||!state)return;
  const dock=$('buildDock');
- const dockMarkup=`<span class="build-dock-hint">${buildMode?esc(E.KINDS[buildMode].name)+' · tap your land':'Cities · economy · defense'}</span>${buildMode?'<button type="button" data-build-stop>Cancel</button>':''}`;
+ const dockMarkup=buildMode?`<div class="build-dock-head"><strong>Place ${esc(E.KINDS[buildMode].name)}</strong><button type="button" data-build-stop>Cancel</button></div><p class="build-dock-guide">Tap your land to select a tile. Review the cost before confirming.</p>`:'';
  if(dock.__last!==dockMarkup){dock.innerHTML=dockMarkup;dock.__last=dockMarkup;}dock.classList.toggle('placement-active',!!buildMode);
  const catalog=$('quickBuildChoices');
  const groups=[['Economy',['farm','lumber','quarry','mine']],['Infrastructure',['city','barracks','fort']]];

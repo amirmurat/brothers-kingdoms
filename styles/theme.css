@@ -3950,3 +3950,212 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
 @media (orientation:portrait) and (max-height:660px){
  #game#game#game#game#game #mapView{--build-sheet-height:204px}
 }
+
+/* v150 — one geometry for every construction bottom state on the portrait map.
+   Controls are placed in two intentional groups, without a blank background band.
+   Panels OVERLAY a fixed-size canvas instead of reflowing the camera. */
+#game#game#game#game#game{
+ --match-sheet-height:224px;
+ --match-tool-gutter:12px;
+ --match-sheet-bg:var(--sheet-flat,#151c26);
+ --match-sheet-border:var(--divider-flat,#465265);
+}
+/* Leave the game-layout/map-shell size untouched while bottom sheets change. */
+#game#game#game#game#game .game-layout{
+ position:relative!important;min-height:0!important;overflow:hidden!important;
+}
+#game#game#game#game#game .game-layout>.map-shell{flex:1 1 auto!important;min-height:0!important}
+/* One flat, square, full-width surface for catalog, placement and details. */
+#game#game#game#game#game #quickBuild:not(.hidden),
+#game#game#game#game#game #buildDock.placement-active,
+#game#game#game#game#game #contextCard:not(.hidden){
+ box-sizing:border-box!important;
+ height:var(--match-sheet-height)!important;
+ min-height:var(--match-sheet-height)!important;
+ max-height:var(--match-sheet-height)!important;
+ width:100%!important;max-width:none!important;
+ left:0!important;right:0!important;bottom:0!important;top:auto!important;
+ transform:none!important;margin:0!important;
+ background:var(--match-sheet-bg)!important;
+ border:0!important;border-top:1px solid var(--match-sheet-border)!important;
+ border-radius:0!important;box-shadow:none!important;
+ padding:8px 12px calc(8px + env(safe-area-inset-bottom,0px))!important;
+}
+#game#game#game#game#game #quickBuild:not(.hidden),
+#game#game#game#game#game #buildDock.placement-active{
+ position:absolute!important;z-index:80!important;
+}
+#game#game#game#game#game #contextCard:not(.hidden){
+ position:absolute!important;inset:auto 0 0 0!important;flex:none!important;
+ z-index:90!important;overflow-x:hidden!important;overflow-y:auto!important;
+ overscroll-behavior:contain!important;
+}
+#game#game#game#game#game #contextBody{
+ display:flex!important;flex-direction:column!important;align-items:stretch!important;
+ gap:6px!important;min-height:calc(var(--match-sheet-height) - 22px)!important;
+}
+#game#game#game#game#game #contextBody .context-actions{
+ margin-top:auto!important;width:100%!important;padding-top:6px!important;
+}
+#game#game#game#game#game #contextCard #closeContext{
+ position:absolute!important;top:0!important;right:0!important;
+ width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;
+ border:0!important;border-radius:0!important;
+}
+/* The catalog is a single horizontal rail; section headings and costs stay visible. */
+#game#game#game#game#game #quickBuild:not(.hidden){
+ display:flex!important;flex-direction:column!important;overflow:hidden!important;
+}
+#game#game#game#game#game #quickBuild .quick-build-head{
+ position:relative!important;top:0!important;
+ height:40px!important;min-height:40px!important;flex:0 0 40px!important;
+ display:flex!important;align-items:center!important;
+ margin:0!important;padding:0!important;
+ background:var(--match-sheet-bg)!important;
+ border:0!important;border-bottom:1px solid var(--match-sheet-border)!important;
+}
+#game#game#game#game#game #quickBuildClose{
+ width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;
+ padding:0!important;margin:0!important;flex:0 0 48px!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+ background:var(--row-flat,#192331)!important;
+}
+#game#game#game#game#game #quickBuildHelp{
+ flex:0 0 auto!important;min-height:0!important;
+ margin:4px 0 5px!important;padding:0!important;
+ font:500 11px/15px system-ui!important;
+}
+#game#game#game#game#game #quickBuildChoices{
+ flex:1 1 auto!important;min-height:0!important;height:auto!important;
+ display:flex!important;gap:12px!important;
+ overflow-x:auto!important;overflow-y:hidden!important;
+ overscroll-behavior-x:contain!important;touch-action:pan-x!important;
+ scroll-snap-type:x proximity!important;-webkit-overflow-scrolling:touch;
+ padding:0 0 3px!important;
+}
+#game#game#game#game#game #quickBuildChoices .catalog-section{
+ flex:0 0 auto!important;min-width:0!important;display:flex!important;flex-direction:column!important;
+}
+#game#game#game#game#game #quickBuildChoices h3{
+ flex:0 0 16px!important;margin:0 0 3px!important;
+ font:650 11px/16px system-ui!important;
+}
+#game#game#game#game#game #quickBuildChoices .build-catalog-grid{
+ display:flex!important;grid-template-columns:none!important;gap:6px!important;
+}
+#game#game#game#game#game #quickBuildChoices .build-catalog-grid>button{
+ flex:0 0 154px!important;width:154px!important;min-width:154px!important;max-width:154px!important;
+ height:124px!important;min-height:124px!important;max-height:124px!important;
+ overflow-x:hidden!important;overflow-y:auto!important;padding:7px!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+ background:var(--row-flat,#192331)!important;
+}
+/* A placement prompt also uses the same sheet, not a narrow floating HUD strip. */
+#game#game#game#game#game #buildDock.placement-active{
+ display:flex!important;flex-direction:column!important;justify-content:flex-start!important;
+ align-items:stretch!important;gap:0!important;overflow:auto!important;
+}
+#game#game#game#game#game #buildDock .build-dock-head{
+ display:flex!important;align-items:center!important;justify-content:space-between!important;
+ min-height:48px!important;gap:8px!important;
+ padding:0!important;margin:0!important;border-bottom:1px solid var(--match-sheet-border)!important;
+}
+#game#game#game#game#game #buildDock .build-dock-head strong{
+ font:700 16px/22px system-ui!important;color:#edf2f8!important;
+}
+#game#game#game#game#game #buildDock .build-dock-head button{
+ flex:0 0 auto!important;min-height:44px!important;
+ width:auto!important;padding:0 12px!important;
+ border:0!important;border-radius:0!important;
+ background:var(--row-flat,#192331)!important;color:#edf2f8!important;
+ font:650 13px/18px system-ui!important;
+}
+#game#game#game#game#game #buildDock .build-dock-guide{
+ margin:10px 0 0!important;max-width:40rem!important;
+ font:500 12px/18px system-ui!important;color:#bbc8d9!important;
+}
+/* Menu and military actions remain top-right. Development is a compact pair. */
+#game#game#game#game#game #planToolSwitch{
+ display:flex!important;flex-direction:column!important;
+ position:absolute!important;top:72px!important;bottom:auto!important;
+ right:calc(var(--match-tool-gutter) + env(safe-area-inset-right,0px))!important;
+ left:auto!important;transform:none!important;
+ width:97px!important;min-width:97px!important;height:auto!important;max-height:none!important;
+ gap:6px!important;margin:0!important;padding:0!important;
+ overflow:visible!important;background:transparent!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+ z-index:70!important;
+}
+#game#game#game#game#game #planToolSwitch .plan-tool-group{
+ display:flex!important;flex-direction:column!important;align-items:flex-end!important;
+ width:97px!important;min-width:97px!important;gap:1px!important;
+ background:transparent!important;margin:0!important;padding:0!important;
+ border:0!important;box-shadow:none!important;
+}
+#game#game#game#game#game #planToolSwitch .plan-tool-group--economy{
+ display:grid!important;grid-template-columns:repeat(2,48px)!important;gap:1px!important;
+}
+#game#game#game#game#game #planToolSwitch .plan-tool-group>button{
+ width:48px!important;min-width:48px!important;max-width:48px!important;
+ height:48px!important;min-height:48px!important;max-height:48px!important;
+ margin:0!important;padding:0!important;flex:0 0 48px!important;
+ border:0!important;border-radius:0!important;box-shadow:none!important;
+}
+#game#game#game#game#game .map-toolbar{
+ right:calc(var(--match-tool-gutter) + env(safe-area-inset-right,0px))!important;
+ top:12px!important;
+}
+/* Mini-map + Nations form one left-bottom 97x48 pair, never under an open sheet. */
+#game#game#game#game#game #mapNavigation{
+ position:absolute!important;
+ left:calc(var(--match-tool-gutter) + env(safe-area-inset-left,0px))!important;
+ right:auto!important;bottom:calc(var(--match-tool-gutter) + env(safe-area-inset-bottom,0px))!important;
+ width:97px!important;min-width:97px!important;height:48px!important;
+ background:transparent!important;padding:0!important;margin:0!important;
+}
+#game#game#game#game#game #mapNavigation #warChip{
+ bottom:0!important;left:49px!important;width:48px!important;height:48px!important;
+}
+#game#game#game#game#game #mapNavigation #minimapWrap{
+ bottom:0!important;left:0!important;
+ width:48px!important;height:48px!important;
+}
+/* While a bottom sheet is visible, lift both side-control groups above its rim.
+   Leave only the Build action to dismiss/reopen construction; no empty toolbar cells. */
+#game#game#game#game#game .map-view:has(#quickBuild:not(.hidden),#buildDock.placement-active) #mapNavigation,
+#game#game#game#game#game:has(#contextCard:not(.hidden)) #mapNavigation{
+ bottom:calc(var(--match-sheet-height) + 12px)!important;
+}
+#game#game#game#game#game .map-view:has(#quickBuild:not(.hidden),#buildDock.placement-active) #planToolSwitch,
+#game#game#game#game#game:has(#contextCard:not(.hidden)) #planToolSwitch{
+ display:flex!important;top:auto!important;
+ bottom:calc(var(--match-sheet-height) + 12px)!important;
+ width:48px!important;min-width:48px!important;max-width:48px!important;
+ z-index:100!important;
+}
+#game#game#game#game#game .map-view:has(#quickBuild:not(.hidden),#buildDock.placement-active) #planToolSwitch .plan-tool-group--military,
+#game#game#game#game#game:has(#contextCard:not(.hidden)) #planToolSwitch .plan-tool-group--military,
+#game#game#game#game#game .map-view:has(#quickBuild:not(.hidden),#buildDock.placement-active) #scienceButton,
+#game#game#game#game#game:has(#contextCard:not(.hidden)) #scienceButton{
+ display:none!important;
+}
+#game#game#game#game#game .map-view:has(#quickBuild:not(.hidden),#buildDock.placement-active) #planToolSwitch .plan-tool-group--economy,
+#game#game#game#game#game:has(#contextCard:not(.hidden)) #planToolSwitch .plan-tool-group--economy{
+ display:flex!important;width:48px!important;min-width:48px!important;
+}
+@media (orientation:portrait) and (max-height:660px){
+ /* Compact toolbar on a short phone, but no shorter bottom panel. */
+ #game#game#game#game#game #planToolSwitch{top:70px!important;}
+ #game#game#game#game#game #planToolSwitch .plan-tool-group--military{
+  display:grid!important;grid-template-columns:repeat(3,48px)!important;
+  width:146px!important;min-width:146px!important;
+ }
+ #game#game#game#game#game #planToolSwitch .plan-tool-group--military>button{grid-column:auto!important}
+ #game#game#game#game#game #planToolSwitch{
+  width:146px!important;min-width:146px!important;
+ }
+ #game#game#game#game#game .map-view:has(#quickBuild:not(.hidden),#buildDock.placement-active) #planToolSwitch,
+ #game#game#game#game#game:has(#contextCard:not(.hidden)) #planToolSwitch{
+  top:auto!important;width:48px!important;min-width:48px!important;
+ }
+}
