@@ -23,6 +23,7 @@ jobs:
           node tests/strategic-priorities.cjs
           node tests/logic-audit-v131.cjs
           node tests/plan-commitment-v132.cjs
+          node tests/strategic-balance-v133.cjs
           node tests/economy-v100.cjs
           node tests/performance-v100.cjs
           node tests/land-storage.cjs
