@@ -8,9 +8,9 @@ function fixture(){const s=E.lobby(7),id=E.addPlayer(s,'Builder'),foe=E.addPlaye
  assert.equal(E.fortRadius(fort,s),14);s.tiles[E.idx(fort.x,fort.y)]=3;assert.equal(E.fortRadius(fort,s),18);s.tiles[E.idx(fort.x,fort.y)]=6;assert.equal(E.fortRadius(fort,s),21);assert(E.visibleBuilding(s,id,far),'Mountain height extends authoritative visibility');
  p.allies=[foe];s.buildings=s.buildings.filter(b=>b!==fort);assert(E.visibleBuilding(s,id,far),'Allied buildings visible without a fort');assert(E.networkState(s,id).buildings.some(b=>b.id==='far'));
  p.allies=[];assert(!E.visibleBuilding(s,id,far),'Ending alliance removes unscouted structures');
- assert(E.action(s,id,{type:'armyFocus',x:95,y:40}).ok);assert.equal(E.focusStatus(s,id),'invalid');
+ assert(!E.action(s,id,{type:'armyFocus',x:95,y:40}).ok);assert.equal(E.focusStatus(s,id,{x:95,y:40}),'invalid');
  const before=E.strategicWeight(s,id,95,40);assert.equal(before,1,'Invalid focus gives no army weight');
- s.attackPlans=[{id:'p',owner:id,targets:[0],zoneCells:[E.idx(95,40)]}];assert.equal(E.focusStatus(s,id),'attack');s.attackPlans=[];assert.equal(E.focusStatus(s,id),'invalid');
+ s.attackPlans=[{id:'p',owner:id,targets:[0],zoneCells:[E.idx(95,40)]}];assert(E.action(s,id,{type:'armyFocus',x:95,y:40}).ok);assert.equal(E.focusStatus(s,id),'attack');s.attackPlans=[];assert.equal(E.focusStatus(s,id),'invalid');
  assert(E.action(s,id,{type:'armyFocus',x:30,y:40}).ok);assert.equal(E.focusStatus(s,id),'defend');
 }
 {
