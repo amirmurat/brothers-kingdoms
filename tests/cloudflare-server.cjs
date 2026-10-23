@@ -56,6 +56,8 @@ async function checkRoom(E,source,assert,btoa){
  a.attachment.last=0;await msg(a,{t:'action',id:103,action:{type:'planStrategy',id:plan.id,mode:'percent',value:25,focus:true}});
  assert.equal(plan.allocationValue,25);assert(plan.focus);
  const packet=a.sent.filter(m=>m.t==='state').at(-1);assert.equal(packet.state.attackPlans.find(p=>p.id===plan.id).allocationValue,25,'Strategy is synchronized');
+ const opponentPacket=b.sent.filter(m=>m.t==='state').at(-1);
+ assert(!opponentPacket.state.attackPlans.some(p=>p.id===plan.id),'Opponent never receives private offensive geometry or troop budgets');
  b.attachment.last=0;await msg(b,{t:'action',id:104,action:{type:'planStrategy',id:plan.id,mode:'troops',value:99999}});
  assert.equal(plan.allocationValue,25,'Another nation cannot change the budget');
 

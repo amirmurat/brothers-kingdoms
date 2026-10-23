@@ -1685,7 +1685,10 @@ function networkState(s,viewerId=null){
    workZones:s.workZones?.filter(b=>b.owner===viewerId)
   }:{}),roadRuns:zoneRuns(roads||[]),armyPacked:true,
   workZones:s.workZones?.filter(z=>viewerId===null||s.phase!=='playing'||z.owner===viewerId).map(geometry),
-  attackPlans:s.attackPlans?.map(geometry),recoveryPlans:s.recoveryPlans?.map(geometry),
+  // Attack areas and troop budgets are military secrets until controlled by the viewer.
+  // Internal snapshots without a viewer stay complete for saves and host authority.
+  attackPlans:s.attackPlans?.filter(plan=>viewerId===null||s.phase!=='playing'||plan.owner===viewerId).map(geometry),
+  recoveryPlans:s.recoveryPlans?.filter(plan=>viewerId===null||s.phase!=='playing'||plan.owner===viewerId).map(geometry),
   players:s.players.map(p=>({...p,...(viewerId!==null&&s.phase==='playing'&&p.id!==viewerId?{capital:null,workers:[]}:{}),garrisons:p.garrisons?.map(({route,...g})=>g),workers:viewerId!==null&&s.phase==='playing'&&p.id!==viewerId?[]:p.workers?.map(({route,...g})=>g)})),
   armies:s.armies.map(a=>{
    const {frontSignature,zoneCells,...wave}=a;
@@ -1712,5 +1715,5 @@ function restoreNetworkState(s){
  delete s.armyPacked;return s;
 }
 
-return{BUILD:'v108',focusStatus,constructionTime,upgradeTime,fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v109',focusStatus,constructionTime,upgradeTime,fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });
