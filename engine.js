@@ -361,8 +361,10 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
  }
  if(a.type==='armyFocus'){
   if(a.clear){p.armyFocus=null;autoDemandCache.delete(s);return {ok:true};}
-  if(!Number.isInteger(a.x)||!Number.isInteger(a.y)||!inside(a.x,a.y))return {ok:false,error:'Choose your land or an attack location outside allied land.'};
-  p.defendPriority=null;p.armyFocus={x:a.x,y:a.y};autoDemandCache.delete(s);return {ok:true};
+  if(!Number.isInteger(a.x)||!Number.isInteger(a.y)||!inside(a.x,a.y))return {ok:false,error:'Choose a point on your land or inside an active offensive plan.'};
+  const focus={x:a.x,y:a.y};
+  if(focusStatus(s,id,focus)==='invalid')return {ok:false,error:'Focus must be on your land or inside an active offensive plan.'};
+  p.defendPriority=null;p.armyFocus=focus;autoDemandCache.delete(s);return {ok:true};
  }
  if(a.type==='planStrategy'){
   const q=(s.attackPlans||[]).find(q=>q.id===a.id&&q.owner===id);
@@ -1659,5 +1661,5 @@ function restoreNetworkState(s){
  delete s.armyPacked;return s;
 }
 
-return{BUILD:'v103',focusStatus,constructionTime,upgradeTime,fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v104',focusStatus,constructionTime,upgradeTime,fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });
