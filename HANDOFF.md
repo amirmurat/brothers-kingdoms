@@ -1,3 +1,13 @@
+## v128 — coherent match entry, reversible UX pass (23.10.2026)
+
+**Six stages:** (1) solo jumped immediately to play, multiplayer had a long setup and ambiguous Create vs Join, links silently joined when nickname persisted, saves were buried; (2) audited live owner iPhone (Cloudflare room does work), HTML/JS/client-server and mobile tests; (3) considered wizard vs labels-only vs a contextual one-page home; (4) chose one-page visible actions, no extra quick solo step, no silent save overwrite, one room launch surface and explicit new-invite confirmation; (5) implemented in client/HTML/CSS with no server or engine changes; (6) mobile/browser tests, CI, live Cloudflare and physical owner review are acceptance gates.
+
+**Behavior:** `Continue solo` first when a save exists; settings (bot count) always visible adjacent to 1-tap `Play solo now`; starting new solo when saved explicitly confirms and can cancel. `Create a room` and `Join a room by code` are unambiguous. New invite `#CODE` pre-fills Join but never silently joins; recognized returning server token preserves same-device auto-rejoin. Room keeps share, roster, settings, spawn and bottom sticky host Start / guest waiting text. Network readiness (auto-ready) remains unchanged deliberately pending separate synchronized implementation. Cache: `128-entry-flow-r1`. Files: `index.html`, `game.js`, `styles/theme.css`, `tests/mobile-layout.cjs`, `HANDOFF.md`. Working branch only, main unchanged.
+
+**QA:** static syntax/DOM uniqueness. Verify 320/390 portrait WebKit and Chromium (first solo, resume, replacement cancel/confirm, CTA visible, room spawn), two-client invite/reconnect and actual iPhone. CI and live Cloudflare must be checked separately before claiming production verified.
+
+---
+
 ## v127 — room creation diagnostics (23.10.2026)
 
 **Owner authorization:** diagnose production `With friends` failure before changing match-entry UX. Repeated public browser tests produce `Server unavailable. Try again.`, but automation could not collect exact HTTP status or Cloudflare logs. Production `/api/health` was healthy (v103 engine), proving only Worker reachability, not Durable Object configuration. Repo `wrangler.jsonc` declares `ROOMS -> KingdomRoom` with `new_sqlite_classes` v1 migration, but actual production binding could not be inspected from GitHub. GitHub Actions only tests; actual Cloudflare deployment/log controls are external.

@@ -40,7 +40,25 @@ const server=http.createServer((req,res)=>{
    });
    assert(lobbyIcons.soloPath&&lobbyIcons.soloArea>3000,label+' solo controller icon is visible geometry, not an absent external reference');
    assert(lobbyIcons.hasResumePlay&&lobbyIcons.hasResumeArrow,label+' resume uses matched action icon family');
-   assert.equal(lobbyIcons.soloHeight,lobbyIcons.friendsHeight,label+' Play solo and Friends share button height');
+   assert.equal(lobbyIcons.soloHeight,lobbyIcons.friendsHeight,label+' Solo and Create room share button height');
+   assert(await page.locator('#soloBots').isVisible(),label+' solo opponents are visible before starting');
+   assert(await page.locator('#joinDetails').isVisible(),label+' explicit join-by-code entry stays visible');
+   assert.equal(await page.locator('#resumeButton').isVisible(),false,label+' no resume without a solo save');
+   await page.click('#demoButton');
+   assert(await page.locator('#game').isVisible(),label+' quick solo stays one click');
+   await page.evaluate(()=>window.__layout.goHome());
+   assert(await page.locator('#resumeButton').isVisible(),label+' saved solo gets a prominent continue action');
+   await page.click('#demoButton');
+   assert(await page.locator('#soloReplacePrompt').isVisible(),label+' new solo prompts before replacing saved game');
+   assert.equal(await page.locator('#game').isVisible(),false,label+' saved game is protected while choosing');
+   await page.click('#keepSolo');
+   assert.equal(await page.locator('#soloReplacePrompt').isVisible(),false,label+' change is cancellable');
+   await page.click('#resumeButton');
+   assert(await page.locator('#game').isVisible(),label+' resume returns to saved game');
+   await page.evaluate(()=>window.__layout.goHome());
+   await page.click('#demoButton');await page.click('#confirmNewSolo');
+   assert(await page.locator('#game').isVisible(),label+' explicit confirmation starts new solo');
+   await page.evaluate(()=>window.__layout.goHome());
    await page.evaluate(()=>window.__layout.setRoom());
    const roomFlat=await page.evaluate(()=>{
     const read=id=>{const el=document.querySelector(id),s=getComputedStyle(el),r=el.getBoundingClientRect();return {radius:s.borderRadius,border:s.borderLeftWidth,x:r.x,right:r.right};};
@@ -50,6 +68,11 @@ const server=http.createServer((req,res)=>{
    assert(Math.abs(roomFlat.invite.x-roomFlat.spawn.x)<1&&Math.abs(roomFlat.invite.right-roomFlat.spawn.right)<1&&Math.abs(roomFlat.rules.x-roomFlat.spawn.x)<1,label+' Room sections share edges');
    assert(await page.locator('#waiting').isVisible(),label+' room is visible');
    assert(await page.locator('#startButton').isVisible(),label+' room Start visible');
+   assert(await page.locator('#roomActionBar').isVisible(),label+' unified room action is present');
+   if(viewport.width<viewport.height){
+    const action=await page.locator('#startButton').boundingBox();
+    assert(action.y>=-1&&action.y+action.height<=viewport.height+1,label+' host Start fits initial portrait viewport '+JSON.stringify(action));
+   }
    const roomIcons=await page.evaluate(()=>{
     const ids=['startButton','leaveRoom'];
     return ids.map(id=>{const el=document.getElementById(id),s=getComputedStyle(el),r=el.getBoundingClientRect();

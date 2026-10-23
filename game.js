@@ -843,7 +843,21 @@ function joinConnection(conn){const sessionPeer=peer;conn.on('data',m=>{if(peer!
  });conn.on('close',()=>{if(peer!==sessionPeer||!state)return;const id=connections.get(conn);connections.delete(conn);previousOwners.delete(conn);previousRevs.delete(conn);lastSendTime.delete(conn);if(id){const p=E.person(state,id);if(p){if(state.phase==='lobby'){state.players=state.players.filter(v=>v.id!==id);for(const [token,pid] of tokenStore)if(pid===id)tokenStore.delete(token);}else{p.connected=false;p.ready=false;}}broadcast();}});}
 function broadcast(includeTerrain=false){if(!state)return;for(const c of connections.keys())if(c.open){try{const packed=pack(state,includeTerrain,connections.get(c));let delta=null,old=previousOwners.get(c);if(!includeTerrain&&old&&old.length===state.owners.length&&state.phase==='playing'){const changes=[];for(let i=0;i<old.length;i++)if(old[i]!==state.owners[i])changes.push(i,state.owners[i]);if(changes.length<state.owners.length*.32)delta=changes;}const out=delta?{...packed,owners:delta,ownerDelta:true,ownerBaseRev:previousRevs.get(c),packed:false}:packed;c.send({t:'state',state:out});previousOwners.set(c,state.owners.slice());previousRevs.set(c,state.territoryRevision);}catch(_){}}render();}
 function savedSolo(){try{const x=JSON.parse(localStorage.getItem('bk-v14-save')||'null');return x?.phase==='playing'&&x.version===14?x:null;}catch(_){return null;}}
-function updateResume(){const b=$('resumeButton');if(b)b.classList.toggle('hidden',!savedSolo());}
+function updateResume(){
+ const saved=!!savedSolo(),resume=$('resumeButton'),solo=$('demoButton');
+ resume.classList.toggle('hidden',!saved);
+ resume.classList.toggle('start-choice-primary',saved);
+ solo.classList.toggle('start-choice-primary',!saved);
+ solo.querySelector('strong').textContent=saved?'New solo match':'Play solo now';
+ solo.querySelector('small').textContent=saved?'Starts fresh · replaces saved progress':'Start immediately with selected opponents';
+ if(!saved)$('soloReplacePrompt').classList.add('hidden');
+}
+function startSoloFromMenu(){
+ if(savedSolo()){
+  $('soloReplacePrompt').classList.remove('hidden');
+  $('confirmNewSolo').focus();
+ }else createDemo(false);
+}
 function createDemo(resume=false){
  if(state||peer)goHome();lastSaveTick=-1;defeatDismissed=false;
  lastHudLand=null;lastHudTick=-1;lastHudOwners=null;lastHudArmies=new Map();hudNotice=null;activeThreats=[];announcedThreats.clear();lastThreatSignature="";
@@ -2118,7 +2132,7 @@ function goHome(){exitArmyFocus();
  worldLayer=null;pixelLayer=null;paintedRevision=-1;activeThreats=[];
  setTimeout(()=>{for(const c of closingConnections){try{c.close();}catch(_){}}try{closingPeer?.destroy();}catch(_){}},150);
  closeNations();setThreatList(false);hideAux();closePanel();$('quickBuild').classList.add('hidden');$('placingBuild').classList.add('hidden');$('targetPreview').classList.add('hidden');$('tutorial').classList.add('hidden');$('victory').classList.add('hidden');$('battleDock').classList.add('collapsed');
- $('lobbyError').textContent='';$('gameToast').classList.add('hidden');setBusy(false);
+ $('lobbyError').textContent='';$('soloReplacePrompt').classList.add('hidden');$('gameToast').classList.add('hidden');setBusy(false);
  history.replaceState(null,'',location.pathname+location.search);show('lobby');
 }
 function openSession(){
@@ -2142,7 +2156,10 @@ async function inviteFriends(){
  copyText(url);
 }
 $('cancelConnect').onclick=goHome;
-$('hostButton').onclick=createRoom;$('joinButton').onclick=joinRoom;$('demoButton').onclick=()=>createDemo(false);$('resumeButton').onclick=()=>createDemo(true);
+$('hostButton').onclick=createRoom;$('joinButton').onclick=joinRoom;
+$('demoButton').onclick=startSoloFromMenu;$('resumeButton').onclick=()=>createDemo(true);
+$('confirmNewSolo').onclick=()=>{$('soloReplacePrompt').classList.add('hidden');createDemo(false);};
+$('keepSolo').onclick=()=>{$('soloReplacePrompt').classList.add('hidden');$('resumeButton').focus();};
 $('leaveRoom').onclick=()=>{if(host)for(const c of connections.keys())try{c.send({t:'room-closed'});}catch(_){}goHome();};
 $('startButton').onclick=startGame;$('copyLink').onclick=inviteFriends;$('copyCode').onclick=()=>copyText(code);
 for(const id of ['hudTroops','hudFronts']){
@@ -2178,7 +2195,19 @@ $('restart').onclick=()=>{
 $('downloadSave').onclick=()=>{const blob=new Blob([JSON.stringify({tick:state.tick,winner:state.winner,players:state.players.map(p=>({name:p.name,land:p.land,kills:p.kills}))},null,2)],{type:'application/json'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='brothers-kingdoms-results.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);};
 try{const previous=localStorage.getItem('bk-name');if(previous)$('nickname').value=previous;}catch(_){ }
 try{const bots=localStorage.getItem('bk-solo-bots');if([...$('soloBots').options].some(o=>o.value===bots))$('soloBots').value=bots;}catch(_){}
-const fromHash=location.hash.replace('#','').toUpperCase().replace(/[^A-Z0-9]/g,'');if(fromHash){$('roomCode').value=fromHash;$('lobbyError').textContent='Room invite '+fromHash+'. Enter your name and press Join.';if($('nickname').value.trim())joinRoom();else $('nickname').focus();}updateResume();
+const fromHash=location.hash.replace('#','').toUpperCase().replace(/[^A-Z0-9]/g,'');
+if(fromHash){
+ $('roomCode').value=fromHash;
+ const hasName=!!$('nickname').value.trim();
+ let returning=false;try{returning=!!localStorage.getItem('bk-token-'+fromHash);}catch(_){}
+ if(hasName&&returning)joinRoom();
+ else{
+  const hint=$('inviteHint');hint.textContent='Invitation '+fromHash+' is ready. Review your name, then tap Join.';
+  hint.classList.remove('hidden');
+  (hasName?$('joinButton'):$('nickname')).focus();
+ }
+}
+updateResume();
 document.addEventListener('visibilitychange',()=>{if(document.hidden)saveSolo();else if(serverActive&&Date.now()-lastStateAt>4500){reconnectTries=0;openServerSocket();}});
 setInterval(()=>{if(demo&&state?.phase==='playing'&&!pauseSolo&&state.tick%10===0&&lastSaveTick!==state.tick){lastSaveTick=state.tick;saveSolo();}if(serverActive||!host||!state||state.phase!=='playing'||pauseSolo)return;E.tick(state);broadcast();},1000);
 setInterval(()=>{if(!serverActive&&host&&state?.phase==='playing'&&!pauseSolo&&state.armies.length){E.combatStep(state);broadcast();}},333);
