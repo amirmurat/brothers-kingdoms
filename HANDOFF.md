@@ -2,7 +2,7 @@
 
 **North star:** A game with meaningful human strategic choices, balanced difficulty and fair solo/multiplayer, without unnecessary mechanical complexity. Select next work from *this ranked queue*, never merely from the last edited feature. Priority is provisional, based on severity/exposure, evidence, player agency and safe reversibility. Re-rank after every completed six-stage issue; document only one canonical list here.
 
-1. **P1 / BK-03 — Player agency and competitive AI (partially evidenced; next investigation).** v132–v134 prove troop commitment and selected scouted objectives affect controlled battles; real difficulty and bot competitiveness remain under-measured. Next: run reproducible human-vs-bot, narrow-vs-wide orders on several seeds, record win/land/troop/loss/resource outcomes and determine the highest-impact *confirmed* issue before adjusting rules.
+1. **P1 / BK-03 — Player agency and competitive AI (v141 comparative evidence; investigation continues).** Legal scripted narrow/wide/no-order policies on three generated seeds and both seats show consequential choices, including opposite survival outcomes; no universal winning geometry. Default distant starts mostly do not meet even by 1,800 economy ticks. Next: diagnose stalled plans with reachable-front/reserve telemetry and compare matched economies/commitments before declaring a rules defect. See v141 below; scripted play is not measured human difficulty.
 2. **P2 / BK-04 — City/barracks/fort strategic opportunity cost (confirmed role imbalance, severity unmeasured).** v136 synthetic benchmarks suggest cities dominate multiple roles. Compare equal-resource defended-front scenarios first.
 3. **P2 / BK-05 — Late-game food/gold surplus (partially mitigated v137/v138, user impact unknown).** Do not add economic penalties without long-game evidence.
 4. **P2 / BK-06 — Real-device UX validation (pending, not a code regression).** Scouted objective and supply HUD still need real iPhone confirmation; browser Chromium/WebKit smoke is not physical Safari.
@@ -14,6 +14,26 @@
 **Future requirement, not a defect:** generated maps with diverse geography; ports/rail later when resource movement/logistics has actual value. Always test procedural map seeds when changing strategic AI. Do not edit `main` or owner-authored sprites.
 
 **Current six-step selection: BK-03 research.** Compare human strategic choices and bot outcomes on multiple reproducible map seeds, starting with the existing no-rules-change engine. New balance changes require measured player agency and fairness evidence; do not add features or move to BK-04 by inertia.
+
+---
+
+## v141 — BK-03 comparative baseline; no gameplay change (23.10.2026)
+
+**Source gates:** Started at `2cfd1a38399c29b4745c632afdc28a6703162f2d`, branch `design/visual-review-v26`; its full CI #39950514826 succeeded. Canonical Cloudflare health v110 / roomsBinding bound; fetched engine.js, game.js and styles/theme.css match branch after CRLF normalization, live HTML has all 30 `140-territory-bot-build-r1` tokens. No main/sprite/gameplay edits; engine remains v110.
+
+**Six stages:** (1) Unknown agency and AI difficulty cannot justify blind tuning. (2) Read instructions, historical handoff, map, engine, server clock and existing tests; short bot fixtures omitted most combat substeps and rarely reached opponents. (3) Considered immediate AI/economy buffs, synthetic boards alone, or reproducible generated-map policies. (4) Chose observation first: same 70% commitment, 40-vs-400-cell connected BFS zones, identical scripted economic policy across variants, both seats, seeds 88/7611/139, no free resources or hidden-building knowledge. (5) Added `tests/agency-benchmark-v141.cjs`: no-order economic control, narrow and wide, default or legally selected nearby starts; one economy tick plus three combat substeps matches server frequency. It records land, total troops, resources, buildings, orders, first war, actual winner/elimination and unfinished-plan frontier. Integrity and exact seeded replay assertions; no exact balance numbers frozen. (6) Ran comparative matrices and controlled-loss benchmark before any rules change.
+
+**Measurements:** 18 distant-start runs at 240 ticks: no wars; wide land 554–716, narrow 301–421, no-order 61. Extended same 18 variants to 1,800 ticks: only two entered war (wide seat 2, seed 88 at 1049, seed 7611 at 1009); no full-map winner. Wide did not always lead: seed 7611 seat 1 narrow 1541 vs wide 687. This measures exploration/expansion, mostly not competitive combat.
+
+18 nearby-start runs at 600 ticks (land player/bot, columns idle | narrow | wide):
+- seed 88 seat 1: 56/968 | 285/837 | 373/1062; seat 2: 0/981 | 95/816 | 0/1097.
+- seed 7611 seat 1: 0/1050 | 594/0 | 1200/0; seat 2: 0/913 | 0/580 | 83/357.
+- seed 139 seat 1: 0/1040 | 257/903 | 64/1138; seat 2: 59/568 | 142/875 | 300/520.
+All nearby variants entered war at ticks 17–138. Across six paired starts, no-order player eliminated in 4, narrow in 1, wide in 1; both active policies eliminated the bot in one start. **Eliminating the rival is not victory**: all winners null because remaining neutral land must be settled. Existing v133 controlled test still passes: 95% city corridor captured city/fort, 94 land for 1324 losses; broad country gained 32 for 101 losses without either objective. Full-match recruitment/loss totals are not instrumented; do not call final troop differences casualties.
+
+**Interpretation / re-ranking:** BK-03 remains first. Decisions demonstrably affect survival; this is not evidence for a general buff/nerf. Some single active plans stall, including peaceful distant starts, but this policy deliberately never cancels/redirects an unfinished plan; distinguish controller weakness, geography, physical reserve travel and an actual allocator defect first. BK-04/05 remain below it: food/gold surplus exists (e.g. seed 139 wide seat 2 food 4308 vs bot 15158), but no new penalty justified. No-order means no military orders, not an entirely idle human. Economic policy is fixed across human variants but differs from bot policy; construction is not capped to bot limits. These are deterministic scripted samples, not independent human win-rate estimates, iPhone playtests, or a proof of balanced difficulty.
+
+**Validation:** Local nearby 18-case matrix and exact replay passed; existing v133 controlled losses passed; Cloudflare build and diff whitespace check passed. Added nearby 600-tick matrix to full push CI. New commit CI/deploy checks pending publication; physical iPhone untested. Next: instrument stalled plans and replicate the most consequential confirmed defect before editing engine rules.
 
 ---
 

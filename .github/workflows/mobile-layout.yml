@@ -24,6 +24,7 @@ jobs:
           node tests/logic-audit-v131.cjs
           node tests/plan-commitment-v132.cjs
           node tests/strategic-balance-v133.cjs
+          BK_CLOSE=1 BK_TICKS=600 node tests/agency-benchmark-v141.cjs
           node tests/objective-targeting-v134.cjs
           node tests/objective-boundaries-v135.cjs
           node tests/economy-v100.cjs
