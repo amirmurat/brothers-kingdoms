@@ -1818,7 +1818,11 @@ function outlinedMapBuilding(source){
  buildingOutlineCache.set(source,layer);
  return layer;
 }
-// v119: one visual footprint per map cell. Do not enlarge adjacent original PNGs.
+// v120: visual detail by CSS pixels per world tile, calibrated against
+// owner sprite comparisons at 10 / 14 / 20 / 32px on portrait iPhone.
+const BUILDING_LOD_CLUSTER_PX=14;
+const BUILDING_LOD_DETAIL_PX=20;
+// One visual footprint per map cell. Do not enlarge adjacent original PNGs.
 function drawOverviewBuilding(b,x,y,count=1){
  ctx.save();ctx.translate(x,y);ctx.scale(1/zoom,1/zoom);
  const accent=color(b.owner);
@@ -1844,9 +1848,9 @@ function drawOverviewBuilding(b,x,y,count=1){
 }
 function drawMapBuilding(b){
  const bounds=buildingTileBounds(b);
- // Zoom LOD: distant clusters <11 CSS px/tile, owner's simple art 11–24,
- // original detailed art on close zoom. This affects only map presentation.
- const useSimple=OWNED_KINDS.has(b.kind)&&TILE*zoom<24;
+ // Zoom LOD: clusters below 14 CSS px/tile, simplified owner art from 14 to
+ // below 20, detailed original at 20+. Only map presentation changes.
+ const useSimple=OWNED_KINDS.has(b.kind)&&TILE*zoom<BUILDING_LOD_DETAIL_PX;
  const source=roofSprite(b.kind,b.owner,b.level,useSimple?'simple':'full');
  const outlined=useSimple?null:outlinedMapBuilding(source);
  // Native artwork occupies at most 82% of its own world tile. At high
@@ -1924,7 +1928,7 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
   if(sx<-16||sx>w+16||sy<-16||sy>h+16)continue;
   visibleMapBuildings.push(b);
  }
- if(TILE*zoom<11)drawDistantBuildings(visibleMapBuildings);
+ if(TILE*zoom<BUILDING_LOD_CLUSTER_PX)drawDistantBuildings(visibleMapBuildings);
  else for(const b of visibleMapBuildings)drawMapBuilding(b);
  // Political and war borders are a higher layer than buildings and roads.
  // This keeps country boundaries readable even in heavily built-up regions.
