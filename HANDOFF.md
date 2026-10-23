@@ -1,3 +1,12 @@
+## v125 — City dock safe inset on portrait iPhone (23.10.2026)
+
+- **Six-stage review:** owner screenshot of live v124 showed City sprite nearly touching the left edge of the viewport; goal is a balanced outer gutter without shrinking authored art or sacrificing one-tap construction. Checked narrow (320px) and normal portrait widths, hitbox, title/time, three live costs, Safari cache and tactical modes. Compared (1) padding entire dock (risks narrowing all three cost cells), (2) resizing/symmetric cards (unnecessary scope), (3) moving only first item identity. Selected reversible 8 CSS px inner shift for City sprite/label/time; centered cost row and dock dimensions unchanged.
+- **Implementation:** tail-only portrait CSS in `styles/theme.css`, matching the first City build button, `transform:translateX(8px)` for sprite/title/time and a matching `width:calc(100% - 8px)` on the title to stay within its own column. No art, gameplay, game.js, engine or other slots changed. `index.html` cache version `125-city-dock-inset-r1`.
+- **Regression:** `tests/mobile-layout.cjs` verifies City sprite is at least 11.5 CSS px inside its cell, title/time aligned, image and price inside button, no overlap, in narrow and regular portraits. Existing checks for button hit area, three prices and building selection remain. Full GitHub Actions and new Safari screenshots are separate, not assumed successful.
+- **Deploy:** only `design/visual-review-v26`; do not merge `main`. Confirm live CSS via distinct cache-busting URL; physical iPhone sign-off belongs to owner.
+
+---
+
 ## v124 — compact portrait HUD (23.10.2026)
 
 **Problem:** Screenshot-reviewed iPhone UI v123 has an oversized permanent top area (88px stats + 80px resources) and bottom dock (112px). Pure spacing reduction would cramp cards. The requested six-stage UX review considered the problem, touch/performance/legibility constraints, simple padding, collapsible details and fixed compact rows, then chose one-tap compact reflow and clear acceptance criteria.

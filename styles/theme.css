@@ -3640,3 +3640,17 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
   width:8px!important;height:8px!important;min-width:8px!important;max-width:8px!important;flex-basis:8px!important;
  }
 }
+
+
+/* v125 — portrait city inset: shift only its sprite and identity 8 CSS px.
+   Live prices remain centred in the original full-width row, and the button
+   still spans its original 76px-high hit target. */
+@media (orientation:portrait) and (max-width:600px){
+ #game#game#game#game #buildDock button[data-place-building="city"]
+  > :is(.building-art,span:not(.dock-cost),.dock-time){
+  transform:translateX(8px)!important;
+ }
+ #game#game#game#game #buildDock button[data-place-building="city"]>span:not(.dock-cost){
+  width:calc(100% - 8px)!important;
+ }
+}

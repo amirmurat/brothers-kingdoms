@@ -449,6 +449,18 @@ const server=http.createServer((req,res)=>{
    const buttons=await page.locator('#buildDock button').evaluateAll(els=>els.map(el=>{const r=el.getBoundingClientRect(),icon=el.querySelector(':scope > img').getBoundingClientRect(),price=el.querySelector('.dock-cost').getBoundingClientRect();return {width:r.width,height:r.height,artInside:icon.left>=r.left-1&&icon.right<=r.right+1&&icon.top>=r.top-1&&icon.bottom<=r.bottom+1,pricesInside:price.left>=r.left-1&&price.right<=r.right+1&&price.top>=r.top-1&&price.bottom<=r.bottom+1};}));
    assert(buttons.every(b=>Math.abs(b.width-buttons[0].width)<.5&&Math.abs(b.height-buttons[0].height)<.5&&b.height>=44&&b.artInside&&b.pricesInside),label+' equal tappable build options retain original art and prices '+JSON.stringify(buttons));
    if(viewport.width<viewport.height){
+    const cityInset=await page.locator('[data-place-building="city"]').evaluate(btn=>{
+     const box=btn.getBoundingClientRect(),art=btn.querySelector(':scope > img').getBoundingClientRect(),
+      title=btn.querySelector(':scope > span').getBoundingClientRect(),
+      time=btn.querySelector('.dock-time').getBoundingClientRect(),
+      costs=btn.querySelector('.dock-cost').getBoundingClientRect();
+     return {left:art.left-box.left,artWithin:art.right<=box.right-1,aligned:Math.abs(title.left-time.left)<1,
+      textWithin:title.right<=box.right+1&&time.right<=box.right+1,
+      separated:art.right+1<=title.left,costsWithin:costs.left>=box.left-1&&costs.right<=box.right+1};
+    });
+    assert(cityInset.left>=11.5&&cityInset.artWithin&&cityInset.aligned&&cityInset.textWithin&&cityInset.separated&&cityInset.costsWithin,label+' city sprite and label clear outer safe inset with no overlap '+JSON.stringify(cityInset));
+   }
+   if(viewport.width<viewport.height){
     const compact=await page.evaluate(()=>({top:document.querySelector('#game .topbar').getBoundingClientRect().height,resources:document.getElementById('resourceSummary').getBoundingClientRect().height,dock:document.getElementById('buildDock').getBoundingClientRect().height}));
     assert(compact.top<=64.5&&compact.resources<=62.5&&compact.dock<=76.5&&compact.dock>=44,label+' portrait HUD frees vertical map space '+JSON.stringify(compact));
    }
