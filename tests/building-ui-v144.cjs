@@ -11,12 +11,19 @@ const server=http.createServer((req,res)=>{try{
  }catch{res.writeHead(404);res.end();}});
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));fs.mkdirSync('test-results',{recursive:true});
  try{for(const [name,type] of [['Chromium',chromium],['WebKit',webkit]]){
- const browser=await type.launch({headless:true});try{for(const width of [320,390]){
-  const page=await browser.newPage({viewport:{width,height:780}});await page.goto('http://127.0.0.1:'+server.address().port);
+ const browser=await type.launch({headless:true});try{for(const viewport of [{width:320,height:568},{width:390,height:780}]){
+  const {width,height}=viewport,page=await browser.newPage({viewport});await page.goto('http://127.0.0.1:'+server.address().port);
   await page.click('#demoButton');await page.click('#startButton');await page.evaluate(()=>window.__build.fixture());
   await page.evaluate(()=>window.__build.select(80,50));
   const geometry=await page.evaluate(()=>{const b=document.getElementById('contextCard').getBoundingClientRect(),m=document.getElementById('mapCanvas').getBoundingClientRect();return {top:b.top,bottom:m.bottom,mapHeight:m.height,blocked:window.__build.blocked(),backdrop:!document.getElementById('auxBackdrop').classList.contains('hidden')};});
   assert(geometry.top>=geometry.bottom-1&&geometry.mapHeight>150,'Details occupy a separate bottom row, preserving usable map');assert(!geometry.blocked&&!geometry.backdrop);
+  const cityBounds=await page.locator('#contextCard').boundingBox();assert(cityBounds.y+cityBounds.height<=height+.5,'Details are inside viewport without auto-scroll');
+  await page.evaluate(()=>new Promise(requestAnimationFrame));
+  const mapBounds=await page.locator('#mapCanvas').boundingBox(),camera=await page.evaluate(()=>window.__build.get().camX);
+  await page.mouse.move(mapBounds.x+mapBounds.width*.45,mapBounds.y+mapBounds.height*.4);await page.mouse.down();
+  await page.mouse.move(mapBounds.x+mapBounds.width*.45+30,mapBounds.y+mapBounds.height*.4,{steps:4});await page.mouse.up();
+  assert(Math.abs(await page.evaluate(()=>window.__build.get().camX)-camera)>10,'Map still pans while details stay open');
+  assert(await page.locator('#contextCard').isVisible());
   const pixels=await page.evaluate(()=>['city','barracks','fort','farm'].map(k=>{const c=window.__build.icon(k,1),d=c.getContext('2d').getImageData(0,0,32,32).data;let opaque=0;for(let i=3;i<d.length;i+=4)if(d[i]===255)opaque++;return opaque;}));assert(pixels.every(n=>n===1024),'New icons fill the complete tile');
   await page.evaluate(()=>window.__build.mode('barracks'));
   const before=await page.evaluate(()=>JSON.stringify(window.__build.get().state.players[0].res));
@@ -37,6 +44,17 @@ const server=http.createServer((req,res)=>{try{
   await page.evaluate(()=>window.__build.select(86,50));await page.locator('[data-context-upgrade]').click();
   assert(await page.locator('[data-context-cancel]').isVisible(),'Upgrade can be cancelled separately from building removal');
   await page.screenshot({path:'test-results/v144-building-'+name+'-'+width+'.png'});
+  await page.locator('#closeContext').click();await page.locator('[data-place-building="farm"]').click();
+  await page.evaluate(()=>window.__build.select(92,50));
+  assert((await page.locator('#contextBody').textContent()).includes('Build Farm here?'),'Farm uses the same explicit confirmation');
+  await page.locator('[data-context-place]').click();
+  assert(await page.evaluate(()=>window.__build.get().state.buildJobs.some(j=>j.kind==='farm')),'Farm queues actual paid work');
+  await page.evaluate(()=>{const {state}=window.__build.get();for(let n=0;n<120;n++)window.BKEngine.workforceStep(state);window.__build.draw();window.__build.mode(null);window.__build.select(92,50);});
+  assert((await page.locator('#contextBody').textContent()).includes('Farm workers:'),'Completed farm explains real staffing');
+  assert(await page.locator('#contextCard').isVisible(),'Farm details stay visible');
+  const farmBounds=await page.locator('#contextCard').boundingBox();
+  assert(farmBounds.y+farmBounds.height<=height+.5,'Farm dock remains inside viewport '+JSON.stringify(farmBounds));
+  await page.screenshot({path:'test-results/v145-farm-'+name+'-'+width+'.png'});
   await page.close();console.log('PASS v144 building UI '+name+' '+width);
  }}finally{await browser.close();}}
  }finally{server.close();}

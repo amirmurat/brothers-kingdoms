@@ -181,6 +181,7 @@ function isCoast(s,x,y){return [[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>tile(
 function canBuild(s,id,kind,x,y){if(!KINDS[kind])return 'Unknown building.';if(!inside(x,y)||owner(s,x,y)!==id)return 'Build on your own territory.';
  if(buildingAt(s,x,y))return 'Tile already has a building.';
  if((s.buildJobs||[]).some(j=>j.x===x&&j.y===y))return 'Construction already queued here.';
+ if(kind==='farm'&&![1,4].includes(tile(s,x,y)))return 'Farms require grassland or fertile fields.';
  if(kind==='lumber'&&tile(s,x,y)!==2)return 'Lumber mills require forests.';
  if(kind==='quarry'&&![3,6].includes(tile(s,x,y)))return 'Quarries require hills or mountains.';
  if(kind==='mine'&&![3,5,6].includes(tile(s,x,y)))return 'Mines require mountains, hills, or ore deposits.';
@@ -434,7 +435,7 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
  if(a.type==='queueBuild'){
   const kind=String(a.kind),x=Math.floor(a.x),y=Math.floor(a.y),fail=canBuild(s,id,kind,x,y);
   if(fail)return {ok:false,error:fail};
-  if(!['city','barracks','fort'].includes(kind))return {ok:false,error:'Use a resource zone for production.'};
+  if(!['city','barracks','fort','farm'].includes(kind))return {ok:false,error:'Use a resource zone for production.'};
   s.buildJobs??=[];if(s.buildJobs.some(j=>j.x===x&&j.y===y))return {ok:false,error:'Construction already queued here.'};
   if(s.buildJobs.filter(j=>j.owner===id).length>=workforceStats(s,id).slots)return {ok:false,error:'All builder crews are assigned. Expand your cities or finish existing jobs.'};
   const count=s.buildJobs.filter(j=>j.owner===id&&!j.upgradeOf&&j.kind===kind).length;
@@ -554,7 +555,7 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
   if(plan){cancelOffensivePlan(s,plan);return {ok:true};}
   finishWave(s,army,p);s.armies=s.armies.filter(v=>v!==army);return {ok:true};
  }
- if(a.type==='build'&&['city','barracks','fort'].includes(a.kind))return action(s,id,{...a,type:'queueBuild'});
+ if(a.type==='build'&&['city','barracks','fort','farm'].includes(a.kind))return action(s,id,{...a,type:'queueBuild'});
  if(a.type==='build'){
   const kind=String(a.kind),x=Math.floor(a.x),y=Math.floor(a.y),fail=canBuild(s,id,kind,x,y);if(fail)return {ok:false,error:fail};
   const price=costBuilding(s,id,kind);
@@ -634,13 +635,17 @@ function action(s,id,a){if(s.phase!=='playing')return {ok:false,error:'Match is 
 // the HUD; squads represent those same soldiers, never an additional resource.
 // Civilian work is simulated in bounded groups, never one agent per person.
 const WORK_RESOURCES={food:[4],wood:[2],stone:[3,6],gold:[5]};
-const RESOURCE_TERRAIN={2:"wood",3:"stone",4:"food",5:"gold",6:"stone"};
+const RESOURCE_TERRAIN={2:"wood",3:"stone",5:"gold",6:"stone"};
 const autoSitesCache=new WeakMap();
 function automaticWorkSites(s,id){
  let cache=autoSitesCache.get(s);if(!cache||cache.revision!==s.territoryRevision||cache.buildings!==s.buildings.length||cache.jobs!==s.buildJobs||cache.jobCount!==(s.buildJobs||[]).length){
   const blocked=new Set([...s.buildings,...(s.buildJobs||[])].map(b=>idx(b.x,b.y))),byOwner=new Map();
   for(let i=0;i<s.tiles.length;i++){const owner=s.owners[i],resource=RESOURCE_TERRAIN[s.tiles[i]];if(!owner||!resource||blocked.has(i))continue;
    if(!byOwner.has(owner))byOwner.set(owner,[]);byOwner.get(owner).push({i,resource});}
+  // Food requires a manually built farm. Fields alone are not food jobs.
+  for(const b of s.buildings)if(b.kind==='farm'&&s.owners[idx(b.x,b.y)]===b.owner){
+   if(!byOwner.has(b.owner))byOwner.set(b.owner,[]);byOwner.get(b.owner).push({i:idx(b.x,b.y),resource:'food'});
+  }
   cache={revision:s.territoryRevision,buildings:s.buildings.length,jobs:s.buildJobs,jobCount:(s.buildJobs||[]).length,byOwner};autoSitesCache.set(s,cache);
  }return cache.byOwner.get(id)||[];
 }
@@ -654,16 +659,16 @@ function layRoad(s,p,i){
  const roads=roadSet(s);if(roads.has(i)||p.res.wood<1)return;
  p.res.wood--;s.roads.push(i);roads.add(i);roadSets.get(s).length=s.roads.length;s.roadRevision=(s.roadRevision||0)+1;
 }
-function workSuitable(s,id,resource,i){return Number.isInteger(i)&&i>=0&&i<W*H&&s.owners[i]===id&&WORK_RESOURCES[resource]?.includes(s.tiles[i]);}
+function workSuitable(s,id,resource,i){return Number.isInteger(i)&&i>=0&&i<W*H&&s.owners[i]===id&&(resource==='food'?s.buildings.some(b=>b.kind==='farm'&&b.owner===id&&idx(b.x,b.y)===i):WORK_RESOURCES[resource]?.includes(s.tiles[i]));}
 function cancelBuildingJob(s,p,job){
  const total=job.upgradeOf?upgradeTime({level:job.targetLevel-1}):constructionTime(job.kind);
- const remaining=1-clamp((job.progress||0)/Math.max(1,total),0,1),refund={};
+ const remaining=job.owner===p.id?1-clamp((job.progress||0)/Math.max(1,total),0,1):0,refund={};
  for(const [resource,cost] of Object.entries(job.cost||{})){
   refund[resource]=Math.floor(cost*remaining);p.res[resource]=Math.min(resourceCapacity(s,p.id),p.res[resource]+refund[resource]);
  }
  const target=s.buildings.find(b=>b.id===job.upgradeOf);if(target?.upgrade?.jobId===job.id)delete target.upgrade;
  s.buildJobs=s.buildJobs.filter(j=>j!==job);
- for(const g of p.workers||[])if(g.job===job.id){g.job=null;g.route=null;g.resource=null;g.progress=0;}
+ for(const g of person(s,job.owner)?.workers||[])if(g.job===job.id){g.job=null;g.route=null;g.resource=null;g.progress=0;}
  return {ok:true,refund};
 }
 function workforceStats(s,id){
@@ -819,6 +824,14 @@ function workforceStep(s){
    g.job=job.id;g.resource=null;g.roadTask=false;
    g.tx=job.x;g.ty=job.y;g.route=null;g.progress=0;
   }
+  // Built farms request an actual nearby crew; do not leave every worker locked
+  // forever on old deposits. Routing/construction still takes precedence.
+  const staffedFarms=new Set(p.workers.filter(g=>g.resource==='food').map(g=>idx(g.tx,g.ty)));
+  for(const farm of sites.filter(t=>t.resource==='food'&&!staffedFarms.has(t.i))){
+   const g=p.workers.filter(g=>!g.job&&!homeCrews.has(g)&&g.resource!=='food'&&components[idx(g.x,g.y)]===components[farm.i])
+    .sort((a,b)=>near(a,{x:farm.i%W,y:(farm.i/W)|0})-near(b,{x:farm.i%W,y:(farm.i/W)|0}))[0];
+   if(!g)continue;g.resource='food';g.tx=farm.i%W;g.ty=(farm.i/W)|0;g.route=null;g.roadTask=false;g.progress=0;
+  }
   const assigned={food:0,wood:0,stone:0,gold:0},availableResources=new Set(sites.map(t=>t.resource));
   for(const g of p.workers)if(g.resource)assigned[g.resource]++;
   const resourceWeight=r=>r===p.workPriority?4:1;
@@ -886,7 +899,7 @@ function workforceStep(s){
      s.buildJobs=s.buildJobs.filter(j=>j!==job);g.job=null;g.progress=0;
     }
    }
-   else if(g.resource){g.progress=Math.min(3,(g.progress||0)+1);g.status=g.progress<3?'Preparing':'Harvesting';if(g.progress>=3)p.workIncome[g.resource]+=g.count*.8;}
+   else if(g.resource){g.progress=Math.min(3,(g.progress||0)+1);g.status=g.progress<3?'Preparing':'Harvesting';if(g.progress>=3){const farm=g.resource==='food'?buildingAt(s,g.x,g.y):null;p.workIncome[g.resource]+=g.count*(farm?.kind==='farm'?(8/6)*farm.level:.8);}}
    else{g.status=g.roadTask?'Road complete':'Home';g.roadTask=false;}
   }
  }
@@ -965,7 +978,7 @@ function fieldRoute(field,start,destination){
 function fortRadius(b,s=null){const terrain=s?tile(s,b.x,b.y):1;return Math.round((8+6*Math.max(1,b.level||1))*(terrain===6?1.5:terrain===3?1.25:1));}
 function fortSees(s,f,b){const r=fortRadius(f,s);return (f.x-b.x)**2+(f.y-b.y)**2<=r*r;}
 function focusStatus(s,id,f=person(s,id)?.armyFocus){if(!f||!inside(f.x,f.y)||!tile(s,f.x,f.y))return 'invalid';const p=person(s,id),i=idx(f.x,f.y);if(s.owners[i]===id)return 'defend';if(p?.allies.includes(s.owners[i]))return 'invalid';return [...(s.attackPlans||[]),...(s.recoveryPlans||[])].some(q=>q.owner===id&&q.zoneCells?.includes(i))?'attack':'invalid';}
-function constructionTime(kind){return {city:35,barracks:30,fort:25}[kind]||20;}
+function constructionTime(kind){return {city:35,barracks:30,fort:25,farm:20}[kind]||20;}
 function upgradeTime(b){return 30*2**Math.max(0,b.level-1);}
 const fortIntel=new WeakMap();
 function visibleBuilding(s,id,b){
@@ -1633,7 +1646,7 @@ function counts(s,id){const stats={farm:0,lumber:0,quarry:0,mine:0,barracks:0,fo
 function resourceCapacity(s,id){const p=person(s,id);return p?.land>0?Math.max(500,Math.floor(p.land*STORAGE_PER_CELL)):0;}
 function clampStorage(s,p){const cap=resourceCapacity(s,p.id);for(const k of Object.keys(p.res))p.res[k]=Math.min(cap,p.res[k]);}
 function income(s,p){const c=counts(s,p.id),l=p.land,e=1+p.tech.economy*.25;
- const income={food:2+Math.round((c.farm*8+(p.workIncome?.food||0))*e),wood:1+Math.round((c.lumber*7+(p.workIncome?.wood||0))*e),stone:1+Math.round((c.quarry*7+(p.workIncome?.stone||0))*e),gold:1+Math.round((c.mine*7+(p.workIncome?.gold||0))*e)};
+ const income={food:2+Math.round((p.workIncome?.food||0)*e),wood:1+Math.round((c.lumber*7+(p.workIncome?.wood||0))*e),stone:1+Math.round((c.quarry*7+(p.workIncome?.stone||0))*e),gold:1+Math.round((c.mine*7+(p.workIncome?.gold||0))*e)};
  for(const k of Object.keys(income))p.res[k]=Math.min(resourceCapacity(s,p.id),p.res[k]+income[k]);
  // Supplies are used only by fielded troops. Stationed reserves have no upkeep.
  // Small rates preserve early-game accessibility; exhausted stocks never go negative.
@@ -1663,10 +1676,15 @@ function bot(s,id){const p=person(s,id);if(!alive(p)||s.phase!=='playing')return
   const limit=Math.min(32,14+Math.floor(Math.max(0,p.land-600)/160));
   const queued=(s.buildJobs||[]).filter(j=>j.owner===id&&!j.upgradeOf).length;
   if(bases.length+queued<limit){
-    const preferences=['barracks','city','fort'];const kind=preferences[Math.floor((s.tick/4+id)%preferences.length)];
+    const preferences=['barracks','city','fort'];
+    const farmOutput=bases.filter(b=>b.kind==='farm').reduce((n,b)=>n+8*b.level*(1+p.tech.economy*.25),0);
+    const foodNeed=Math.max(8,(p.upkeep?.food||0)+Math.ceil((p.recruitment?.potential||0)*.2)-2+(p.res.food<300?8:0));
+    const needsFarm=(p.res.food<300||(p.income?.food||2)-(p.upkeep?.food||0)-Math.ceil((p.troopIncome||0)*.2)<=0)&&
+     farmOutput<foodNeed&&!(s.buildJobs||[]).some(j=>j.owner===id&&j.kind==='farm');
+    const kind=needsFarm?'farm':preferences[Math.floor((s.tick/4+id)%preferences.length)];
     const cx=p.capital.x,cy=p.capital.y;for(let n=0;n<35;n++){
       const x=clamp(cx+Math.round((hash(n,s.tick,id)-.5)*30),0,W-1),y=clamp(cy+Math.round((hash(s.tick,n,id)-.5)*27),0,H-1);
-      if(!KINDS[kind].income&&!canBuild(s,id,kind,x,y)){action(s,id,{type:'queueBuild',kind,x,y});break;}
+      if(!canBuild(s,id,kind,x,y)){action(s,id,{type:'queueBuild',kind,x,y});break;}
     }
   }
   if(p.troops>130&&s.armies.filter(a=>a.owner===id).length<5){
@@ -1788,5 +1806,5 @@ function restoreNetworkState(s){
  delete s.armyPacked;return s;
 }
 
-return{BUILD:'v113',constructionSupport,focusStatus,constructionTime,upgradeTime,fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v114',constructionSupport,focusStatus,constructionTime,upgradeTime,fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });

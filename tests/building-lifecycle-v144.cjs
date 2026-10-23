@@ -36,3 +36,11 @@ function fixture(){const s=E.lobby(88),id=E.addPlayer(s,'Builder'),foe=E.addPlay
  assert(!E.action(s,id,{type:'cancelBuild',id:job.id}).ok);assert.deepEqual(p.res,before,'Stale captured site cannot be cancelled by former owner');
 }
 console.log('PASS v144 building lifecycle: quoted prices, authority, stale sites, proportional single refunds, crew release, upgrade cancellation and demolition');
+{
+ const {s,id,foe,p}=fixture(),job={id:'old-enemy-upgrade',owner:foe,kind:'city',x:30,y:40,upgradeOf:'city',targetLevel:2,progress:0,cost:{wood:100,gold:100}};
+ s.buildJobs=[job];s.buildings[0].upgrade={owner:foe,jobId:job.id,level:2};
+ E.person(s,foe).workers=[{id:'old-crew',job:job.id,x:30,y:40,count:6}];
+ const before={...p.res};assert(E.action(s,id,{type:'removeBuilding',id:'city'}).ok);
+ assert.deepEqual(p.res,before,'Demolishing a captured upgrade cannot steal the previous owner refund');
+ assert.equal(E.person(s,foe).workers[0].job,null);
+}

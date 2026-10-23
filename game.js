@@ -61,7 +61,7 @@ const BUILDING_PRIORITY={fort:8,barracks:7,city:6,mine:3,quarry:3,lumber:3,farm:
 const buildingArt=(kind,owner=null,level=1)=>`<img class="building-art tiny-building-art" src="${buildingRoofUrl(kind,owner,level)}" alt="" aria-hidden="true"/>`;
 const BUILDING_CODES={city:'CT',barracks:'BA',fort:'FT',farm:'FM',lumber:'WD',quarry:'ST',mine:'AU'};
 const buildingInfo={
- farm:{short:'Feeds your army.',detail:'+8 food/s per level',place:'Your land, excluding mountain summits',resource:'food',perLevel:8},
+ farm:{short:'Grows food with assigned workers.',detail:'Up to +8 food/s per level with 6 workers',place:'Your grassland or fertile fields',resource:'food',perLevel:8},
  lumber:{short:'Produces wood for development.',detail:'+7 wood/s per level',place:'Forests only',resource:'wood',perLevel:7},
  quarry:{short:'Produces stone for buildings.',detail:'+7 stone/s per level',place:'Hills or mountains',resource:'stone',perLevel:7},
  mine:{short:'Produces gold for research.',detail:'+7 gold/s per level',place:'Ore, hills, or mountains',resource:'gold',perLevel:7},
@@ -73,12 +73,12 @@ const nameResource={food:'Food',wood:'Wood',stone:'Stone',gold:'Gold'};
 let builderPreviewCache=null;
 let removalConfirmation=null;
 const briefCost=c=>Object.entries(c||{}).map(([k,v])=>`<span class="cost-unit">${uiIcon(k)}${number(v)}</span>`).join(' ');
-function buildingBenefit(id,p,level=1){const b=buildingInfo[id];if(!b)return '';if(b.resource)return `+${Math.round(b.perLevel*level*(1+.25*(p?.tech?.economy||0)))}/s ${({food:'food',wood:'wood',stone:'stone',gold:'gold'})[b.resource]}`;if(id==='city')return `+${24*level} workers · 6 wait here for nearby construction · no resource or army bonus`;if(id==='barracks')return `+${430*level} capacity · up to +${5*level} recruits/s · automatic border garrison`;if(id==='fort')return `up to +${(18.5*level).toFixed(1)} defense within radius 4 · base sight ${E.fortRadius({level})} tiles · hills +25% · mountains +50%`;return b.detail;}
+function buildingBenefit(id,p,level=1){const b=buildingInfo[id];if(!b)return '';if(id==='farm')return `Up to +${Math.round(8*level*(1+.25*(p?.tech?.economy||0)))}/s food · needs 6 workers`;if(b.resource)return `+${Math.round(b.perLevel*level*(1+.25*(p?.tech?.economy||0)))}/s ${({food:'food',wood:'wood',stone:'stone',gold:'gold'})[b.resource]}`;if(id==='city')return `+${24*level} workers · 6 wait here for nearby construction · no resource or army bonus`;if(id==='barracks')return `+${430*level} capacity · up to +${5*level} recruits/s · automatic border garrison`;if(id==='fort')return `up to +${(18.5*level).toFixed(1)} defense within radius 4 · base sight ${E.fortRadius({level})} tiles · hills +25% · mountains +50%`;return b.detail;}
 function techBenefit(id,level){if(id==='economy')return `Income multiplier ×${(1+level*.25).toFixed(2)}`;if(id==='war')return `Stronger attacks · defense +${(1.9*level).toFixed(1)} · recruitment +${2*level} troops/s`;if(id==='logistics')return `Conquest troop losses −${8*level}%`;return '';}
 function resourceRates(p){
  const c=E.counts(state,p.id),land=p.land||0,m=1+(p.tech.economy||0)*.25;
  const gross=p.income||{
-  food:2+Math.round((c.farm*8+(p.workIncome?.food||0))*m),
+  food:2+Math.round((p.workIncome?.food||0)*m),
   wood:1+Math.round((c.lumber*7+(p.workIncome?.wood||0))*m),
   stone:1+Math.round((c.quarry*7+(p.workIncome?.stone||0))*m),
   gold:1+Math.round((c.mine*7+(p.workIncome?.gold||0))*m)
@@ -170,7 +170,7 @@ function hideAux(){
  for(const id of AUX_IDS)$(id)?.classList.add('hidden');
  $('auxBackdrop')?.classList.add('hidden');document.body.classList.remove('aux-open');
  // Never reopen a dismissed object card on the next network tick.
- if(closingContext)selected=null;
+ if(closingContext){selected=null;delete $('contextCard').dataset.target;}
 }
 function showAux(id){
  if(id==='armiesPanel'){openMilitary('army');return;}
@@ -731,7 +731,7 @@ function contextual(item){
  const me=mine(),own=item.owner===myId;
  let html='';
  if(item.kind==='placement'){
-  const kind=item.buildingKind,cost=E.costBuilding(state,myId,kind),fail=E.canBuild(state,myId,kind,item.x,item.y);
+  const kind=item.buildingKind,cost=E.costBuilding(state,myId,kind),crews=E.workforceStats(state,myId),fail=E.canBuild(state,myId,kind,item.x,item.y)||(crews.slots<=crews.building?'All builder crews are assigned.':null);
   const support=E.constructionSupport(state,myId,item.x,item.y);
   html=`<div class="context-building-header"><strong>Build ${esc(E.KINDS[kind].name)} here?</strong><small>Cell ${item.x}, ${item.y}${support?' · builders ~'+support.travelTicks+'s away':''}</small></div>
    <div class="context-upgrade-price"><div>${briefCost(cost)}</div></div>
@@ -759,12 +759,23 @@ function contextual(item){
     own&&level<3?`<div class="context-upgrade-price"><div>${briefCost(cost)}</div></div>`:''}
    <details class="context-more"><summary>Details</summary><div class="context-builder-status">BUILDER CREWS · ${crews.building} / ${crews.slots} assigned</div>
     ${kind==='city'?`<div>Local builders: ${number(home)} at home · build nearby to shorten travel</div>`:''}
+    ${kind==='farm'?`<div>Farm workers: ${number((me.workers||[]).filter(g=>g.resource==='food'&&g.x===item.x&&g.y===item.y&&g.progress>=3).reduce((n,g)=>n+g.count,0))} / 6</div>`:''}
     ${['city','barracks'].includes(kind)?`<div>Nearby garrison: ${number(stationed)} troops</div>`:''}
     ${kind==='fort'?`<div>Scouting range: ${E.fortRadius(item,state)} tiles</div>`:''}
     ${level<3?`<div>Next: ${esc(buildingBenefit(kind,me,level+1))}</div>`:''}</details>`;
  }else html=`<strong>Army · ${number(item.strength)} troops</strong>${own?`<button data-context-return="${esc(item.id)}">Retreat</button>`:''}`;
  if(content.__last!==html){const expanded=content.querySelector?.('details')?.open;content.innerHTML=html;content.__last=html;if(expanded&&content.querySelector('details'))content.querySelector('details').open=true;}
  if(box.classList.contains('hidden'))showAux('contextCard');
+ const key=item.id||item.kind+':'+item.x+':'+item.y;
+ if(box.dataset.target!==key&&Number.isFinite(item.x)&&Number.isFinite(item.y)){
+  box.dataset.target=key;requestAnimationFrame(()=>{
+   if(box.classList.contains('hidden'))return;
+   const r=canvas.getBoundingClientRect(),x=(item.x+.5)*TILE*zoom+camX,y=(item.y+.5)*TILE*zoom+camY;
+   if(x<28)camX+=28-x;else if(x>r.width-76)camX+=r.width-76-x;
+   if(y<36)camY+=36-y;else if(y>r.height-60)camY+=r.height-60-y;
+   queueDraw();
+  });
+ }
 }
 let serverSocket=null,serverActive=false,serverSession=0,serverHeartbeat=null,serverJoinToken=null;
 function serverEnabled(){return window.BK_SERVER===true;}
@@ -1078,8 +1089,8 @@ function updateSelection(){const item=selected?.kind==='placement'?{...selected,
 function refreshQuickBuild(){
  const p=mine();if(!p||!state)return;
  const dock=$('buildDock');
- if(!dock.dataset.ready||dock.dataset.roofOwner!==String(myId)){dock.innerHTML=['city','barracks','fort'].map(id=>'<button type="button" data-place-building="'+id+'" aria-label="Place '+E.KINDS[id].name+'" aria-pressed="false">'+buildingArt(id,myId,1)+'<span>'+E.KINDS[id].name+'</span><small class="dock-time">'+E.constructionTime(id)+'s build</small><small class="dock-cost"></small></button>').join('');dock.dataset.ready='yes';dock.dataset.roofOwner=String(myId);}
- for(const id of ['city','barracks','fort']){const b=dock.querySelector('[data-place-building="'+id+'"]');b.classList.toggle('chosen',buildMode===id);b.setAttribute('aria-pressed',String(buildMode===id));const cost=E.costBuilding(state,myId,id);b.title=E.KINDS[id].name+' · '+costText(cost)+' · '+E.constructionTime(id)+'s construction after builders arrive';const price=b.querySelector('.dock-cost'),key=JSON.stringify(cost);if(price.dataset.cost!==key){price.innerHTML=briefCost(cost);price.dataset.cost=key;}}
+ if(!dock.dataset.ready||dock.dataset.roofOwner!==String(myId)){dock.innerHTML=['city','barracks','fort','farm'].map(id=>'<button type="button" data-place-building="'+id+'" aria-label="Place '+E.KINDS[id].name+'" aria-pressed="false">'+buildingArt(id,myId,1)+'<span>'+E.KINDS[id].name+'</span><small class="dock-time">'+E.constructionTime(id)+'s build</small><small class="dock-cost"></small></button>').join('');dock.dataset.ready='yes';dock.dataset.roofOwner=String(myId);}
+ for(const id of ['city','barracks','fort','farm']){const b=dock.querySelector('[data-place-building="'+id+'"]');b.classList.toggle('chosen',buildMode===id);b.setAttribute('aria-pressed',String(buildMode===id));const cost=E.costBuilding(state,myId,id);b.title=E.KINDS[id].name+' · '+costText(cost)+' · '+E.constructionTime(id)+'s construction after builders arrive';const price=b.querySelector('.dock-cost'),key=JSON.stringify(cost);if(price.dataset.cost!==key){price.innerHTML=briefCost(cost);price.dataset.cost=key;}}
  $('placingBuild').classList.add('hidden');
  if(buildMode){$('placingBuildName').textContent=E.KINDS[buildMode].name;$('placingBuildCost').textContent=costText(E.costBuilding(state,myId,buildMode));$('placingBuildIcon').innerHTML=uiIcon(buildMode);}
  const workers=E.workforceStats(state,myId);
@@ -1103,7 +1114,7 @@ function toggleQuickBuild(force){
 }
 function closePanelIfOpen(){if(panelOpen)closePanel();}
 function setBuildingMode(kind){exitArmyFocus();
- if(E.KINDS[kind]?.income){if(attackPlanner)resetAttackPlanner();buildMode=null;command({type:'setWorkPriority',priority:E.KINDS[kind].income});refreshQuickBuild();queueDraw();return;}
+ if(kind!=='farm'&&E.KINDS[kind]?.income){if(attackPlanner)resetAttackPlanner();buildMode=null;command({type:'setWorkPriority',priority:E.KINDS[kind].income});refreshQuickBuild();queueDraw();return;}
  if(kind&&attackPlanner)resetAttackPlanner();
  buildMode=kind||null;selected=null;setPreview(null);moveCursor=null;
  $('developButton').classList.toggle('chosen',!!buildMode||quickBuildOpen);$('developButton').setAttribute('aria-pressed',String(!!buildMode||quickBuildOpen));

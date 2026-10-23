@@ -3742,6 +3742,7 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
 }
 
 /* v144: non-modal building dock is a real flex row below the map. */
+#game#game#game#game#game .game-layout{display:flex!important;flex-direction:column!important;min-height:0!important;overflow:hidden!important}
 #game#game#game#game#game #contextCard{
  position:relative!important;inset:auto!important;left:auto!important;bottom:auto!important;
  transform:none!important;width:100%!important;max-width:none!important;flex:0 0 auto!important;
@@ -3768,3 +3769,15 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
 #game#game#game#game#game #contextBody progress{width:100%!important;height:7px!important;accent-color:#79d8ee}
 #game#game#game#game#game #contextCard #closeContext{width:44px!important;height:44px!important;min-height:44px!important;top:0!important;right:0!important}
 #game#game#game#game#game:has(#contextCard:not(.hidden)) #buildDock{visibility:hidden!important;pointer-events:none!important}
+
+/* v145: four explicit build choices, with wrapping costs inside each cell. */
+#game#game#game#game#game #buildDock{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;width:100%!important;gap:0!important}
+#game#game#game#game#game #buildDock button{
+ display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:26px 14px 26px!important;
+ justify-items:center!important;justify-self:stretch!important;align-content:center!important;gap:0!important;padding:3px!important;min-width:0!important;width:100%!important;max-width:none!important;box-sizing:border-box!important;
+}
+#game#game#game#game#game #buildDock button>.building-art{grid-column:1!important;grid-row:1!important;width:24px!important;height:24px!important;min-width:24px!important;max-width:24px!important;min-height:24px!important;max-height:24px!important;margin:0!important}
+#game#game#game#game#game #buildDock button>span{grid-column:1!important;grid-row:2!important;min-width:0!important;font:650 11px/14px system-ui!important;white-space:nowrap!important}
+#game#game#game#game#game #buildDock button>.dock-time{display:none!important}
+#game#game#game#game#game #buildDock button>.dock-cost{grid-column:1!important;grid-row:3!important;width:100%!important;min-width:0!important;display:flex!important;flex-wrap:wrap!important;justify-content:center!important;align-content:center!important;gap:0 3px!important;height:26px!important;font:500 9px/12px system-ui!important}
+#game#game#game#game#game #buildDock .dock-cost .cost-unit{font:inherit!important;white-space:nowrap!important}

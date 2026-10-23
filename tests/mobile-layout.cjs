@@ -484,8 +484,8 @@ const server=http.createServer((req,res)=>{
    const dock=await page.locator('#buildDock').boundingBox();
    assert(dock&&dock.width<=viewport.width&&dock.x>=0&&dock.y+dock.height<=viewport.height+1,label+' strategic dock fits');
    assert.equal(await page.locator('#developButton').isVisible(),false,label+' no construction catalogue toggle');
-   assert.equal(await page.locator('[data-place-building]').count(),3,label+' only three strategic buildings');
-   assert.equal(await page.locator('#buildDock button > img').count(),3,label+' dock uses original building art');
+   assert.equal(await page.locator('[data-place-building]').count(),4,label+' explicit city, barracks, fort and farm choices');
+   assert.equal(await page.locator('#buildDock button > img').count(),4,label+' dock uses the new filled-cell symbols');
    assert.equal(await page.locator('#workerCount').isVisible(),true,label+' workforce count is visible');
    assert.equal(await page.locator('#planToolPaint use').getAttribute('href'),'assets/icons/game.svg#sword',label+' attack action has sword icon');
    await page.locator('[data-place-building="city"]').click();
@@ -498,23 +498,20 @@ const server=http.createServer((req,res)=>{
    assert.equal(await page.locator('[data-place-building="fort"]').getAttribute('aria-pressed'),'true',label+' choosing another selects it');
    assert.equal(await page.locator('#placingBuild').isVisible(),false,label+' no separate placement chooser');
    const buttons=await page.locator('#buildDock button').evaluateAll(els=>els.map(el=>{const r=el.getBoundingClientRect(),icon=el.querySelector(':scope > img').getBoundingClientRect(),price=el.querySelector('.dock-cost').getBoundingClientRect();return {width:r.width,height:r.height,artInside:icon.left>=r.left-1&&icon.right<=r.right+1&&icon.top>=r.top-1&&icon.bottom<=r.bottom+1,pricesInside:price.left>=r.left-1&&price.right<=r.right+1&&price.top>=r.top-1&&price.bottom<=r.bottom+1};}));
-   assert(buttons.every(b=>Math.abs(b.width-buttons[0].width)<.5&&Math.abs(b.height-buttons[0].height)<.5&&b.height>=44&&b.artInside&&b.pricesInside),label+' equal tappable build options retain original art and prices '+JSON.stringify(buttons));
+   assert(buttons.every(b=>Math.abs(b.width-buttons[0].width)<.5&&Math.abs(b.height-buttons[0].height)<.5&&b.height>=44&&b.artInside&&b.pricesInside),label+' four equal tappable build options contain symbols and prices '+JSON.stringify(buttons));
    if(viewport.width<viewport.height){
     const aligned=await page.locator('#buildDock button').evaluateAll(els=>els.map(el=>{
      const r=el.getBoundingClientRect(),art=el.querySelector(':scope > img').getBoundingClientRect(),
       title=el.querySelector(':scope > span').getBoundingClientRect(),
-      time=el.querySelector('.dock-time').getBoundingClientRect(),
       costs=el.querySelector('.dock-cost').getBoundingClientRect();
      const priceUnits=[...el.querySelectorAll('.dock-cost .cost-unit')].map(u=>u.getBoundingClientRect());
-     return {kind:el.dataset.placeBuilding,artX:art.left-r.left,titleX:title.left-r.left,
-      timeX:time.left-r.left,priceCenter:(costs.left+costs.right)/2-(r.left+r.right)/2,
-      artInside:art.left>=r.left&&art.right<=r.right,headerInside:title.right<=r.right+1&&time.right<=r.right+1,
-      separated:art.right+1<=title.left,pricesInside:priceUnits.length===3&&priceUnits.every(u=>u.left>=r.left-1&&u.right<=r.right+1)};
+     return {kind:el.dataset.placeBuilding,artCenter:(art.left+art.right-r.left-r.right)/2,titleCenter:(title.left+title.right-r.left-r.right)/2,
+      priceCenter:(costs.left+costs.right-r.left-r.right)/2,
+      artInside:art.left>=r.left&&art.right<=r.right&&art.bottom<=title.top+1,
+      pricesInside:priceUnits.length===(el.dataset.placeBuilding==='farm'?2:3)&&priceUnits.every(u=>u.left>=r.left-1&&u.right<=r.right+1&&u.bottom<=r.bottom+1)};
     }));
-    const inset=viewport.width<=355?8:12,range=key=>Math.max(...aligned.map(a=>a[key]))-Math.min(...aligned.map(a=>a[key]));
-    assert(aligned.length===3&&aligned.every(a=>Math.abs(a.artX-inset)<.6&&a.artInside&&a.headerInside&&a.separated&&a.pricesInside),label+' each portrait build cell shares same safe inset and keeps three prices visible '+JSON.stringify(aligned));
-    assert(range('artX')<.6&&range('titleX')<.6&&range('timeX')<.6,label+' City, Barracks and Fort artwork/text align across all columns '+JSON.stringify(aligned));
-    assert(aligned.every(a=>Math.abs(a.priceCenter)<.6),label+' live costs stay centered in their original button cells '+JSON.stringify(aligned));
+    assert(aligned.length===4&&aligned.every(a=>a.artInside&&a.pricesInside),label+' all four portrait build cells retain complete prices '+JSON.stringify(aligned));
+    assert(aligned.every(a=>Math.abs(a.artCenter)<.6&&Math.abs(a.titleCenter)<.6&&Math.abs(a.priceCenter)<.6),label+' symbols, titles and wrapping prices stay centered '+JSON.stringify(aligned));
    }
    if(viewport.width<viewport.height){
     const compact=await page.evaluate(()=>({top:document.querySelector('#game .topbar').getBoundingClientRect().height,resources:document.getElementById('resourceSummary').getBoundingClientRect().height,dock:document.getElementById('buildDock').getBoundingClientRect().height}));

@@ -48,6 +48,7 @@ function fixture(){
  const {s,id,p}=fixture();const resources={food:[4,36,40],wood:[2,37,40],stone:[3,38,40],gold:[5,39,40]};
  for(const [resource,[terrain,x,y]] of Object.entries(resources)){
   s.tiles[E.idx(x,y)]=terrain;
+  if(resource==='food')s.buildings.push({id:'manual-farm',owner:id,kind:'farm',level:1,x,y});
   s.territoryRevision++;
   E.action(s,id,{type:'setWorkPriority',priority:resource});
   for(let t=0;t<70;t++)E.tick(s);

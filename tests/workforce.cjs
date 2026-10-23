@@ -10,9 +10,10 @@ function fixture(){const s=E.lobby(41),id=E.addPlayer(s,'Builder'),enemy=E.addPl
  const {s,id,enemy,p}=fixture(),wood=E.idx(20,20),food=E.idx(20,21),stone=E.idx(20,22),gold=E.idx(20,23),foreign=E.idx(41,20);
  s.tiles[wood]=2;s.tiles[food]=4;s.tiles[stone]=3;s.tiles[gold]=5;s.tiles[foreign]=2;
  for(const [resource,i] of Object.entries({wood,food,stone,gold})){
-  const result=E.action(s,id,{type:'workZone',resource,cells:[i,i,foreign,E.idx(10,20)]});assert(result.ok);assert.equal(result.cells,1);
+  const result=E.action(s,id,{type:'workZone',resource,cells:[i,i,foreign,E.idx(10,20)]});assert(result.ok);assert.equal(result.cells,resource==='food'?0:1);
  }
- assert.equal(s.workZones.length,4);assert.equal(s.wars.length,0,'Civilian paint cannot declare war');
+ assert.equal(s.workZones.length,3);assert.equal(s.wars.length,0,'Civilian paint cannot declare war or create farms');
+ s.buildings.push({id:'manual-farm',owner:id,kind:'farm',level:1,x:20,y:21});
  assert.equal(E.action(s,id,{type:'workZone',resource:'hack',cells:[]}).ok,false);
  assert.equal(E.action(s,id,{type:'workZone',resource:'wood',cells:[-1]}).ok,false);
  E.workforceStep(s);assert.equal(E.workforceStats(s,id).capacity,24);assert.equal(p.workers.length,4);

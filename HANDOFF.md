@@ -4,7 +4,7 @@
 
 **Owner's match-length target (23.10.2026): 15–30 minutes.** Assess first contact and progression against this target. The v141 two-kingdom first-border controller is not enough to attribute slow contact to rules: compare directed legal routes, bot counts and starting distance before changing simulation speed or AI.
 
-1. **P1 / BK-07 — Owner-selected building readability and construction workflow (v144 / next manual farms).** Owner requests filled-cell simple icons, map construction/upgrade indicators, non-modal bottom details, explicit placement confirmation, cancellation/demolition and manual paid worker-operated farms. First cycle is v144; second must replace automatic food fields with manually built farms. Owner explicitly accepts replacing displayed old art; preserve original PNGs as archive. Complete these before more balance research.
+1. **P1 / BK-07 — Owner-selected building readability and construction workflow (v144/v145).** Filled-cell icons, construction/upgrade indicators, non-modal bottom details, placement confirmation, cancellation/demolition and manual paid worker-operated farms implemented. v144 CI #39962356444 passed and Cloudflare v113/source equality confirmed before v145 edits; v145 full CI/deployment pending. Owner explicitly accepts replacing displayed old art; original PNGs remain archived. Next verify final gates and real portrait iPhone feedback before more balance research.
 2. **P2 / BK-04 + BK-05 — Economic roles/recovery follow-up.** v142 city/barracks roles and v143 recovery floor verified; next owner play feedback. No new professions or reserve slider.
 3. **P2 / BK-03 — Player agency and competitive AI (v141 evidence; tempo research deferred by owner).** Revisit after economic/building review.
 4. **P2 / BK-06 — Real-device UX validation (pending).** Portrait iPhone still separate from Chromium/WebKit smoke.
@@ -15,7 +15,19 @@
 
 **Future requirement, not a defect:** generated maps with diverse geography; ports/rail later when resource movement/logistics has actual value. Always test procedural map seeds when changing strategic AI. Do not edit `main` or owner-authored sprites.
 
-**Current six-step selection: v144 building workflow, then manual farms as explicitly confirmed by owner.** Farmer professions and unrelated mechanical additions are out of scope.
+**Current six-step selection: v145 manual farms and final building workflow validation.** Farmer professions and unrelated mechanical additions are out of scope.
+
+---
+
+## v145 — paid worker-operated farms and final map-dock integration (23.10.2026)
+
+**Six-stage cycle:** Owner clarified that a manual Farm is a separately placed paid building with real workers. Rechecked v144 canonical health v113 and exact engine/game/theme equality; full v144 CI #39962356444 succeeded at `2479f75`. Compared painting food fields, free automatic extraction and reusing normal construction; chose existing paid queue, builder travel, confirmation, upgrade and removal. Criteria: no food from mere terrain, no passive Farm income, working human/bot parity, no new professions, four readable mobile choices and actual visible map/dock geometry.
+
+**Rules / migration:** Engine v114 / client `145-manual-farms-r1`. Farm uses existing base price 45 wood + 10 stone, same 5% same-type scaling, 20 builder-work ticks after arrival. Place only on owned grassland/fertile fields, not deposits, summits or occupied cells. Both `build` and `queueBuild` now use paid delayed construction. Fertile terrain alone is no longer a food job; existing saved Farms remain but now require staffing. A nearby non-builder/non-home crew walks to each manually built Farm, prepares and harvests; six workers give 8 food/tick per level before research (proportional for smaller recovery crews). No passive `farmCount*8` duplication. Construction still wins crew priority, city home builders remain; wood/stone/gold extraction and v143 minimal income unchanged. Bots buy normal farms when stored/net food and farm output indicate shortage, count pending farm work, no free AI farms.
+
+**Integrated UI / verified defect:** Four equal catalog cells (City/Barracks/Fort/Farm), new full-cell symbols and wrapping prices; duration remains in placement/title instead of squeezing a fifth text row. Farm uses the same confirmation and typed pending-site card, upgrade/cancel/demolition flow. Details report Farm workers. Screenshot inspection caught that the old `.game-layout` block parent could place a relative details panel BELOW the viewport; Playwright auto-scroll to buttons had masked it in the first cycle. Parent is now a real flex column, map shrinks and remains interactive, selected object is kept away from the dock/side controls. New assertions require dock inside viewport before clicking and actual map panning at 320x568/390x780. A second authority regression prevents demolishing a newly captured enemy upgrade from crediting its old owner's paid materials to the captor.
+
+**Validation:** New `tests/manual-farms-v145.cjs`: no terrain-only food, legal own terrain, authoritative prices, delayed build, physical staffing, levels, old saves, removal stopping output and paid AI farm requests. Existing price/workforce tests updated for delayed staffed farms; no weakening of pricing/ownership invariants. All local engine/server suites pass (heavy performance reserved for full CI), 18 seeded 600-tick agency cases and replay/integrity pass. Existing mobile suite passes locally in Edge at 320/390/844; new workflow suite passes at 320x568/390x780, including actual Farm placement → building → staffing and viewport/panning checks. Screenshots inspected; original art/main untouched. Full final CI/Cloudflare and actual iPhone are independent gates, pending publication. No claim that economic difficulty is fully balanced; next owner-play feedback, especially farm workforce opportunity cost and far-zoom recognizability.
 
 ---
 

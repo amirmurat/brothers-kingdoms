@@ -3,6 +3,7 @@ const assert=require('node:assert/strict'),E=require('../engine.js');
 const s=E.lobby(4701),id=E.addPlayer(s,'Builder'),other=E.addPlayer(s,'Rival');
 assert(E.start(s,0).ok);s.buildings=[];s.tiles.fill(1);s.owners.fill(id);
 const p=E.person(s,id);p.land=s.tiles.length;p.res={food:10000,wood:10000,stone:10000,gold:10000};
+s.buildings.push({id:'worker-city',owner:id,kind:'city',level:1,x:10,y:10});
 const build=(kind,x,y)=>E.action(s,id,{type:'build',kind,x,y,price:{wood:0},cost:{wood:0}});
 const base=JSON.stringify(E.KINDS);
 assert.deepEqual(E.costBuilding(s,id,'farm'),{wood:45,stone:10});
@@ -11,9 +12,8 @@ assert(build('farm',20,20).ok);assert.equal(p.res.wood,wood-45);assert.equal(p.r
 assert.deepEqual(E.costBuilding(s,id,'farm'),{wood:48,stone:11});
 wood=p.res.wood;assert(build('farm',21,20).ok);assert.equal(p.res.wood,wood-48);
 assert.deepEqual(E.costBuilding(s,id,'farm'),{wood:50,stone:11});
-const first=s.buildings[0];
-// Upgrades now need an actual workforce: a level-1 city supplies builder crews.
-s.buildings.push({id:'worker-city',owner:id,kind:'city',level:1,x:10,y:10});
+for(let t=0;t<100;t++)E.workforceStep(s);
+const first=s.buildings.find(b=>b.kind==='farm');assert(first,'Paid farms require builders to finish before upgrading');
 assert(E.action(s,id,{type:'upgrade',id:first.id}).ok);
 assert.equal(E.buildingCount(s,id,'farm'),2,'levels do not count as extra buildings');
 assert.equal(E.costBuilding(s,id,'farm').wood,50);
