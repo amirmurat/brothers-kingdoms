@@ -6,6 +6,8 @@
 
 **Verification:** `tests/objective-targeting-v134.cjs` runs against seven already-seeded generated terrains, testing hidden-building rejection, war authorization, troop conservation, network snapshots, battlefield connectivity, and ally protection. Mobile Chromium/WebKit screen checks and Cloudflare deployment remain independent gates. No original sprite files or `main` updates. Engine build v106; client token `134-objective-theatre-r1`. Future map regeneration with completely new geography or dimensions will require additional tests rather than assuming current 160×104 is dynamic. This is a small first playable objective UX, not a full AI or economy rebalance.
 
+**v134 UI correction:** First full CI failed the new mobile smoke check because a historical generic CSS rule hid `#targetQuickPercents` even for the new `data-order="objective"` mode. Added a narrowly scoped higher-specificity rule only for objective previews; ordinary passive target previews stay unchanged. Refreshed HTML asset token to `134-objective-theatre-r2`; mobile test now explicitly checks that the troop choices are visible before clicking. Engine remains v106.
+
 **Next research:** Test real iPhone selection of a scouted enemy structure and attack outcome; compare player success at tactical objectives vs wide plans with bots and several generated seeds. Then audit building cost vs recurring benefit and late-game money/food overload before changing economic values.
 
 ---

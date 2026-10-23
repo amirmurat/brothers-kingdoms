@@ -3732,3 +3732,11 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
 #waiting#waiting#waiting#waiting #roomActionBar #waitingHint:empty{
  display:none!important;
 }
+
+/* v134 objective orders need a visible troop-choice row; generic quick-target
+   controls stay hidden for existing passive map previews. */
+#game#game#game#game #targetPreview[data-order="objective"] #targetQuickPercents{
+ display:grid!important;
+ grid-template-columns:repeat(5,minmax(0,1fr))!important;
+ gap:5px!important;
+}

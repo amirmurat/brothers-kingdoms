@@ -713,6 +713,7 @@ const server=http.createServer((req,res)=>{
     assert(await page.locator('#targetPreview').isVisible(),label+' tapping a known city opens objective preview');
     assert((await page.locator('#targetTitle').textContent()).includes('City'),label+' preview identifies the goal');
     assert.equal(await objectiveButton.textContent(),'Attack objective',label+' attack action is clear');
+    assert(await page.locator('[data-target-percent="50"]').isVisible(),label+' objective troop presets are visible');
     await page.locator('[data-target-percent="50"]').click();
     await objectiveButton.click();
     const outcome=await page.evaluate(()=>{
