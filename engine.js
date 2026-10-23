@@ -322,7 +322,9 @@ function upsertPaintedPlan(s,id,request,rawTargets,percent,editId=null,excludeTa
   s.armies=s.armies.filter(w=>!removedIds.has(w.planId));
   s.attackPlans=s.attackPlans.filter(pl=>!removedIds.has(pl.id));
  }
- const strategy={focus:plan.focus,allocationMode:plan.allocationMode,allocationValue:plan.allocationValue};
+ // A player's painted troop percentage is a real allocation request, not just metadata.
+ // Unedited legacy AUTO plans retain their prior behavior and fixed-troop orders stay fixed.
+ const strategy={focus:plan.focus,allocationMode:plan.allocationMode==='troops'?'troops':'percent',allocationValue:plan.allocationMode==='troops'?plan.allocationValue:percent};
  const partTotal=parts.reduce((n,c)=>n+c.length,0);
  const plans=parts.map((zoneCells,i)=>{
   const item=i===0?plan:{id:'p'+(++s.nonce),owner:id,waves:0,initialStrength:Math.max(35,Math.floor(p.troops*percent/100))};
@@ -1661,5 +1663,5 @@ function restoreNetworkState(s){
  delete s.armyPacked;return s;
 }
 
-return{BUILD:'v104',focusStatus,constructionTime,upgradeTime,fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
+return{BUILD:'v105',focusStatus,constructionTime,upgradeTime,fortRadius,visibleBuilding,strategicWeight,reserveShare,TROOPS_PER_PLAN_CELL,planCellLimit,STORAGE_PER_CELL,resourceCapacity,automaticWorkSites,WORK_RESOURCES,workforceStats,workSuitable,workforceStep,roadRoute,moveOnRoute,automaticAllocation,networkState,restoreNetworkState,frontDeployment,localAttackStrength,spatialArmyStep,homeSites,militaryStrength,planAllocation,W,H,MAX,COLORS,KINDS,TECH,previewFront,canBuild,tileDefense,estimatePlanFront,lobby,addPlayer,start,previewTerrain,spawnError,setSpawn,action,tick,bot,owner,tile,buildingAt,armiesAt,person,counts,buildingCount,costBuilding,costUpgrade,costTech,landCount,inside,idx,sealTerritories,nearestBorderLand,combatStep};
 });

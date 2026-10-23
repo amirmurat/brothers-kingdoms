@@ -1,3 +1,15 @@
+## v132 — make painted troop commitment real (23.10.2026)
+
+**Six-stage problem:** Owner's root concern is weak human strategic agency, especially painting entire countries/world and relying on automatic targets. Reviewed original engine, front logic, battle UI, fort intel, and deterministic narrow/medium/world attack scenarios at 3,000 and 200,000 troops. Local vs wide plans change initial frontier and battle distribution, but human painted-plan TROOPS 5%, 30%, 50%, 95% all originally launched exactly 758 troops in a controlled 3,000-army scenario and captured the same 48 cells after 32 combat substeps. The slider changed only legacy `initialStrength` metadata: `automaticAllocation` ignored `plan.percent`. A historical army test deliberately asserted this ineffective behavior.
+
+**Options and chosen rule:** Deleting the slider would avoid deception but retain weak agency; adding a superficial "Prioritize" toggle would not resolve the existing broken choice; rewriting into goal-based objectives is the long-term strategic candidate but requires more UX and balance exploration. Chose minimal, reversible existing-rule fix: new/edited player-painted plans use `allocationMode:'percent'` and `allocationValue` from the slider; fixed-troop manual orders remain fixed. Old saved AUTO plans retain behavior unless edited; split disconnected plans share the specified percent instead of multiplying it. The existing allocation pool protects the defensive reserve and competing plans, preserves physical troop routes, and prevents army creation.
+
+**Evidence and changes:** Prototype first wave at 3,000 troops with same region was 150/900/1,950 soldiers for 5/30/95% (95% capped by defensive reserve). The renderer now shows `N% MAX` and the requested troop upper bound instead of misleading AUTO text. Engine build v105; client token `132-real-commitment-r1`. Added `tests/plan-commitment-v132.cjs`, updated `tests/army-command.cjs` legacy assertion and `tests/unlimited-plans.cjs` build guard; CI invokes new regression. Local engine checks of prior military tests passed after updating only the obsolete expectation; full CI and Cloudflare must be checked independently. No `main`, original art or save schema rewrites.
+
+**Next gameplay priorities:** Replace excessive painting with meaningful target objectives and commitment on a future controlled design iteration; test battlefield trade-offs, mid/late game economy, and meaningful city/barracks/fort roles before rebalancing. Silent plan-size truncation when external input exceeds troop-dependent cell limit is an audit concern; UI painting already caps brush selection, so do not claim a user-visible repro without testing. Ports and railway stations remain future logistics features.
+
+---
+
 ## Strategy audit after v131 — large painted plans undermine player agency (23.10.2026, no gameplay changes)
 
 **Owner's question:** Why draw plans at all if a player can paint an entire country/world and let automatic armies choose where to fight? This is more fundamental than adding a `Prioritize` button to the current Army UI. Do not assume a priority toggle alone solves the problem.

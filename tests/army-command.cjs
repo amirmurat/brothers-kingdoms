@@ -11,7 +11,7 @@ function setup(percent=30){
  assert(E.action(s,id,{type:'send',x:71,y:40,zone,percent}).ok);return{s,id,p,a:s.armies[0]};
 }
 {
- const t=setup(5),other=setup(95);assert.equal(t.a.strength,other.a.strength,'Old troop sliders do not affect automatic orders');
+ const t=setup(5),other=setup(95);assert(t.a.strength<other.a.strength,'A 95% painted order commits more than a 5% painted order while preserving reserves');
  assert(t.a.columns.every(c=>c.x===70),'Sufficient nearby troops take priority over distant bases');
  assert(t.p.troops>=25000,'The director retains a defensive reserve');
  const before=t.p.land;for(let n=0;n<50&&t.p.land===before;n++)E.combatStep(t.s);
@@ -26,4 +26,4 @@ function setup(percent=30){
  for(let n=0;n<100&&t.p.land===before;n++)E.combatStep(t.s);
  assert(t.p.land>before,'The original order resumes with physical reinforcements');
 }
-console.log('PASS autonomous commands: old slider ignored, nearby force, 100k reserves, local advancement and active support');
+console.log('PASS painted troop commitment: real slider, nearby force, 100k reserves, local advancement and active support');

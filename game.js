@@ -567,8 +567,8 @@ function refreshPlanReview(){
  $('planDescription').textContent=other&&!war?'Confirming will declare war on '+other.name+'. Captures will advance only inside the outline.':
   other?'War is already active. Troops will advance only through the marked zone.':
   'Your army will gradually claim the marked neutral land. No troops move before confirmation.';
- $('planForceLabel').textContent='AUTO';
- $('planForceDetails').textContent='Ready sectors advance independently. Troops and defensive reserves are assigned automatically.';
+ $('planForceLabel').textContent=percent+'% MAX';
+ $('planForceDetails').textContent='Up to '+number(Math.floor(E.militaryStrength(state,myId).total*percent/100))+' troops requested. Defensive reserves and other offensives can reduce actual deployment.';
  const btn=$('planLaunch');btn.textContent=other&&!war?'Declare war & attack':'Start offensive';
  btn.classList.toggle('declare-war',!!other&&!war);
  btn.disabled=!plan.zoneCells?.length;
