@@ -10,7 +10,16 @@ async function checkRoom(E,source,assert,btoa){
  const clone=x=>JSON.parse(JSON.stringify(x));
  const storage={async get(k){if(Array.isArray(k))return new Map(k.map(i=>[i,data.get(i)]));return data.get(k);},async put(k,v){data.set(k,clone(v));},async transaction(fn){return fn(this);},async setAlarm(){},async deleteAll(){data.clear();}};
  const ctx={storage,blockConcurrencyWhile(fn){this.ready=fn();},getWebSockets(){return sockets.filter(s=>!s.closed);},waitUntil(p){pending.push(p);}};
- const room=new KingdomRoom(ctx,{});await ctx.ready;await room.fetch(new Request('https://test/internal/create?code=A1B2C3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'A',token:'session-a-123456789'})}));
+ const room=new KingdomRoom(ctx,{});await ctx.ready;
+ // Public health discloses only binding availability, never tokens or logs.
+ const healthy=await worker.fetch(new Request('https://test/api/health'),{ROOMS:{get(){},idFromName(){}}});
+ const healthInfo=await healthy.json();
+ assert.equal(healthInfo.roomsBinding,'bound','health identifies configured ROOMS service');
+ const missing=await worker.fetch(new Request('https://test/api/health'),{});
+ assert.equal((await missing.json()).roomsBinding,'missing','health exposes missing ROOMS binding safely');
+ const missingRoom=await worker.fetch(new Request('https://test/api/rooms',{method:'POST',headers:{Origin:'https://test','Content-Type':'application/json'},body:'{}'}),{});
+ assert.equal(missingRoom.status,503,'room setup fails cleanly when DO binding is absent');
+ assert.equal((await missingRoom.json()).code,'ROOMS_BINDING_MISSING');await room.fetch(new Request('https://test/internal/create?code=A1B2C3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'A',token:'session-a-123456789'})}));
  function socket(){const w={attachment:{id:null},sent:[],closed:false,deserializeAttachment(){return this.attachment;},serializeAttachment(a){this.attachment=a;},send(s){this.sent.push(JSON.parse(s));},close(){this.closed=true;}};sockets.push(w);return w;}
  const a=socket(),b=socket(),c=socket();
  const msg=(w,m)=>room.webSocketMessage(w,JSON.stringify(m));

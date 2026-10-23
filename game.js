@@ -753,7 +753,16 @@ async function createServerRoom(){
  try{
   const token=crypto.randomUUID();
   const response=await fetch('/api/rooms',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name(),token})});
-  if(!response.ok)throw Error('Server unavailable. Try again.');
+  if(!response.ok){
+   let reason='Server unavailable (HTTP '+response.status+').';
+   try{
+    const detail=await response.json();
+    if(detail?.code==='ROOMS_BINDING_MISSING')reason='Room service is not configured (ROOMS binding).';
+    else if(detail?.code==='ROOM_CREATION_FAILED')reason='Room storage unavailable (HTTP '+response.status+').';
+    else if(detail?.error&&response.status<500)reason=detail.error+' (HTTP '+response.status+').';
+   }catch(_){}
+   throw Error(reason);
+  }
   const room=await response.json();if(session!==serverSession)return;
   code=room.code;serverJoinToken=token;
   try{localStorage.setItem('bk-token-'+code,token);}catch(_){}

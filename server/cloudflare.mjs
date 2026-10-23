@@ -15,13 +15,22 @@ const json = (data, status = 200) => Response.json(data, {status});
 export default {
  async fetch(request, env) {
   const url = new URL(request.url);
-  if (url.pathname === '/api/health') return json({ok:true,build:E.BUILD,transport:'cloudflare'});
+  if (url.pathname === '/api/health') return json({ok:true,build:E.BUILD,transport:'cloudflare',roomsBinding:typeof env.ROOMS?.get==='function'&&typeof env.ROOMS?.idFromName==='function'?'bound':'missing'});
   if (url.pathname === '/api/rooms' && request.method === 'POST') {
    if (request.headers.get('Origin') !== url.origin) return json({error:'Invalid origin'},403);
+   if(typeof env.ROOMS?.get!=='function'||typeof env.ROOMS?.idFromName!=='function'){
+    console.error('Cloudflare room create: ROOMS Durable Object binding unavailable');
+    return json({error:'Room service configuration unavailable.',code:'ROOMS_BINDING_MISSING'},503);
+   }
    const code=crypto.randomUUID().replace(/-/g,'').slice(0,6).toUpperCase();
-   const stub=env.ROOMS.get(env.ROOMS.idFromName(code));
    let creator={};try{creator=await request.json();}catch(_){}
-   return stub.fetch(new Request(url.origin+'/internal/create?code='+code,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(creator)}));
+   try{
+    const stub=env.ROOMS.get(env.ROOMS.idFromName(code));
+    return await stub.fetch(new Request(url.origin+'/internal/create?code='+code,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(creator)}));
+   }catch(e){
+    console.error('Cloudflare room create: Durable Object request failed',e);
+    return json({error:'Room creation temporarily unavailable.',code:'ROOM_CREATION_FAILED'},503);
+   }
   }
   const match=url.pathname.match(/^\/api\/rooms\/([A-F0-9]{6})\/socket$/);
   if (match) {

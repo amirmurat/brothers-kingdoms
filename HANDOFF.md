@@ -1,3 +1,13 @@
+## v127 — room creation diagnostics (23.10.2026)
+
+**Owner authorization:** diagnose production `With friends` failure before changing match-entry UX. Repeated public browser tests produce `Server unavailable. Try again.`, but automation could not collect exact HTTP status or Cloudflare logs. Production `/api/health` was healthy (v103 engine), proving only Worker reachability, not Durable Object configuration. Repo `wrangler.jsonc` declares `ROOMS -> KingdomRoom` with `new_sqlite_classes` v1 migration, but actual production binding could not be inspected from GitHub. GitHub Actions only tests; actual Cloudflare deployment/log controls are external.
+
+**Diagnostic patch:** Server `/api/health` additionally returns `roomsBinding:'bound'|'missing'`, a safe boolean capability check without secrets. `POST /api/rooms` returns explicit `ROOMS_BINDING_MISSING` 503 if DO namespace absent and catches DO request exceptions into `ROOM_CREATION_FAILED` 503 while logging the actual exception only server-side. Client displays HTTP status or recognized error code, replacing previously ambiguous generic text; API semantics, rooms, engine and session tokens unaffected. `tests/cloudflare-server.cjs` verifies health binding and missing-binding response. No secrets or internal stack traces exposed in public response.
+
+**Next check:** verify actual Cloudflare live `/api/health` reports `roomsBinding`. If missing, fix Cloudflare Dashboard > Worker > Settings > Bindings / deploy configuration; if bound, reproduce `POST /api/rooms` and inspect Cloudflare Workers invocation logs (HTTP status and exception details) with account access. Run live room creation and rejoin tests after repairs. Code push, actual Worker deploy, live backend availability and iPhone confirmation are different validation stages.
+
+---
+
 ## Match-entry UX audit — preparation only (23.10.2026)
 
 **Owner request:** investigate unintuitive entry to both solo and multiplayer, prepare a six-stage implementation, **do not implement yet**. Verified `AGENTS.md`, `docs/GAME_MAP.md`, `README.md`, active Cloudflare Worker, `index.html`, `game.js`, `engine.js`, `server/cloudflare.mjs`, `tests/network-lobby.cjs`. Current working/deploy branch `design/visual-review-v26`, at audit start `2ad8e6a1`. Latest v126 layout and CI succeeded.
