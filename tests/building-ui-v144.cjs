@@ -60,6 +60,7 @@ const server=http.createServer((req,res)=>{try{
   await page.screenshot({path:'test-results/v145-farm-'+name+'-'+width+'.png'});
   await page.locator('#closeContext').click();await page.locator('#developButton').click();
   assert.equal(await page.locator('[data-fast-build]').count(),7);
+  assert(await page.evaluate(()=>getComputedStyle(document.getElementById('quickBuild')).backgroundColor===getComputedStyle(document.getElementById('sessionPanel')).backgroundColor),'Catalog uses the existing Match sheet surface');
   assert(await page.locator('#quickBuild').evaluate(el=>getComputedStyle(el).borderRadius==='0px'&&getComputedStyle(el).borderTopWidth==='0px'),'Catalog follows flat frameless menu');
   assert(await page.locator('[data-fast-build]').evaluateAll(els=>els.every(el=>getComputedStyle(el).borderRadius==='0px'&&getComputedStyle(el).borderTopWidth==='0px')),'Cards add no decorative frames or rounded corners');
   const catalogGeometry=await page.locator('#quickBuild').evaluate(el=>{const r=el.getBoundingClientRect();return {x:r.x,right:r.right,y:r.y,bottom:r.bottom};});

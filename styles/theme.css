@@ -3798,8 +3798,8 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
 #game#game#game#game#game #developButton{display:flex!important;align-items:center!important;justify-content:center!important;min-width:44px!important;min-height:44px!important}
 #game#game#game#game#game #buildDock:not(.placement-active){display:none!important}
 #game#game#game#game#game #buildDock [data-build-catalog]{display:none!important}
-#game#game#game#game#game #quickBuild:not(.hidden){border-radius:0!important;background:var(--row-flat,#151c26)!important;border-color:var(--divider-flat,#465265)!important}
-#game#game#game#game#game #quickBuild .quick-build-head{background:var(--row-flat,#151c26)!important}
+#game#game#game#game#game #quickBuild:not(.hidden){border-radius:0!important;background:var(--sheet-flat,#151c26)!important;border-color:var(--divider-flat,#465265)!important}
+#game#game#game#game#game #quickBuild .quick-build-head{background:var(--sheet-flat,#151c26)!important}
 #game#game#game#game#game .build-catalog-grid button{border-radius:0!important;background:var(--row-flat,#192331)!important;border-color:var(--divider-flat,#465265)!important}
 #game#game#game#game#game .build-catalog-grid button:hover{background:var(--row-active,#26374b)!important}
 #game#game#game#game#game #quickBuildChoices{overflow:visible!important;max-height:none!important;scroll-snap-type:none!important}
@@ -3815,3 +3815,5 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
 #game#game#game#game#game #quickBuild .quick-build-head{top:-16px!important;border-bottom:1px solid var(--divider-flat,#465265)!important}
 #game#game#game#game#game #quickBuild .quick-build-head>strong{font:700 18px/24px system-ui!important}
 #game#game#game#game#game .build-catalog-grid button{border:0!important}
+
+#game#game#game#game#game #quickBuildClose{background:var(--row-flat)!important;color:var(--flat-ink)!important;border:0!important;border-radius:0!important;box-shadow:none!important}
