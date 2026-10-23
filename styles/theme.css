@@ -4159,3 +4159,12 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
   top:auto!important;width:48px!important;min-width:48px!important;
  }
 }
+
+/* v150 rail fit: the 48px Close action fits the header; cards stay in the 224px sheet. */
+#game#game#game#game#game #quickBuild .quick-build-head{
+ height:48px!important;min-height:48px!important;flex-basis:48px!important;
+}
+#game#game#game#game#game #quickBuildHelp{margin:3px 0!important}
+#game#game#game#game#game #quickBuildChoices .build-catalog-grid>button{
+ height:116px!important;min-height:116px!important;max-height:116px!important;
+}
