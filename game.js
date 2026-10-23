@@ -848,8 +848,8 @@ function updateResume(){
  resume.classList.toggle('hidden',!saved);
  resume.classList.toggle('start-choice-primary',saved);
  solo.classList.toggle('start-choice-primary',!saved);
- solo.querySelector('strong').textContent=saved?'New solo match':'Play solo now';
- solo.querySelector('small').textContent=saved?'Starts fresh · replaces saved progress':'Start immediately with selected opponents';
+ solo.querySelector('strong').textContent=saved?'New solo match':'Set up solo';
+ solo.querySelector('small').textContent=saved?'Choose a start point · replaces saved progress when started':'Choose starting location and opponents';
  if(!saved)$('soloReplacePrompt').classList.add('hidden');
 }
 function startSoloFromMenu(){
@@ -861,13 +861,33 @@ function startSoloFromMenu(){
 function createDemo(resume=false){
  if(state||peer)goHome();lastSaveTick=-1;defeatDismissed=false;
  lastHudLand=null;lastHudTick=-1;lastHudOwners=null;lastHudArmies=new Map();hudNotice=null;activeThreats=[];announcedThreats.clear();lastThreatSignature="";
- worldLayer=null;paintedRevision=-1;host=true;demo=true;pauseSolo=false;code='DEMO';
+ worldLayer=null;paintedRevision=-1;host=true;demo=true;pauseSolo=false;code='SOLO';
  const previous=resume?savedSolo():null;state=previous||E.lobby(Date.now());
  myId=state.players[0]?.id||E.addPlayer(state,name());
- if(state.phase==='lobby'){state.settings={bots:Number($('soloBots').value)};E.start(state,Number($('soloBots').value));}
- phaseShown='';setNetwork('SOLO');render();if(!resume)showTutorial();
+ if(state.phase==='lobby'){
+  state.settings={bots:Number($('soloBots').value)};
+  E.person(state,myId).ready=true;
+  $('soloRoomBots').value=String(state.settings.bots);
+ }
+ phaseShown='';setNetwork('SOLO');render();
 }
-function startGame(){if(serverActive){if(host)serverSend({t:'start'});return;}if(!host)return;const waiting=state.players.filter(p=>!p.bot&&p.connected!==false&&!p.ready);if(waiting.length)return toast('Waiting for: '+waiting.map(p=>p.name).join(', '));state.settings={bots:Number($('botCount').value)};const res=E.start(state,state.settings.bots);if(!res.ok)return toast(res.error);broadcast(true);showTutorial();}
+function startGame(){
+ if(serverActive){if(host)serverSend({t:'start'});return;}
+ if(!host||!state||state.phase!=='lobby')return;
+ if(demo){
+  state.settings.bots=Number($('soloRoomBots').value);
+  $('soloBots').value=String(state.settings.bots);
+  try{localStorage.setItem('bk-solo-bots',$('soloBots').value);}catch(_){}
+  const result=E.start(state,state.settings.bots);
+  if(!result.ok){$('spawnHint').textContent=result.error;$('spawnHint').dataset.kind='error';return;}
+  phaseShown='';render();saveSolo();showTutorial();return;
+ }
+ const waiting=state.players.filter(p=>!p.bot&&p.connected!==false&&!p.ready);
+ if(waiting.length)return toast('Waiting for: '+waiting.map(p=>p.name).join(', '));
+ state.settings={bots:Number($('botCount').value)};
+ const res=E.start(state,state.settings.bots);if(!res.ok)return toast(res.error);
+ broadcast(true);showTutorial();
+}
 function command(a){if(!state||state.phase!=='playing')return false;
  if(serverActive){if(Date.now()-lastStateAt>4500){toast('Wait for the server connection.','error');return false;}const id=++seq;if(!serverSend({t:'action',id,action:a})){toast('Server connection lost.','error');return false;}pendingOrders.set(id,Date.now());return true;}
  if(host){const r=E.action(state,myId,a);if(!r.ok){toast(r.error);return false;}broadcast();if(a.type==='build'){toast('Construction queued');refreshQuickBuild();}else if(a.type==='send'){toast('Offensive started');}return true;}
@@ -931,12 +951,23 @@ $('spawnAuto').onclick=()=>chooseSpawn(null);
 
 function render(){if(!state)return;
  if(state.phase==='lobby'){
-  $('victory').classList.add('hidden');show('waiting');$('showCode').textContent=code;$('roomHeadingLabel').textContent=host?'ROOM READY':'IN ROOM';$('roomMembersCount').textContent=state.players.filter(p=>!p.bot).length+' players';
+  const soloSetup=demo&&!serverActive;
+  $('victory').classList.add('hidden');show('waiting');
+  $('waiting').classList.toggle('solo-lobby',soloSetup);
+  $('showCode').textContent=code;
+  $('roomHeadingLabel').textContent=soloSetup?'SOLO SETUP':host?'ROOM READY':'IN ROOM';
+  $('roomTitle').textContent=soloSetup?'Solo match setup':'Match lobby';
+  $('roomSubtitle').textContent=soloSetup?'Choose your starting point and opponents, then start.':'Share the code, check players and choose a start position.';
+  $('multiplayerBotOptions').classList.toggle('hidden',soloSetup);
+  $('soloBotOptions').classList.toggle('hidden',!soloSetup);
+  if(soloSetup){$('roomSettings').open=true;$('soloRoomBots').value=String(state.settings?.bots??4);}
+  $('roomMembersCount').textContent=state.players.filter(p=>!p.bot).length+' players';
   patchHtml('waitingPlayers',state.players.map(p=>`<div class="player-row"><i class="player-dot" style="background:${p.color}"></i><strong>${esc(p.name)}</strong><span class="muted">${[p.id===myId?'You':'',p.id===(serverActive?state.serverAdmin:1)?'Host':''].filter(Boolean).join(' · ')} · ${p.connected===false?'Offline':p.ready?'In room':'Connecting'}</span></div>`).join(''));
   $('startButton').classList.toggle('hidden',!host);$('readyButton').classList.add('hidden');$('readyButton').setAttribute('aria-pressed',String(readyLocal));$('readyButton').textContent=readyLocal?'Ready ✓':'I am ready';$('botCount').disabled=!host;
   $('startButton').disabled=!state.players.filter(p=>!p.bot).every(p=>p.ready||p.connected===false);$('botCount').value=state.settings?.bots??0;
-  $('roomRules').textContent=serverActive?'Conquer 100% of the land. No time limit. The server runs the match; all players offline pauses it.':'Conquer 100% of the land. No time limit. The host must keep their tab open.';
-  $('waitingHint').textContent=serverActive?(host?'You can start the match. The server runs the game.':'Waiting for the room leader. You are ready.'):host?'You are the host. Leaving closes the room.':'Waiting for host to start. You are ready.'; $('roomSettingsSummary').textContent=(state.settings?.bots??0)+' bots';
+  $('roomRules').textContent=soloSetup?'Conquer 100% of the land. Your solo match runs locally on this device.':serverActive?'Conquer 100% of the land. No time limit. The server runs the match; all players offline pauses it.':'Conquer 100% of the land. No time limit. The host must keep their tab open.';
+  $('waitingHint').textContent=soloSetup?'Choose a starting point or leave Automatic, then start your match.':serverActive?(host?'You can start the match. The server runs the game.':'Waiting for the room leader. You are ready.'):host?'You are the host. Leaving closes the room.':'Waiting for host to start. You are ready.';
+  $('roomSettingsSummary').textContent=soloSetup?(state.settings?.bots??4)+' opponents':(state.settings?.bots??0)+' bots';
   renderSpawnMap();phaseShown='lobby';return;
  }
  if(phaseShown!=='playing'&&phaseShown!=='ended'){
@@ -2181,6 +2212,13 @@ $('nickname').addEventListener('change',()=>name());
 $('soloBots').addEventListener('change',()=>{try{localStorage.setItem('bk-solo-bots',$('soloBots').value);}catch(_){}});
 $('readyButton').onclick=()=>{readyLocal=!readyLocal;$('readyButton').setAttribute('aria-pressed',String(readyLocal));upstream?.send({t:'ready',value:readyLocal});};
 for(const id of ['botCount'])$(id).onchange=()=>{if(host&&state?.phase==='lobby'){if(serverActive){serverSend({t:'settings',bots:Number($('botCount').value)});return;}state.settings={bots:Number($('botCount').value)};broadcast();}};
+$('soloRoomBots').onchange=()=>{
+ if(!demo||!state||state.phase!=='lobby')return;
+ state.settings.bots=Number($('soloRoomBots').value);
+ $('soloBots').value=$('soloRoomBots').value;
+ $('roomSettingsSummary').textContent=state.settings.bots+' opponents';
+ try{localStorage.setItem('bk-solo-bots',$('soloBots').value);}catch(_){}
+};
 
 $('resultExit').onclick=requestExit;$('spectateMatch').onclick=()=>{defeatDismissed=true;phaseShown='playing';$('victory').classList.add('hidden');};
 $('restart').onclick=()=>{

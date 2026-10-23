@@ -3734,3 +3734,21 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
   backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
  }
 }
+
+
+/* v129 — shared preparation screen; local solo does not create a server room.
+   Use the same validated terrain/spawn canvas and fixed action bar. */
+#waiting#waiting#waiting#waiting.solo-lobby .room-invite,
+#waiting#waiting#waiting#waiting.solo-lobby .room-roster-heading,
+#waiting#waiting#waiting#waiting.solo-lobby #waitingPlayers{
+ display:none!important;
+}
+#waiting#waiting#waiting#waiting.solo-lobby .room-heading{
+ margin-bottom:12px!important;
+}
+#waiting#waiting#waiting#waiting.solo-lobby #roomSettings{
+ margin-top:8px!important;
+}
+#waiting#waiting#waiting#waiting.solo-lobby #roomActionBar #waitingHint{
+ color:var(--bk94-secondary)!important;
+}

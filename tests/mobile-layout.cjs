@@ -45,7 +45,18 @@ const server=http.createServer((req,res)=>{
    assert(await page.locator('#joinDetails').isVisible(),label+' explicit join-by-code entry stays visible');
    assert.equal(await page.locator('#resumeButton').isVisible(),false,label+' no resume without a solo save');
    await page.click('#demoButton');
-   assert(await page.locator('#game').isVisible(),label+' quick solo stays one click');
+   assert(await page.locator('#waiting').isVisible(),label+' solo now enters common preparation lobby');
+   assert.equal(await page.locator('#roomInvite').isVisible(),false,label+' local solo never offers a cloud room code');
+   assert(await page.locator('#soloRoomBots').isVisible(),label+' solo opponents are editable in preparation');
+   assert.equal(await page.locator('#botCount').isVisible(),false,label+' multiplayer settings stay out of local solo');
+   const soloPick=await page.evaluate(()=>{const s=window.__layout.getState(),E=window.BKEngine;for(let y=10;y<E.H-10;y++)for(let x=10;x<E.W-10;x++)if(!E.spawnError(s,1,x,y))return {x,y};});
+   const soloMap=page.locator('#spawnMap');await soloMap.scrollIntoViewIfNeeded();
+   const soloRect=await soloMap.boundingBox();
+   await page.mouse.click(soloRect.x+(soloPick.x+.5)/160*soloRect.width,soloRect.y+(soloPick.y+.5)/104*soloRect.height);
+   assert.deepEqual(await page.evaluate(()=>window.__layout.getState().players[0].spawnPoint),soloPick,label+' local solo saves chosen spawn before starting');
+   await page.click('#startButton');
+   assert(await page.locator('#game').isVisible(),label+' solo starts only after selecting Start');
+   assert.deepEqual(await page.evaluate(()=>window.__layout.getState().players[0].capital),soloPick,label+' solo capital appears at exact chosen location');
    await page.evaluate(()=>window.__layout.goHome());
    assert(await page.locator('#resumeButton').isVisible(),label+' saved solo gets a prominent continue action');
    await page.click('#demoButton');
@@ -57,7 +68,15 @@ const server=http.createServer((req,res)=>{
    assert(await page.locator('#game').isVisible(),label+' resume returns to saved game');
    await page.evaluate(()=>window.__layout.goHome());
    await page.click('#demoButton');await page.click('#confirmNewSolo');
-   assert(await page.locator('#game').isVisible(),label+' explicit confirmation starts new solo');
+   assert(await page.locator('#waiting').isVisible(),label+' confirming new solo opens local prep, not immediate combat');
+   assert(await page.locator('#resumeButton').isVisible()===false,label+' only the room is visible while preparing');
+   await page.click('#leaveRoom');
+   assert(await page.locator('#resumeButton').isVisible(),label+' leaving setup preserves prior saved solo');
+   await page.click('#demoButton');await page.click('#confirmNewSolo');
+   await page.selectOption('#soloRoomBots','2');
+   await page.click('#startButton');
+   assert(await page.locator('#game').isVisible(),label+' confirming and starting launches a new solo with selected bots');
+   assert.equal(await page.evaluate(()=>window.__layout.getState().players.filter(p=>p.bot).length),2,label+' solo lobby settings reach local engine exactly');
    await page.evaluate(()=>window.__layout.goHome());
    await page.evaluate(()=>window.__layout.setRoom());
    const roomFlat=await page.evaluate(()=>{
@@ -91,6 +110,7 @@ const server=http.createServer((req,res)=>{
    assert.deepEqual(await page.evaluate(()=>window.__layout.getState().players[0].spawnPoint),chosen,label+' map click chooses exact point');
    await page.locator('#spawnAuto').click();assert.equal(await page.evaluate(()=>window.__layout.getState().players[0].spawnPoint),null,label+' automatic resets selection');
    await page.evaluate(()=>window.__layout.createDemo(false));
+   await page.click('#startButton');
    const planStyle=await page.evaluate(()=>{
     const L=window.__layout;L.beginAttackPlanner();
     const buttons=[...document.querySelectorAll('#planGuide .plan-guide-actions button')];

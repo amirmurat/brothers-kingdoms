@@ -1,3 +1,13 @@
+## v129 — local solo now uses common match lobby (23.10.2026)
+
+**Owner feedback / six stages:** v128's solo lacked manual spawn while multiplayer offered it; user suggests lobby before every new match and asks about backend load. Existing `E.lobby` / `E.setSpawn` / `E.start` and `renderSpawnMap` already support manual starting point locally, so rebuilding UI/server rooms is unnecessary. Explored server-hosted solo, a separate location picker, and reuse of common room; chose reuse of common preparation UI and local engine, no Durable Object/WebSocket/extra Cloudflare room/ongoing server load. Resume stays direct. Accept: same map and valid spawn selection as multiplayer, correct capital location, editable difficulty in setup, no cloud invite in solo, existing save not overwritten until actual Start, and tests on portrait WebKit/Chromium and unchanged multiplayer.
+
+**Behavior:** `Play solo` / `New solo match` now open local `#waiting` in `SOLO SETUP` mode with map and `Automatic` option; solo opponent picker is shown instead of the multiplayer bot picker. The map uses existing `chooseSpawn` and engine validates site. Press `Start match` locally runs `E.start` with selected bots, renders game and saves immediately; no network API calls. `Continue solo` loads existing saved match directly and does not show lobby. Exiting setup returns to main menu and retains previous saved solo until another match is started. Multiplayer room create/invite/join/readiness remain unchanged. Main menu cache `129-local-solo-lobby-r1`. Original art/engine/server unaffected.
+
+**Regression:** mobile browser tests assert setup appears, room code is hidden, difficulty shown, chosen spawn is preserved in player's capital, bot count correct, leaving setup protects previous save, continuation bypasses lobby, and existing multiplayer map/click path stays passing. Static JS/CSS and deployed Worker verification required. Run full GitHub Actions and verify real iPhone portrait lobby.
+
+---
+
 ## v128 — coherent match entry, reversible UX pass (23.10.2026)
 
 **Six stages:** (1) solo jumped immediately to play, multiplayer had a long setup and ambiguous Create vs Join, links silently joined when nickname persisted, saves were buried; (2) audited live owner iPhone (Cloudflare room does work), HTML/JS/client-server and mobile tests; (3) considered wizard vs labels-only vs a contextual one-page home; (4) chose one-page visible actions, no extra quick solo step, no silent save overwrite, one room launch surface and explicit new-invite confirmation; (5) implemented in client/HTML/CSS with no server or engine changes; (6) mobile/browser tests, CI, live Cloudflare and physical owner review are acceptance gates.
