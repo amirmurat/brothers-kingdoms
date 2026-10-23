@@ -1557,26 +1557,48 @@ let infrastructureCache=null,unitCellCache=null;
 function drawInfrastructure(){
  const zones=[],roads=state.roads||[];
  if(!infrastructureCache||infrastructureCache.seed!==state.seed||infrastructureCache.myId!==myId||infrastructureCache.length!==roads.length||infrastructureCache.roadRevision!==state.roadRevision||infrastructureCache.revision!==state.workRevision||(zones||[]).length!==infrastructureCache.zoneCells.length||(zones||[]).some((z,i)=>z.zoneCells!==infrastructureCache.zoneCells[i])){
-  const paths=new Map(),roadPath=new Path2D();
+  const paths=new Map(),roadPath=new Path2D(),roadBackbonePath=new Path2D();
   for(const z of zones||[]){let path=paths.get(z.resource);if(!path){path=new Path2D();paths.set(z.resource,path);}if(z.owner===myId)for(const i of z.zoneCells)path.rect(i%E.W*TILE,((i/E.W)|0)*TILE,TILE,TILE);}
   const connected=new Set(roads);
-  // Cached, continuous centerlines: preserve strategic visibility without tile-sized boxes.
+  // Retain only through-road edges in the very distant overview.
+  const degree=i=>{
+   const x=i%E.W,y=(i/E.W)|0;
+   return (x>0&&connected.has(i-1)?1:0)+(x<E.W-1&&connected.has(i+1)?1:0)+
+    (y>0&&connected.has(i-E.W)?1:0)+(y<E.H-1&&connected.has(i+E.W)?1:0);
+  };
+  const degrees=new Map(roads.map(i=>[i,degree(i)]));
   for(const i of roads){
    const x=i%E.W,y=(i/E.W)|0,cx=(x+.5)*TILE,cy=(y+.5)*TILE;
-   if(x<E.W-1&&connected.has(i+1)){roadPath.moveTo(cx,cy);roadPath.lineTo(cx+TILE,cy);}
-   if(y<E.H-1&&connected.has(i+E.W)){roadPath.moveTo(cx,cy);roadPath.lineTo(cx,cy+TILE);}
+   if(x<E.W-1&&connected.has(i+1)){
+    roadPath.moveTo(cx,cy);roadPath.lineTo(cx+TILE,cy);
+    if(degrees.get(i)>=2&&degrees.get(i+1)>=2){roadBackbonePath.moveTo(cx,cy);roadBackbonePath.lineTo(cx+TILE,cy);}
+   }
+   if(y<E.H-1&&connected.has(i+E.W)){
+    roadPath.moveTo(cx,cy);roadPath.lineTo(cx,cy+TILE);
+    if(degrees.get(i)>=2&&degrees.get(i+E.W)>=2){roadBackbonePath.moveTo(cx,cy);roadBackbonePath.lineTo(cx,cy+TILE);}
+   }
    roadPath.moveTo(cx+.5,cy);roadPath.arc(cx,cy,.5,0,Math.PI*2);
   }
-  infrastructureCache={seed:state.seed,myId,zoneCells:(zones||[]).map(z=>z.zoneCells),length:roads.length,roadRevision:state.roadRevision,revision:state.workRevision,paths,roadPath};
+  infrastructureCache={seed:state.seed,myId,zoneCells:(zones||[]).map(z=>z.zoneCells),length:roads.length,roadRevision:state.roadRevision,revision:state.workRevision,paths,roadPath,roadBackbonePath};
  }
+
  ctx.save();ctx.globalAlpha=.18;
  const shades={food:'#a7cf78',wood:'#54bc94',stone:'#c7cfdb',gold:'#e8ca70'};
  for(const [r,path] of infrastructureCache.paths){ctx.fillStyle=shades[r];ctx.fill(path);}
  if(roads.length){
-  ctx.globalAlpha=zoom<.5?.45:zoom<.9?.76:.92;
+  const cellPixels=TILE*zoom;
   ctx.lineJoin='round';ctx.lineCap='round';
-  ctx.strokeStyle='#473e30';ctx.lineWidth=TILE*.37;ctx.stroke(infrastructureCache.roadPath);
-  ctx.strokeStyle='#e7cb8d';ctx.lineWidth=TILE*.22;ctx.stroke(infrastructureCache.roadPath);
+  if(cellPixels<9){
+   // Very distant roads are a subdued hairline backbone.
+   ctx.globalAlpha=.37;ctx.strokeStyle='#e4c899';ctx.lineWidth=1.15/zoom;
+   ctx.stroke(infrastructureCache.roadBackbonePath);
+  }else{
+   // Return continuously to v121 road weight at >=24px/tile.
+   const weight=Math.max(0,Math.min(1,(cellPixels-9)/15));
+   ctx.globalAlpha=.42+.5*weight;
+   ctx.strokeStyle='#473e30';ctx.lineWidth=TILE*(.16+.21*weight);ctx.stroke(infrastructureCache.roadPath);
+   ctx.strokeStyle='#e7cb8d';ctx.lineWidth=TILE*(.09+.13*weight);ctx.stroke(infrastructureCache.roadPath);
+  }
  }ctx.restore();
 }
 function drawHarvestSites(w,h){
@@ -1831,11 +1853,11 @@ function drawOverviewBuilding(b,x,y,count=1){
  const accent=color(b.owner);
  if(count>1){
   // Zoomed-out neighbors become one owned group, with a readable count.
-  const size=17;
+  const label=count>99?'99+':String(count),width=label.length>2?26:label.length>1?21:17;
   ctx.fillStyle='#0c1b26';ctx.strokeStyle=accent;ctx.lineWidth=1.6;
-  ctx.beginPath();ctx.roundRect(-size/2,-size/2,size,size,4);ctx.fill();ctx.stroke();
+  ctx.beginPath();ctx.roundRect(-width/2,-9,width,18,4);ctx.fill();ctx.stroke();
   ctx.fillStyle='#ffffff';ctx.font='800 11px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText(count>99?'99+':String(count),0,.5);
+  ctx.fillText(label,0,.5);
  }else{
   // Single buildings remain distinct by shape, without growing wider than nearby cells.
   const radius=Math.max(3.5,Math.min(5.3,TILE*zoom*.43));
@@ -1873,20 +1895,40 @@ function drawMapBuilding(b){
  else ctx.drawImage(buildingTypeMarker(b.kind,color(b.owner)),bounds.x+artInset,bounds.y+artInset,artSize,artSize);
  ctx.restore();
 }
-// Deterministic clustering uses world-grid coordinates, not moving screen bins,
-// so clusters never rearrange merely because the player pans the map.
-function drawDistantBuildings(visible){
- const cellPixels=TILE*zoom;
- const span=Math.max(1,Math.ceil(16/cellPixels));
+// World-grid bins keep memberships stable during camera pans.
+function collectDistantBuildingGroups(buildings,span){
  const groups=new Map();
- for(const b of visible){
-  const key=b.owner+':'+Math.floor(b.x/span)+':'+Math.floor(b.y/span);
+ for(const b of buildings){
+  const gx=Math.floor(b.x/span),gy=Math.floor(b.y/span),key=b.owner+':'+gx+':'+gy;
   let g=groups.get(key);
-  if(!g){g={owner:b.owner,kind:b.kind,count:0,x:0,y:0,first:b};groups.set(key,g);}
+  if(!g){g={owner:b.owner,gx,gy,count:0,x:0,y:0,first:b};groups.set(key,g);}
   g.count++;g.x+=b.x+.5;g.y+=b.y+.5;
  }
- for(const g of groups.values()){
-  drawOverviewBuilding(g.first,g.x/g.count*TILE,g.y/g.count*TILE,g.count);
+ return [...groups.values()].sort((a,b)=>b.count-a.count||a.owner-b.owner||a.gy-b.gy||a.gx-b.gx);
+}
+function drawDistantBuildings(buildings,w,h){
+ const cellPixels=TILE*zoom,span=Math.max(2,Math.ceil(40/cellPixels));
+ const groups=collectDistantBuildingGroups(buildings,span),occupied=[];
+ const shifts=[[0,0],[0,-20],[-20,0],[20,0],[0,20],[-20,-20],[20,-20],[-20,20],[20,20],
+  [0,-32],[-32,0],[32,0],[0,32]];
+ for(const g of groups){
+  const px=g.x/g.count*TILE*zoom+camX,py=g.y/g.count*TILE*zoom+camY;
+  if(px<-45||px>w+45||py<-45||py>h+45)continue;
+  const radius=g.count>99?14:g.count>9?12:g.count>1?10:7;
+  let best=null,bestOverlap=Infinity;
+  for(const [dx,dy] of shifts){
+   const x=px+dx,y=py+dy;
+   if(x<-12||x>w+12||y<-12||y>h+12)continue;
+   let overlap=0;
+   for(const p of occupied){
+    const gap=radius+p.radius+3,dist=Math.hypot(x-p.x,y-p.y);
+    if(dist<gap)overlap+=gap-dist;
+   }
+   if(overlap<bestOverlap){best={x,y};bestOverlap=overlap;if(!overlap)break;}
+  }
+  if(!best)continue;
+  occupied.push({...best,radius});
+  drawOverviewBuilding(g.first,(best.x-camX)/zoom,(best.y-camY)/zoom,g.count);
  }
 }
 let worldBordersCache=null;
@@ -1925,14 +1967,17 @@ function draw(){if(!state?.tiles.length)return;repaintWorld();resize();const dpr
  drawInfrastructure();drawAttackPlanning();drawArmyDisplay(w,h);drawHarvestSites(w,h);
  // Keep original artwork inside each world tile. At low zoom, adjacent
  // buildings collapse into an owned count marker instead of overlapping.
- const visibleMapBuildings=[];
+ const distantMode=TILE*zoom<BUILDING_LOD_CLUSTER_PX,visibleMapBuildings=[];
  for(const b of state.buildings){
   if(!E.visibleBuilding(state,myId,b))continue;
-  const sx=(b.x+.5)*TILE*zoom+camX,sy=(b.y+.5)*TILE*zoom+camY;
-  if(sx<-16||sx>w+16||sy<-16||sy>h+16)continue;
+  // Include whole offscreen clusters so counts don't change as the viewport pans.
+  if(!distantMode){
+   const sx=(b.x+.5)*TILE*zoom+camX,sy=(b.y+.5)*TILE*zoom+camY;
+   if(sx<-16||sx>w+16||sy<-16||sy>h+16)continue;
+  }
   visibleMapBuildings.push(b);
  }
- if(TILE*zoom<BUILDING_LOD_CLUSTER_PX)drawDistantBuildings(visibleMapBuildings);
+ if(distantMode)drawDistantBuildings(visibleMapBuildings,w,h);
  else for(const b of visibleMapBuildings)drawMapBuilding(b);
  // Political and war borders are a higher layer than buildings and roads.
  // This keeps country boundaries readable even in heavily built-up regions.
