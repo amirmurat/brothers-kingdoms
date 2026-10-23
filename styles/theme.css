@@ -3527,7 +3527,7 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
 /* v124 — portrait-only compact information architecture; preserves one-tap
    construction, original player PNGs, prices, income and safe tap targets. */
 @media (orientation:portrait) and (max-width:600px){
- #game#game#game{--bottom-hud-size:76px;--bottom-hud-half:38px}
+ #game#game#game{--bottom-hud-size:76px;--bottom-hud-half:56px}
  #game#game#game:has(:is(#planGuide,#armyFocusGuide,#planEraseHint):not(.hidden)){
   --bottom-hud-size:112px;--bottom-hud-half:56px;
  }
@@ -3620,5 +3620,23 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
   height:calc(112px + env(safe-area-inset-bottom,0px))!important;
   min-height:calc(112px + env(safe-area-inset-bottom,0px))!important;
   max-height:calc(112px + env(safe-area-inset-bottom,0px))!important;
+ }
+}
+
+/* v124 narrow portrait: preserve all three prices in 320px build cells.
+   Fixed side-tool center avoids lateral/vertical jump when switching modes. */
+@media (orientation:portrait) and (max-width:355px){
+ #game#game#game#game #buildDock button{
+  grid-template-columns:26px minmax(0,1fr)!important;column-gap:3px!important;padding:4px!important;
+ }
+ #game#game#game#game #buildDock button>.building-art{
+  width:26px!important;height:26px!important;min-width:26px!important;max-width:26px!important;
+  min-height:26px!important;max-height:26px!important;
+ }
+ #game#game#game#game #buildDock button>.dock-cost{
+  font:500 9px/17px system-ui!important;gap:2px!important;
+ }
+ #game#game#game#game #buildDock .dock-cost :is(img.tiny-resource-art,svg.ui-icon){
+  width:8px!important;height:8px!important;min-width:8px!important;max-width:8px!important;flex-basis:8px!important;
  }
 }

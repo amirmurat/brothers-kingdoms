@@ -6,6 +6,8 @@
 
 **Files:** `styles/theme.css`, `index.html` (Safari cache `124-portrait-compact-hud-r1`), `tests/mobile-layout.cjs` for portrait dimensions and dock arrangement; no changes to `game.js`, engine, server, owned PNG, balance, multiplayer, placement semantics, or landscape design. Branch is `design/visual-review-v26` only, not `main`.
 
+**v124 follow-up:** CI exposed a pre-existing v123 failure: browser test expected five distinct colors despite the engine's three-level maximum (actual 3). Corrected assertion to 3; game code unchanged. Kept the side-tool midpoint fixed across mode switches by retaining half-height anchor 56px even though build dock shrinks; adapted price-font/icon grid at <=355px to avoid clipping. Confirm current CI before claiming pass.
+
 **QA:** static CSS/JS syntax and cache tests; confirm GitHub CI and actual live Cloudflare CSS/HTML before saying deployed. Check physical iPhone portrait at 320/390 widths, label/price clipping, resource taps, build selection and tactical sheets. No claim of a real iPhone test until owner reviews the live build.
 
 ---
