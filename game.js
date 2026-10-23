@@ -918,7 +918,7 @@ function render(){if(!state)return;
  }
  if(phaseShown!=='playing'&&phaseShown!=='ended'){
   lastHudLand=null;lastHudTick=-1;lastHudOwners=null;lastHudArmies=new Map();hudNotice=null;activeThreats=[];announcedThreats.clear();lastThreatSignature="";
-  show('game');phaseShown='playing';zoom=window.innerWidth<600?2.2:1.8;$('zoomText').textContent=Math.round(zoom*100)+'%';setMinimapExpanded(window.innerWidth>=850);resize();centerOnCapital();
+  show('game');phaseShown='playing';zoom=window.innerWidth<600?2.75:1.8;$('zoomText').textContent=Math.round(zoom*100)+'%';setMinimapExpanded(window.innerWidth>=850);resize();centerOnCapital();
  }else if(phaseShown==='ended'&&state.phase==='playing'&&!mine()?.eliminated){phaseShown='playing';}
  updateUI();repaintWorld();queueDraw();
  if((state.phase==='ended'||mine()?.eliminated&&!defeatDismissed)&&phaseShown!=='ended'){
@@ -1425,7 +1425,7 @@ $('zoomIn').onclick=()=>zoomAt(1.24,canvas.clientWidth/2,canvas.clientHeight/2);
 mini.addEventListener('pointerdown',e=>{const r=mini.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*E.W,y=(e.clientY-r.top)/r.height*E.H;camX=canvas.clientWidth/2-x*TILE*zoom;camY=canvas.clientHeight/2-y*TILE*zoom;clampCamera();queueDraw();});mini.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();fitWorld();}});
 // Low-resolution territory bitmap: one pixel per world tile. The GPU enlarges it.
 // It is updated only when a territory changes, NOT once per animation frame.
-const TERRAIN_RGB=[[56,145,165],[113,152,80],[58,125,75],[150,144,115],[154,183,97],[149,116,68],[156,164,155]];
+const TERRAIN_RGB=[[56,145,165],[113,152,80],[48,111,69],[150,144,115],[154,183,97],[149,116,68],[156,164,155]];
 let minimapCached=null,pixelLayer=null;
 let mapPaintOwners=null;
 function repaintWorld(){
@@ -1443,7 +1443,9 @@ function repaintWorld(){
  const wc=worldLayer.getContext('2d',{alpha:false});wc.imageSmoothingEnabled=false;const colors=Object.fromEntries(state.players.map(p=>{const v=parseInt(p.color.slice(1),16);return[p.id,[(v>>>16)&255,(v>>>8)&255,v&255]];}));
  // Paint only changed ownership cells and adjacent boundary cells. The resource
  // pattern is deterministic, so overwriting a cell restores its exact terrain.
- for(const i of dirty){const x=i%E.W,y=(i/E.W)|0,t=tiles[i],terr=TERRAIN_RGB[t]||TERRAIN_RGB[1],col=colors[owners[i]],k=col?(t===1?.38:.25):0;
+ // Owner tint must not erase biome contrast: ownership is also shown by
+ // nation borders and labels. Keep forests, mines and mountains unmistakable.
+ for(const i of dirty){const x=i%E.W,y=(i/E.W)|0,t=tiles[i],terr=TERRAIN_RGB[t]||TERRAIN_RGB[1],col=colors[owners[i]],k=col?(t===1?.18:t===4?.14:.11):0;
   let h=Math.imul(x+state.seed*3,374761393)^Math.imul(y,668265263);h=Math.imul(h^(h>>>13),1274126177);
   const shade=(((h>>>24)&15)-7)*(t===0?.66:.27);
   wc.fillStyle='rgb('+terr.map((v,j)=>Math.max(0,Math.min(255,Math.round(v*(1-k)+(col?.[j]||0)*k+shade)))).join(',')+')';wc.fillRect(x*6,y*6,6,6);
@@ -1820,8 +1822,9 @@ function outlinedMapBuilding(source){
 }
 // v120: visual detail by CSS pixels per world tile, calibrated against
 // owner sprite comparisons at 10 / 14 / 20 / 32px on portrait iPhone.
-const BUILDING_LOD_CLUSTER_PX=14;
-const BUILDING_LOD_DETAIL_PX=20;
+// Avoid shrinking hand-drawn detail below phone-readable sizes.
+const BUILDING_LOD_CLUSTER_PX=24;
+const BUILDING_LOD_DETAIL_PX=46;
 // One visual footprint per map cell. Do not enlarge adjacent original PNGs.
 function drawOverviewBuilding(b,x,y,count=1){
  ctx.save();ctx.translate(x,y);ctx.scale(1/zoom,1/zoom);
@@ -1848,15 +1851,16 @@ function drawOverviewBuilding(b,x,y,count=1){
 }
 function drawMapBuilding(b){
  const bounds=buildingTileBounds(b);
- // Zoom LOD: clusters below 14 CSS px/tile, simplified owner art from 14 to
- // below 20, detailed original at 20+. Only map presentation changes.
+ // Zoom LOD: cluster while art would be <21 CSS px, use simplified owner
+ // art at medium zoom, and detailed original once it renders at >=40px.
+ // World positions and building selection stay unchanged.
  const useSimple=OWNED_KINDS.has(b.kind)&&TILE*zoom<BUILDING_LOD_DETAIL_PX;
  const source=roofSprite(b.kind,b.owner,b.level,useSimple?'simple':'full');
  const outlined=useSimple?null:outlinedMapBuilding(source);
- // Native artwork occupies at most 82% of its own world tile. At high
- // camera zoom this still grows naturally, but never touches neighboring art.
- const inset=TILE*.09,baseSize=TILE*.82;
- const artInset=TILE*.13,artSize=TILE*.74;
+ // Draw more of the authored PNG inside its unchanged logical tile.
+ // A 12% tile gap still separates neighboring buildings at every zoom.
+ const inset=TILE*.03,baseSize=TILE*.94;
+ const artInset=TILE*.06,artSize=TILE*.88;
  ctx.save();
  ctx.fillStyle='rgba(9,23,30,.72)';
  ctx.fillRect(bounds.x+inset,bounds.y+inset,baseSize,baseSize);
