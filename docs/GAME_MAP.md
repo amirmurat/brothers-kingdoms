@@ -1,5 +1,11 @@
 # Brothers Kingdoms — карта интерфейса и исходников
 
+## v146 — active economy / construction
+
+All four production types are paid, delayed, worker-operated buildings; raw terrain is only a placement constraint. `automaticWorkSites` lists built owned production structures; income uses actual crews only. Right-side `#developButton` is the single catalog entry; `#quickBuildChoices` groups all seven kinds. `#buildDock` is only an active placement hint/cancel. `buildingOccupancy` / `drawBuildingOccupancy` show physically co-located own workers/reserve troops (selected at all zooms, collision-limited at close zoom). `HANDOFF.md` contains the owner-required per-element visual/UX checklist and verification status. Original PNG art stays archived.
+
+---
+
 ## v145 — active map buildings and construction workflow
 
 `game.js`: `flatBuildingIcon` is the active filled-cell Canvas symbol for map, catalog and details; original PNGs/sprite helpers are archival compatibility sources. `drawMapBuilding` preserves one world cell at every zoom; new jobs get yellow work marks/progress, own upgrades cyan marks/progress. No active distant cluster displacement.

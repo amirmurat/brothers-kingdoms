@@ -10,10 +10,10 @@ function fixture(){const s=E.lobby(41),id=E.addPlayer(s,'Builder'),enemy=E.addPl
  const {s,id,enemy,p}=fixture(),wood=E.idx(20,20),food=E.idx(20,21),stone=E.idx(20,22),gold=E.idx(20,23),foreign=E.idx(41,20);
  s.tiles[wood]=2;s.tiles[food]=4;s.tiles[stone]=3;s.tiles[gold]=5;s.tiles[foreign]=2;
  for(const [resource,i] of Object.entries({wood,food,stone,gold})){
-  const result=E.action(s,id,{type:'workZone',resource,cells:[i,i,foreign,E.idx(10,20)]});assert(result.ok);assert.equal(result.cells,resource==='food'?0:1);
+  const result=E.action(s,id,{type:'workZone',resource,cells:[i,i,foreign,E.idx(10,20)]});assert(result.ok);assert.equal(result.cells,0);
  }
- assert.equal(s.workZones.length,3);assert.equal(s.wars.length,0,'Civilian paint cannot declare war or create farms');
- s.buildings.push({id:'manual-farm',owner:id,kind:'farm',level:1,x:20,y:21});
+ assert.equal(s.workZones.length,0);assert.equal(s.wars.length,0,'Civilian paint cannot declare war or create farms');
+ for(const [kind,y] of [['lumber',20],['farm',21],['quarry',22],['mine',23]])s.buildings.push({id:kind,owner:id,kind,level:1,x:20,y});
  assert.equal(E.action(s,id,{type:'workZone',resource:'hack',cells:[]}).ok,false);
  assert.equal(E.action(s,id,{type:'workZone',resource:'wood',cells:[-1]}).ok,false);
  E.workforceStep(s);assert.equal(E.workforceStats(s,id).capacity,24);assert.equal(p.workers.length,4);
@@ -26,7 +26,7 @@ function fixture(){const s=E.lobby(41),id=E.addPlayer(s,'Builder'),enemy=E.addPl
  const before=JSON.stringify(s.workZones.filter(z=>z.resource!=='wood'));
  E.action(s,id,{type:'workZone',resource:'wood',cells:[]});
  assert.equal(JSON.stringify(s.workZones),before,'Clear affects only the selected own resource');
- E.workforceStep(s);assert(E.automaticWorkSites(s,id).some(t=>t.i===wood),'Legacy paint removal cannot disable automatic extraction');
+ E.workforceStep(s);assert(E.automaticWorkSites(s,id).some(t=>t.i===wood),'Legacy paint removal cannot disable staffed buildings');
  // Lost resource land cannot produce for its old owner.
  s.owners[gold]=enemy;s.territoryRevision++;E.workforceStep(s);assert.equal(p.workIncome.gold,0);
  const packet=E.networkState(s);assert(!JSON.stringify(packet.players).includes('"route"'));
@@ -42,7 +42,7 @@ function fixture(){const s=E.lobby(41),id=E.addPlayer(s,'Builder'),enemy=E.addPl
  const result=E.action(s,id,{type:'queueBuild',kind:'city',x,y});assert(result.ok);
  assert(!E.buildingAt(s,x,y),'Paid construction waits for workers');
  assert.equal(E.action(s,id,{type:'queueBuild',kind:'city',x,y}).ok,false,'No duplicate paid site');
- assert.equal(E.action(s,id,{type:'queueBuild',kind:'lumber',x:14,y}).ok,false,'Economic construction uses paint');
+ assert.equal(E.action(s,id,{type:'queueBuild',kind:'lumber',x:14,y}).ok,false,'Lumber requires forest terrain');
  for(let n=0;n<50&&!E.buildingAt(s,x,y);n++)E.workforceStep(s);
  assert.equal(E.buildingAt(s,x,y)?.kind,'city','Worker travels then completes construction');
  E.workforceStep(s);assert.equal(E.workforceStats(s,id).capacity,48,'City adds real workforce');
@@ -80,7 +80,7 @@ function fixture(){const s=E.lobby(41),id=E.addPlayer(s,'Builder'),enemy=E.addPl
 }
 {
  const {s,id,p,enemy}=fixture();const i=E.idx(12,20);s.tiles[i]=5;
- E.workforceStep(s);assert(E.automaticWorkSites(s,id).some(t=>t.i===i&&t.resource==='gold'),'Owned deposits are jobs without paint');
+ E.workforceStep(s);assert(!E.automaticWorkSites(s,id).some(t=>t.i===i),'Unbuilt deposits produce nothing');s.buildings.push({id:'mine',kind:'mine',owner:id,x:12,y:20,level:1});E.workforceStep(s);assert(E.automaticWorkSites(s,id).some(t=>t.i===i&&t.resource==='gold'),'Built mine becomes a staffed job');
  assert(!E.workSuitable(s,id,'stone',i),'Gold veins cannot become quarries');assert(!E.workSuitable(s,id,'food',E.idx(13,20)),'Plains are not farmland');
  assert(E.action(s,id,{type:'setWorkPriority',priority:'gold'}).ok);
  for(let k=0;k<35;k++)E.workforceStep(s);assert(p.workIncome.gold>0,'Priority works without a painted zone');
@@ -90,7 +90,7 @@ function fixture(){const s=E.lobby(41),id=E.addPlayer(s,'Builder'),enemy=E.addPl
 }
 {
  const {s,id,p}=fixture();s.buildings[0].level=6;
- for(let y=12;y<28;y++)for(const [x,type] of [[20,2],[21,3],[22,4],[23,5]])s.tiles[E.idx(x,y)]=type;
+ for(let y=12;y<28;y++)for(const [x,type,kind] of [[20,2,'lumber'],[21,3,'quarry'],[22,4,'farm'],[23,5,'mine']]){s.tiles[E.idx(x,y)]=type;s.buildings.push({id:kind+y,kind,owner:id,x,y,level:1});}
  assert(E.action(s,id,{type:'setWorkPriority',priority:'gold'}).ok);
  for(let n=0;n<45;n++)E.workforceStep(s);
  const assigned=r=>p.workers.filter(g=>g.resource===r).length;
@@ -101,7 +101,7 @@ function fixture(){const s=E.lobby(41),id=E.addPlayer(s,'Builder'),enemy=E.addPl
  const {s,id,p}=fixture();
  // A settled worker must not abandon a productive site every eight ticks.
  const gold=E.idx(12,20),wood=E.idx(13,20);
- s.tiles[gold]=5;s.tiles[wood]=2;
+ s.tiles[gold]=5;s.tiles[wood]=2;s.buildings.push({id:'mine',kind:'mine',owner:id,x:12,y:20,level:1},{id:'lumber',kind:'lumber',owner:id,x:13,y:20,level:1});
  for(let n=0;n<30;n++){s.tick++;E.workforceStep(s);}
  const working=p.workers.filter(g=>g.resource&&g.x===g.tx&&g.y===g.ty&&g.progress>=3);
  assert(working.length>=1,'At least one civilian group reaches a productive deposit');

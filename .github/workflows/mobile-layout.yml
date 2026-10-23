@@ -33,6 +33,7 @@ jobs:
           node tests/recovery-economy-v143.cjs
           node tests/building-lifecycle-v144.cjs
           node tests/manual-farms-v145.cjs
+          node tests/manual-resources-v146.cjs
           node tests/field-supply-v137.cjs
           node tests/supply-precision-v138.cjs
           node tests/fog-plans-v139.cjs

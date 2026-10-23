@@ -3770,14 +3770,48 @@ button,a,summary,select,[role="button"],[role="tab"],[data-resource],
 #game#game#game#game#game #contextCard #closeContext{width:44px!important;height:44px!important;min-height:44px!important;top:0!important;right:0!important}
 #game#game#game#game#game:has(#contextCard:not(.hidden)) #buildDock{visibility:hidden!important;pointer-events:none!important}
 
-/* v145: four explicit build choices, with wrapping costs inside each cell. */
-#game#game#game#game#game #buildDock{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;width:100%!important;gap:0!important}
-#game#game#game#game#game #buildDock button{
- display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:26px 14px 26px!important;
- justify-items:center!important;justify-self:stretch!important;align-content:center!important;gap:0!important;padding:3px!important;min-width:0!important;width:100%!important;max-width:none!important;box-sizing:border-box!important;
+/* v146: one readable catalog, no seven tiny price buttons on the map. */
+#game#game#game#game#game #buildDock{display:flex!important;align-items:center!important;gap:12px!important;width:100%!important;padding:6px 12px!important;min-height:56px!important;height:auto!important;box-sizing:border-box!important}
+#game#game#game#game#game #buildDock button{display:flex!important;align-items:center!important;gap:8px!important;min-height:44px!important;width:auto!important;padding:8px 14px!important;font:650 14px/20px system-ui!important}
+#game#game#game#game#game #buildDock .build-dock-hint{flex:1!important;font:500 12px/16px system-ui!important;color:#bdc9d8!important}
+#game#game#game#game#game #quickBuild:not(.hidden){display:block!important;position:absolute!important;inset:auto 8px 8px!important;width:auto!important;max-width:none!important;max-height:calc(100% - 16px)!important;padding:12px!important;box-sizing:border-box!important;background:#151e2b!important;border:1px solid #506176!important;border-radius:12px!important;z-index:80!important;overflow:auto!important}
+#game#game#game#game#game #quickBuild .quick-build-head{position:sticky!important;top:-12px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;background:#151e2b!important;z-index:1!important;padding:4px 0 8px!important}
+#game#game#game#game#game #quickBuild :is(#quickBuildInfo,#workBalanced){display:none!important}
+#game#game#game#game#game #quickBuildClose{min-width:44px!important;min-height:44px!important}
+#game#game#game#game#game #quickBuildChoices{display:block!important}
+#game#game#game#game#game #quickBuild h3{font:650 12px/18px system-ui!important;color:#b6c5d9!important;margin:12px 0 6px!important;text-transform:uppercase!important;letter-spacing:.06em!important}
+#game#game#game#game#game .build-catalog-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+#game#game#game#game#game .build-catalog-grid button{display:grid!important;grid-template-columns:32px minmax(0,1fr)!important;gap:4px 8px!important;align-content:start!important;text-align:left!important;min-height:114px!important;min-width:0!important;padding:10px!important;background:#243145!important;border:1px solid #42546d!important;border-radius:8px!important;color:#f2f6fc!important;box-shadow:none!important}
+#game#game#game#game#game .build-catalog-grid .building-art{width:32px!important;height:32px!important;min-width:32px!important;grid-row:1 / 3!important;margin:0!important}
+#game#game#game#game#game .build-catalog-grid strong{font:650 13px/17px system-ui!important;align-self:center!important}
+#game#game#game#game#game .build-catalog-grid small{font:500 11px/15px system-ui!important;color:#c3cedc!important}
+#game#game#game#game#game .build-catalog-grid :is(.catalog-output,.catalog-cost,.catalog-shortage){grid-column:1 / -1!important;font:500 12px/17px system-ui!important}
+#game#game#game#game#game .catalog-cost{display:flex!important;gap:6px!important;flex-wrap:wrap!important;color:#fff0bb!important}
+#game#game#game#game#game .catalog-cost .cost-unit{display:inline-flex!important;align-items:center!important;white-space:nowrap!important}
+#game#game#game#game#game .catalog-shortage{color:#ffb3b3!important}
+#game#game#game#game#game .context-operation{display:flex!important;flex-wrap:wrap!important;align-items:baseline!important;gap:4px 12px!important;padding:8px 0!important;border-bottom:1px solid #3b485a!important;font:500 12px/17px system-ui!important}
+#game#game#game#game#game .context-operation strong{font:700 17px/22px system-ui!important;color:#d7f4b5!important}
+#game#game#game#game#game .context-operation span{color:#c6d3e2!important}
+#game#game#game#game#game #contextBody .context-secondary{background:transparent!important;border:1px solid #566174!important;color:#c8d0db!important;box-shadow:none!important}
+#game#game#game#game#game #quickBuild:not(.hidden){transform:none!important}
+/* Construction uses the same flat surfaces and type as the rest of the HUD. */
+#game#game#game#game#game #developButton{display:flex!important;align-items:center!important;justify-content:center!important;min-width:44px!important;min-height:44px!important}
+#game#game#game#game#game #buildDock:not(.placement-active){display:none!important}
+#game#game#game#game#game #buildDock [data-build-catalog]{display:none!important}
+#game#game#game#game#game #quickBuild:not(.hidden){border-radius:0!important;background:var(--row-flat,#151c26)!important;border-color:var(--divider-flat,#465265)!important}
+#game#game#game#game#game #quickBuild .quick-build-head{background:var(--row-flat,#151c26)!important}
+#game#game#game#game#game .build-catalog-grid button{border-radius:0!important;background:var(--row-flat,#192331)!important;border-color:var(--divider-flat,#465265)!important}
+#game#game#game#game#game .build-catalog-grid button:hover{background:var(--row-active,#26374b)!important}
+#game#game#game#game#game #quickBuildChoices{overflow:visible!important;max-height:none!important;scroll-snap-type:none!important}
+/* A short map must not silently clip the newly restored construction tool. */
+#game#game#game#game#game #planToolSwitch{max-height:none!important;height:auto!important;overflow:visible!important}
+#game#game#game#game#game #planToolSwitch>button{flex-shrink:0!important}
+#game#game#game#game#game:has(#contextCard:not(.hidden)) #planToolSwitch>button:not(#developButton){display:none!important}
+@media(max-height:480px) and (orientation:landscape){
+ #game#game#game#game#game #planToolSwitch{display:grid!important;grid-template-columns:repeat(2,48px)!important;width:97px!important}
 }
-#game#game#game#game#game #buildDock button>.building-art{grid-column:1!important;grid-row:1!important;width:24px!important;height:24px!important;min-width:24px!important;max-width:24px!important;min-height:24px!important;max-height:24px!important;margin:0!important}
-#game#game#game#game#game #buildDock button>span{grid-column:1!important;grid-row:2!important;min-width:0!important;font:650 11px/14px system-ui!important;white-space:nowrap!important}
-#game#game#game#game#game #buildDock button>.dock-time{display:none!important}
-#game#game#game#game#game #buildDock button>.dock-cost{grid-column:1!important;grid-row:3!important;width:100%!important;min-width:0!important;display:flex!important;flex-wrap:wrap!important;justify-content:center!important;align-content:center!important;gap:0 3px!important;height:26px!important;font:500 9px/12px system-ui!important}
-#game#game#game#game#game #buildDock .dock-cost .cost-unit{font:inherit!important;white-space:nowrap!important}
+
+#game#game#game#game#game #quickBuild:not(.hidden){left:12px!important;right:12px!important;padding:16px!important;border:0!important;box-shadow:none!important}
+#game#game#game#game#game #quickBuild .quick-build-head{top:-16px!important;border-bottom:1px solid var(--divider-flat,#465265)!important}
+#game#game#game#game#game #quickBuild .quick-build-head>strong{font:700 18px/24px system-ui!important}
+#game#game#game#game#game .build-catalog-grid button{border:0!important}
