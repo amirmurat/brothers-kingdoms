@@ -67,4 +67,11 @@ function deployment(allied=false,invasion=false){
 }
 assert(deployment()>deployment(true),'Non-allied border gets more defense than allied border');
 assert(deployment(false,true)>deployment(),'Actual invasion outweighs potential border threat');
+for(const seed of [88,7611,139]){
+ const s=E.lobby(seed),id=E.addPlayer(s,'Bot',true);assert(E.start(s,0).ok);
+ // A resource-poor start must still be able to spend its original budget on military infrastructure.
+ s.tiles.fill(1);s.territoryRevision++;
+ for(let t=0;t<16;t++)E.tick(s);
+ assert(s.buildJobs.some(j=>j.owner===id&&j.kind==='barracks')||s.buildings.some(b=>b.owner===id&&b.kind==='barracks'),'Bot reserves starter budget for its first barracks before research');
+}
 console.log('PASS v142: separated economic/military roles, worked resources, local builders, reconstruction, old saves and threat-weighted reserves');

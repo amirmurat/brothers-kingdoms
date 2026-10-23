@@ -1660,7 +1660,9 @@ function bot(s,id){const p=person(s,id);if(!alive(p)||s.phase!=='playing')return
 
   }
  }
- if(s.tick%38===id%38){const choices=['economy','war','logistics'];action(s,id,{type:'research',key:choices[(Math.floor(s.tick/38)+id)%3]});}
+ // With no passive city gold, spending the starting military budget on tech
+ // before the first barracks can permanently prevent recruitment.
+ if(s.tick%38===id%38&&s.buildings.some(b=>b.owner===id&&b.kind==='barracks')){const choices=['economy','war','logistics'];action(s,id,{type:'research',key:choices[(Math.floor(s.tick/38)+id)%3]});}
 }
 function checkWin(s){
  if(s.phase!=='playing')return;
