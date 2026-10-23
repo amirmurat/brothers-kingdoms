@@ -60,6 +60,15 @@ const server=http.createServer((req,res)=>{try{
   await page.screenshot({path:'test-results/v145-farm-'+name+'-'+width+'.png'});
   await page.locator('#closeContext').click();await page.locator('#developButton').click();
   assert.equal(await page.locator('[data-fast-build]').count(),7);
+  const helpFirst=await page.locator('#quickBuildHelp').evaluate(el=>{
+   const panel=document.getElementById('quickBuild'),first=document.querySelector('#quickBuildChoices h3');
+   const h=el.getBoundingClientRect(),p=panel.getBoundingClientRect(),f=first.getBoundingClientRect();
+   return {before:!!(el.compareDocumentPosition(first)&Node.DOCUMENT_POSITION_FOLLOWING),
+    visible:h.height>0&&h.top>=p.top&&h.bottom<=p.bottom,
+    aboveFirst:h.bottom<=f.top};
+  });
+  assert(helpFirst.before&&helpFirst.visible&&helpFirst.aboveFirst,
+   label+' construction workflow instructions appear before all cards without scrolling');
   assert(await page.evaluate(()=>getComputedStyle(document.getElementById('quickBuild')).backgroundColor===getComputedStyle(document.getElementById('sessionPanel')).backgroundColor),'Catalog uses the existing Match sheet surface');
   assert(await page.locator('#quickBuild').evaluate(el=>getComputedStyle(el).borderRadius==='0px'&&getComputedStyle(el).borderTopWidth==='0px'),'Catalog follows flat frameless menu');
   assert(await page.locator('[data-fast-build]').evaluateAll(els=>els.every(el=>getComputedStyle(el).borderRadius==='0px'&&getComputedStyle(el).borderTopWidth==='0px')),'Cards add no decorative frames or rounded corners');
