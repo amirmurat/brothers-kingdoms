@@ -68,7 +68,7 @@ const server=http.createServer((req,res)=>{try{
     aboveFirst:h.bottom<=f.top};
   });
   assert(helpFirst.before&&helpFirst.visible&&helpFirst.aboveFirst,
-   label+' construction workflow instructions appear before all cards without scrolling');
+   name+' construction workflow instructions appear before all cards without scrolling');
   assert(await page.evaluate(()=>getComputedStyle(document.getElementById('quickBuild')).backgroundColor===getComputedStyle(document.getElementById('sessionPanel')).backgroundColor),'Catalog uses the existing Match sheet surface');
   assert(await page.locator('#quickBuild').evaluate(el=>getComputedStyle(el).borderRadius==='0px'&&getComputedStyle(el).borderTopWidth==='0px'),'Catalog follows flat frameless menu');
   assert(await page.locator('[data-fast-build]').evaluateAll(els=>els.every(el=>getComputedStyle(el).borderRadius==='0px'&&getComputedStyle(el).borderTopWidth==='0px')),'Cards add no decorative frames or rounded corners');
